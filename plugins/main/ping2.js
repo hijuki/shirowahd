@@ -3,6 +3,7 @@ import { performance } from 'perf_hooks'
 import { execSync } from 'child_process'
 import config from '../../config.js'
 import { getDatabase } from '../../src/lib/ourin-database.js'
+import { getStats, getTotalStorage } from '../../src/lib/vid-store.js'
 import te from '../../src/lib/ourin-error.js'
 
 const pluginConfig = {
@@ -103,13 +104,16 @@ async function handler(m, { sock }) {
             }
         } catch {}
 
+        let vidStats = { totalActive: 0, totalSize: 0, uploadsToday: 0 };
+        let vidStorage = 0;
+        try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch {}
+
         const totalExec = Math.round(performance.now() - execStart)
 
         const tableData = [
             ['WA Roundtrip', `${waRoundtrip} ms`],
-            ['Kecepatan Respon bot mu', `${totalExec} ms`],
+            ['Response', `${totalExec} ms`],
             ['Status', 'Online'],
-            ['Hostname', os.hostname()],
             ['Platform', `${os.platform()} ${os.arch()}`],
             ['Node', process.version],
             ['CPU', `${cpus[0]?.model?.slice(0, 25)}`],
@@ -119,11 +123,15 @@ async function handler(m, { sock }) {
             ['Heap', `${fmtSize(heap.heapUsed)} / ${fmtSize(heap.heapTotal)}`],
             ['Disk', `${fmtSize(diskUsed)} / ${fmtSize(diskTotal)}`],
             ['Network', net.iface],
+            ['Videos', `${vidStats.totalActive} aktif`],
+            ['Uploads Today', `${vidStats.uploadsToday}`],
+            ['Storage', fmtSize(vidStorage)],
             ['Users', `${dbUsers}`],
             ['Premium', `${dbPremium}`],
             ['Groups', `${dbGroups}`],
             ['Uptime Bot', fmtUp(process.uptime())],
             ['Uptime Server', fmtUp(os.uptime())],
+            ['Domain', 'swhdhlz.my.id'],
         ]
 
         await sock.sendTable(

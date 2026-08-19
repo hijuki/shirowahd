@@ -3,6 +3,8 @@ import { performance } from "perf_hooks"
 import os from "os"
 import config from "../../config.js"
 import te from "../../src/lib/ourin-error.js"
+import { getStats, getTotalStorage } from "../../src/lib/vid-store.js"
+import { getDatabase } from "../../src/lib/ourin-database.js"
 
 const pluginConfig = {
   name: "ping",
@@ -146,7 +148,7 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 
 async function createEpicPingCanvas(data) {
     const width = 1200;
-    const height = 800;
+    const height = 900;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
@@ -233,12 +235,11 @@ async function createEpicPingCanvas(data) {
     ctx.fillStyle = '#fbbf24';
     ctx.fillText(`${data.cpuSpeed} MHz`, col1X + 110, 555);
 
-    drawCyberBox(ctx, col1X, 610, colWidth, 140, 'SYSTEM LOAD', '#f43f5e');
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 24px Courier New';
-    ctx.fillText(`1m:  ${data.load[0]}`, col1X + 20, 680);
-    ctx.fillText(`5m:  ${data.load[1]}`, col1X + 20, 710);
-    ctx.fillText(`15m: ${data.load[2]}`, col1X + 180, 680);
+    drawCyberBox(ctx, col1X, 610, colWidth, 180, 'VIDEO STORAGE', '#22d3ee');
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(`Active:`, col1X + 20, 680); ctx.fillStyle = '#22d3ee'; ctx.fillText(`${data.vidActive} video`, col1X + 120, 680);
+    ctx.fillStyle = '#94a3b8'; ctx.fillText(`Today:`, col1X + 20, 715); ctx.fillStyle = '#22d3ee'; ctx.fillText(`${data.vidToday} uploads`, col1X + 120, 715);
+    ctx.fillStyle = '#94a3b8'; ctx.fillText(`Storage:`, col1X + 20, 750); ctx.fillStyle = '#22d3ee'; ctx.fillText(fmtSize(data.vidStorage), col1X + 120, 750);
 
     const col2X = 410, col2Width = 380;
     const gaugeX = col2X + col2Width/2;
@@ -285,11 +286,22 @@ async function createEpicPingCanvas(data) {
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Host:`, col3X + 20, osY+70);    ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.osHost}`, col3X + 80, osY+70);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Node:`, col3X + 20, osY+105);   ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.nodeVer}`, col3X + 80, osY+105);
 
-    drawCyberBox(ctx, col3X, 610, col3Width, 140, 'UPTIME', '#ec4899');
+    drawCyberBox(ctx, col3X, 610, col3Width, 180, 'BOT STATS', '#ec4899');
     ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(`Server:`, col3X + 20, 670); ctx.fillStyle = '#ec4899'; ctx.font = 'bold 22px sans-serif'; ctx.fillText(data.upOS, col3X + 100, 670);
+    ctx.fillText(`Server:`, col3X + 20, 670); ctx.fillStyle = '#ec4899'; ctx.font = 'bold 22px sans-serif'; ctx.fillText(data.upOS, col3X + 110, 670);
     ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(`Bot:`, col3X + 20, 715);    ctx.fillStyle = '#ec4899'; ctx.font = 'bold 22px sans-serif'; ctx.fillText(data.upBot, col3X + 100, 715);
+    ctx.fillText(`Bot:`, col3X + 20, 705); ctx.fillStyle = '#ec4899'; ctx.font = 'bold 22px sans-serif'; ctx.fillText(data.upBot, col3X + 110, 705);
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(`Users:`, col3X + 20, 740); ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.dbUsers}`, col3X + 110, 740);
+    ctx.fillStyle = '#94a3b8'; ctx.fillText(`Premium:`, col3X + 170, 740); ctx.fillStyle = '#fbbf24'; ctx.fillText(`${data.dbPremium}`, col3X + 260, 740);
+    ctx.fillStyle = '#94a3b8'; ctx.fillText(`Groups:`, col3X + 20, 775); ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.dbGroups}`, col3X + 110, 775);
+
+    // Domain bar at bottom
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+    ctx.fillRect(50, height - 50, width - 100, 35);
+    ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 18px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(`DOMAIN: ${data.domain} | SHIROWAHD v3.3`, width/2, height - 27);
+    ctx.textAlign = 'left';
 
     return canvas.toBuffer('image/png');
 }
@@ -308,6 +320,22 @@ async function handler(m, { sock }) {
     const tEnd = performance.now();
     const execTime = (tEnd - tStart).toFixed(0);
 
+    // Video storage stats
+    let vidStats = { totalActive: 0, totalSize: 0, uploadsToday: 0 };
+    let vidStorage = 0;
+    try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch {}
+
+    // Database stats
+    let dbUsers = 0, dbGroups = 0, dbPremium = 0;
+    try {
+      const db = getDatabase();
+      if (db?.data) {
+        dbUsers = Object.keys(db.data.users || {}).length;
+        dbGroups = Object.keys(db.data.groups || {}).length;
+        dbPremium = Object.values(db.data.users || {}).filter(u => u.isPremium).length;
+      }
+    } catch {}
+
     const data = {
         ping: execTime,
         cpuModel: cpus[0]?.model || "Unknown CPU",
@@ -324,7 +352,13 @@ async function handler(m, { sock }) {
         nodeVer: process.version,
         v8: process.versions.v8,
         upOS: fmtUp(os.uptime()),
-        upBot: fmtUp(process.uptime())
+        upBot: fmtUp(process.uptime()),
+        vidActive: vidStats.totalActive,
+        vidSize: vidStats.totalSize,
+        vidToday: vidStats.uploadsToday,
+        vidStorage,
+        dbUsers, dbGroups, dbPremium,
+        domain: 'swhdhlz.my.id'
     };
 
     await m.react('🕕');
@@ -333,31 +367,31 @@ async function handler(m, { sock }) {
 
     const caption = 
       `🏓 *PONG!* (${data.ping}ms)\n\n` +
-      `Berikut adalah detail spesifikasi dan performa server secara lengkap:\n\n` +
-      `🖥️ *INFORMASI SISTEM*\n` +
+      `🖥️ *SISTEM*\n` +
       `> ◦ *OS:* ${data.osType} (${data.osRel})\n` +
       `> ◦ *Platform:* ${data.osPlatform} (${data.osArch})\n` +
-      `> ◦ *Hostname:* ${data.osHost}\n` +
       `> ◦ *NodeJS:* ${data.nodeVer}\n` +
-      `> ◦ *Engine V8:* ${data.v8}\n\n` +
-      `💻 *INFORMASI CPU*\n` +
+      `> ◦ *V8:* ${data.v8}\n\n` +
+      `💻 *CPU*\n` +
       `> ◦ *Model:* ${data.cpuModel.trim()}\n` +
-      `> ◦ *Cores:* ${data.cpuCores} Core(s)\n` +
-      `> ◦ *Speed:* ${data.cpuSpeed} MHz\n` +
-      `> ◦ *Load Avg:* ${data.load[0]} (1m), ${data.load[1]} (5m), ${data.load[2]} (15m)\n\n` +
-      `🧠 *PENGGUNAAN MEMORI*\n` +
-      `> ◦ *Total RAM:* ${fmtSize(data.totalMem)}\n` +
-      `> ◦ *Dipakai:* ${fmtSize(data.usedMem)} (${data.memPct}%)\n` +
-      `> ◦ *Sisa Bebas:* ${fmtSize(data.freeMem)}\n\n` +
-      `📦 *MEMORI NODEJS*\n` +
-      `> ◦ *RSS:* ${fmtSize(data.memNode.rss)}\n` +
-      `> ◦ *Heap Total:* ${fmtSize(data.memNode.heapTotal)}\n` +
-      `> ◦ *Heap Used:* ${fmtSize(data.memNode.heapUsed)}\n` +
-      `> ◦ *External:* ${fmtSize(data.memNode.external)}\n\n` +
-      `⏱️ *WAKTU AKTIF (UPTIME)*\n` +
-      `> ◦ *Uptime Server:* ${data.upOS}\n` +
-      `> ◦ *Uptime Bot:* ${data.upBot}\n\n` +
-      `Sistem berjalan stabil dan menyelesaikan kalkulasi dalam waktu eksekusi *${data.ping}ms*.`;
+      `> ◦ *Cores:* ${data.cpuCores} | *Speed:* ${data.cpuSpeed} MHz\n` +
+      `> ◦ *Load:* ${data.load[0]} / ${data.load[1]} / ${data.load[2]}\n\n` +
+      `🧠 *MEMORI*\n` +
+      `> ◦ *RAM:* ${fmtSize(data.usedMem)} / ${fmtSize(data.totalMem)} (${data.memPct}%)\n` +
+      `> ◦ *Heap:* ${fmtSize(data.memNode.heapUsed)} / ${fmtSize(data.memNode.heapTotal)}\n` +
+      `> ◦ *RSS:* ${fmtSize(data.memNode.rss)}\n\n` +
+      `📹 *VIDEO STORAGE*\n` +
+      `> ◦ *Aktif:* ${data.vidActive} video\n` +
+      `> ◦ *Upload hari ini:* ${data.vidToday}\n` +
+      `> ◦ *Total storage:* ${fmtSize(data.vidStorage)}\n\n` +
+      `👥 *DATABASE*\n` +
+      `> ◦ *Users:* ${data.dbUsers} | *Premium:* ${data.dbPremium}\n` +
+      `> ◦ *Groups:* ${data.dbGroups}\n\n` +
+      `⏱️ *UPTIME*\n` +
+      `> ◦ *Server:* ${data.upOS}\n` +
+      `> ◦ *Bot:* ${data.upBot}\n\n` +
+      `🌐 *DOMAIN:* ${data.domain}\n\n` +
+      `Eksekusi: *${data.ping}ms*`;
 
     await sock.sendMessage(m.chat, { image: imageBuffer, caption: caption }, { quoted: m });
     await m.react("✅");
