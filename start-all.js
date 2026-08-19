@@ -8,6 +8,31 @@ const CF_WORKER = 'swhdhlz-redirect';
 const CF_TUNNEL_ID = 'a4064acb-4df6-419d-9fc7-39cdfa8ca0af';
 const DOMAIN = 'swhdhlz.my.id';
 
+// 0. Patch Baileys for large file upload (80MB+)
+try {
+  const { execSync } = await import('child_process');
+  const sendFile = './node_modules/@whiskeysockets/baileys/lib/Socket/messages-send.js';
+  const mediaFile = './node_modules/@whiskeysockets/baileys/lib/Utils/messages-media.js';
+  
+  if (existsSync(sendFile)) {
+    let src = readFileSync(sendFile, 'utf8');
+    if (src.includes('maxContentLengthBytes:') && !src.includes('maxContentLengthBytes: Infinity')) {
+      src = src.replace(/maxContentLengthBytes:\s*\d+/g, 'maxContentLengthBytes: Infinity');
+      writeFileSync(sendFile, src);
+      console.log('[PATCH] Baileys messages-send.js patched (maxContentLengthBytes → Infinity)');
+    }
+  }
+  
+  if (existsSync(mediaFile)) {
+    let src = readFileSync(mediaFile, 'utf8');
+    if (src.includes('opts?.maxContentLength') && !src.includes('if (false && opts?.maxContentLength')) {
+      src = src.replace(/if \(opts\?\.maxContentLength/g, 'if (false && opts?.maxContentLength');
+      writeFileSync(mediaFile, src);
+      console.log('[PATCH] Baileys messages-media.js patched (maxContentLength check disabled)');
+    }
+  }
+} catch (e) { console.error('[PATCH] Baileys patch error:', e.message); }
+
 // 1. Start web-uploader as child process
 console.log('[START] Launching web-uploader...');
 const webUp = spawn('node', ['web-uploader.js'], { stdio: 'inherit' });
