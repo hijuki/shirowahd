@@ -232,6 +232,15 @@ function needsConvert(name) {
   return isVideoFile(name) && !VIDEO_MP4_EXTS.includes(ext);
 }
 
+// Detect if video codec is NOT h264 — needs re-encode for WA compatibility
+function detectNeedsReencode(filePath) {
+  try {
+    const codec = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim();
+    // h264/avc = compatible with all WA clients. Anything else (hevc/h265/vp9/av1) = re-encode
+    return codec !== 'h264';
+  } catch { return false; }
+}
+
 function convertToMp4(buf, originalName) {
   const id = crypto.randomBytes(8).toString('hex');
   const ext = extname(originalName || '').toLowerCase() || '.vid';
@@ -239,25 +248,27 @@ function convertToMp4(buf, originalName) {
   const tmpOut = join(tmpdir(), 'upload_out_' + id + '.mp4');
   try {
     writeFileSync(tmpIn, buf);
-    // ponytail: stream copy video track (no re-encode = keeps FPS, resolution, quality 100%)
-    // only re-mux audio to AAC if needed, wrap in MP4 container
-    try {
-      execSync(
-        'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v copy -c:a aac -b:a 320k -movflags +faststart -y ' + JSON.stringify(tmpOut),
-        { timeout: 300000, stdio: 'pipe' }
-      );
-      if (existsSync(tmpOut) && readFileSync(tmpOut).length > 1000) {
-        return { buf: readFileSync(tmpOut), name: originalName.replace(/\.[^.]+$/, '.mp4') };
-      }
-    } catch {}
-    // Fallback: source codec incompatible with MP4 container, re-encode keeping original FPS + resolution
+    const forceReencode = detectNeedsReencode(tmpIn);
+    if (!forceReencode) {
+      // Source is h264 — stream copy (no re-encode, keeps quality 100%)
+      try {
+        execSync(
+          'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v copy -c:a aac -b:a 320k -movflags +faststart -y ' + JSON.stringify(tmpOut),
+          { timeout: 300000, stdio: 'pipe' }
+        );
+        if (existsSync(tmpOut) && readFileSync(tmpOut).length > 1000) {
+          return { buf: readFileSync(tmpOut), name: originalName.replace(/\.[^.]+$/, '.mp4') };
+        }
+      } catch {}
+    }
+    // Re-encode to H.264 — either forced (HEVC/VP9/AV1) or stream copy failed
     try { unlinkSync(tmpOut); } catch {}
-    // Get source FPS to preserve it exactly
     let fpsFlag = '';
     try {
       const fps = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim();
       if (fps && fps.includes('/')) fpsFlag = ' -r ' + fps;
     } catch {}
+    // ponytail: crf 18 = visually lossless. No resolution/quality downgrade. Just codec swap to H.264.
     execSync(
       'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v libx264 -preset fast -crf 18' + fpsFlag + ' -c:a aac -b:a 320k -movflags +faststart -y ' + JSON.stringify(tmpOut),
       { timeout: 600000, stdio: 'pipe' }
@@ -359,9 +370,10 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        // ponytail: auto-convert non-MP4 video to MP4 H.264 on upload (keep 4K + FPS, no compress)
+        // ponytail: auto-convert ALL video to MP4 H.264 on upload (keep 4K + FPS, no compress)
+        // includes .mp4 with HEVC codec — re-encode to H.264 for WA compatibility
         files = files.map(f => {
-          if (needsConvert(f.name)) {
+          if (isVideoFile(f.name)) {
             try {
               const converted = convertToMp4(f.buf, f.name);
               return converted;
