@@ -4,6 +4,7 @@ import { storeVideo, storeBundle, getBundle, isBundle, deleteVideo, extendVideo,
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import https from 'https';
 import { execSync, exec as execCb } from 'child_process';
 import { tmpdir } from 'os';
 
@@ -13,6 +14,19 @@ const PAGE = join(__dirname, 'upload-page.html');
 const ADMIN_PAGE = join(__dirname, 'admin.html');
 const SETTINGS_FILE = join(__dirname, 'admin-settings.json');
 const UPLOAD_LOG_FILE = join(__dirname, 'upload-log.json');
+
+// --- Telegram Notif ---
+function sendTelegram(event, text) {
+  const s = loadSettings();
+  if (!s.telegramBotToken || !s.telegramChatId) return;
+  if (event === 'upload' && !s.telegramNotifyUpload) return;
+  if (event === 'claim' && !s.telegramNotifyClaim) return;
+  if (event === 'error' && !s.telegramNotifyError) return;
+  const body = JSON.stringify({ chat_id: s.telegramChatId, text, parse_mode: 'HTML' });
+  const req = https.request({ hostname: 'api.telegram.org', path: `/bot${s.telegramBotToken}/sendMessage`, method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } });
+  req.on('error', () => {});
+  req.end(body);
+}
 
 // --- Settings ---
 function loadSettings() {
@@ -396,6 +410,7 @@ const server = http.createServer(async (req, res) => {
           const totalSize = files.reduce((s, f) => s + f.buf.length, 0);
           addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: files.map(f => f.name).join(', '), filesize: totalSize, code, bundle: true, count: files.length });
           recordUpload(clientIP);
+          sendTelegram('upload', `📤 <b>Upload Bundle</b>\n${files.length} file | ${(totalSize/1048576).toFixed(1)} MB\nKode: <code>${code}</code>\nIP: ${clientIP}`);
           jsonRes(res, 200, { ok: true, code, bundle: true, count: files.length });
         } else {
           const codes = [];
@@ -406,6 +421,7 @@ const server = http.createServer(async (req, res) => {
             addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: file.name, filesize: file.buf.length, code });
           }
           recordUpload(clientIP);
+          sendTelegram('upload', `📤 <b>Upload</b>\n${codes.map(c=>c.name).join(', ')}\nKode: <code>${codes[0].code}</code>\nIP: ${clientIP}`);
           jsonRes(res, 200, { ok: true, code: codes[0].code, codes });
         }
       } catch (e) {

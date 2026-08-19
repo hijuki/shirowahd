@@ -34,10 +34,20 @@ html,body{min-height:100dvh;font-family:'Outfit',sans-serif;background:var(--bg)
 .login-bg::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.06),transparent 70%);bottom:-80px;left:-80px;animation:floatOrb 20s ease-in-out infinite reverse}
 @keyframes floatOrb{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(30px,-20px) scale(1.05)}50%{transform:translate(-20px,30px) scale(.95)}75%{transform:translate(20px,20px) scale(1.03)}}
 
-/* ─── Header Video ─── */
-.header-video-wrap{position:fixed;inset:0;z-index:0;overflow:hidden}
-.header-video-wrap video{width:100%;height:100%;object-fit:cover;opacity:.12}
-.header-video-wrap .header-video-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,11,20,.3) 0%,rgba(7,11,20,.85) 50%,var(--bg) 100%)}
+/* ─── Hero Banner ─── */
+.hero-banner{position:relative;width:100%;max-width:460px;border-radius:20px;overflow:hidden;margin-bottom:20px;aspect-ratio:21/9;background:var(--surface)}
+.hero-glow{position:absolute;inset:0;background:linear-gradient(135deg,rgba(30,106,255,.2) 0%,rgba(139,92,246,.15) 30%,rgba(30,106,255,.1) 60%,rgba(16,185,129,.08) 100%);animation:heroShift 8s ease-in-out infinite alternate}
+.hero-mesh{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(30,106,255,.25),transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(139,92,246,.2),transparent 50%),radial-gradient(ellipse at 60% 80%,rgba(16,185,129,.12),transparent 50%)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(30,106,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(30,106,255,.06) 1px,transparent 1px);background-size:32px 32px;mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%)}
+.hero-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px;text-align:center}
+.hero-title{font-size:1.4em;font-weight:800;color:var(--text-bright);letter-spacing:-.02em;text-shadow:0 2px 20px rgba(30,106,255,.3)}
+.hero-sub{font-size:.72em;color:var(--text-dim);margin-top:4px;font-weight:500}
+.hero-glow-dot{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--accent);filter:blur(2px);opacity:.6}
+.hero-glow-dot:nth-child(1){top:20%;left:15%;animation:dotFloat 6s ease-in-out infinite}
+.hero-glow-dot:nth-child(2){top:60%;right:20%;animation:dotFloat 8s ease-in-out infinite 1s}
+.hero-glow-dot:nth-child(3){bottom:25%;left:40%;animation:dotFloat 7s ease-in-out infinite 2s}
+@keyframes heroShift{0%{filter:hue-rotate(0deg) brightness(1)}100%{filter:hue-rotate(15deg) brightness(1.1)}}
+@keyframes dotFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(10px,-10px)}}
 
 /* ─── Page Layout ─── */
 .page{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 16px;position:relative;z-index:1}
@@ -242,9 +252,17 @@ input[type=file]{display:none}
 <div class="toast-container" id="toastContainer"></div>
 
 <div class="login-bg" id="bgFallback"></div>
-<div class="header-video-wrap" id="headerVideoWrap" style="display:none">
-  <video autoplay muted loop playsinline id="headerVideo" poster=""></video>
-  <div class="header-video-overlay"></div>
+<div class="hero-banner">
+  <div class="hero-glow"></div>
+  <div class="hero-mesh"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-glow-dot"></div>
+  <div class="hero-glow-dot"></div>
+  <div class="hero-glow-dot"></div>
+  <div class="hero-content">
+    <div class="hero-title" id="heroTitle">SHIROWAHD</div>
+    <div class="hero-sub">Upload &amp; claim video HD tanpa batas</div>
+  </div>
 </div>
 
 <!-- Popup -->
@@ -430,18 +448,11 @@ function toast(type, msg, duration) {
   setTimeout(function(){ t.classList.add('out'); setTimeout(function(){ t.remove(); }, 300); }, duration);
 }
 
-// ===== HEADER VIDEO =====
+// ===== HERO TITLE SYNC =====
 (function(){
-  var v = document.getElementById('headerVideo');
-  v.src = 'header-video.mp4';
-  v.oncanplay = function(){
-    document.getElementById('headerVideoWrap').style.display = 'block';
-    document.getElementById('bgFallback').style.display = 'none';
-  };
-  v.onerror = function(){
-    document.getElementById('headerVideoWrap').style.display = 'none';
-    document.getElementById('bgFallback').style.display = 'block';
-  };
+  var h = document.getElementById('heroTitle');
+  // will be updated by loadSettings if siteName exists
+  window._setHeroTitle = function(t){ if(h) h.textContent = t; };
 })();
 
 // ===== POPUP =====
@@ -628,7 +639,7 @@ var claimGroupUrl='https://chat.whatsapp.com/L4J6dYuP3bX0aNzmMW6pnp';
       mo.innerHTML='<i class="fas fa-wrench"></i><h2>Sedang Maintenance</h2><p>Coba lagi nanti</p>'+chatBtn;
       document.body.appendChild(mo);return;
     }
-    if(s.siteName){var h1=document.querySelector('.logo-text');if(h1)h1.textContent=s.siteName;document.title=s.siteName+' — Upload';}
+    if(s.siteName){var h1=document.querySelector('.logo-text');if(h1)h1.textContent=s.siteName;document.title=s.siteName+' — Upload';if(window._setHeroTitle)window._setHeroTitle(s.siteName);}
     if(s.siteSubtitle){var sub=document.querySelector('.site-subtitle');if(sub)sub.textContent=s.siteSubtitle;}
     if(s.bannerText){var banner=document.getElementById('announceBanner');if(banner){banner.textContent=s.bannerText;banner.classList.add('v');}}
     if(s.maxFileSizeMB&&s.maxFileSizeMB>0){maxFileSizeMB=s.maxFileSizeMB;var ds=document.getElementById('dropSub');if(ds)ds.textContent='semua format \u2022 maks '+s.maxFileSizeMB+' MB';}
