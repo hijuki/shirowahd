@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.log
+tmp/
+tmp_caller/
+session/
+auth_info_baileys/
+database/ai_chat/
+deploy-worker.py

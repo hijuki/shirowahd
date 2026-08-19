@@ -1,0 +1,62 @@
+*OURIN MD 3.3*
+
+🌾 Apa aja yang di update?
+
+NOTE: aku enggak menjamin 100% work
+
+[ 🥐 *FITUR BARU* ]
+- reply variant 11 dab menu variant 8
+- goodbye dan welcome variant 8
+- *.wormgpt* - udah tau lah fungsinya
+- *.carigrup* - mencari suatu grup
+- *.watercolortext* - membuat gambar aestetic
+- *.starboy* - gambar dengan tulisan starboy
+- *.ttqc* - qc versi tiktok
+- *.playcall* - memutar musik, tapi lewat telpon
+- *.gachawaifu* - ajak jadian waifu hasil gacha mu
+- *.gachahusbu* - ajak jadian husbu hasil gacha mu
+- *.tod* - memutar botol truth or dare
+- *.amdl* - mendownload projek dari alight motionn
+- *.gag2watch* - gag2watch
+- *.topanime* - cek anime ter top saat ini
+- *.tiktokchat* - canvas tiktok chat
+- *.applemusic-canvas* - canvas apple music
+- *.character-ai* - chat dengan ai ( mirip autoai )
+- *.bandingkan-device* - membandingkan spesifikasi device
+- *.paptt* - random paptt nsfw
+- *.fakegopay* - canvas fake gopay
+- *.profileig* - canvas profile ig
+- *.fake-ovo* - canvas fake ovo
+- *.attp2* - membuat stiker attp
+- *.smeme-animated* - membuat stiker meme versi animasi
+- *.countrystalk* - stalk suatu negara
+- *.playvid* - play versi video
+- *.hitungwrmlbb* - Hitung winrate mobile legends
+- *.phisingataubukan* - Cek link phising
+
+[ 🚧 *PERBAIKAN* ]
+- memperbaiki similarity yang agak ngawur nebaknya
+- memperbaiki *nanobanana*
+- memperbaiki *igdl*
+- memperbaiki *emojimix*
+- memperbaiki *gpt4o*
+- memperbaiki *hd*
+- memperbaiki *hd2*
+- memperbaiki *hd3*
+- memperbaiki *iqc*
+- memperbaiki *ytmp4*
+- memperbaiki *bratimg*
+- memperbaiki *balogo*
+- memperbaiki *spotplay*
+- memperbaiki *spotifysearch*
+- memperbaiki *spotifydl*
+- memperbaiki masalah sharp dan git
+
+[ 🚀 *PENINGKATAN / PERUBAHAN* ] 
+- sekarang fitur deploy sudah support dengan file zip dan juga file html
+- mengganti tampilan similarity
+- mengganti tampilan *tt* ( tiktok downloader )
+- mengganti tampilan *getplugin*
+- mengganti tampilan *ganticode*
+- mengganti tampilan *addplugin*
+- mengganti tampilan *delplugin*

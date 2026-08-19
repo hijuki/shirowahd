@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#0a0f1a">
+<title>Admin — SHIROWAHD</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#070b14;--surface:#0f1525;--surface2:#161d30;--surface3:#1c2540;--border:#1a2340;--border2:#253050;--accent:#1e6aff;--accent-glow:rgba(30,106,255,.15);--accent-dim:rgba(30,106,255,.08);--green:#10b981;--red:#ef4444;--orange:#f59e0b;--purple:#8b5cf6;--text:#e2e8f0;--text-dim:#64748b;--text-bright:#f8fafc;--radius:12px;--radius-lg:16px;--shadow:0 4px 24px rgba(0,0,0,.3);--transition:all .2s cubic-bezier(.4,0,.2,1)}
+html,body{height:100%;font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font-size:15px;-webkit-tap-highlight-color:transparent;overflow:hidden}
+.mono{font-family:'JetBrains Mono',monospace}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+/* ─── Toast ─── */
+.toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:14px 20px;border-radius:var(--radius);font-size:.84em;font-weight:600;display:flex;align-items:center;gap:10px;animation:toastIn .35s ease;backdrop-filter:blur(12px);min-width:260px;box-shadow:var(--shadow)}
+.toast.ok{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:var(--green)}
+.toast.err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.toast.info{background:rgba(30,106,255,.15);border:1px solid rgba(30,106,255,.3);color:var(--accent)}
+.toast.out{animation:toastOut .3s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateX(40px)}}
+
+/* ─── Login ─── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;position:relative;overflow:hidden}
+.login-bg{position:absolute;inset:0;background:linear-gradient(135deg,#070b14 0%,#0d1a30 40%,#0a1528 70%,#070b14 100%);z-index:0}
+.login-bg::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(30,106,255,.08),transparent 70%);top:-100px;right:-100px;animation:floatOrb 15s ease-in-out infinite}
+.login-bg::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.06),transparent 70%);bottom:-80px;left:-80px;animation:floatOrb 20s ease-in-out infinite reverse}
+@keyframes floatOrb{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(30px,-20px) scale(1.05)}50%{transform:translate(-20px,30px) scale(.95)}75%{transform:translate(20px,20px) scale(1.03)}}
+.login-card{background:rgba(15,21,37,.8);backdrop-filter:blur(20px);border:1px solid var(--border2);border-radius:20px;padding:44px 38px;width:100%;max-width:400px;animation:fadeUp .5s ease;position:relative;z-index:1;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.login-card h1{font-size:1.6em;font-weight:800;color:var(--text-bright);margin-bottom:4px;letter-spacing:-.02em}
+.login-card .subtitle{color:var(--text-dim);font-size:.84em;margin-bottom:32px}
+.login-card .logo-icon{width:56px;height:56px;border-radius:16px;background:var(--accent-glow);display:flex;align-items:center;justify-content:center;font-size:1.5em;color:var(--accent);margin-bottom:20px;border:1px solid rgba(30,106,255,.2)}
+
+/* ─── Layout ─── */
+.app{display:none;height:100vh;overflow:hidden}
+.sidebar{width:240px;background:linear-gradient(180deg,#0b1120,#0d1525);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;position:fixed;left:0;top:0;z-index:100}
+.sidebar-brand{padding:24px 22px 20px;border-bottom:1px solid var(--border)}
+.sidebar-brand h2{font-size:1.1em;font-weight:800;color:var(--text-bright);display:flex;align-items:center;gap:8px}
+.sidebar-brand span{font-size:.72em;color:var(--text-dim);font-weight:500;display:block;margin-top:2px}
+.sidebar-nav{flex:1;padding:14px 12px;overflow-y:auto}
+.nav-group-label{font-size:.64em;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;padding:16px 14px 6px;opacity:.6}
+.nav-item{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:10px;color:var(--text-dim);font-size:.84em;font-weight:600;cursor:pointer;transition:var(--transition);margin-bottom:2px;min-height:44px;position:relative}
+.nav-item:hover{background:var(--accent-dim);color:var(--text)}
+.nav-item.active{background:var(--accent-glow);color:var(--accent);border:1px solid rgba(30,106,255,.15)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--accent);border-radius:0 3px 3px 0}
+.nav-item i{width:20px;text-align:center;font-size:.88em}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+.sidebar-version{text-align:center;padding:4px 0 8px;font-size:.64em;color:var(--text-dim);font-family:'JetBrains Mono',monospace;opacity:.5}
+.sidebar-footer .nav-item{color:var(--red);opacity:.7}
+.sidebar-footer .nav-item:hover{opacity:1;background:rgba(239,68,68,.06)}
+.main{margin-left:240px;height:100vh;display:flex;flex-direction:column}
+.header{height:60px;background:rgba(15,21,37,.6);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0}
+.header-title{font-weight:700;font-size:.94em;color:var(--text-bright)}
+.header-right{display:flex;align-items:center;gap:16px;font-size:.78em}
+.header-badge{font-size:.72em;color:var(--green);font-weight:700;display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(16,185,129,.08);border-radius:20px;border:1px solid rgba(16,185,129,.15)}
+.header-badge::before{content:'';width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+.header-clock{color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:.82em;font-weight:500}
+.header-uptime{color:var(--text-dim);font-size:.72em;display:flex;align-items:center;gap:4px}
+.content{flex:1;overflow-y:auto;padding:28px;scroll-behavior:smooth}
+
+/* ─── Tabs ─── */
+.tab-content{display:none;animation:fadeUp .3s ease}
+.tab-content.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ─── Welcome Greeting ─── */
+.greeting{margin-bottom:24px}
+.greeting h2{font-size:1.35em;font-weight:800;color:var(--text-bright);margin-bottom:4px}
+.greeting p{font-size:.84em;color:var(--text-dim)}
+
+/* ─── Stats ─── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 20px;transition:var(--transition);position:relative;overflow:hidden}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.stat-card .stat-bg-icon{position:absolute;right:-8px;bottom:-10px;font-size:3.5em;opacity:.04;color:var(--text-bright);pointer-events:none}
+.stat-card .stat-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:.9em;margin-bottom:14px}
+.stat-card .stat-icon.blue{background:rgba(30,106,255,.1);color:var(--accent)}
+.stat-card .stat-icon.green{background:rgba(16,185,129,.1);color:var(--green)}
+.stat-card .stat-icon.orange{background:rgba(245,158,11,.1);color:var(--orange)}
+.stat-card .stat-icon.red{background:rgba(239,68,68,.1);color:var(--red)}
+.stat-card .stat-icon.purple{background:rgba(139,92,246,.1);color:var(--purple)}
+.stat-val{font-size:1.6em;font-weight:800;color:var(--text-bright);font-family:'JetBrains Mono',monospace}
+.stat-label{font-size:.73em;color:var(--text-dim);font-weight:600;margin-top:4px}
+
+/* ─── Section ─── */
+.section{margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+.section-title{font-size:.96em;font-weight:800;color:var(--text-bright);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.section-title i{font-size:.85em}
+.section-desc{font-size:.78em;color:var(--text-dim);margin-bottom:14px}
+.section-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+
+/* ─── Card Panel ─── */
+.card-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:16px}
+
+/* ─── Forms ─── */
+label{display:block;font-weight:700;font-size:.76em;color:var(--text-dim);margin-bottom:6px;margin-top:18px;text-transform:uppercase;letter-spacing:.05em}
+label:first-child{margin-top:0}
+input[type=text],input[type=password],input[type=number],textarea{width:100%;padding:11px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.86em;outline:none;transition:var(--transition)}
+input:focus,textarea:focus{border-color:rgba(30,106,255,.5);box-shadow:0 0 0 3px rgba(30,106,255,.08)}
+textarea{resize:vertical;min-height:60px}
+
+/* ─── Buttons ─── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 22px;border:none;border-radius:10px;font-family:'Outfit',sans-serif;font-weight:700;font-size:.82em;cursor:pointer;transition:var(--transition);min-height:44px;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);pointer-events:none;border-radius:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#2b7aff;transform:translateY(-1px);box-shadow:0 4px 16px rgba(30,106,255,.3)}
+.btn-danger{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red);padding:7px 14px;font-size:.76em;min-height:36px}
+.btn-danger:hover{background:rgba(239,68,68,.15);transform:translateY(-1px)}
+.btn-success{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:var(--green);padding:7px 14px;font-size:.76em;min-height:36px}
+.btn-success:hover{background:rgba(16,185,129,.15);transform:translateY(-1px)}
+.btn-add{background:var(--accent-dim);border:1px solid var(--border2);color:var(--accent);padding:9px 16px;font-size:.78em}
+.btn-add:hover{background:rgba(30,106,255,.14);transform:translateY(-1px)}
+.btn-full{width:100%;margin-top:18px}
+.btn-sm{padding:6px 12px;font-size:.73em;min-height:36px}
+.btn-orange{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--orange);padding:9px 16px;font-size:.78em;min-height:44px}
+.btn-orange:hover{background:rgba(245,158,11,.15);transform:translateY(-1px)}
+.btn-purple{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);color:var(--purple);padding:9px 16px;font-size:.78em;min-height:44px}
+.btn-purple:hover{background:rgba(139,92,246,.15)}
+.btn[disabled]{opacity:.35;pointer-events:none}
+.quick-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;margin-bottom:8px}
+
+/* ─── Table ─── */
+.tbl-wrap{overflow-x:auto;margin-top:12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)}
+.tbl{width:100%;border-collapse:collapse;font-size:.8em}
+.tbl th{text-align:left;padding:12px 16px;border-bottom:2px solid var(--border2);color:var(--text-dim);font-weight:700;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;background:var(--surface2)}
+.tbl td{padding:11px 16px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.tbl tbody tr:hover td{background:rgba(30,106,255,.05)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl th.chk,td.chk{width:40px;text-align:center}
+.tbl input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;cursor:pointer}
+
+/* Mobile cards for tables */
+.mobile-cards{display:none}
+.m-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;transition:var(--transition)}
+.m-card:hover{border-color:var(--border2)}
+.m-card-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.82em}
+.m-card-row .m-label{color:var(--text-dim);font-size:.72em;font-weight:700;text-transform:uppercase}
+.m-card-row .m-val{color:var(--text);font-weight:500}
+.m-card-row .m-val.code{color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700}
+.m-card-row .m-val.mono{font-family:'JetBrains Mono',monospace;font-size:.85em}
+.m-card .m-chk{display:flex;align-items:center;gap:8px;padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+.m-card .m-chk label{margin:0;text-transform:none;font-size:.76em}
+.m-card-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+
+/* ─── Toggle ─── */
+.toggle{display:flex;align-items:center;gap:10px;margin:10px 0}
+.toggle-switch{width:48px;height:26px;background:var(--surface2);border-radius:13px;position:relative;cursor:pointer;transition:.3s;border:1px solid var(--border2);min-width:48px}
+.toggle-switch.on{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.3)}
+.toggle-switch::after{content:'';position:absolute;width:20px;height:20px;background:var(--text-dim);border-radius:50%;top:2px;left:2px;transition:.3s}
+.toggle-switch.on::after{left:24px;background:var(--green)}
+.toggle-label{font-size:.82em;color:var(--text-dim);font-weight:600}
+
+/* ─── Chart ─── */
+.chart{display:flex;align-items:flex-end;gap:8px;height:150px;margin-top:12px;padding:10px 0}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;position:relative}
+.chart-bar{width:100%;background:linear-gradient(180deg,var(--accent),rgba(30,106,255,.4));border-radius:6px 6px 2px 2px;min-height:3px;margin-top:auto;transition:height .5s cubic-bezier(.4,0,.2,1)}
+.chart-bar:hover{filter:brightness(1.3)}
+.chart-bar-wrap:hover .chart-count{opacity:1;transform:translateY(-3px)}
+.chart-day{font-size:.66em;color:var(--text-dim);margin-top:6px;font-family:'JetBrains Mono',monospace}
+.chart-count{font-size:.66em;color:var(--accent);margin-bottom:3px;font-family:'JetBrains Mono',monospace;font-weight:700;opacity:.6;transition:var(--transition)}
+
+/* Hourly chart */
+.hourly-chart{display:flex;align-items:flex-end;gap:3px;height:120px;margin-top:12px;padding:10px 0}
+.hourly-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+.hourly-bar{width:100%;background:linear-gradient(180deg,var(--green),rgba(16,185,129,.3));border-radius:3px 3px 1px 1px;min-height:2px;margin-top:auto;transition:height .5s ease}
+.hourly-bar:hover{filter:brightness(1.3)}
+.hourly-label{font-size:.55em;color:var(--text-dim);margin-top:4px;font-family:'JetBrains Mono',monospace}
+
+/* ─── Monitor ─── */
+.mon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px}
+.mon-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;transition:var(--transition)}
+.mon-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.mon-card-label{font-size:.7em;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.mon-card-val{font-size:1.1em;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-top:5px}
+.bar-usage{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:8px}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.bar-fill.mem{background:linear-gradient(90deg,var(--accent),var(--green))}
+.bar-fill.disk{background:linear-gradient(90deg,var(--orange),var(--red))}
+.proc-row{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;flex-wrap:wrap;transition:var(--transition)}
+.proc-row:hover{border-color:var(--border2);transform:translateY(-1px)}
+.proc-name{font-weight:700;font-size:.88em;color:var(--text-bright);min-width:100px}
+.proc-badge{padding:4px 12px;border-radius:20px;font-size:.68em;font-weight:700;font-family:'JetBrains Mono',monospace}
+.proc-badge.online{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.proc-badge.online::before{content:'';display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;margin-right:5px;animation:pulse 2s infinite}
+.proc-badge.stopped{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.15)}
+.proc-badge.errored{background:rgba(245,158,11,.08);color:var(--orange);border:1px solid rgba(245,158,11,.15)}
+.proc-meta{font-size:.72em;color:var(--text-dim);font-family:'JetBrains Mono',monospace;flex:1}
+.proc-actions{display:flex;gap:4px}
+.pair-section{margin-top:14px;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.pair-section input{max-width:220px}
+
+/* ─── Logs ─── */
+.log-toolbar{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.log-toolbar select{padding:8px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.82em;outline:none;min-height:44px;transition:var(--transition)}
+.log-toolbar select:focus{border-color:rgba(30,106,255,.4)}
+.log-toolbar input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
+.log-box{background:#060a12;border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;font-family:'JetBrains Mono',monospace;font-size:.74em;color:#c4d0e0;max-height:420px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;line-height:1.8}
+
+/* ─── Messages (kept for backward compat) ─── */
+.msg{margin-top:10px;padding:8px 12px;border-radius:8px;font-size:.8em;font-weight:600;display:none}
+.msg.ok{display:block;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);color:var(--green)}
+.msg.err{display:block;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);color:var(--red)}
+.item-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.item-row input{flex:1}
+
+/* ─── FAQ ─── */
+.faq-item{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;overflow:hidden;background:var(--surface)}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;cursor:pointer;font-weight:700;font-size:.88em;color:var(--text-bright);min-height:50px;gap:10px;transition:var(--transition)}
+.faq-q:hover{background:var(--surface2)}
+.faq-q i{color:var(--text-dim);font-size:.7em;transition:transform .3s;flex-shrink:0}
+.faq-q.open i{transform:rotate(180deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease;padding:0 20px;font-size:.82em;color:var(--text-dim);line-height:1.7}
+.faq-a.open{max-height:600px;padding:0 20px 18px}
+.faq-a p{margin-bottom:8px}
+.faq-a ol,.faq-a ul{margin:8px 0 8px 20px}
+.faq-a li{margin-bottom:4px}
+.faq-a a{color:var(--accent);text-decoration:none}
+.faq-a a:hover{text-decoration:underline}
+
+/* Top uploader list */
+.top-list{list-style:none;margin-top:8px}
+.top-list li{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:.82em;transition:var(--transition)}
+.top-list li:last-child{border-bottom:none}
+.top-list li:hover{background:var(--accent-dim)}
+.top-list .rank{color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:.75em;min-width:28px}
+.top-list .ip{color:var(--text);font-family:'JetBrains Mono',monospace;flex:1;margin-left:8px}
+.top-list .cnt{color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700}
+
+/* ─── Bulk action bar ─── */
+.bulk-bar{display:none;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius);padding:12px 18px;margin-bottom:14px;align-items:center;gap:14px;animation:fadeUp .2s ease}
+.bulk-bar.show{display:flex}
+.bulk-bar .bulk-count{font-size:.84em;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace}
+.bulk-bar .bulk-actions{display:flex;gap:6px;margin-left:auto}
+
+/* ─── Storage Quota Warning ─── */
+.quota-warn{display:none;padding:12px 18px;border-radius:var(--radius);background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);margin-bottom:16px;font-size:.82em;color:var(--red);align-items:center;gap:10px;font-weight:600}
+.quota-warn.show{display:flex}
+.quota-warn i{font-size:1.1em}
+
+/* ─── Inline group ─── */
+.inline-group{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.inline-group > div{flex:1;min-width:140px}
+
+/* ─── Mobile ─── */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{margin-left:0}
+  .content{padding:18px;padding-bottom:100px}
+  .header{padding:0 18px}
+  .header-title span.desk{display:none}
+  .header-uptime{display:none}
+  .stats{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat-card{padding:16px 14px}
+  .stat-val{font-size:1.2em}
+  .stat-label{font-size:.68em}
+  .stat-card .stat-bg-icon{font-size:2.5em}
+  .tbl-wrap{display:none}
+  .mobile-cards{display:block}
+  .chart{height:110px}
+  .chart-bar-wrap{min-width:0}
+  .chart-day{font-size:.55em}
+  .chart-count{font-size:.55em}
+  .hourly-chart{height:90px;gap:2px}
+  .hourly-label{font-size:.48em}
+  .section-title{font-size:.88em}
+  .mon-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .mon-card{padding:14px 12px}
+  .mon-card-val{font-size:.9em}
+  .proc-row{padding:12px 14px;font-size:.85em}
+  .proc-meta{font-size:.65em;flex-basis:100%}
+  .log-toolbar{flex-wrap:wrap;gap:6px}
+  .log-toolbar select{font-size:.75em;padding:6px 10px;min-height:44px}
+  .log-box{font-size:.65em;max-height:300px;padding:14px}
+  .item-row{flex-wrap:wrap}
+  .item-row input{min-width:0}
+  .pair-section input{max-width:100%}
+  .quick-actions{flex-direction:column}
+  .quick-actions .btn{width:100%}
+  .inline-group{flex-direction:column}
+  .inline-group>div{min-width:0}
+  .greeting h2{font-size:1.15em}
+  .bulk-bar{flex-wrap:wrap;gap:8px}
+  .bulk-bar .bulk-actions{margin-left:0;width:100%}
+  .bulk-bar .bulk-actions .btn{flex:1}
+  .toast-container{top:auto;bottom:80px;right:12px;left:12px}
+  .toast{min-width:0;width:100%}
+}
+
+/* ─── Bottom tab bar mobile ─── */
+.mobile-nav{display:none}
+@media(max-width:768px){
+  .mobile-nav{display:flex!important;position:fixed;bottom:0;left:0;right:0;background:rgba(11,17,32,.95);backdrop-filter:blur(12px);border-top:1px solid var(--border);z-index:200;padding:6px 4px env(safe-area-inset-bottom,0);gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .mobile-nav::-webkit-scrollbar{display:none}
+  .mob-item{flex:0 0 auto;min-width:64px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 10px;border-radius:10px;color:var(--text-dim);font-size:.58em;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap;min-height:56px;justify-content:center}
+  .mob-item.active{color:var(--accent);background:var(--accent-dim)}
+  .mob-item i{font-size:1.3em}
+}
+</style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-bg"></div>
+  <div class="login-card">
+    <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+    <h1>SHIROWAHD</h1>
+    <div class="subtitle">Admin Panel — Masuk untuk melanjutkan</div>
+    <label for="pwd">Password</label>
+    <input type="password" id="pwd" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="msg" id="loginMsg"></div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()"><i class="fas fa-arrow-right"></i> Masuk</button>
+  </div>
+</div>
+<!-- APP SHELL -->
+<div class="app" id="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><h2><i class="fas fa-bolt" style="color:var(--accent);font-size:.85em"></i>SHIROWAHD</h2><span>Admin Panel</span></div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <div class="nav-group-label">Utama</div>
+      <div class="nav-item active" data-tab="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</div>
+      <div class="nav-item" data-tab="statistik"><i class="fas fa-chart-line"></i> Statistik</div>
+      <div class="nav-item" data-tab="videos"><i class="fas fa-film"></i> File</div>
+      <div class="nav-item" data-tab="log"><i class="fas fa-list"></i> Log Upload</div>
+      <div class="nav-group-label">Konfigurasi</div>
+      <div class="nav-item" data-tab="settings"><i class="fas fa-cog"></i> Pengaturan</div>
+      <div class="nav-item" data-tab="branding"><i class="fas fa-palette"></i> Branding</div>
+      <div class="nav-item" data-tab="notifikasi"><i class="fab fa-telegram"></i> Notifikasi</div>
+      <div class="nav-item" data-tab="security"><i class="fas fa-shield-halved"></i> Keamanan</div>
+      <div class="nav-group-label">Sistem</div>
+      <div class="nav-item" data-tab="monitor"><i class="fas fa-server"></i> Monitor</div>
+      <div class="nav-item" data-tab="bantuan"><i class="fas fa-circle-question"></i> Bantuan</div>
+    </nav>
+    <div class="sidebar-version">v5.0.0</div>
+    <div class="sidebar-footer"><div class="nav-item" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</div></div>
+  </aside>
+  <!-- Mobile bottom nav -->
+  <div class="mobile-nav" id="mobileNav">
+    <div class="mob-item active" data-tab="dashboard"><i class="fas fa-chart-pie"></i>Home</div>
+    <div class="mob-item" data-tab="statistik"><i class="fas fa-chart-line"></i>Stats</div>
+    <div class="mob-item" data-tab="videos"><i class="fas fa-film"></i>File</div>
+    <div class="mob-item" data-tab="log"><i class="fas fa-list"></i>Log</div>
+    <div class="mob-item" data-tab="settings"><i class="fas fa-cog"></i>Setting</div>
+    <div class="mob-item" data-tab="branding"><i class="fas fa-palette"></i>Brand</div>
+    <div class="mob-item" data-tab="notifikasi"><i class="fab fa-telegram"></i>Notif</div>
+    <div class="mob-item" data-tab="security"><i class="fas fa-shield-halved"></i>Security</div>
+    <div class="mob-item" data-tab="monitor"><i class="fas fa-server"></i>Monitor</div>
+    <div class="mob-item" data-tab="bantuan"><i class="fas fa-circle-question"></i>Help</div>
+  </div>
+  <div class="main">
+    <header class="header">
+      <div class="header-title"><span class="desk">Panel — </span><span id="headerTab">Dashboard</span></div>
+      <div class="header-right">
+        <span class="header-uptime" id="headerUptime"><i class="fas fa-server"></i> <span id="srvUptime">—</span></span>
+        <span class="header-clock mono" id="headerClock"></span>
+        <div class="header-badge">Live</div>
+      </div>
+    </header>
+    <div class="content">
+      <!-- TAB: Dashboard -->
+      <div class="tab-content active" id="tab-dashboard">
+        <div class="greeting" id="greeting">
+          <h2 id="greetText">Selamat Datang 👋</h2>
+          <p>Berikut ringkasan aktivitas hari ini.</p>
+        </div>
+        <div class="quota-warn" id="quotaWarn"><i class="fas fa-exclamation-triangle"></i><span id="quotaWarnText">Storage hampir penuh!</span></div>
+        <div class="stats" id="statsCards">
+          <div class="stat-card"><div class="stat-bg-icon"><i class="fas fa-cloud-arrow-up"></i></div><div class="stat-icon blue"><i class="fas fa-cloud-arrow-up"></i></div><div class="stat-val" id="statToday">-</div><div class="stat-label">Upload Hari Ini</div></div>
+          <div class="stat-card"><div class="stat-bg-icon"><i class="fas fa-file-video"></i></div><div class="stat-icon green"><i class="fas fa-file-video"></i></div><div class="stat-val" id="statActive">-</div><div class="stat-label">File Aktif</div></div>
+          <div class="stat-card"><div class="stat-bg-icon"><i class="fas fa-hard-drive"></i></div><div class="stat-icon orange"><i class="fas fa-hard-drive"></i></div><div class="stat-val" id="statStorage">-</div><div class="stat-label">Penyimpanan</div></div>
+          <div class="stat-card"><div class="stat-bg-icon"><i class="fas fa-clock"></i></div><div class="stat-icon blue"><i class="fas fa-clock"></i></div><div class="stat-val" id="statExpire">-</div><div class="stat-label">Expire (menit)</div></div>
+        </div>
+        <div class="card-panel" style="display:flex;align-items:center;gap:12px;font-size:.82em">
+          <i class="fas fa-upload" style="color:var(--accent)"></i>
+          <span style="color:var(--text-dim)">Upload terakhir:</span>
+          <span class="mono" id="lastUploadTime" style="color:var(--text-bright)">—</span>
+        </div>
+        <div class="section-title"><i class="fas fa-bolt" style="color:var(--orange)"></i> Quick Actions</div>
+        <div class="quick-actions">
+          <button class="btn btn-orange" onclick="pm2Action('restart','ourin')"><i class="fas fa-rotate"></i> Restart Bot</button>
+          <button class="btn btn-add" id="btnCleanup" onclick="doCleanup()"><i class="fas fa-broom"></i> Clear Expired</button>
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+            <div class="toggle-switch" id="dashMaintToggle" onclick="toggleDashMaint()" style="margin:0"></div>
+            <span style="font-size:.82em;font-weight:700;color:var(--text-dim)">Maintenance</span>
+          </div>
+        </div>
+        <div class="section" style="margin-top:20px">
+          <div class="section-title"><i class="fas fa-chart-bar" style="color:var(--accent)"></i> Upload 7 Hari Terakhir</div>
+          <div class="chart" id="analyticsChart"></div>
+        </div>
+      </div>
+
+      <!-- TAB: Statistik -->
+      <div class="tab-content" id="tab-statistik">
+        <div class="stats">
+          <div class="stat-card"><div class="stat-bg-icon"><i class="fas fa-image"></i></div><div class="stat-icon green"><i class="fas fa-image"></i></div><div class="stat-val" id="statFotoCount">-</div><div class="stat-label">Foto</div></div>
+          <div class="stat-card"><div class="stat-bg-icon"><i class="fas fa-video"></i></div><div class="stat-icon blue"><i class="fas fa-video"></i></div><div class="stat-val" id="statVideoCount">-</div><div class="stat-label">Video</div></div>
+          <div class="stat-card"><div class="stat-bg-icon"><i class="fas fa-weight-hanging"></i></div><div class="stat-icon orange"><i class="fas fa-weight-hanging"></i></div><div class="stat-val" id="statAvgSize">-</div><div class="stat-label">Rata-rata Ukuran</div></div>
+          <div class="stat-card"><div class="stat-bg-icon"><i class="fas fa-arrow-up-right-dots"></i></div><div class="stat-icon red"><i class="fas fa-arrow-up-right-dots"></i></div><div class="stat-val" id="statTotalUploads">-</div><div class="stat-label">Total Upload</div></div>
+        </div>
+        <div class="section-title"><i class="fas fa-clock" style="color:var(--green)"></i> Upload per Jam (Hari Ini)</div>
+        <div class="hourly-chart" id="hourlyChart"></div>
+        <div class="section">
+          <div class="section-title"><i class="fas fa-ranking-star" style="color:var(--orange)"></i> Top Uploaders by IP</div>
+          <div class="section-desc">10 IP paling aktif</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+            <ul class="top-list" id="topUploaders"><li style="color:var(--text-dim);justify-content:center;padding:20px">Memuat data...</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Videos (File) -->
+      <div class="tab-content" id="tab-videos">
+        <div class="section-header">
+          <div>
+            <div class="section-title" style="margin-bottom:2px"><i class="fas fa-film" style="color:var(--accent)"></i> File Aktif</div>
+            <div class="section-desc" style="margin-bottom:0">Kelola semua file yang belum expired</div>
+          </div>
+        </div>
+        <div class="bulk-bar" id="bulkBar">
+          <i class="fas fa-check-double" style="color:var(--accent)"></i>
+          <span class="bulk-count"><span id="bulkCount">0</span> dipilih</span>
+          <div class="bulk-actions">
+            <button class="btn btn-success btn-sm" onclick="bulkExtend()"><i class="fas fa-clock"></i> +1h Semua</button>
+            <button class="btn btn-danger btn-sm" onclick="bulkDelete()"><i class="fas fa-trash"></i> Hapus Semua</button>
+            <button class="btn btn-add btn-sm" onclick="clearSelection()"><i class="fas fa-times"></i> Batal</button>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="tbl" id="videosTable"><thead><tr><th class="chk"><input type="checkbox" id="selectAllVideos" onchange="toggleSelectAll(this)"></th><th>Kode</th><th>Nama File</th><th>Ukuran</th><th>Upload</th><th>Sisa</th><th>IP</th><th>Aksi</th></tr></thead><tbody id="videosTbody"></tbody></table></div>
+        <div class="mobile-cards" id="videosMobileCards"></div>
+        <div id="noVideos" style="text-align:center;color:var(--text-dim);font-size:.82em;padding:24px;display:none">Tidak ada file aktif</div>
+      </div>
+
+      <!-- TAB: Upload Log -->
+      <div class="tab-content" id="tab-log">
+        <div class="section-header">
+          <div>
+            <div class="section-title" style="margin-bottom:2px"><i class="fas fa-list" style="color:var(--accent)"></i> Log Upload</div>
+            <div class="section-desc" style="margin-bottom:0">500 upload terakhir</div>
+          </div>
+          <button class="btn btn-purple" onclick="exportLogCSV()"><i class="fas fa-download"></i> Export CSV</button>
+        </div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Waktu</th><th>IP</th><th>File</th><th>Ukuran</th><th>Kode</th></tr></thead><tbody id="logTbody"></tbody></table></div>
+        <div class="mobile-cards" id="logMobileCards"></div>
+        <div id="noLogs" style="text-align:center;color:var(--text-dim);font-size:.82em;padding:24px;display:none">Belum ada log upload</div>
+      </div>
+
+      <!-- TAB: Settings -->
+      <div class="tab-content" id="tab-settings">
+        <label>Nomor WhatsApp Owner (tanpa +)</label>
+        <div class="section-desc">Dipakai untuk link "Chat Admin" di maintenance &amp; footer halaman upload</div>
+        <input type="text" id="ownerWa" placeholder="6282262421536">
+
+        <div class="section">
+          <div class="section-title"><i class="fas fa-globe" style="color:var(--accent)"></i> Custom Domain</div>
+          <div class="section-desc">Domain untuk claim links (kosongkan untuk default)</div>
+          <input type="text" id="settDomain" placeholder="https://yourdomain.com">
+        </div>
+
+        <div class="section">
+          <div class="section-title"><i class="fab fa-whatsapp" style="color:#25d366"></i> Grup WhatsApp</div>
+          <div class="section-desc">Grup yang tampil di halaman upload</div>
+          <div id="groupsList"></div>
+          <button class="btn btn-add" onclick="addGroup()"><i class="fas fa-plus"></i> Tambah Grup</button>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><i class="fab fa-whatsapp" style="color:var(--green)"></i> Grup Claim</div>
+          <div class="section-desc">Grup WhatsApp untuk claim kode. Bot hanya respon .claim di grup yang terdaftar di sini.</div>
+          <div id="claimGroupsList"></div>
+          <button class="btn btn-add" onclick="addClaimGroup()"><i class="fas fa-plus"></i> Tambah Grup Claim</button>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><i class="fas fa-satellite-dish" style="color:var(--accent)"></i> Saluran WhatsApp</div>
+          <div class="section-desc">Saluran yang tampil di halaman upload</div>
+          <div id="channelsList"></div>
+          <button class="btn btn-add" onclick="addChannel()"><i class="fas fa-plus"></i> Tambah Saluran</button>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><i class="fas fa-clock" style="color:var(--accent)"></i> Durasi &amp; Batas</div>
+          <div class="inline-group">
+            <div>
+              <label>Expire File (menit)</label>
+              <input type="number" id="expireMinutes" placeholder="60" min="1" style="max-width:160px">
+            </div>
+            <div>
+              <label>Batas Ukuran File (MB)</label>
+              <input type="number" id="maxFileSizeMB" placeholder="0" min="0" style="max-width:160px">
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><i class="fas fa-gauge-high" style="color:var(--orange)"></i> Rate Limit</div>
+          <div class="section-desc">Batasi jumlah upload per IP</div>
+          <div class="inline-group">
+            <div>
+              <label>Max upload per IP / jam</label>
+              <input type="number" id="settRateLimit" placeholder="0 = unlimited" min="0" style="max-width:160px">
+            </div>
+            <div>
+              <label>Cooldown antar upload (detik)</label>
+              <input type="number" id="settRateCooldown" placeholder="0 = none" min="0" style="max-width:160px">
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><i class="fas fa-broom" style="color:var(--green)"></i> Auto-Cleanup</div>
+          <div class="section-desc">Otomatis hapus file expired setiap interval tertentu</div>
+          <div class="toggle">
+            <div class="toggle-switch" id="autoCleanupToggle" onclick="this.classList.toggle('on')"></div>
+            <span class="toggle-label">Auto-cleanup</span>
+          </div>
+          <label>Interval (menit)</label>
+          <input type="number" id="settAutoCleanupInterval" placeholder="30" min="1" style="max-width:160px">
+        </div>
+
+        <div class="section">
+          <div class="section-title"><i class="fas fa-database" style="color:var(--red)"></i> Storage Quota</div>
+          <div class="section-desc">Tampilkan peringatan jika storage melebihi batas (0 = unlimited)</div>
+          <label>Quota (MB)</label>
+          <input type="number" id="settStorageQuota" placeholder="0" min="0" style="max-width:160px">
+        </div>
+
+        <div class="section">
+          <div class="section-title"><i class="fas fa-wrench" style="color:var(--orange)"></i> Mode Maintenance</div>
+          <div class="section-desc">Upload dinonaktifkan saat maintenance aktif</div>
+          <div class="toggle"><div class="toggle-switch" id="maintenanceToggle" onclick="toggleMaintenance()"></div><span class="toggle-label" id="maintenanceLabel">Nonaktif</span></div>
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="doSave()"><i class="fas fa-save"></i> Simpan Pengaturan</button>
+      </div>
+
+      <!-- TAB: Branding -->
+      <div class="tab-content" id="tab-branding">
+        <div class="section-title"><i class="fas fa-palette" style="color:var(--accent)"></i> Custom Branding</div>
+        <div class="section-desc">Ubah nama dan subtitle yang tampil di halaman upload</div>
+        <label>Nama Situs</label>
+        <input type="text" id="siteName" placeholder="SHIROWAHD">
+        <label>Subtitle</label>
+        <input type="text" id="siteSubtitle" placeholder="Upload &amp; claim video HD">
+        <div class="section">
+          <div class="section-title"><i class="fas fa-bullhorn" style="color:var(--orange)"></i> Banner Pengumuman</div>
+          <div class="section-desc">Teks yang ditampilkan sebagai banner di halaman upload (kosongkan untuk sembunyikan)</div>
+          <textarea id="bannerText" placeholder="Tulis pengumuman..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveBranding()"><i class="fas fa-save"></i> Simpan Branding</button>
+      </div>
+
+      <!-- TAB: Notifikasi (NEW) -->
+      <div class="tab-content" id="tab-notifikasi">
+        <div class="section-title"><i class="fab fa-telegram" style="color:#2AABEE"></i> Notifikasi Telegram</div>
+        <div class="section-desc">Kirim notifikasi otomatis ke Telegram saat ada event tertentu</div>
+
+        <div class="card-panel">
+          <label>Bot Token</label>
+          <input type="text" id="tgBotToken" placeholder="123456:ABC-DEF...">
+          <label>Chat ID</label>
+          <input type="text" id="tgChatId" placeholder="-1001234567890">
+        </div>
+
+        <div class="card-panel" style="margin-top:12px">
+          <div style="font-weight:700;font-size:.88em;color:var(--text-bright);margin-bottom:14px">Event Notifikasi</div>
+          <div class="toggle">
+            <div class="toggle-switch" id="tgNotifyUpload" onclick="this.classList.toggle('on')"></div>
+            <span class="toggle-label"><i class="fas fa-cloud-arrow-up" style="margin-right:6px;color:var(--accent)"></i>Upload baru</span>
+          </div>
+          <div class="toggle">
+            <div class="toggle-switch" id="tgNotifyClaim" onclick="this.classList.toggle('on')"></div>
+            <span class="toggle-label"><i class="fas fa-hand" style="margin-right:6px;color:var(--green)"></i>File di-claim</span>
+          </div>
+          <div class="toggle">
+            <div class="toggle-switch" id="tgNotifyError" onclick="this.classList.toggle('on')"></div>
+            <span class="toggle-label"><i class="fas fa-triangle-exclamation" style="margin-right:6px;color:var(--red)"></i>Error / gagal</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="saveNotifikasi()"><i class="fas fa-save"></i> Simpan Notifikasi</button>
+      </div>
+
+      <!-- TAB: Security -->
+      <div class="tab-content" id="tab-security">
+        <div class="section-title"><i class="fas fa-key" style="color:var(--orange)"></i> Ganti Password</div>
+        <label>Password Lama</label>
+        <input type="password" id="curPwd" placeholder="Password saat ini">
+        <label>Password Baru</label>
+        <input type="password" id="newPwd" placeholder="Password baru">
+        <label>Konfirmasi Password Baru</label>
+        <input type="password" id="confPwd" placeholder="Ulangi password baru">
+        <div class="msg" id="pwdMsg"></div>
+        <button class="btn btn-primary" onclick="changePassword()" style="margin-top:12px"><i class="fas fa-key"></i> Ganti Password</button>
+        <div class="section">
+          <div class="section-title"><i class="fas fa-ban" style="color:var(--red)"></i> IP Blacklist</div>
+          <div class="section-desc">IP yang diblokir dari upload</div>
+          <div id="blacklistItems"></div>
+          <div class="item-row" style="margin-top:8px">
+            <input type="text" id="newBlacklistIP" placeholder="Contoh: 192.168.1.1">
+            <button class="btn btn-danger" onclick="addBlacklist()"><i class="fas fa-plus"></i> Tambah</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Monitor -->
+      <div class="tab-content" id="tab-monitor">
+        <div class="section-title"><i class="fas fa-server" style="color:var(--accent)"></i> System Info</div>
+        <div class="mon-grid" id="sysInfo">
+          <div class="mon-card"><div class="mon-card-label">RAM</div><div class="mon-card-val" id="monRam">-</div><div class="bar-usage"><div class="bar-fill mem" id="monRamBar" style="width:0"></div></div></div>
+          <div class="mon-card"><div class="mon-card-label">Disk</div><div class="mon-card-val" id="monDisk">-</div><div class="bar-usage"><div class="bar-fill disk" id="monDiskBar" style="width:0"></div></div></div>
+          <div class="mon-card"><div class="mon-card-label">Uptime</div><div class="mon-card-val" id="monUptime">-</div></div>
+          <div class="mon-card"><div class="mon-card-label">Load</div><div class="mon-card-val" id="monLoad">-</div></div>
+        </div>
+        <div class="section"><div class="section-title"><i class="fas fa-microchip" style="color:var(--green)"></i> PM2 Processes</div>
+        <div class="section-desc">Kelola semua proses PM2</div>
+        <div id="procList"></div>
+        <button class="btn btn-add" onclick="loadProcesses()" style="margin-top:8px"><i class="fas fa-sync"></i> Refresh</button></div>
+        <div class="section"><div class="section-title"><i class="fas fa-robot" style="color:var(--orange)"></i> Bot Status &amp; Pairing</div>
+        <div class="section-desc">Status WhatsApp bot dan pairing nomor baru</div>
+        <div class="mon-grid" style="margin-top:10px">
+          <div class="mon-card"><div class="mon-card-label">Bot</div><div class="mon-card-val" id="monBotStatus">-</div></div>
+          <div class="mon-card"><div class="mon-card-label">Session</div><div class="mon-card-val" id="monBotSession">-</div></div>
+          <div class="mon-card"><div class="mon-card-label">Restarts</div><div class="mon-card-val" id="monBotRestarts">-</div></div>
+        </div>
+        <div class="pair-section">
+          <label>Pairing Nomor Baru</label>
+          <div class="section-desc">Stop bot dulu, lalu masukkan nomor WA (tanpa +). Session lama akan dihapus.</div>
+          <div class="item-row" style="margin-top:6px">
+            <input type="text" id="pairNumber" placeholder="6281234567890">
+            <button class="btn btn-primary btn-sm" onclick="doPairing()"><i class="fas fa-link"></i> Pair</button>
+          </div>
+          <div class="msg" id="pairMsg"></div>
+        </div></div>
+        <div class="section"><div class="section-title"><i class="fas fa-terminal" style="color:var(--accent)"></i> Live Logs</div>
+        <div class="log-toolbar">
+          <select id="logProcess"><option value="ourin">ourin (bot)</option><option value="web-uploader">web-uploader</option><option value="ngrok-tunnel">ngrok-tunnel</option><option value="ngrok-sync">ngrok-sync</option><option value="tg-pair">tg-pair</option></select>
+          <select id="logLines"><option value="30">30 baris</option><option value="50" selected>50 baris</option><option value="100">100 baris</option><option value="200">200 baris</option></select>
+          <button class="btn btn-add btn-sm" onclick="loadLogs()"><i class="fas fa-sync"></i> Refresh</button>
+          <label style="margin:0;font-size:.75em;display:flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0"><input type="checkbox" id="logAuto"> Auto 10s</label>
+        </div>
+        <div class="log-box" id="logBox">Klik refresh untuk muat logs...</div></div>
+      </div>
+
+      <!-- TAB: Bantuan -->
+      <div class="tab-content" id="tab-bantuan">
+        <div class="section-title"><i class="fas fa-circle-question" style="color:var(--accent)"></i> FAQ & Bantuan</div>
+        <div class="section-desc">Panduan penggunaan SHIROWAHD</div>
+        <div style="margin-top:16px">
+          <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fas fa-upload" style="color:var(--accent);margin-right:8px"></i>Cara upload video</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><ol><li>Buka halaman upload di browser</li><li>Klik tombol <strong>"Pilih File"</strong> atau drag & drop file ke area upload</li><li>Tunggu proses upload selesai (progress bar akan muncul)</li><li>Setelah selesai, kode unik akan muncul — <strong>salin kode tersebut</strong></li><li>Kirim kode ke grup WhatsApp claim untuk mendapatkan file via bot</li></ol><p>⚠️ File akan otomatis terhapus setelah waktu expire habis.</p></div></div>
+          <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fab fa-whatsapp" style="color:#25d366;margin-right:8px"></i>Cara claim di grup</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><ol><li>Pastikan kamu sudah bergabung di <strong>grup claim</strong> yang terdaftar</li><li>Kirim pesan <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">.claim KODE</code> (contoh: <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">.claim abc123</code>)</li><li>Bot akan membalas dengan file video/foto dalam beberapa detik</li><li>Jika kode sudah expired, bot akan memberitahu</li></ol></div></div>
+          <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fas fa-users" style="color:var(--green);margin-right:8px"></i>Cara tambah grup claim</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><ol><li>Buka tab <strong>Pengaturan</strong> di admin panel</li><li>Scroll ke bagian <strong>"Grup Claim"</strong></li><li>Klik <strong>"Tambah Grup Claim"</strong></li><li>Isi nama grup dan link invite (<code style="background:var(--surface2);padding:2px 6px;border-radius:4px">https://chat.whatsapp.com/...</code>)</li><li>Klik <strong>"Simpan Pengaturan"</strong></li><li>Pastikan bot sudah di-invite ke grup tersebut</li></ol></div></div>
+          <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fas fa-triangle-exclamation" style="color:var(--orange);margin-right:8px"></i>Troubleshooting: video patah</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><p>Video yang dikirim via WhatsApp kadang terlihat "patah" atau kualitasnya menurun. Ini karena:</p><ul><li><strong>Re-encoding oleh WhatsApp</strong> — WA mengkompresi ulang semua video yang dikirim, terutama video berukuran besar</li><li><strong>Resolusi tinggi</strong> — Video 4K/1080p akan di-downscale oleh WA</li><li><strong>Format tidak didukung</strong> — Beberapa codec (HEVC/H.265) akan di-re-encode ke H.264</li></ul><p><strong>Solusi:</strong></p><ul><li>Upload video dengan resolusi 720p untuk hasil terbaik via WA</li><li>Gunakan format MP4 dengan codec H.264</li><li>Untuk kualitas asli, share link download langsung daripada kirim via bot</li></ul></div></div>
+          <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fas fa-headset" style="color:var(--accent);margin-right:8px"></i>Kontak Developer</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><p>Butuh bantuan lebih? Hubungi developer:</p><p><a href="https://wa.me/6282262421536" target="_blank"><i class="fab fa-whatsapp" style="margin-right:4px"></i>Chat HILLZ di WhatsApp</a></p></div></div>
+        </div>
+      </div>
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+var token = null, cachedLogData = null, cachedSettings = {};
+var selectedVideos = new Set();
+
+// ─── Toast System ───
+function toast(type, msg, duration) {
+  duration = duration || 3000;
+  var c = document.getElementById('toastContainer');
+  var icons = {ok:'fa-check-circle',err:'fa-times-circle',info:'fa-info-circle'};
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<i class="fas ' + (icons[type]||icons.info) + '"></i><span>' + msg + '</span>';
+  c.appendChild(t);
+  setTimeout(function(){ t.classList.add('out'); setTimeout(function(){ t.remove(); }, 300); }, duration);
+}
+
+// ─── Clock WIB ───
+function updateClock() {
+  var now = new Date();
+  var wib = new Date(now.getTime() + (7 * 3600000) + (now.getTimezoneOffset() * 60000));
+  var h = String(wib.getHours()).padStart(2,'0'), m = String(wib.getMinutes()).padStart(2,'0'), s = String(wib.getSeconds()).padStart(2,'0');
+  var el = document.getElementById('headerClock');
+  if (el) el.textContent = h + ':' + m + ':' + s + ' WIB';
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ─── Greeting ───
+function updateGreeting() {
+  var now = new Date();
+  var wib = new Date(now.getTime() + (7 * 3600000) + (now.getTimezoneOffset() * 60000));
+  var h = wib.getHours();
+  var greet = h < 11 ? 'Selamat Pagi ☀️' : h < 15 ? 'Selamat Siang 🌤️' : h < 18 ? 'Selamat Sore 🌅' : 'Selamat Malam 🌙';
+  document.getElementById('greetText').textContent = greet;
+}
+
+// ─── Tab Switching ───
+function switchTab(tab) {
+  document.querySelectorAll('.nav-item,.mob-item').forEach(function(x){x.classList.remove('active')});
+  document.querySelectorAll('.nav-item[data-tab="'+tab+'"],.mob-item[data-tab="'+tab+'"]').forEach(function(x){x.classList.add('active')});
+  document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active')});
+  document.getElementById('tab-' + tab).classList.add('active');
+  var names = {dashboard:'Dashboard',statistik:'Statistik',videos:'File',log:'Log Upload',settings:'Pengaturan',branding:'Branding',notifikasi:'Notifikasi',security:'Keamanan',monitor:'Monitor',bantuan:'Bantuan'};
+  document.getElementById('headerTab').textContent = names[tab] || tab;
+  if (tab === 'dashboard') loadDashboard();
+  else if (tab === 'statistik') loadStatistik();
+  else if (tab === 'videos') loadVideos();
+  else if (tab === 'log') loadUploadLog();
+  else if (tab === 'monitor') loadMonitor();
+  var mobActive = document.querySelector('.mob-item.active');
+  if (mobActive) mobActive.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+}
+document.querySelectorAll('.nav-item[data-tab],.mob-item[data-tab]').forEach(function(t) {
+  t.onclick = function(){ switchTab(t.dataset.tab); };
+});
+
+// ─── Login / Logout ───
+function doLogin() {
+  var pwd = document.getElementById('pwd').value;
+  fetch('/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) })
+    .then(function(r){return r.json()}).then(function(d) {
+      if (d.ok) { token = d.token; showMsg('loginMsg', '', ''); enterAdmin(); }
+      else showMsg('loginMsg', 'err', d.error || 'Password salah');
+    }).catch(function(){showMsg('loginMsg', 'err', 'Koneksi gagal')});
+}
+function enterAdmin() {
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  updateGreeting();
+  loadDashboard();
+  loadSettingsData();
+  loadServerUptime();
+}
+function doLogout() {
+  token = null;
+  document.getElementById('loginWrap').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pwd').value = '';
+}
+
+// ─── API Helper ───
+function api(method, url, body) {
+  var opts = { method: method, headers: { 'Authorization': 'Bearer ' + token } };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  return fetch(url, opts).then(function(r){return r.json()});
+}
+
+// ─── Utilities ───
+function showMsg(id, cls, txt) {
+  var el = document.getElementById(id); if(!el) return; el.className = 'msg'; el.textContent = txt;
+  if (cls) el.classList.add(cls);
+}
+function esc(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;'); }
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(2) + ' GB';
+}
+
+// ─── Server Uptime ───
+function loadServerUptime() {
+  api('GET', '/admin/api/system').then(function(d) {
+    if (!d.ok) return;
+    var hrs = Math.floor(d.uptime / 3600), mins = Math.floor((d.uptime % 3600) / 60);
+    document.getElementById('srvUptime').textContent = hrs + 'h ' + mins + 'm';
+  }).catch(function(){});
+}
+
+// ─── Dashboard ───
+function loadDashboard() {
+  updateGreeting();
+  api('GET', '/admin/api/stats').then(function(d) {
+    document.getElementById('statToday').textContent = d.uploadsToday || 0;
+    document.getElementById('statActive').textContent = d.totalActive || 0;
+    document.getElementById('statStorage').textContent = fmtSize(d.totalStorage || 0);
+    document.getElementById('statExpire').textContent = d.expireMinutes || 60;
+    // Check storage quota warning
+    checkStorageQuota(d.totalStorage || 0);
+  });
+  api('GET', '/admin/api/analytics').then(function(d) {
+    var chart = document.getElementById('analyticsChart'); chart.innerHTML = '';
+    var max = 1, keys = Object.keys(d);
+    for (var i = 0; i < keys.length; i++) { if (d[keys[i]] > max) max = d[keys[i]]; }
+    for (var i = 0; i < keys.length; i++) {
+      var pct = Math.max(2, (d[keys[i]] / max) * 100);
+      chart.innerHTML += '<div class="chart-bar-wrap"><div class="chart-count">' + d[keys[i]] + '</div><div class="chart-bar" style="height:' + pct + '%"></div><div class="chart-day">' + keys[i].slice(5) + '</div></div>';
+    }
+  });
+  api('GET', '/admin/api/upload-log').then(function(log) {
+    cachedLogData = log;
+    var el = document.getElementById('lastUploadTime');
+    if (log && log.length > 0) {
+      var dt = new Date(log[0].timestamp);
+      el.textContent = dt.toLocaleString('id-ID', {hour12:false});
+    } else { el.textContent = '—'; }
+    syncDashMaint();
+  }).catch(function(){});
+}
+
+function checkStorageQuota(usedBytes) {
+  var quota = parseInt(cachedSettings.storageQuotaMB) || 0;
+  var el = document.getElementById('quotaWarn');
+  if (quota > 0) {
+    var usedMB = usedBytes / 1048576;
+    var pct = ((usedMB / quota) * 100).toFixed(0);
+    if (usedMB >= quota * 0.85) {
+      document.getElementById('quotaWarnText').textContent = 'Storage ' + pct + '% terpakai (' + fmtSize(usedBytes) + ' / ' + quota + ' MB) — hampir penuh!';
+      el.classList.add('show');
+    } else { el.classList.remove('show'); }
+  } else { el.classList.remove('show'); }
+}
+
+function syncDashMaint() {
+  var mt = document.getElementById('maintenanceToggle');
+  var dm = document.getElementById('dashMaintToggle');
+  if (mt && dm) { dm.className = mt.className; }
+}
+function toggleDashMaint() {
+  toggleMaintenance();
+  syncDashMaint();
+  doSave();
+}
+function doCleanup() {
+  var btn = document.getElementById('btnCleanup');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cleaning...';
+  fetch('/admin/api/cleanup', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } })
+    .then(function(r){return r.json()}).then(function(d) {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-broom"></i> Clear Expired';
+      if (d.ok) { toast('ok', 'Cleanup selesai! ' + (d.deleted || 0) + ' file dihapus'); loadDashboard(); }
+      else toast('err', d.error || 'Endpoint belum tersedia');
+    }).catch(function() {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-broom"></i> Clear Expired';
+      toast('err', 'Endpoint /admin/api/cleanup belum tersedia');
+    });
+}
+
+// ─── Statistik ───
+function loadStatistik() {
+  var go = function(log) {
+    if (!log) log = [];
+    var fotoCount = 0, videoCount = 0, totalSize = 0, hourly = new Array(24).fill(0);
+    var ipMap = {}, now = new Date();
+    var todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    for (var i = 0; i < log.length; i++) {
+      var e = log[i], fn = (e.filename || '').toLowerCase();
+      if (/\.(jpg|jpeg|png|gif|webp|bmp|heic)$/i.test(fn)) fotoCount++; else videoCount++;
+      totalSize += (e.filesize || 0);
+      var ip = e.ip || 'unknown'; ipMap[ip] = (ipMap[ip] || 0) + 1;
+      var ts = new Date(e.timestamp);
+      var tsDay = ts.getFullYear() + '-' + String(ts.getMonth()+1).padStart(2,'0') + '-' + String(ts.getDate()).padStart(2,'0');
+      if (tsDay === todayStr) hourly[ts.getHours()]++;
+    }
+    document.getElementById('statFotoCount').textContent = fotoCount;
+    document.getElementById('statVideoCount').textContent = videoCount;
+    document.getElementById('statAvgSize').textContent = log.length ? fmtSize(Math.round(totalSize / log.length)) : '—';
+    document.getElementById('statTotalUploads').textContent = log.length;
+    var hc = document.getElementById('hourlyChart'); hc.innerHTML = '';
+    var hMax = 1;
+    for (var h = 0; h < 24; h++) { if (hourly[h] > hMax) hMax = hourly[h]; }
+    for (var h = 0; h < 24; h++) {
+      var pct = hourly[h] > 0 ? Math.max(4, (hourly[h] / hMax) * 100) : 2;
+      var opacity = hourly[h] > 0 ? '1' : '.3';
+      hc.innerHTML += '<div class="hourly-bar-wrap" title="' + h + ':00 — ' + hourly[h] + ' upload"><div class="hourly-bar" style="height:' + pct + '%;opacity:' + opacity + '"></div><div class="hourly-label">' + String(h).padStart(2,'0') + '</div></div>';
+    }
+    var sorted = Object.keys(ipMap).map(function(ip){return {ip:ip,count:ipMap[ip]}}).sort(function(a,b){return b.count-a.count}).slice(0,10);
+    var ul = document.getElementById('topUploaders'); ul.innerHTML = '';
+    if (sorted.length === 0) { ul.innerHTML = '<li style="color:var(--text-dim);justify-content:center;padding:20px">Belum ada data</li>'; return; }
+    for (var i = 0; i < sorted.length; i++) {
+      ul.innerHTML += '<li><span class="rank">#' + (i+1) + '</span><span class="ip">' + esc(sorted[i].ip) + '</span><span class="cnt">' + sorted[i].count + '</span></li>';
+    }
+  };
+  if (cachedLogData) { go(cachedLogData); return; }
+  api('GET', '/admin/api/upload-log').then(function(log) { cachedLogData = log; go(log); }).catch(function(){ go([]); });
+}
+
+// ─── Videos (File) with Bulk Actions ───
+function loadVideos() {
+  selectedVideos.clear();
+  updateBulkBar();
+  var chkAll = document.getElementById('selectAllVideos');
+  if (chkAll) chkAll.checked = false;
+
+  api('GET', '/admin/api/videos').then(function(list) {
+    var tb = document.getElementById('videosTbody');
+    var mc = document.getElementById('videosMobileCards');
+    var noVid = document.getElementById('noVideos');
+    if (!list || list.length === 0) { tb.innerHTML = ''; mc.innerHTML = ''; noVid.style.display = 'block'; return; }
+    noVid.style.display = 'none';
+    tb.innerHTML = ''; mc.innerHTML = '';
+    for (var i = 0; i < list.length; i++) {
+      var v = list[i], rem = Math.ceil(v.remaining / 60000);
+      var dt = new Date(v.ts), time = dt.toLocaleString('id-ID', {hour12:false});
+      tb.innerHTML += '<tr>' +
+        '<td class="chk"><input type="checkbox" data-code="' + esc(v.code) + '" onchange="toggleVideoSelect(this)"></td>' +
+        '<td class="mono" style="font-weight:700;color:var(--accent)">' + esc(v.code) + '</td>' +
+        '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(v.name) + '">' + esc(v.name) + '</td>' +
+        '<td class="mono">' + fmtSize(v.size) + '</td>' +
+        '<td style="font-size:.72em">' + time + '</td>' +
+        '<td class="mono">' + rem + 'm</td>' +
+        '<td class="mono" style="font-size:.72em">' + esc(v.ip) + '</td>' +
+        '<td><button class="btn btn-success btn-sm" onclick="extendVid(\'' + v.code + '\')"><i class="fas fa-clock"></i> +1h</button> <button class="btn btn-danger btn-sm" onclick="deleteVid(\'' + v.code + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+      mc.innerHTML += '<div class="m-card">' +
+        '<div class="m-chk"><input type="checkbox" data-code="' + esc(v.code) + '" onchange="toggleVideoSelect(this)"><label>Pilih</label></div>' +
+        '<div class="m-card-row"><span class="m-label">Kode</span><span class="m-val code">' + esc(v.code) + '</span></div>' +
+        '<div class="m-card-row"><span class="m-label">File</span><span class="m-val" style="max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(v.name) + '</span></div>' +
+        '<div class="m-card-row"><span class="m-label">Ukuran</span><span class="m-val mono">' + fmtSize(v.size) + '</span></div>' +
+        '<div class="m-card-row"><span class="m-label">Upload</span><span class="m-val" style="font-size:.78em">' + time + '</span></div>' +
+        '<div class="m-card-row"><span class="m-label">Sisa</span><span class="m-val mono">' + rem + 'm</span></div>' +
+        '<div class="m-card-row"><span class="m-label">IP</span><span class="m-val mono" style="font-size:.78em">' + esc(v.ip) + '</span></div>' +
+        '<div class="m-card-actions"><button class="btn btn-success btn-sm" style="flex:1" onclick="extendVid(\'' + v.code + '\')"><i class="fas fa-clock"></i> +1h</button><button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteVid(\'' + v.code + '\')"><i class="fas fa-trash"></i> Hapus</button></div></div>';
+    }
+  });
+}
+
+function toggleVideoSelect(el) {
+  var code = el.dataset.code;
+  if (el.checked) selectedVideos.add(code); else selectedVideos.delete(code);
+  updateBulkBar();
+}
+function toggleSelectAll(el) {
+  document.querySelectorAll('#videosTable input[data-code], #videosMobileCards input[data-code]').forEach(function(c) {
+    c.checked = el.checked;
+    if (el.checked) selectedVideos.add(c.dataset.code); else selectedVideos.delete(c.dataset.code);
+  });
+  updateBulkBar();
+}
+function updateBulkBar() {
+  var bar = document.getElementById('bulkBar');
+  document.getElementById('bulkCount').textContent = selectedVideos.size;
+  if (selectedVideos.size > 0) bar.classList.add('show'); else bar.classList.remove('show');
+}
+function clearSelection() {
+  selectedVideos.clear();
+  document.querySelectorAll('#videosTable input[data-code], #videosMobileCards input[data-code]').forEach(function(c){ c.checked = false; });
+  var chkAll = document.getElementById('selectAllVideos'); if (chkAll) chkAll.checked = false;
+  updateBulkBar();
+}
+function bulkDelete() {
+  if (selectedVideos.size === 0) return;
+  if (!confirm('Hapus ' + selectedVideos.size + ' file?')) return;
+  var codes = Array.from(selectedVideos);
+  var done = 0;
+  codes.forEach(function(code) {
+    api('POST', '/admin/api/video/delete', { code: code }).then(function() {
+      done++;
+      if (done >= codes.length) { toast('ok', done + ' file dihapus'); loadVideos(); }
+    });
+  });
+}
+function bulkExtend() {
+  if (selectedVideos.size === 0) return;
+  var codes = Array.from(selectedVideos);
+  var done = 0;
+  codes.forEach(function(code) {
+    api('POST', '/admin/api/video/extend', { code: code }).then(function() {
+      done++;
+      if (done >= codes.length) { toast('ok', done + ' file diperpanjang +1h'); loadVideos(); }
+    });
+  });
+}
+function deleteVid(code) {
+  if (!confirm('Hapus file ' + code + '?')) return;
+  api('POST', '/admin/api/video/delete', { code: code }).then(function(d) {
+    if (d.ok) { toast('ok', 'File ' + code + ' dihapus'); loadVideos(); } else toast('err', d.error || 'Gagal');
+  });
+}
+function extendVid(code) {
+  api('POST', '/admin/api/video/extend', { code: code }).then(function(d) {
+    if (d.ok) { toast('ok', 'File ' + code + ' diperpanjang +1h'); loadVideos(); } else toast('err', d.error || 'Gagal');
+  });
+}
+
+// ─── Upload Log ───
+function loadUploadLog() {
+  api('GET', '/admin/api/upload-log').then(function(log) {
+    cachedLogData = log;
+    var tb = document.getElementById('logTbody');
+    var mc = document.getElementById('logMobileCards');
+    var noLog = document.getElementById('noLogs');
+    if (!log || log.length === 0) { tb.innerHTML = ''; mc.innerHTML = ''; noLog.style.display = 'block'; return; }
+    noLog.style.display = 'none';
+    tb.innerHTML = ''; mc.innerHTML = '';
+    for (var i = 0; i < Math.min(log.length, 100); i++) {
+      var e = log[i], dt = new Date(e.timestamp), time = dt.toLocaleString('id-ID', {hour12:false});
+      tb.innerHTML += '<tr>' +
+        '<td style="font-size:.72em">' + time + '</td>' +
+        '<td class="mono" style="font-size:.72em">' + esc(e.ip) + '</td>' +
+        '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(e.filename) + '">' + esc(e.filename) + '</td>' +
+        '<td class="mono">' + fmtSize(e.filesize) + '</td>' +
+        '<td class="mono" style="font-weight:700;color:var(--accent)">' + esc(e.code) + '</td></tr>';
+      mc.innerHTML += '<div class="m-card">' +
+        '<div class="m-card-row"><span class="m-label">Kode</span><span class="m-val code">' + esc(e.code) + '</span></div>' +
+        '<div class="m-card-row"><span class="m-label">File</span><span class="m-val" style="max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.filename) + '</span></div>' +
+        '<div class="m-card-row"><span class="m-label">Ukuran</span><span class="m-val mono">' + fmtSize(e.filesize) + '</span></div>' +
+        '<div class="m-card-row"><span class="m-label">IP</span><span class="m-val mono" style="font-size:.78em">' + esc(e.ip) + '</span></div>' +
+        '<div class="m-card-row"><span class="m-label">Waktu</span><span class="m-val" style="font-size:.78em">' + time + '</span></div></div>';
+    }
+  });
+}
+
+// ─── Export CSV ───
+function exportLogCSV() {
+  var data = cachedLogData;
+  if (!data || data.length === 0) {
+    // Try to load first
+    api('GET', '/admin/api/upload-log').then(function(log) {
+      cachedLogData = log;
+      if (!log || log.length === 0) { toast('err', 'Tidak ada data untuk export'); return; }
+      doExport(log);
+    });
+    return;
+  }
+  doExport(data);
+}
+function doExport(log) {
+  var csv = 'Waktu,IP,File,Ukuran,Kode\n';
+  for (var i = 0; i < log.length; i++) {
+    var e = log[i], dt = new Date(e.timestamp);
+    csv += '"' + dt.toLocaleString('id-ID',{hour12:false}) + '","' + (e.ip||'') + '","' + (e.filename||'').replace(/"/g,'""') + '",' + (e.filesize||0) + ',"' + (e.code||'') + '"\n';
+  }
+  var blob = new Blob([csv], {type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'upload-log-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  toast('ok', 'CSV exported: ' + log.length + ' rows');
+}
+
+// ─── Settings ───
+function loadSettingsData() {
+  api('GET', '/admin/api/settings').then(function(d) {
+    cachedSettings = d;
+    document.getElementById('ownerWa').value = d.ownerWhatsapp || '';
+    document.getElementById('expireMinutes').value = d.expireMinutes || 60;
+    document.getElementById('maxFileSizeMB').value = d.maxFileSizeMB || 0;
+    document.getElementById('siteName').value = d.siteName || 'SHIROWAHD';
+    document.getElementById('siteSubtitle').value = d.siteSubtitle || 'Upload & claim video HD';
+    document.getElementById('bannerText').value = d.bannerText || '';
+    document.getElementById('settDomain').value = d.domain || '';
+    document.getElementById('settRateLimit').value = d.rateLimit || 0;
+    document.getElementById('settRateCooldown').value = d.rateCooldown || 0;
+    document.getElementById('settStorageQuota').value = d.storageQuotaMB || 0;
+    document.getElementById('settAutoCleanupInterval').value = d.autoCleanupInterval || 30;
+    // Toggles
+    var acToggle = document.getElementById('autoCleanupToggle');
+    if (d.autoCleanup) acToggle.classList.add('on'); else acToggle.classList.remove('on');
+    // Telegram notif
+    document.getElementById('tgBotToken').value = d.telegramBotToken || '';
+    document.getElementById('tgChatId').value = d.telegramChatId || '';
+    if (d.telegramNotifyUpload) document.getElementById('tgNotifyUpload').classList.add('on'); else document.getElementById('tgNotifyUpload').classList.remove('on');
+    if (d.telegramNotifyClaim) document.getElementById('tgNotifyClaim').classList.add('on'); else document.getElementById('tgNotifyClaim').classList.remove('on');
+    if (d.telegramNotifyError) document.getElementById('tgNotifyError').classList.add('on'); else document.getElementById('tgNotifyError').classList.remove('on');
+
+    renderGroups(d.groups || []);
+    renderChannels(d.channels || []);
+    renderClaimGroups(d.claimGroups || (d.claimGroup ? [d.claimGroup] : []));
+    var mt = document.getElementById('maintenanceToggle'), ml = document.getElementById('maintenanceLabel');
+    if (d.maintenance) { mt.classList.add('on'); ml.textContent = 'Aktif'; }
+    else { mt.classList.remove('on'); ml.textContent = 'Nonaktif'; }
+    syncDashMaint();
+    renderBlacklist(d.ipBlacklist || []);
+  });
+}
+function renderGroups(groups) {
+  var c = document.getElementById('groupsList'); c.innerHTML = '';
+  groups.forEach(function(g) {
+    c.innerHTML += '<div class="item-row"><input type="text" placeholder="Nama" value="' + esc(g.name) + '" class="g-name"><input type="text" placeholder="Link" value="' + esc(g.link) + '" class="g-link"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>';
+  });
+}
+function renderChannels(channels) {
+  var c = document.getElementById('channelsList'); c.innerHTML = '';
+  channels.forEach(function(ch) {
+    c.innerHTML += '<div class="item-row"><input type="text" placeholder="Nama" value="' + esc(ch.name) + '" class="c-name"><input type="text" placeholder="Link" value="' + esc(ch.link) + '" class="c-link"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>';
+  });
+}
+function addGroup() {
+  document.getElementById('groupsList').innerHTML += '<div class="item-row"><input type="text" placeholder="Nama" class="g-name"><input type="text" placeholder="Link" class="g-link"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>';
+}
+function renderClaimGroups(list) {
+  var c = document.getElementById('claimGroupsList'); c.innerHTML = '';
+  (list || []).forEach(function(g) {
+    c.innerHTML += '<div class="item-row"><input type="text" placeholder="Nama" value="' + esc(g.name) + '" class="cg-name"><input type="text" placeholder="https://chat.whatsapp.com/..." value="' + esc(g.link) + '" class="cg-link"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>';
+  });
+}
+function addClaimGroup() {
+  document.getElementById('claimGroupsList').innerHTML += '<div class="item-row"><input type="text" placeholder="Nama" class="cg-name"><input type="text" placeholder="https://chat.whatsapp.com/..." class="cg-link"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>';
+}
+function addChannel() {
+  document.getElementById('channelsList').innerHTML += '<div class="item-row"><input type="text" placeholder="Nama" class="c-name"><input type="text" placeholder="Link" class="c-link"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>';
+}
+function doSave() {
+  var groups = [], channels = [], claimGroups = [];
+  document.querySelectorAll('#groupsList .item-row').forEach(function(r) {
+    var n = r.querySelector('.g-name').value.trim(), l = r.querySelector('.g-link').value.trim();
+    if (n && l) groups.push({ name: n, link: l });
+  });
+  document.querySelectorAll('#channelsList .item-row').forEach(function(r) {
+    var n = r.querySelector('.c-name').value.trim(), l = r.querySelector('.c-link').value.trim();
+    if (n && l) channels.push({ name: n, link: l });
+  });
+  document.querySelectorAll('#claimGroupsList .item-row').forEach(function(r) {
+    var n = r.querySelector('.cg-name').value.trim(), l = r.querySelector('.cg-link').value.trim();
+    if (n && l) claimGroups.push({ name: n, link: l });
+  });
+  var mt = document.getElementById('maintenanceToggle').classList.contains('on');
+  var acOn = document.getElementById('autoCleanupToggle').classList.contains('on');
+  var data = {
+    ownerWhatsapp: document.getElementById('ownerWa').value.trim(),
+    groups: groups, channels: channels, claimGroups: claimGroups,
+    expireMinutes: parseInt(document.getElementById('expireMinutes').value) || 60,
+    maxFileSizeMB: parseInt(document.getElementById('maxFileSizeMB').value) || 0,
+    maintenance: mt,
+    domain: document.getElementById('settDomain').value.trim(),
+    rateLimit: parseInt(document.getElementById('settRateLimit').value) || 0,
+    rateCooldown: parseInt(document.getElementById('settRateCooldown').value) || 0,
+    autoCleanup: acOn,
+    autoCleanupInterval: parseInt(document.getElementById('settAutoCleanupInterval').value) || 30,
+    storageQuotaMB: parseInt(document.getElementById('settStorageQuota').value) || 0
+  };
+  cachedSettings = Object.assign(cachedSettings, data);
+  api('POST', '/admin/api/settings', data).then(function(d) {
+    if (d.ok) toast('ok', 'Pengaturan tersimpan!');
+    else toast('err', d.error || 'Gagal menyimpan');
+  }).catch(function(){toast('err','Koneksi gagal')});
+}
+function toggleMaintenance() {
+  var mt = document.getElementById('maintenanceToggle'), ml = document.getElementById('maintenanceLabel');
+  mt.classList.toggle('on');
+  ml.textContent = mt.classList.contains('on') ? 'Aktif' : 'Nonaktif';
+}
+
+// ─── Branding ───
+function saveBranding() {
+  var data = {
+    siteName: document.getElementById('siteName').value.trim() || 'SHIROWAHD',
+    siteSubtitle: document.getElementById('siteSubtitle').value.trim() || 'Upload & claim video HD',
+    bannerText: document.getElementById('bannerText').value.trim()
+  };
+  api('POST', '/admin/api/settings', data).then(function(d) {
+    if (d.ok) toast('ok', 'Branding tersimpan!');
+    else toast('err', d.error || 'Gagal');
+  }).catch(function(){toast('err','Koneksi gagal')});
+}
+
+// ─── Notifikasi Telegram ───
+function saveNotifikasi() {
+  var data = {
+    telegramBotToken: document.getElementById('tgBotToken').value.trim(),
+    telegramChatId: document.getElementById('tgChatId').value.trim(),
+    telegramNotifyUpload: document.getElementById('tgNotifyUpload').classList.contains('on'),
+    telegramNotifyClaim: document.getElementById('tgNotifyClaim').classList.contains('on'),
+    telegramNotifyError: document.getElementById('tgNotifyError').classList.contains('on')
+  };
+  cachedSettings = Object.assign(cachedSettings, data);
+  api('POST', '/admin/api/settings', data).then(function(d) {
+    if (d.ok) toast('ok', 'Notifikasi tersimpan!');
+    else toast('err', d.error || 'Gagal');
+  }).catch(function(){toast('err','Koneksi gagal')});
+}
+
+// ─── Security ───
+function changePassword() {
+  var cur = document.getElementById('curPwd').value, np = document.getElementById('newPwd').value, cp = document.getElementById('confPwd').value;
+  if (!cur || !np || !cp) { showMsg('pwdMsg', 'err', 'Semua field harus diisi'); return; }
+  if (np !== cp) { showMsg('pwdMsg', 'err', 'Password baru tidak cocok'); return; }
+  if (np.length < 4) { showMsg('pwdMsg', 'err', 'Password baru minimal 4 karakter'); return; }
+  api('POST', '/admin/api/change-password', { currentPassword: cur, newPassword: np }).then(function(d) {
+    if (d.ok) { toast('ok', 'Password berhasil diubah!'); showMsg('pwdMsg','',''); document.getElementById('curPwd').value = ''; document.getElementById('newPwd').value = ''; document.getElementById('confPwd').value = ''; }
+    else showMsg('pwdMsg', 'err', d.error || 'Gagal');
+  }).catch(function(){showMsg('pwdMsg','err','Koneksi gagal')});
+}
+function renderBlacklist(list) {
+  var c = document.getElementById('blacklistItems'); c.innerHTML = '';
+  if (!list || list.length === 0) { c.innerHTML = '<div style="color:var(--text-dim);font-size:.78em;padding:6px 0">Tidak ada IP yang diblokir</div>'; return; }
+  list.forEach(function(ip) {
+    c.innerHTML += '<div class="item-row"><input type="text" value="' + esc(ip) + '" readonly style="opacity:.7"><button class="btn btn-danger btn-sm" onclick="removeBlacklist(\'' + esc(ip) + '\')"><i class="fas fa-trash"></i> Hapus</button></div>';
+  });
+}
+function addBlacklist() {
+  var ip = document.getElementById('newBlacklistIP').value.trim();
+  if (!ip) return;
+  api('POST', '/admin/api/blacklist', { action: 'add', ip: ip }).then(function(d) {
+    if (d.ok) { renderBlacklist(d.ipBlacklist); document.getElementById('newBlacklistIP').value = ''; toast('ok', 'IP ditambahkan ke blacklist'); }
+    else toast('err', d.error || 'Gagal');
+  });
+}
+function removeBlacklist(ip) {
+  api('POST', '/admin/api/blacklist', { action: 'remove', ip: ip }).then(function(d) {
+    if (d.ok) { renderBlacklist(d.ipBlacklist); toast('ok', 'IP dihapus dari blacklist'); }
+    else toast('err', d.error || 'Gagal');
+  });
+}
+
+// ─── FAQ ───
+function toggleFaq(el) {
+  var a = el.nextElementSibling;
+  var isOpen = a.classList.contains('open');
+  document.querySelectorAll('.faq-a').forEach(function(x){x.classList.remove('open')});
+  document.querySelectorAll('.faq-q').forEach(function(x){x.classList.remove('open')});
+  if (!isOpen) { a.classList.add('open'); el.classList.add('open'); }
+}
+
+// ─── Monitor ───
+var logAutoTimer = null;
+function loadMonitor() { loadSystemInfo(); loadProcesses(); loadBotStatus(); }
+function loadSystemInfo() {
+  api('GET', '/admin/api/system').then(function(d) {
+    if (!d.ok) return;
+    var memPct = ((d.mem.used / d.mem.total) * 100).toFixed(0);
+    document.getElementById('monRam').textContent = fmtSize(d.mem.used) + ' / ' + fmtSize(d.mem.total);
+    document.getElementById('monRamBar').style.width = memPct + '%';
+    document.getElementById('monDisk').textContent = d.disk.pct;
+    document.getElementById('monDiskBar').style.width = (parseInt(d.disk.pct) || 0) + '%';
+    var hrs = Math.floor(d.uptime / 3600), mins = Math.floor((d.uptime % 3600) / 60);
+    document.getElementById('monUptime').textContent = hrs + 'h ' + mins + 'm';
+    document.getElementById('monLoad').textContent = d.loadavg;
+    document.getElementById('srvUptime').textContent = hrs + 'h ' + mins + 'm';
+  });
+}
+function loadProcesses() {
+  api('GET', '/admin/api/pm2/list').then(function(d) {
+    if (!d.ok) return;
+    var c = document.getElementById('procList'); c.innerHTML = '';
+    d.processes.forEach(function(p) {
+      var uptimeStr = '-';
+      if (p.status === 'online' && p.uptime) {
+        var secs = Math.floor((Date.now() - p.uptime) / 1000);
+        var h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
+        uptimeStr = h + 'h ' + m + 'm';
+      }
+      var cls = p.status === 'online' ? 'online' : p.status === 'stopped' ? 'stopped' : 'errored';
+      c.innerHTML += '<div class="proc-row">' +
+        '<span class="proc-name">' + esc(p.name) + '</span>' +
+        '<span class="proc-badge ' + cls + '">' + p.status + '</span>' +
+        '<span class="proc-meta">CPU ' + p.cpu + '% | RAM ' + fmtSize(p.mem) + ' | Up ' + uptimeStr + ' | R:' + p.restarts + '</span>' +
+        '<span class="proc-actions">' +
+        '<button class="btn btn-success btn-sm" onclick="pm2Action(\'restart\',\'' + esc(p.name) + '\')"><i class="fas fa-redo"></i></button>' +
+        (p.status === 'online' ? '<button class="btn btn-danger btn-sm" onclick="pm2Action(\'stop\',\'' + esc(p.name) + '\')"><i class="fas fa-stop"></i></button>' : '<button class="btn btn-add btn-sm" onclick="pm2Action(\'start\',\'' + esc(p.name) + '\')"><i class="fas fa-play"></i></button>') +
+        '</span></div>';
+    });
+  });
+}
+function pm2Action(action, name) {
+  if (action === 'stop' && !confirm('Stop ' + name + '?')) return;
+  api('POST', '/admin/api/pm2/action', { action: action, name: name }).then(function(d) {
+    if (d.ok) { toast('ok', name + ' ' + action + ' berhasil'); setTimeout(loadProcesses, 1000); }
+    else toast('err', d.error || 'Gagal');
+  });
+}
+function loadBotStatus() {
+  api('GET', '/admin/api/bot/status').then(function(d) {
+    if (!d.ok) return;
+    document.getElementById('monBotStatus').innerHTML = d.botOnline ? '<span style="color:var(--green)">Online</span>' : '<span style="color:var(--red)">Offline</span>';
+    document.getElementById('monBotSession').innerHTML = d.hasSession ? '<span style="color:var(--green)">Ada</span>' : '<span style="color:var(--red)">Tidak ada</span>';
+    document.getElementById('monBotRestarts').textContent = d.restarts;
+  });
+}
+function doPairing() {
+  var num = document.getElementById('pairNumber').value.trim();
+  if (!num) return;
+  if (!confirm('Pairing nomor ' + num + '? Session lama akan dihapus!')) return;
+  api('POST', '/admin/api/bot/pair', { number: num }).then(function(d) {
+    if (d.ok) { toast('ok', d.message || 'Pairing dimulai! Cek logs.'); setTimeout(function() { loadBotStatus(); loadProcesses(); }, 3000); }
+    else showMsg('pairMsg', 'err', d.error || 'Gagal');
+    setTimeout(function(){showMsg('pairMsg','','')}, 6000);
+  });
+}
+function loadLogs() {
+  var name = document.getElementById('logProcess').value, lines = document.getElementById('logLines').value;
+  var box = document.getElementById('logBox'); box.textContent = 'Loading...';
+  api('GET', '/admin/api/pm2/logs?name=' + name + '&lines=' + lines).then(function(d) {
+    box.textContent = d.logs || 'Tidak ada log'; box.scrollTop = box.scrollHeight;
+  }).catch(function() { box.textContent = 'Gagal memuat logs'; });
+  clearInterval(logAutoTimer);
+  if (document.getElementById('logAuto').checked) {
+    logAutoTimer = setInterval(function() {
+      if (!document.getElementById('logAuto').checked) { clearInterval(logAutoTimer); return; }
+      var n = document.getElementById('logProcess').value, l = document.getElementById('logLines').value;
+      api('GET', '/admin/api/pm2/logs?name=' + n + '&lines=' + l).then(function(d) {
+        var b = document.getElementById('logBox'); b.textContent = d.logs || 'Tidak ada log'; b.scrollTop = b.scrollHeight;
+      });
+    }, 10000);
+  }
+}
+</script>
+</body>
+</html>

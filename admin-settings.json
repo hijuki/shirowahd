@@ -1,0 +1,38 @@
+{
+  "ownerWhatsapp": "6282262421536",
+  "groups": [
+    {
+      "name": "SHIROWAHD",
+      "link": "https://chat.whatsapp.com/L4J6dYuP3bX0aNzmMW6pnp"
+    }
+  ],
+  "channels": [
+    {
+      "name": "SHIROWAHD",
+      "link": "https://whatsapp.com/channel/0029Vb9EUEx30LKYoGYqwg0u"
+    }
+  ],
+  "claimGroups": [
+    {
+      "name": "SHIROWAHD",
+      "link": "https://chat.whatsapp.com/LWKuppGygGW0z0Rq1lr1qo"
+    },
+    {
+      "name": "MAYA ILANG",
+      "link": "https://chat.whatsapp.com/KjMH5lqh85fIOwOu4VGxMq"
+    },
+    {
+      "name": "TEST",
+      "link": "https://chat.whatsapp.com/E597ARKxnLnLSpTVBx5G4C"
+    }
+  ],
+  "adminPassword": "@Hillz126",
+  "maintenance": false,
+  "ipBlacklist": [],
+  "siteName": "SHIROWAHD",
+  "siteSubtitle": "JADIKAN SW MU BERKUALITAS",
+  "expireMinutes": 60,
+  "maxFileSizeMB": 100,
+  "bannerText": "JIKA ADA BUG HUBUNGI ADMIN KARENA\n MASIH BETA BELUM FINAL",
+  "domain": ""
+}
