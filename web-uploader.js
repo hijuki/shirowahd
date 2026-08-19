@@ -615,50 +615,7 @@ const server = http.createServer(async (req, res) => {
 
   // === MONITORING API ===
 
-  if (req.method === 'GET' && url === '/admin/api/pm2/list') {
-    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
-    try {
-      const out = execSync('pm2 jlist 2>/dev/null', { timeout: 5000 }).toString();
-      const procs = JSON.parse(out).map(p => ({
-        name: p.name, id: p.pm_id, status: p.pm2_env?.status || 'unknown',
-        cpu: p.monit?.cpu || 0, mem: p.monit?.memory || 0,
-        uptime: p.pm2_env?.pm_uptime || 0, restarts: p.pm2_env?.restart_time || 0,
-        pid: p.pid
-      }));
-      jsonRes(res, 200, { ok: true, processes: procs });
-    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
-    return;
-  }
-
-  if (req.method === 'POST' && url === '/admin/api/pm2/action') {
-    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
-    try {
-      const body = await readBody(req);
-      const { action, name } = JSON.parse(body.toString());
-      if (!['restart','stop','start'].includes(action) || !name) {
-        jsonRes(res, 400, { ok: false, error: 'Invalid action/name' }); return;
-      }
-      if (action === 'stop' && name === 'web-uploader') {
-        jsonRes(res, 400, { ok: false, error: 'Tidak bisa stop web-uploader dari panel' }); return;
-      }
-      execSync(`pm2 ${action} ${JSON.stringify(name)} 2>&1`, { timeout: 10000 });
-      jsonRes(res, 200, { ok: true });
-    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
-    return;
-  }
-
-  if (req.method === 'GET' && (url === '/admin/api/pm2/logs' || url.startsWith('/admin/api/pm2/logs?'))) {
-    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
-    try {
-      const params = new URL(req.url, 'http://localhost').searchParams;
-      const name = params.get('name') || 'ourin';
-      const lines = Math.min(parseInt(params.get('lines')) || 50, 200);
-      const safe = name.replace(/[^a-zA-Z0-9_-]/g, '');
-      const out = execSync(`pm2 logs ${safe} --nostream --lines ${lines} 2>&1`, { timeout: 5000 }).toString();
-      jsonRes(res, 200, { ok: true, logs: out });
-    } catch (e) { jsonRes(res, 200, { ok: true, logs: e.stdout?.toString() || e.message }); }
-    return;
-  }
+    // ponytail: pm2 endpoints removed — not used on Pterodactyl
 
   if (req.method === 'GET' && url === '/admin/api/system') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
@@ -686,16 +643,12 @@ const server = http.createServer(async (req, res) => {
       if (!number || !/^\d{10,15}$/.test(number)) {
         jsonRes(res, 400, { ok: false, error: 'Nomor tidak valid (10-15 digit)' }); return;
       }
-      try {
-        const jlist = JSON.parse(execSync('pm2 jlist 2>/dev/null', { timeout: 5000 }).toString());
-        const ourin = jlist.find(p => p.name === 'ourin');
-        if (ourin && ourin.pm2_env?.status === 'online') {
-          jsonRes(res, 400, { ok: false, error: 'Bot sudah online. Stop dulu sebelum pairing ulang.' }); return;
-        }
-      } catch {}
-      execSync('rm -rf /opt/ourin/storage/session/* 2>/dev/null; true', { timeout: 5000 });
-      execSync(`PAIR_NUMBER=${number} pm2 restart ourin --update-env 2>&1`, { timeout: 10000 });
-      jsonRes(res, 200, { ok: true, message: 'Pairing dimulai untuk ' + number + '. Cek logs untuk kode pairing.' });
+      // ponytail: on Pterodactyl, no pm2. Clear session + set env for next restart.
+      const sessionDir = join(__dirname, 'storage', 'session');
+      try { execSync('rm -rf ' + JSON.stringify(sessionDir + '/*') + ' 2>/dev/null; true', { timeout: 5000 }); } catch {}
+      // Write pair number to env file so bot picks it up
+      writeFileSync(join(__dirname, '.pair-number'), number);
+      jsonRes(res, 200, { ok: true, message: 'Session dihapus. Restart server dari Pterodactyl panel, bot akan pairing dengan nomor ' + number + '.' });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
   }
@@ -703,16 +656,21 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url === '/admin/api/bot/status') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     try {
-      const hasSession = existsSync('/opt/ourin/storage/session/creds.json');
-      const jlist = JSON.parse(execSync('pm2 jlist 2>/dev/null', { timeout: 5000 }).toString());
-      const ourin = jlist.find(p => p.name === 'ourin');
+      const sessionDir = join(__dirname, 'storage', 'session');
+      const hasSession = existsSync(join(sessionDir, 'creds.json'));
+      // ponytail: detect bot online by checking if index.js process is running (spawned by start-all.js)
+      let botOnline = false;
+      try {
+        const ps = execSync('ps aux 2>/dev/null | grep "node.*index.js" | grep -v grep', { timeout: 3000 }).toString().trim();
+        botOnline = ps.length > 0;
+      } catch { /* grep returns 1 if no match */ }
       jsonRes(res, 200, {
         ok: true,
-        botOnline: ourin?.pm2_env?.status === 'online',
+        botOnline,
         hasSession,
-        pid: ourin?.pid || null,
-        uptime: ourin?.pm2_env?.pm_uptime || null,
-        restarts: ourin?.pm2_env?.restart_time || 0
+        pid: process.pid,
+        uptime: Date.now() - (process.uptime() * 1000),
+        restarts: 0
       });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
