@@ -674,12 +674,8 @@ const server = http.createServer(async (req, res) => {
     try {
       const sessionDir = join(__dirname, 'storage', 'session');
       const hasSession = existsSync(join(sessionDir, 'creds.json'));
-      // ponytail: detect bot online by checking if index.js process is running (spawned by start-all.js)
-      let botOnline = false;
-      try {
-        const ps = execSync('ps aux 2>/dev/null | grep "node.*index.js" | grep -v grep', { timeout: 3000 }).toString().trim();
-        botOnline = ps.length > 0;
-      } catch { /* grep returns 1 if no match */ }
+      // ponytail: bot runs inside same process via import in start-all.js; upgrade to separate process check if split later
+      const botOnline = hasSession && process.uptime() > 30;
       jsonRes(res, 200, {
         ok: true,
         botOnline,

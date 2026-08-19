@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================
-# OURIN (SHIROWAHD) WA Bot - One-Click Setup
+# SHIROWAHD WA Bot - One-Click Setup
 # Usage: cd /opt/ourin && bash setup.sh
 # ============================================
 
@@ -10,7 +10,7 @@ PROJECT_DIR="$(pwd)"
 
 echo ""
 echo "╔══════════════════════════════════════════╗"
-echo "║   🚀 OURIN (SHIROWAHD) Setup v3.3       ║"
+echo "║   🚀 SHIROWAHD Setup v3.3.0              ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
 

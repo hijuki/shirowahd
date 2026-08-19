@@ -192,7 +192,7 @@ async function handleCommand(m, sock) {
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
                   newsletterJid: "120363400911374213@newsletter",
-                  newsletterName: "Ourin Case System",
+                  newsletterName: "SHIROWAHD Case System",
                   serverMessageId: 127,
                 },
               },
@@ -280,7 +280,7 @@ async function handleCommand(m, sock) {
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
                   newsletterJid: "120363400911374213@newsletter",
-                  newsletterName: "Ourin Plugin System",
+                  newsletterName: "SHIROWAHD Plugin System",
                   serverMessageId: 127,
                 },
               },
