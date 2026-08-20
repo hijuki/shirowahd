@@ -16,4 +16,8 @@ database/lid-cache.json
 database/prefix.json
 database/sewa.json
 database/stickerCommands.json
+database/cpanel/
 storage/
+assets/image/shuffle/
+src/data/autoanime_winbu_sent.json
+src/data/autoanime_winbu_state.json
