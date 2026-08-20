@@ -140,8 +140,11 @@ function checkPermission(m, pluginConfig) {
 
 function checkMode(m, getActiveJadibots) {
   const db = getDatabase();
+  if (!db || !db.db || !db.db.data || !db.db.data.settings) {
+    return { allowed: true, reason: "db not ready" };
+  }
   const dbMode = db.setting("botMode");
-  const mode = dbMode || config.config.mode || "public";
+  const mode = dbMode || config.config?.mode || "public";
 
   const onlyGc = db.setting("onlyGc");
   const onlyPc = db.setting("onlyPc");
