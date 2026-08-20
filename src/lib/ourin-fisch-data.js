@@ -56,7 +56,7 @@ const islands = {
     { name: "Mushgrove Crab", rarity: "legendary", avgValue: 32200, minKg: 1, maxKg: 1 },
     { name: "Alligator", rarity: "mythic", avgValue: 68600, minKg: 1, maxKg: 225 },
     { name: "Handfish", rarity: "godly", avgValue: 156800, minKg: 1, maxKg: 9 },
-    { name: "RocketFuel", rarity: "secret", avgValue: 518000, minKg: 5, maxKg: 1.25 },
+    { name: "RocketFuel", rarity: "secret", avgValue: 518000, minKg: 1.25, maxKg: 5 },
     { name: "Resin", rarity: "secret", avgValue: 560000, minKg: 1, maxKg: 7 },
     { name: "Spore Dragon", rarity: "godly", avgValue: 165000, minKg: 80, maxKg: 600 },
   ]},

@@ -2,12 +2,12 @@ import { UnlimitedAI } from "../../src/scraper/unlimitedai.js";
 import te from "../../src/lib/ourin-error.js";
 
 const pluginConfig = {
-  name: "ourin-ai",
-  alias: ["ourinai", "ourin"],
+  name: "shirowahd-ai",
+  alias: ["shirowahd", "swai"],
   category: "ai",
-  description: "Chat dengan Ourin AI — Asisten bot cerdas",
-  usage: ".ourin-ai <pertanyaan>",
-  example: ".ourin-ai Apa itu Node.js?",
+  description: "Chat dengan SHIROWAHD AI — Asisten bot cerdas",
+  usage: ".shirowahd-ai <pertanyaan>",
+  example: ".shirowahd-ai Apa itu Node.js?",
   isOwner: false,
   isPremium: false,
   isGroup: false,
@@ -21,12 +21,12 @@ async function handler(m, { sock }) {
   const text = m.args.join(" ");
   if (!text) {
     return m.reply(
-      `🤖 *Ourin AI*\n\n` +
+      `🤖 *SHIROWAHD AI*\n\n` +
         `> Asisten cerdas siap membantu\n\n` +
         `*PENGGUNAAN:*\n` +
-        `> *${m.prefix}ourin-ai <pertanyaan>*\n\n` +
+        `> *${m.prefix}shirowahd-ai <pertanyaan>*\n\n` +
         `*CONTOH:*\n` +
-        `> *${m.prefix}ourin-ai Apa itu Node.js?*`
+        `> *${m.prefix}shirowahd-ai Apa itu Node.js?*`
     );
   }
 
@@ -37,7 +37,7 @@ async function handler(m, { sock }) {
 
     if (!result.status) {
       await m.react("☢");
-      return m.reply(`❌ *Ourin AI Error*\n\n> ${result.error || "Gagal mendapatkan respons"}`);
+      return m.reply(`❌ *SHIROWAHD AI Error*\n\n> ${result.error || "Gagal mendapatkan respons"}`);
     }
 
     await m.react("✅");

@@ -308,10 +308,7 @@ function isOwner(number) {
 
   if (config.bot?.number) {
     const botNum = config.bot.number.replace(/[^0-9]/g, "");
-    if (
-      botNum &&
-      (cleanNumber.includes(botNum) || botNum.includes(cleanNumber))
-    )
+    if (botNum && cleanNumber === botNum)
       return true;
   }
 
@@ -321,12 +318,7 @@ function isOwner(number) {
     if (config.owner?.number) {
       const match = config.owner.number.some((own) => {
         const c = own.replace(/[^0-9]/g, "");
-        return (
-          c &&
-          (cleanNumber === c ||
-            cleanNumber.endsWith(c) ||
-            c.endsWith(cleanNumber))
-        );
+        return c && cleanNumber === c;
       });
       if (match) return true;
     }
@@ -334,12 +326,7 @@ function isOwner(number) {
     if (db?.data && Array.isArray(db.data.owner)) {
       const match = db.data.owner.some((own) => {
         const c = String(own).replace(/[^0-9]/g, "");
-        return (
-          c &&
-          (cleanNumber === c ||
-            cleanNumber.endsWith(c) ||
-            c.endsWith(cleanNumber))
-        );
+        return c && cleanNumber === c;
       });
       if (match) return true;
     }
@@ -348,12 +335,7 @@ function isOwner(number) {
       if (Array.isArray(definedOwner)) {
         const match = definedOwner.some((own) => {
           const c = String(own).replace(/[^0-9]/g, "");
-          return (
-            c &&
-            (cleanNumber === c ||
-              cleanNumber.endsWith(c) ||
-              c.endsWith(cleanNumber))
-          );
+          return c && cleanNumber === c;
         });
         if (match) return true;
       }
@@ -382,11 +364,7 @@ function isPremium(number) {
       .split(":")[0]
       .split("@")[0]
       .replace(/[^0-9]/g, "");
-    return (
-      cleanNumber === cleanPremium ||
-      cleanNumber.endsWith(cleanPremium) ||
-      cleanPremium.endsWith(cleanNumber)
-    );
+    return cleanNumber === cleanPremium;
   });
 
   if (inConfig) return true;
@@ -434,11 +412,7 @@ function isPremium(number) {
           .split(":")[0]
           .split("@")[0]
           .replace(/[^0-9]/g, "");
-        return (
-          cleanNumber === cleanPremium ||
-          cleanNumber.endsWith(cleanPremium) ||
-          cleanPremium.endsWith(cleanNumber)
-        );
+        return cleanNumber === cleanPremium;
       });
       if (inDb) return true;
     }
@@ -463,11 +437,7 @@ function isPartner(number) {
       .split(":")[0]
       .split("@")[0]
       .replace(/[^0-9]/g, "");
-    return (
-      cleanNumber === cleanPartner ||
-      cleanNumber.endsWith(cleanPartner) ||
-      cleanPartner.endsWith(cleanNumber)
-    );
+    return cleanNumber === cleanPartner;
   });
 
   if (inConfig) return true;
@@ -529,11 +499,7 @@ function isBanned(number) {
       .split(":")[0]
       .split("@")[0]
       .replace(/[^0-9]/g, "");
-    return (
-      cleanNumber === cleanBanned ||
-      cleanNumber.endsWith(cleanBanned) ||
-      cleanBanned.endsWith(cleanNumber)
-    );
+    return cleanNumber === cleanBanned;
   });
 }
 
@@ -545,7 +511,7 @@ function isSelf(number) {
   if (!number || !config.bot.number) return false;
   const cleanNumber = number.replace(/[^0-9]/g, "");
   const botNumber = config.bot.number.replace(/[^0-9]/g, "");
-  return cleanNumber.includes(botNumber) || botNumber.includes(cleanNumber);
+  return cleanNumber === botNumber;
 }
 
 function getOwnerName(number) {
@@ -559,12 +525,7 @@ function getOwnerName(number) {
   if (config.owner?.number) {
     const isMainOwner = config.owner.number.some((own) => {
       const c = own.replace(/[^0-9]/g, "");
-      return (
-        c &&
-        (cleanNumber === c ||
-          cleanNumber.endsWith(c) ||
-          c.endsWith(cleanNumber))
-      );
+      return c && cleanNumber === c;
     });
     if (isMainOwner) return config.owner?.name || "Owner";
   }

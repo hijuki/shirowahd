@@ -31,7 +31,7 @@ export function preloadAssets(configAssets) {
 import config from '../../config.js';
 
 /**
- * Get the cached asset buffer by key (e.g. 'ourin', 'ourin2').
+ * Get the cached asset buffer by key (e.g. 'hillz', 'hillz2').
  * If not in cache but available in config, loads it synchronously.
  * 
  * @param {string} key - The asset key defined in config.assets

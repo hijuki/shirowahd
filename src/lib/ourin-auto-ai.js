@@ -180,6 +180,14 @@ function isOnCooldown(userId) {
 }
 
 function setCooldown(userId) {
+  // ponytail: simple size cap; upgrade to LRU if needed
+  if (userCooldowns.size > 1000) {
+    const cutoff = Date.now() - COOLDOWN_MS * 10;
+    for (const [k, v] of userCooldowns) {
+      if (v < cutoff) userCooldowns.delete(k);
+    }
+    if (userCooldowns.size > 1000) userCooldowns.clear();
+  }
   userCooldowns.set(userId, Date.now());
 }
 

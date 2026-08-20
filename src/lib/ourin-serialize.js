@@ -66,8 +66,14 @@ function invalidatePrefixCache() {
 }
 
 const _thumbCache = {};
+const _THUMB_CACHE_MAX = 1000;
 async function getCachedThumb(filePath) {
   if (_thumbCache[filePath] !== undefined) return _thumbCache[filePath];
+
+  // ponytail: simple size cap; upgrade to LRU if needed
+  if (Object.keys(_thumbCache).length > _THUMB_CACHE_MAX) {
+    for (const k of Object.keys(_thumbCache)) { delete _thumbCache[k]; }
+  }
 
   // Try AssetManager first if it's a known file name
   const basename = filePath ? filePath.split('/').pop().split('.')[0] : null;
@@ -92,6 +98,7 @@ async function getCachedThumb(filePath) {
 }
 
 let _sharpThumbCache = {};
+const _SHARP_CACHE_MAX = 500;
 let _sharpInstance = null;
 async function _getSharp() {
   if (!_sharpInstance) _sharpInstance = (await import("sharp")).default;
@@ -100,6 +107,10 @@ async function _getSharp() {
 async function getCachedSharpThumb(filePath, w, h) {
   const key = `${filePath}_${w}x${h}`;
   if (_sharpThumbCache[key] !== undefined) return _sharpThumbCache[key];
+  // ponytail: simple size cap; upgrade to LRU if needed
+  if (Object.keys(_sharpThumbCache).length > _SHARP_CACHE_MAX) {
+    _sharpThumbCache = {};
+  }
   try {
     const raw = await getCachedThumb(filePath);
     if (raw) {
@@ -1089,7 +1100,7 @@ async function serialize(sock, msg, store = {}) {
             "status": "INQUIRY",
             "surface": "CATALOG",
             "message": text,
-            "orderTitle": "CONTOL",
+            "orderTitle": "",
             "token": "SDsdafma",
             "totalAmount1000": "0",
             "totalCurrencyCode": "IDR",

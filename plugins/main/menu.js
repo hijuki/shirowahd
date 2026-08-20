@@ -624,7 +624,7 @@ ${readmore}${s}`
                   },
                   contextInfo: {
                     isForwarded: true,
-                    fprwardingScore: 9,
+                    forwardingScore: 9,
                     participant: "0@s.whatsapp.net",
                     quotedMessage: {
                       conversation: `${config.bot?.name}`
@@ -961,7 +961,7 @@ _i am an automated system (WhatsApp bot) that can help to do something search an
 *\`乂 I N F O - U S E R\`*
 ┌ ◦ Nama : ${m.pushName}
 │ ◦ Status : ${m.isPremium ? "💎 Premium" : m.isOwner ? "👑 Owner" : "🏷️ Free"}
-│ ◦ Mode : ${config.mode === "pblic" ? "Bisa digunakan semua" : "Hanya Owner :b"}
+│ ◦ Mode : ${config.mode === "public" ? "Bisa digunakan semua" : "Hanya Owner :b"}
 │ ◦ Nomor : @${m.sender.split("@")[0]}
 └ ◦ ${greeting}
 `

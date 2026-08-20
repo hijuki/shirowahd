@@ -1104,28 +1104,6 @@ async function startConnection(options = {}) {
     }
   });
 
-  sock.ev.on("group-participants.update", async (update) => {
-    if (options.onGroupUpdate) {
-      _groupEventQueue.push({
-        handler: options.onGroupUpdate,
-        args: [update, sock],
-      });
-      _processGroupQueue();
-    }
-  });
-
-  sock.ev.on("groups.update", async (updates) => {
-    for (const update of updates) {
-      if (options.onGroupSettingsUpdate) {
-        try {
-          await options.onGroupSettingsUpdate(update, sock);
-        } catch (error) {
-          console.error("[GroupsUpdate] Error:", error.message);
-        }
-      }
-    }
-  });
-
   sock.ev.on("messages.update", async (updates) => {
     if (options.onMessageUpdate) {
       await options.onMessageUpdate(updates, sock);

@@ -11,7 +11,7 @@
  * JANGAN HAPUS/GANTI CREDITS & THANKS TO
  * JANGAN DIJUAL YA MEK
  * 
- * Saluran Resmi Ourin:
+ * Saluran Resmi ShiroWAHD:
  * https://whatsapp.com/channel/0029VbFGkAF9cDDV1LYP1W3v 
  * 
  */
@@ -46,7 +46,7 @@ function getTempDir() {
 const DEFAULT_METADATA = {
     packname: 'HILLZ',
     author: 'Bot',
-    packId: 'com.ourin.sticker',
+    packId: 'com.shirowahd.sticker',
     emojis: ['🤖']
 };
 

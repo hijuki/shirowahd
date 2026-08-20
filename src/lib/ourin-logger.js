@@ -66,7 +66,7 @@ function writeLog(kind, label, detail = "") {
   };
   const tag = tags[kind] || SYM.info;
 
-  // Format: [  OK  ] Started OURIN AI
+  // Format: [  OK  ] Started SHIROWAHD AI
   const msg = `${tag} ${chalk.cyanBright(label)}${detail ? " " + cWhite(detail) : ""}`;
   console.log(msg);
 }
@@ -131,18 +131,18 @@ async function runLoader(text = "memuat", options = {}) {
 }
 
 async function playBootSequence(info = {}) {
-  const { name = "OURIN", version = "3.3", mode = "public" } = info;
+  const { name = "SHIROWAHD", version = "3.3", mode = "public" } = info;
   console.log("");
   console.log(chalk.cyan(`
-          ██████╗ ██╗   ██╗██████╗ ██╗███╗   ██╗
-         ██╔═══██╗██║   ██║██╔══██╗██║████╗  ██║
-         ██║   ██║██║   ██║██████╔╝██║██╔██╗ ██║
-         ██║   ██║██║   ██║██╔══██╗██║██║╚██╗██║
-         ╚██████╔╝╚██████╔╝██║  ██║██║██║ ╚████║
-          ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
+     ███████╗██╗  ██╗██╗██████╗  ██████╗ ██╗    ██╗ █████╗ ██╗  ██╗██████╗
+     ██╔════╝██║  ██║██║██╔══██╗██╔═══██╗██║    ██║██╔══██╗██║  ██║██╔══██╗
+     ███████╗███████║██║██████╔╝██║   ██║██║ █╗ ██║███████║███████║██║  ██║
+     ╚════██║██╔══██║██║██╔══██╗██║   ██║██║███╗██║██╔══██║██╔══██║██║  ██║
+     ███████║██║  ██║██║██║  ██║╚██████╔╝╚███╔███╔╝██║  ██║██║  ██║██████╔╝
+     ╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
 `));
-  console.log(`         ${chalk.magenta.bold("►")} ${chalk.white("OURIN MULTI-DEVICE BOT")} ${chalk.gray(`v${version}`)}`);
-  console.log(`         ${chalk.magenta("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")}`);
+  console.log(`         ${chalk.magenta.bold("►")} ${chalk.white("SHIROWAHD MULTI-DEVICE BOT")} ${chalk.gray(`v${version}`)}`);
+  console.log(`         ${chalk.magenta("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")}`);
   console.log("");
   console.log(`${makeTag("BOOT", true)} ${cWhite(`Memulai Sistem Utama...`)}`);
   console.log(`${makeTag("INFO")} ${cWhite(`Mode: ${chalk.cyan(mode)}`)}`);

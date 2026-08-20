@@ -40,6 +40,14 @@ function gpMsg(key, replacements = {}) {
 }
 
 function cacheMessage(key, message, content) {
+  // ponytail: purge expired entries when cache is large
+  if (messageCache.size > CACHE_MAX_SIZE) {
+    const now = Date.now();
+    for (const [k, v] of messageCache) {
+      if (now - v.timestamp > CACHE_EXPIRY) messageCache.delete(k);
+    }
+  }
+
   messageCache.set(key, {
     message,
     content,

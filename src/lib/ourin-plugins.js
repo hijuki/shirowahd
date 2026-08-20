@@ -280,7 +280,7 @@ function printPluginTable(plugins) {
  * @param {string} pluginsDir - Path ke directory plugins
  * @returns {number} Jumlah plugin yang berhasil dimuat
  * @example
- * const count = loadPlugins('./ourin-plugins');
+ * const count = loadPlugins('./plugins');
  * console.log(`Loaded ${count} plugins`);
  */
 async function loadPlugins(pluginsDir) {
@@ -468,7 +468,7 @@ function getPluginInfo(name) {
  * @param {string} name - Nama command untuk reload
  * @returns {boolean} True jika berhasil
  */
-function reloadPlugin(name) {
+async function reloadPlugin(name) {
   const plugin = getPlugin(name);
   if (!plugin || !plugin.filePath) return false;
 
@@ -488,7 +488,7 @@ function reloadPlugin(name) {
     }
   }
 
-  const newPlugin = loadPlugin(plugin.filePath);
+  const newPlugin = await loadPlugin(plugin.filePath);
   if (newPlugin && registerPlugin(newPlugin)) {
     logger.success("plugin", `reloaded: ${name}`);
     return true;

@@ -562,7 +562,7 @@ class FgsiApiProvider extends OurinApiProvider {
 }
 
 /**
- * API manager terpusat untuk provider eksternal Ourin.
+ * API manager terpusat untuk provider eksternal ShiroWAHD.
  */
 class OurinApiManager {
   /**

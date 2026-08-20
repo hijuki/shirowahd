@@ -69,8 +69,9 @@ export function tokenize(text) {
   const tokens = [];
   for (const seg of raw) {
     if (seg.type === "emoji") {
-
-
+      // Render emoji as text token so it appears in output
+      if (tokens.length > 0) tokens.push({ type: "space" });
+      tokens.push({ type: "text", value: seg.value });
     } else {
       const words = seg.value.split(/\s+/).filter(w => w.length > 0);
       words.forEach(w => {

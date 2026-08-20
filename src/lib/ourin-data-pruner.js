@@ -1,4 +1,5 @@
 import { logger } from './ourin-logger.js'
+import { getDatabase } from './ourin-database.js'
 const INACTIVE_THRESHOLD = 14 * 24 * 60 * 60 * 1000
 const PRUNE_INTERVAL = 6 * 60 * 60 * 1000
 
@@ -22,12 +23,13 @@ function startDailyPruner() {
             if (users && typeof users === 'object') {
                 for (const [jid, user] of Object.entries(users)) {
                     const isProtected =
-                        user.premium ||
+                        user.isPremium ||
                         user.owner ||
                         user.partner ||
                         user.banned
 
-                    if (!isProtected && user.lastSeen && user.lastSeen < threshold) {
+                    const lastSeenTs = typeof user.lastSeen === 'string' ? new Date(user.lastSeen).getTime() : user.lastSeen
+                    if (!isProtected && lastSeenTs && lastSeenTs < threshold) {
                         delete users[jid]
                         prunedUsers++
                     }
@@ -37,7 +39,8 @@ function startDailyPruner() {
             const groups = db.db.data.groups
             if (groups && typeof groups === 'object') {
                 for (const [jid, group] of Object.entries(groups)) {
-                    if (group.lastActivity && group.lastActivity < threshold) {
+                    const lastActivityTs = typeof group.lastActivity === 'string' ? new Date(group.lastActivity).getTime() : group.lastActivity
+                    if (lastActivityTs && lastActivityTs < threshold) {
                         delete groups[jid]
                         prunedGroups++
                     }

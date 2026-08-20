@@ -53,15 +53,15 @@ async function tiktokDl(url) {
     data.push(
       {
         type: "watermark",
-        url: "https://www.tikwm.com" + res?.wmplay || "/undefined",
+        url: "https://www.tikwm.com" + (res?.wmplay || "/undefined"),
       },
       {
         type: "nowatermark",
-        url: "https://www.tikwm.com" + res?.play || "/undefined",
+        url: "https://www.tikwm.com" + (res?.play || "/undefined"),
       },
       {
         type: "nowatermark_hd",
-        url: "https://www.tikwm.com" + res?.hdplay || "/undefined",
+        url: "https://www.tikwm.com" + (res?.hdplay || "/undefined"),
       },
     );
   }
