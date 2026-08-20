@@ -148,7 +148,7 @@ async function safeReply(m, text, options = {}) {
 async function safeReact(m, emoji) {
   try {
     await sendWithRetry(() => m.react(emoji));
-  } catch (error) {}
+  } catch (error) { /* send optional */ }
 }
 async function handler(m, { sock }) {
   const db = getDatabase();

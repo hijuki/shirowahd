@@ -27,7 +27,7 @@ try {
     "hillz-games.jpg",
   );
   if (fs.existsSync(thumbPath)) thumbFun = fs.readFileSync(thumbPath);
-} catch (e) {}
+} catch (e) { /* asset optional */ }
 
 const loveQuotes = [
   "Cinta sejati tidak pernah mengenal jarak 💕",

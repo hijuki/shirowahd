@@ -116,7 +116,7 @@ async function handler(m, { sock }) {
           ).data,
         );
       }
-    } catch {}
+    } catch { /* pp optional */ }
 
     const saluranId = config.saluran?.id || "120363413208281480@newsletter";
     const saluranName = config.saluran?.name || config.bot?.name || "SHIROWAHD";
@@ -159,7 +159,7 @@ async function handler(m, { sock }) {
           { image: resized },
           { upload: sock.waUploadToServer },
         );
-      } catch {}
+      } catch { /* upload optional */ }
 
       const msg = generateWAMessageFromContent(
         m.chat,

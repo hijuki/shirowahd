@@ -1,6 +1,5 @@
 import axios from 'axios'
 import { uploadImage } from '../../src/lib/ourin-uploader.js'
-import te from '../../src/lib/ourin-error.js'
 import { serialize } from '../../src/lib/ourin-serialize.js'
 import { parsePhoneNumber } from 'awesome-phonenumber'
 
@@ -90,7 +89,7 @@ async function handler(m, { sock }) {
                 if (pn && pn.valid && pn.number && pn.number.international) {
                     return pn.number.international.replace(/-/g, ' ')
                 }
-            } catch (e) {}
+            } catch (e) { /* ignored */ }
             return "+" + numStr.split('@')[0]
         }
 

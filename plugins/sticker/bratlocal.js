@@ -379,7 +379,7 @@ async function createBratVideo(text, template) {
     const videoBuffer = fs.readFileSync(outputPath);
     return videoBuffer;
   } finally {
-    await fsp.rm(tmpDir, { recursive: true, force: true }).catch(() => { });
+    await fsp.rm(tmpDir, { recursive: true, force: true }).catch(() => { /* cleanup */ });
   }
 }
 
@@ -422,7 +422,7 @@ async function handler(m, { sock }) {
         author: config.sticker.author
       });
 
-      try { fs.unlinkSync(tempPath); } catch (e) { }
+      try { fs.unlinkSync(tempPath); } catch (e) { /* ignored */ }
     } else {
       const imageBuffer = await createBratImage(inputText, template);
       await sock.sendImageAsSticker(m.chat, imageBuffer, m, {

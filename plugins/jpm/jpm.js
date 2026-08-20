@@ -18,8 +18,6 @@ import {
 import config from "../../config.js";
 import te from "../../src/lib/ourin-error.js";
 import { saluranCtx } from "../../src/lib/ourin-context.js";
-import util from "util";
-import axios from "axios";
 import path from "path";
 import fs from "fs";
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
@@ -71,7 +69,7 @@ const jpmSessions = {};
 let cachedThumb = null;
 try {
   cachedThumb = getAssetBuffer("hillz2");
-} catch {}
+} catch { /* asset optional */ }
 
 function getVerifiedQuoted() {
   const botName = config.bot?.name || "SHIROWAHD";
@@ -211,7 +209,7 @@ async function sendInteractiveMessage(
         { image: cachedThumb },
         { upload: sock.waUploadToServer },
       );
-    } catch {}
+    } catch { /* upload optional */ }
   }
 
   const botName = config.bot?.name || "SHIROWAHD";
@@ -590,17 +588,17 @@ async function handleJpmMain(m, sock, db, fullInput) {
     try {
       mediaBuffer = await qmsg.download();
       mediaType = "image";
-    } catch {}
+    } catch { /* download optional */ }
   } else if (qmsg.isVideo) {
     try {
       mediaBuffer = await qmsg.download();
       mediaType = "video";
-    } catch {}
+    } catch { /* download optional */ }
   } else if (qmsg.isAudio || qmsg.mimetype?.startsWith("audio")) {
     try {
       mediaBuffer = await qmsg.download();
       mediaType = "audio";
-    } catch {}
+    } catch { /* download optional */ }
   } else if (
     qmsg.isDocument ||
     (qmsg.mimetype && !qmsg.mimetype.startsWith("text/plain"))
@@ -608,7 +606,7 @@ async function handleJpmMain(m, sock, db, fullInput) {
     try {
       mediaBuffer = await qmsg.download();
       mediaType = "document";
-    } catch {}
+    } catch { /* download optional */ }
   }
 
   const contentInfo =
@@ -771,12 +769,12 @@ async function handleJpmDirect(m, sock, db, text, mode) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "image";
-      } catch {}
+      } catch { /* download optional */ }
     } else if (qmsg.isVideo) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "video";
-      } catch {}
+      } catch { /* download optional */ }
     }
 
     const { groupIds, allGroups, blacklistedCount } = await getTargetGroups(
@@ -847,12 +845,12 @@ async function handleJpmChannelWithContent(
         try {
           mediaBuffer = await qmsg.download();
           mediaType = "image";
-        } catch {}
+        } catch { /* download optional */ }
       } else if (qmsg.isVideo) {
         try {
           mediaBuffer = await qmsg.download();
           mediaType = "video";
-        } catch {}
+        } catch { /* download optional */ }
       }
     }
 
@@ -1170,7 +1168,7 @@ async function completeAutoJpmSetup(m, sock, db, intervalStr) {
         ) {
           fs.unlinkSync(mediaData.path);
         }
-      } catch {}
+      } catch { /* cleanup */ }
     }
     mediaData = { type: mType, path: filePath, mimetype, fileName };
   }
@@ -1280,7 +1278,7 @@ async function handleAutoJpm(m, sock, db, input, fullInput) {
           ) {
             fs.unlinkSync(mediaData.path);
           }
-        } catch {}
+        } catch { /* cleanup */ }
       }
       mediaData = { type: mediaType, path: filePath, mimetype, fileName };
     }

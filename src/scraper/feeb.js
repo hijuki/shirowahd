@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 
 const API = "https://feelbetterbot.com/";
 

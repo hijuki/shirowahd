@@ -99,10 +99,10 @@ async function loadAllPlugins() {
               isCase: false,
             });
           }
-        } catch { }
+        } catch { /* plugin optional */ }
       }
     }
-  } catch { }
+  } catch { /* plugin optional */ }
   try {
     const caseCommands = getCaseCommands();
     const caseAliases = {
@@ -133,7 +133,7 @@ async function loadAllPlugins() {
         });
       }
     }
-  } catch { }
+  } catch { /* ignored */ }
   return plugins;
 }
 async function handler(m, { sock }) {

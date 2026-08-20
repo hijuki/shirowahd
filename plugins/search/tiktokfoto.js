@@ -99,7 +99,7 @@ async function handler(m, { sock }) {
                 if (buffer.length > 1000) {
                     mediaList.push({ image: buffer })
                 }
-            } catch {}
+            } catch { /* fetch optional */ }
         }
 
         if (mediaList.length === 0) {

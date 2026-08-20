@@ -172,7 +172,7 @@ async function handler(m, { sock, config: botConfig }) {
                     if (fs.existsSync(tempVideo)) fs.unlinkSync(tempVideo)
                     return
                 }
-            } catch (e) {}
+            } catch (e) { /* cleanup */ }
             
             if (fs.existsSync(tempVideo)) fs.unlinkSync(tempVideo)
         }
@@ -201,7 +201,7 @@ async function handler(m, { sock, config: botConfig }) {
                     await processVideo(inputPath, outputPath, options)
                 }
                 buffer = fs.readFileSync(outputPath)
-            } catch (e) {}
+            } catch (e) { /* asset optional */ }
             
             if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath)
             if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)

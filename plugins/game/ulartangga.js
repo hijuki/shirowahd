@@ -46,7 +46,7 @@ try {
   if (fs.existsSync(thumbPath)) {
     thumbUT = fs.readFileSync(thumbPath);
   }
-} catch (e) { }
+} catch (e) { /* asset optional */ }
 
 function utCtx(mentions) {
   const saluranId = config.saluran?.id || "120363413208281480@newsletter";

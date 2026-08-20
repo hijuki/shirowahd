@@ -1,4 +1,3 @@
-import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
 import { f } from '../../src/lib/ourin-http.js'
@@ -30,7 +29,7 @@ function loadJsonData() {
                 const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
                 allUrls = allUrls.concat(data.map(d => d.url))
             }
-        } catch {}
+        } catch { /* parse skip */ }
     }
     
     return allUrls

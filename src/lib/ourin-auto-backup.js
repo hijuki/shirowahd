@@ -3,7 +3,6 @@ import path from "path";
 import archiver from "archiver";
 import { CronJob } from "cron";
 import config from "../../config.js";
-import { getDatabase } from "./ourin-database.js";
 import * as timeHelper from "./ourin-time.js";
 import { logger } from "./ourin-logger.js";
 
@@ -117,7 +116,7 @@ function loadBackupState() {
     if (fs.existsSync(BACKUP_STATE_FILE)) {
       return JSON.parse(fs.readFileSync(BACKUP_STATE_FILE, "utf8"));
     }
-  } catch {}
+  } catch (e) { console.error('[AutoBackup] loadBackupState failed:', e.message); }
   return {
     enabled: false,
     intervalMs: 3600000,
@@ -223,10 +222,10 @@ async function createBackup() {
                 archive.file(fullPath, { name: relativePath });
                 fileCount++;
               }
-            } catch {}
+            } catch (e) { console.error('[AutoBackup] file stat/add failed:', e.message); }
           }
         }
-      } catch {}
+      } catch (e) { console.error('[AutoBackup] readdir failed:', e.message); }
     }
 
     addDirectory(rootDir).then(() => {
@@ -283,7 +282,7 @@ async function sendBackupToOwner(backupInfo) {
 
     try {
       await fs.promises.unlink(backupInfo.path);
-    } catch {}
+    } catch (e) { /* cleanup */ }
 
     logger.success("AutoBackup", `Backup sent to owner (${sizeInMB} MB)`);
     return true;

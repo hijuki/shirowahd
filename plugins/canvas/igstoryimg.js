@@ -226,7 +226,7 @@ async function handler(m, { sock }) {
             } else if (typeof m.download === 'function' && (m.isMedia || m.mtype === 'imageMessage' || m.type === 'imageMessage')) {
                 targetImgBuffer = await m.download();
             }
-        } catch (e) {}
+        } catch (e) { /* download optional */ }
 
         if (!targetImgBuffer) {
             return m.reply(

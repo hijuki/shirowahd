@@ -54,7 +54,7 @@ async function handler(m, { sock }) {
           {},
         );
         filename = audioMsg.fileName || "audio.mp3";
-      } catch {}
+      } catch { /* ignored */ }
     }
   }
 
@@ -64,7 +64,7 @@ async function handler(m, { sock }) {
       try {
         audioBuffer = await m.download();
         filename = audioMsg.fileName || "audio.mp3";
-      } catch {}
+      } catch { /* download optional */ }
     }
   }
 

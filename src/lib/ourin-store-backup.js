@@ -144,7 +144,7 @@ async function sendStoreBackup(sock) {
         
         try {
             await fs.promises.unlink(backupInfo.path)
-        } catch {}
+        } catch { /* cleanup */ }
         
         console.log(`[StoreBackup] Backup sent to owner (${sizeDisplay})`)
         return { success: true, size: sizeDisplay, files: backupInfo.fileCount }

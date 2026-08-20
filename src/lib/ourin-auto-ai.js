@@ -701,7 +701,7 @@ async function executeAction(action, m, sock) {
             imagenya.push({
               image: { url: imageUrl },
             });
-          } catch {}
+          } catch (e) { console.error('[AutoAI] image push failed:', e.message); }
         }
         await sock.sendMessage(
           m.chat,
@@ -824,7 +824,7 @@ async function executeAction(action, m, sock) {
             ok: true,
             msg: `@${targetNum} di-kick karena 3x warning`,
           });
-        } catch {}
+        } catch (e) { console.error('[AutoAI] kick after warn failed:', e.message); }
       }
       break;
     }
@@ -1077,7 +1077,7 @@ async function handleAutoAI(m, sock) {
             `ffmpeg -y -i "${mp3Path}" -c:a libopus -b:a 64k -ac 1 -ar 48000 "${oggPath}"`,
             { timeout: 30000 },
           );
-        } catch {}
+        } catch (e) { console.error('[AutoAI] ffmpeg convert failed:', e.message); }
 
         let audioBuffer;
         let mime = "audio/mpeg";
@@ -1086,13 +1086,13 @@ async function handleAutoAI(m, sock) {
           mime = "audio/ogg; codecs=opus";
           try {
             fs.unlinkSync(oggPath);
-          } catch {}
+          } catch (e) { /* cleanup */ }
         } else {
           audioBuffer = fs.readFileSync(mp3Path);
         }
         try {
           fs.unlinkSync(mp3Path);
-        } catch {}
+        } catch (e) { /* cleanup */ }
 
         await sock.sendMessage(
           m.chat,
@@ -1148,7 +1148,7 @@ async function handleAutoAI(m, sock) {
     await sock.sendPresenceUpdate("paused", m.chat);
     try {
       await m.reply(getFallbackResponse());
-    } catch {}
+    } catch (e) { /* fallback reply failed */ }
     return true;
   }
 }

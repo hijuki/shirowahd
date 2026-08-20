@@ -63,7 +63,7 @@ function parseResponse(html) {
                         data.slides.push({ index: data.slides.length + 1, url })
                     })
                 }
-            } catch {}
+            } catch { /* parse skip */ }
         })
         return data
     }
@@ -88,7 +88,7 @@ function parseResponse(html) {
             if (label.includes('mp3')) {
                 data.mp3.push(...json.URL)
             }
-        } catch {}
+        } catch { /* parse skip */ }
     })
 
     return data

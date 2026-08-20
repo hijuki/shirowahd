@@ -147,7 +147,7 @@ async function UnlimitedAI(prompt, character = "ourin-ai") {
         if (json.type === "delta" && typeof json.delta === "string") {
           answer += json.delta;
         }
-      } catch {}
+      } catch { /* parse skip */ }
     }
   }
 

@@ -1,7 +1,6 @@
 import { getDatabase } from "./ourin-database.js";
 import { logger } from "./ourin-logger.js";
 import { delay } from "./ourin-utils.js";
-import config from "../../config.js";
 import fs from "fs";
 import { saluranCtx } from "./ourin-context.js";
 import path from "path";
@@ -15,7 +14,7 @@ try {
   if (!!getAssetBuffer("hillz2")) {
     cachedThumb = getAssetBuffer("hillz2");
   }
-} catch (e) {}
+} catch (e) { console.error('[AutoJPM] asset load failed:', e.message); }
 
 function getAutoJpmStorageDir() {
   const dir = path.join(process.cwd(), "storage", "autojpm");

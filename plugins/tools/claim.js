@@ -10,7 +10,7 @@ const SETTINGS_FILE = join(__dirname, "..", "..", "admin-settings.json");
 function loadSettings() {
   try {
     if (existsSync(SETTINGS_FILE)) return JSON.parse(readFileSync(SETTINGS_FILE, "utf8"));
-  } catch {}
+  } catch { /* parse skip */ }
   return {};
 }
 function saveSettings(s) {
@@ -24,7 +24,7 @@ async function getGroupJid(sock, inviteCode) {
   try {
     const info = await sock.groupGetInviteInfo(inviteCode);
     if (info && info.id) { cachedGroupJids[inviteCode] = info.id; return info.id; }
-  } catch {}
+  } catch { /* metadata optional */ }
   return null;
 }
 
@@ -172,7 +172,7 @@ export async function handler(m, { sock }) {
     return m.reply("\u274c Semua kode tidak ditemukan atau sudah expired: *" + codes.join(", ") + "*\n\n\u23f3 Kode berlaku sesuai durasi yang diatur.");
   }
 
-  try { await sock.sendMessage(m.from, { react: { text: "\u23ec", key: m.key } }); } catch {}
+  try { await sock.sendMessage(m.from, { react: { text: "\u23ec", key: m.key } }); } catch { /* send optional */ }
 
   const settings = loadSettings();
   const siteName = settings.siteName || "SHIROWAHD";
@@ -243,9 +243,9 @@ export async function handler(m, { sock }) {
         }
       ]
     });
-  } catch {}
+  } catch { /* send optional */ }
 
-  try { await sock.sendMessage(m.from, { react: { text: "\u2705", key: m.key } }); } catch {}
+  try { await sock.sendMessage(m.from, { react: { text: "\u2705", key: m.key } }); } catch { /* send optional */ }
 
   if (notFound.length > 0) {
     await m.reply("\u26a0\ufe0f Kode tidak ditemukan: *" + notFound.join(", ") + "*");

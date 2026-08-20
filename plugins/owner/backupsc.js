@@ -119,10 +119,10 @@ async function handler(m, { sock }) {
         settled = true;
         try {
           output.destroy();
-        } catch { }
+        } catch { /* cleanup */ }
         try {
           if (fs.existsSync(zipFilePath)) fs.unlinkSync(zipFilePath);
-        } catch { }
+        } catch { /* cleanup */ }
         reject(error);
       };
       const succeed = () => {
@@ -168,9 +168,9 @@ async function handler(m, { sock }) {
                 archive.file(fullPath, { name: relativePath });
                 fileCount += 1;
               }
-            } catch { }
+            } catch { /* modify optional */ }
           }
-        } catch { }
+        } catch { /* modify optional */ }
       }
 
       addDirectory(projectRoot);
@@ -217,7 +217,7 @@ async function handler(m, { sock }) {
 
     try {
       fs.unlinkSync(zipFilePath);
-    } catch { }
+    } catch { /* cleanup */ }
   } catch (error) {
     await m.react("☢");
     await m.reply(te(m.prefix, m.command, m.pushName));

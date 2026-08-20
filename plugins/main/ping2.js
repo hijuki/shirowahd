@@ -89,7 +89,7 @@ async function handler(m, { sock }) {
                     }
                 }
             }
-        } catch {}
+        } catch { /* ignored */ }
 
         const heap = process.memoryUsage()
         const net = await getNetwork()
@@ -102,11 +102,11 @@ async function handler(m, { sock }) {
                 dbGroups = Object.keys(db.data.groups || {}).length
                 dbPremium = Object.values(db.data.users || {}).filter(u => u.isPremium).length
             }
-        } catch {}
+        } catch { /* db optional */ }
 
         let vidStats = { totalActive: 0, totalSize: 0, uploadsToday: 0 };
         let vidStorage = 0;
-        try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch {}
+        try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch { /* upload optional */ }
 
         const totalExec = Math.round(performance.now() - execStart)
 

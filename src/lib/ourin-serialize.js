@@ -2,13 +2,11 @@ import {
   downloadContentFromMessage,
   getContentType,
   jidDecode,
-  proto,
   generateWAMessageFromContent,
   generateWAMessage,
-  areJidsSameUser,
   normalizeMessageContent,
 } from "ourin";
-import { writeFileSync, mkdirSync, existsSync, unlinkSync } from "fs";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import config, {
   isBanned,
@@ -22,14 +20,12 @@ import {
   lidToJid,
   convertLidArray,
   decodeAndNormalize,
-  resolveLidFromParticipants,
   resolveAnyLidToJid,
   getCachedJid,
   cacheParticipantLids,
   cacheLidJid,
   resolveFromSock,
 } from "./ourin-lid.js";
-import util from "util";
 import axios from "axios";
 import sharp from "sharp";
 import fsc from "fs";
@@ -54,7 +50,7 @@ function getCachedPrefixes() {
       prefixList = [configPrefix, ...(prefixData.prefixes || [])];
       isNoPrefix = prefixData.noprefix === true;
     }
-  } catch { }
+  } catch (e) { console.error('[Serialize] prefix load failed:', e.message); }
   _prefixCache = { list: [...new Set(prefixList)], noprefix: isNoPrefix };
   _prefixCacheTime = now;
   return _prefixCache;
@@ -397,7 +393,7 @@ async function serializeQuotedMessage(
           qPushName = rawMsg.pushName;
         }
       }
-    } catch (e) { }
+    } catch (e) { console.error('[Serialize] quoted pushName lookup failed:', e.message); }
   }
 
   if (qPushName === "~ User" && contacts[quotedParticipant]) {
@@ -751,7 +747,7 @@ async function serialize(sock, msg, store = {}) {
           : "";
         m.quoted.key.participant = m.quoted.sender;
       }
-    } catch (error) { }
+    } catch (error) { console.error('[Serialize] LID resolve failed:', error.message); }
   }
 
   if (m._pendingQuotedMessage) {
@@ -841,7 +837,7 @@ async function serialize(sock, msg, store = {}) {
           }
         }
       }
-    } catch (e) { }
+    } catch (e) { console.error('[Serialize] shuffle image load failed:', e.message); }
 
     let replyVariant = 1;
     try {
@@ -1153,7 +1149,7 @@ async function serialize(sock, msg, store = {}) {
               }
             }
           }
-        } catch (e) { }
+        } catch (e) { console.error('[Serialize] reply shuffle image failed:', e.message); }
         return null;
       };
 
@@ -1623,7 +1619,7 @@ END:VCARD`;
         m.jid = resolved;
         m.remoteJid = resolved;
       }
-    }).catch(() => { });
+    }).catch((e) => { console.error('[Serialize] LID background resolve failed:', e.message); });
   }
 
   return m;

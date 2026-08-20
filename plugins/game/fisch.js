@@ -46,7 +46,7 @@ let thumbFish = null;
 try {
   const p = path.join(process.cwd(), "assets", "images", "hillz-fishit.jpg");
   if (fs.existsSync(p)) thumbFish = fs.readFileSync(p);
-} catch (e) {}
+} catch (e) { /* asset optional */ }
 
 function ctx(title, body) {
   const sId = config.saluran?.id || "120363413208281480@newsletter";

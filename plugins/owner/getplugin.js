@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import config from "../../config.js";
-import { AIRich } from "../../src/lib/ourin-builder.js";
 const pluginConfig = {
   name: "getplugin",
   alias: ["gp", "getcode", "plugincode", "sourcecode"],
@@ -63,7 +62,7 @@ function searchPlugin(name, pluginsDir) {
             }
           }
         }
-      } catch { }
+      } catch { /* ignored */ }
     }
   }
 

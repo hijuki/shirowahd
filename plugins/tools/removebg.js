@@ -49,7 +49,7 @@ async function handler(m, { sock }) {
         }, { quoted: m });
         try {
             fs.unlinkSync(pathnya);
-        } catch (e) {}
+        } catch (e) { /* cleanup */ }
     } catch (error) {
         console.error('[RemoveBG Error]', error);
         m.reply(te(m.prefix, m.command, m.pushName));

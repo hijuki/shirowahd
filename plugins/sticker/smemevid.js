@@ -139,7 +139,7 @@ async function handler(m, { sock }) {
             fs.unlinkSync(inputVideo)
             fs.unlinkSync(outputVideo)
             fs.unlinkSync(overlayImage)
-        } catch (e) { }
+        } catch (e) { /* cleanup */ }
 
     } catch (error) {
         m.react('☢')

@@ -103,7 +103,7 @@ async function handler(m, { sock }) {
             })
             userInfo = userRes.data.attributes
             isUserAdmin = userInfo.root_admin
-        } catch (e) {}
+        } catch (e) { /* fetch optional */ }
         
         await m.reply(`🗑️ *ᴍᴇɴɢʜᴀᴘᴜs ᴘᴀɴᴇʟ...*\n\n> Server: *${serverLabel}*\n> Panel: \`${server.name}\`\n> Mode: *${option === 'full' ? 'Server + User' : 'Server saja'}*`)
         

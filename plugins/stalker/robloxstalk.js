@@ -79,7 +79,7 @@ async function Roblox(username) {
     });
     const presJson = await pres.json();
     presence = presJson.userPresences?.[0] || null;
-  } catch {}
+  } catch { /* fetch optional */ }
 
   return {
     id: detail.id,

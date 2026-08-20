@@ -188,7 +188,7 @@ class Database {
     const flush = () => {
       try {
         this.flushAll();
-      } catch { }
+      } catch (e) { console.error('[Database] shutdown flush failed:', e.message); }
     };
     process.on("exit", flush);
     process.on("beforeExit", flush);
@@ -225,7 +225,7 @@ class Database {
       await fs.promises.writeFile(temp, json, "utf-8");
       await fs.promises.rename(temp, filePath);
       this.dirty[key] = false;
-    } catch { }
+    } catch (e) { console.error('[Database] save failed:', e.message); }
     this._writing.delete(key);
     if (this._pendingWrite.has(key)) {
       this._pendingWrite.delete(key);
@@ -238,7 +238,7 @@ class Database {
       try {
         this.stores[key].write();
         this.dirty[key] = false;
-      } catch { }
+      } catch (e) { console.error('[Database] flushAll write failed:', e.message); }
     }
   }
 
@@ -246,7 +246,7 @@ class Database {
     for (const store of Object.values(this.stores)) {
       try {
         store.read();
-      } catch { }
+      } catch (e) { console.error('[Database] readAll failed:', e.message); }
     }
   }
 
@@ -422,7 +422,7 @@ class Database {
       const isPremiumUser = config.isPremium(jid);
       if (isOwnerUser && ownerEnergi === -1) return -1;
       if (isPremiumUser && premiumEnergi === -1) return -1;
-    } catch { }
+    } catch (e) { console.error('[Database] energi config check failed:', e.message); }
 
     user.energi = Math.max(0, (user.energi ?? 0) + amount);
     this.setUser(jid, user);
@@ -597,11 +597,11 @@ class Database {
       if (!fs.existsSync(filePath)) continue;
       try {
         fs.copyFileSync(filePath, path.join(backupFolder, file));
-      } catch { }
+      } catch (e) { console.error('[Database] backup copy failed:', e.message); }
       try {
         fs.writeFileSync(filePath, JSON.stringify(defaults, null, 2), "utf-8");
         resetCount++;
-      } catch { }
+      } catch (e) { console.error('[Database] reset write failed:', e.message); }
     }
 
     for (const [key, { defaults }] of Object.entries(fileMap)) {

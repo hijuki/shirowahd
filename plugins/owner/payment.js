@@ -78,7 +78,7 @@ async function handler(m, { sock }) {
         caption: text
       }, { quoted: m })
       return
-    } catch {}
+    } catch { /* send optional */ }
   }
 
   await sock.sendMessage(m.chat, { text }, { quoted: m })

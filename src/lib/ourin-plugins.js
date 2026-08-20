@@ -591,7 +591,7 @@ function unloadPlugin(name) {
     if (plugin.filePath) {
       try {
         // require.cache removed
-      } catch {}
+      } catch (e) { /* cleanup */ }
     }
 
     logger.warn("plugin", `unloaded: ${primaryName}`);

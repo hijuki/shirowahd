@@ -1,6 +1,4 @@
-import axios from 'axios'
 import config from '../../config.js'
-import { f } from '../../src/lib/ourin-http.js'
 import te from '../../src/lib/ourin-error.js'
 const pluginConfig = {
     name: 'bratanime',

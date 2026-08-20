@@ -38,10 +38,10 @@ async function convertGifToMp4(buffer) {
   } finally {
     try {
       if (fs.existsSync(gifPath)) fs.unlinkSync(gifPath);
-    } catch {}
+    } catch { /* cleanup */ }
     try {
       if (fs.existsSync(mp4Path)) fs.unlinkSync(mp4Path);
-    } catch {}
+    } catch { /* cleanup */ }
   }
 }
 
@@ -59,13 +59,13 @@ async function handler(m, { sock }) {
     let buffer = null;
     try {
       buffer = await fetchBuffer(result.gif);
-    } catch (e) {}
+    } catch (e) { /* fetch optional */ }
 
     let videoBuffer = null;
     if (buffer) {
       try {
         videoBuffer = await convertGifToMp4(buffer);
-      } catch (e) {}
+      } catch (e) { /* convert optional */ }
     }
 
     let txt =

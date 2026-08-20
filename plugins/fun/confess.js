@@ -62,7 +62,7 @@ async function handler(m, { sock }) {
     if (!onWa?.exists) {
       return m.reply(`Yah kak, nomor \`${targetNumber}\` ternyata nggak terdaftar di WhatsApp! 😔`);
     }
-  } catch (e) {}
+  } catch (e) { /* lookup optional */ }
 
   if (message.length < 5) {
     return m.reply(`Pesannya kependekan kak! Minimal 5 karakter ya biar lebih bermakna. 📝`);

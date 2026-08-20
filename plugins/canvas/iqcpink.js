@@ -1,5 +1,5 @@
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
-import { writeFile, readFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -442,7 +442,7 @@ async function handler(m, { sock, text }) {
             } else if (typeof m.download === 'function' && (m.isMedia || m.mtype === 'imageMessage' || m.type === 'imageMessage')) {
                 targetImgBuffer = await m.download();
             }
-        } catch (e) {}
+        } catch (e) { /* download optional */ }
         
         if (!targetText && !targetImgBuffer) {
             return m.reply(

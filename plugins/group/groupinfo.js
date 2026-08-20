@@ -56,7 +56,7 @@ async function handler(m, { sock, db }) {
         let ppUrl = null
         try {
             ppUrl = await sock.profilePictureUrl(m.chat)
-        } catch {}
+        } catch { /* pp optional */ }
 
         const isOpen = groupMeta.announce === false || !groupMeta.announce
 

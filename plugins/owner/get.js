@@ -1,8 +1,5 @@
 import config from "../../config.js";
 import axios from "axios";
-import fs from "fs";
-import path from "path";
-import te from "../../src/lib/ourin-error.js";
 const pluginConfig = {
   name: "get",
   alias: ["fetch", "http", "request", "curl"],
@@ -309,7 +306,7 @@ async function handler(m, { sock }) {
               formatSize(size) +
               ")";
           }
-        } catch {}
+        } catch { /* parse skip */ }
       }
       await m.reply(header + `\n\n\`\`\`${text}\`\`\``);
     } else if (category === "text" && buffer.length > MAX_CHAT_LENGTH) {

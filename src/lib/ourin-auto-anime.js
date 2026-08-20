@@ -18,7 +18,8 @@ function loadSent() {
     try {
         if (!fs.existsSync(SENT_FILE)) return new Set()
         return new Set(JSON.parse(fs.readFileSync(SENT_FILE, 'utf8')))
-    } catch {
+    } catch (e) {
+        console.error('[AutoAnime] loadSent failed:', e.message)
         return new Set()
     }
 }
@@ -27,14 +28,15 @@ function saveSent(set) {
     try {
         if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
         fs.writeFileSync(SENT_FILE, JSON.stringify([...set]))
-    } catch {}
+    } catch (e) { console.error('[AutoAnime] saveSent failed:', e.message) }
 }
 
 function loadState() {
     try {
         if (!fs.existsSync(STATE_FILE)) return { enabled: false, groups: [], interval: 5 }
         return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'))
-    } catch {
+    } catch (e) {
+        console.error('[AutoAnime] loadState failed:', e.message)
         return { enabled: false, groups: [], interval: 5 }
     }
 }
@@ -43,7 +45,7 @@ function saveState(state) {
     try {
         if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
         fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2))
-    } catch {}
+    } catch (e) { console.error('[AutoAnime] saveState failed:', e.message) }
 }
 
 async function fetchPage(url) {

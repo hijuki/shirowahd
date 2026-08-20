@@ -53,7 +53,7 @@ async function handler(m, { sock }) {
         const result = await imgtoprompt(tmpFile);
         try {
             fs.unlinkSync(tmpFile);
-        } catch (e) {}
+        } catch (e) { /* cleanup */ }
         if (result.status === 'eror' || !result.prompt) {
             return await m.reply(`❌ *ɢᴀɢᴀʟ*\n\n> ${result.msg || 'Tidak dapat menghasilkan prompt dari gambar ini'}`);
         }

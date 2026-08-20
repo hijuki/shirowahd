@@ -38,7 +38,7 @@ async function handler(m, { sock }) {
         try {
           await sock.chatModify({ archive: true, lastMessages: [] }, jid);
           count++;
-        } catch {}
+        } catch { /* modify optional */ }
       }
       await m.react("✅");
       return m.reply(

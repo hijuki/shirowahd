@@ -84,7 +84,7 @@ async function handler(m, { sock, db }) {
     if (tempFile && fs.existsSync(tempFile)) {
       try {
         fs.unlinkSync(tempFile);
-      } catch {}
+      } catch { /* cleanup */ }
     }
 
     let report =
@@ -197,7 +197,7 @@ async function handler(m, { sock, db }) {
     let thumbnail = null;
     try {
       thumbnail = getAssetBuffer("hillz2");
-    } catch {}
+    } catch { /* asset optional */ }
 
     const estimatedTime = Math.ceil(groupList.length * 1.5);
 
@@ -241,7 +241,7 @@ async function handler(m, { sock, db }) {
     if (tempFile && fs.existsSync(tempFile)) {
       try {
         fs.unlinkSync(tempFile);
-      } catch {}
+      } catch { /* cleanup */ }
     }
     global._swgcallPending?.delete(m.sender);
   }

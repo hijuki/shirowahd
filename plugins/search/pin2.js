@@ -2,7 +2,6 @@ import {
   generateWAMessageFromContent,
   prepareWAMessageMedia,
 } from "ourin";
-import te from "../../src/lib/ourin-error.js";
 import { f } from "../../src/lib/ourin-http.js";
 
 const pluginConfig = {

@@ -4,7 +4,6 @@ import fs from "fs";
 import { saluranCtx } from "./ourin-context.js";
 import {
   delay,
-  DisconnectReason,
   jidNormalizedUser,
   useMultiFileAuthState,
 } from "ourin";
@@ -397,7 +396,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
         reconnectAttempts.delete(id);
         try {
           childSock.ws.close();
-        } catch { }
+        } catch (e) { console.error('[JadibotManager] ws close failed:', e.message); }
         return;
       }
 
@@ -451,7 +450,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
           if (!isSocketAlive(childSock)) {
             clearInterval(heartbeatInterval);
           }
-        } catch { }
+        } catch (e) { console.error('[JadibotManager] heartbeat check failed:', e.message); }
       }, 30000);
 
       const session = jadibotSessions.get(id);
@@ -512,7 +511,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
             if (fs.existsSync(authPath)) {
               fs.rmSync(authPath, { recursive: true, force: true });
             }
-          } catch { }
+          } catch (e) { /* cleanup */ }
         }
 
         let statusEmoji = "❌";
@@ -660,7 +659,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
           if (!!getAssetBuffer("hillz2")) {
             thumbnail = getAssetBuffer("hillz2");
           }
-        } catch { }
+        } catch (e) { console.error('[JadibotManager] asset load failed:', e.message); }
 
         await sock.sendMessage(
           m.chat,
@@ -716,7 +715,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
 
       try {
         childSock.end?.();
-      } catch { }
+      } catch (e) { /* cleanup */ }
       jadibotSessions.delete(id);
       reconnectAttempts.delete(id);
       throw new Error(errorMsg);
@@ -737,7 +736,7 @@ async function stopJadibot(jid, deleteSession = false) {
       }
       session.sock.ev.removeAllListeners();
       session.sock.ws.close();
-    } catch { }
+    } catch (e) { /* cleanup */ }
     jadibotSessions.delete(id);
   }
 
@@ -762,7 +761,7 @@ async function stopAllJadibots() {
       }
       session.sock.ev.removeAllListeners();
       session.sock.ws.close();
-    } catch { }
+    } catch (e) { /* cleanup */ }
     stopped.push(id);
   }
   jadibotSessions.clear();
@@ -782,7 +781,7 @@ async function restartJadibotSession(sock, sessionId) {
         const data = JSON.parse(fs.readFileSync(dbPath, "utf8"));
         if (data.owners?.[0]) ownerJid = data.owners[0] + "@s.whatsapp.net";
       }
-    } catch { }
+    } catch (e) { console.error('[JadibotManager] read data.json failed:', e.message); }
 
     const mockM = {
       chat: ownerJid,

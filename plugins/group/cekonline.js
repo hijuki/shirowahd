@@ -49,7 +49,7 @@ async function handler(m, { sock }) {
         for (let i = 0; i < participants.length; i += batchSize) {
             const batch = participants.slice(i, i + batchSize)
             await Promise.all(batch.map(p => 
-                sock.presenceSubscribe(p.id).catch(() => {})
+                sock.presenceSubscribe(p.id).catch(() => { /* subscribe optional */ })
             ))
             await new Promise(resolve => setTimeout(resolve, 500))
         }

@@ -5,7 +5,7 @@ function getUploaderUrl() {
   try { return fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), "../../vids/uploader-url.txt"), "utf8").trim(); }
   catch { return "https://swhdhlz.my.id"; }
 }
-import { generateWAMessageFromContent, prepareWAMessageMedia, proto } from "ourin";
+import { generateWAMessageFromContent, prepareWAMessageMedia } from "ourin";
 import _sharp from "sharp";
 import config from "../../config.js";
 import axios from "axios";
@@ -142,7 +142,7 @@ async function handler(m, { sock, config: botConfig, db, uptime }) {
       const kondisi = weatherCodeMap[current.weather_code] || "Cerah Berawan";
       weatherText = `Merangin ${kondisi} ${Math.round(current.temperature_2m)}°C`;
     }
-  } catch (e) { }
+  } catch (e) { /* fetch optional */ }
 
   const userLimit = (m.isPremium || m.isOwner) ? "∞ Unlimited" : (user?.limit || 0);
   const botName = botConfig.bot?.name || "Remi AI";
@@ -216,7 +216,7 @@ async function handler(m, { sock, config: botConfig, db, uptime }) {
         modeExcludeMap[key] = val.excludeCategories;
       }
     }
-  } catch (e) { }
+  } catch (e) { /* plugin optional */ }
   const allowedCategories = modeAllowedMap[botMode];
   const excludeCategories = modeExcludeMap[botMode] || [];
   for (const category of sortedCategories) {

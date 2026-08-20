@@ -76,7 +76,7 @@ async function handler(m, { sock }) {
             await m.reply(`❌ Tidak bisa memberikan warning kepada admin grup.`)
             return
         }
-    } catch (e) {}
+    } catch (e) { /* metadata optional */ }
     
     const botJid = sock.user?.id?.split(':')[0] + '@s.whatsapp.net'
     if (targetUser === botJid) {

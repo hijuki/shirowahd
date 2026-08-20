@@ -50,8 +50,8 @@ function gifToMp4(gifBuffer) {
         fs.writeFileSync(inputPath, gifBuffer)
 
         const cleanup = () => {
-            try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath) } catch {}
-            try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath) } catch {}
+            try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath) } catch { /* ignored */ }
+            try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath) } catch { /* cleanup */ }
         }
 
         const timeout = setTimeout(() => {

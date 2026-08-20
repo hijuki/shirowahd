@@ -88,7 +88,7 @@ async function checkAndNotifyLevelUp(sock, m, db, user, oldExp, newExp) {
         ctx.arc(120, height / 2, 85, 0, Math.PI * 2);
         ctx.stroke();
       }
-    } catch (e) {}
+    } catch (e) { console.error('[Level] avatar draw failed:', e.message); }
     ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
     ctx.shadowBlur = 5;
     ctx.fillStyle = "#ffffff";
@@ -155,7 +155,7 @@ async function checkAndNotifyLevelUp(sock, m, db, user, oldExp, newExp) {
     let ppBuffer = null;
     try {
       ppBuffer = await sock.profilePictureUrl(m.sender, "image");
-    } catch {}
+    } catch (e) { /* no profile picture */ }
 
     const txt = `🎊 *SELAMAT @${m.sender.split("@")[0]}!*
 

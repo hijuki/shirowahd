@@ -179,7 +179,7 @@ async function handler(m, { sock }) {
               author,
               emojis: ["❤"],
             });
-          } catch {}
+          } catch { /* ignored */ }
           await sock.sendMessage(
             m.chat,
             {

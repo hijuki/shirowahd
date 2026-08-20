@@ -189,7 +189,7 @@ async function getAvatarBuffer(sock, jid) {
     if (ppUrl) {
       return await downloadImage(ppUrl);
     }
-  } catch {}
+  } catch { /* download optional */ }
   if (fs.existsSync(DEFAULT_PP_PATH)) {
     return fs.readFileSync(DEFAULT_PP_PATH);
   }

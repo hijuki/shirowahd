@@ -66,7 +66,7 @@ async function handler(m, { sock, db }) {
       try {
         const meta = await sock.groupMetadata(targetGroupId);
         groupName = meta.subject;
-      } catch (e) { }
+      } catch (e) { /* metadata optional */ }
 
       await m.react("🕕");
 
@@ -149,7 +149,7 @@ async function handler(m, { sock, db }) {
         setTimeout(() => {
           try {
             fs.unlinkSync(pendingData.tempFile);
-          } catch (e) { }
+          } catch (e) { /* cleanup */ }
         }, 5000);
       }
     } catch (error) {
@@ -282,7 +282,7 @@ async function handler(m, { sock, db }) {
     let thumbnail = null;
     try {
       thumbnail = getAssetBuffer("hillz2");
-    } catch (e) { }
+    } catch (e) { /* asset optional */ }
 
     await sock.sendMessage(m.chat, {
       text:
@@ -329,7 +329,7 @@ async function handler(m, { sock, db }) {
     if (tempFile && fs.existsSync(tempFile)) {
       try {
         fs.unlinkSync(tempFile);
-      } catch (e) { }
+      } catch (e) { /* cleanup */ }
     }
     pendingSwgcV2.delete(m.sender);
   }

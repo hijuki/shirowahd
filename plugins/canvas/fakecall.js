@@ -57,11 +57,11 @@ async function handler(m, { sock }) {
         if (m.isImage) {
             try {
                 bufferBase = await m.download()
-            } catch (err) {}
+            } catch (err) { /* download optional */ }
         } else if (m.quoted?.isImage) {
             try {
                 bufferBase = await m.quoted.download()
-            } catch (err) {}
+            } catch (err) { /* download optional */ }
         }
 
         if (!bufferBase) {

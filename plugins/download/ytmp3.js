@@ -22,7 +22,7 @@ async function getAudioDownload(url) {
     if (download) {
       return { download, title };
     }
-  } catch {}
+  } catch { /* fetch optional */ }
 
   const fallback = await ytdl(url, "mp3");
   if (fallback?.status && fallback?.dl) {

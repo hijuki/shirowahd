@@ -35,7 +35,7 @@ function loadJadibotDb(jadibotId) {
         try {
             const content = fs.readFileSync(dbPath, 'utf8')
             data = JSON.parse(content)
-        } catch {}
+        } catch (e) { console.error('[JadibotDB] parse failed:', e.message); }
     }
     
     jadibotDatabases.set(id, data)

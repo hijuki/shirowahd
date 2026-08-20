@@ -43,7 +43,7 @@ async function findPluginFile(pluginName) {
         if (name === pluginName || aliases.includes(pluginName)) {
           return { filePath, plugin, category, file };
         }
-      } catch {}
+      } catch { /* plugin optional */ }
     }
   }
 

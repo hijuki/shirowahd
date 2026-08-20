@@ -499,7 +499,7 @@ function matchCustomRule(text, rules = []) {
         const flags = rule.flags || "i";
         const regex = new RegExp(rule.pattern, flags);
         if (regex.test(text)) return rule;
-      } catch {}
+      } catch (e) { console.error('[GroupProtection] regex test failed:', e.message); }
       continue;
     }
 
@@ -541,7 +541,7 @@ async function executeProtectionAction({
         });
       }
       return true;
-    } catch {}
+    } catch (e) { console.error('[GroupProtection] kick failed:', e.message); }
   }
 
   await sock.sendMessage(chatId, {
@@ -969,7 +969,7 @@ async function handleAntiRemove(messageUpdate, sock, db) {
             { quoted: headerMsg },
           );
         }
-      } catch (e2) {}
+      } catch (e2) { console.error('[GroupProtection] antidelete forward failed:', e2.message); }
     }
 
     deleteCachedMessage(deletedMsgId);
@@ -1102,7 +1102,7 @@ async function handleAntiRemoveFromUpsert(msg, sock, db) {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) { console.error('[GroupProtection] antidelete relay failed:', e.message); }
 
     deleteCachedMessage(deletedMsgId);
     return true;
@@ -1138,7 +1138,7 @@ async function cacheMessageForAntiRemove(m, sock, db) {
     };
 
     cacheMessage(msgId, rawMsg, null);
-  } catch {}
+  } catch (e) { console.error('[GroupProtection] cache message failed:', e.message); }
 }
 
 const WA_SPECIFIC_PATTERNS = [

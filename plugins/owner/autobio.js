@@ -1,4 +1,3 @@
-import { getDatabase } from "../../src/lib/ourin-database.js";
 import config from "../../config.js";
 
 const pluginConfig = {
@@ -50,7 +49,7 @@ async function handler(m, { sock, db }) {
     try {
       const { startAutoBioChecker } = await import("../../src/lib/ourin-scheduler.js");
       startAutoBioChecker(sock);
-    } catch (e) {}
+    } catch (e) { /* scheduler optional */ }
     return m.reply(`✅ *AUTO BIO DIAKTIFKAN*\n\nBio WhatsApp bot sekarang akan diperbarui secara otomatis setiap menit.`);
   }
   
@@ -88,7 +87,7 @@ async function handler(m, { sock, db }) {
     try {
       const { startAutoBioChecker } = await import("../../src/lib/ourin-scheduler.js");
       startAutoBioChecker(sock);
-    } catch (e) {}
+    } catch (e) { /* scheduler optional */ }
 
     return m.reply(`✅ *Interval Diubah*\n\nBio akan di-update otomatis setiap *${value} ${timeStr.replace(/[0-9\s]/g, "")}* (atau ${ms / 1000} detik).`);
   }
@@ -100,7 +99,7 @@ async function handler(m, { sock, db }) {
   try {
     const { startAutoBioChecker } = await import("../../src/lib/ourin-scheduler.js");
     startAutoBioChecker(sock);
-  } catch (e) {}
+  } catch (e) { /* scheduler optional */ }
   
   return m.reply(
     `✅ *TEKS BIO DIUBAH*\n\n` +

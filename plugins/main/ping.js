@@ -323,7 +323,7 @@ async function handler(m, { sock }) {
     // Video storage stats
     let vidStats = { totalActive: 0, totalSize: 0, uploadsToday: 0 };
     let vidStorage = 0;
-    try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch {}
+    try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch { /* upload optional */ }
 
     // Database stats
     let dbUsers = 0, dbGroups = 0, dbPremium = 0;
@@ -334,7 +334,7 @@ async function handler(m, { sock }) {
         dbGroups = Object.keys(db.data.groups || {}).length;
         dbPremium = Object.values(db.data.users || {}).filter(u => u.isPremium).length;
       }
-    } catch {}
+    } catch { /* db optional */ }
 
     const data = {
         ping: execTime,

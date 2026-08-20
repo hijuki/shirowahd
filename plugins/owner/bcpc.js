@@ -68,12 +68,12 @@ async function handler(m, { sock }) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "image";
-      } catch {}
+      } catch { /* download optional */ }
     } else if (qmsg.isVideo) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "video";
-      } catch {}
+      } catch { /* download optional */ }
     }
 
     const privateJids = new Set();

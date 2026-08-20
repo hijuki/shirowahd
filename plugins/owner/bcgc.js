@@ -145,22 +145,22 @@ async function handler(m, { sock }) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "image";
-      } catch {}
+      } catch { /* download optional */ }
     } else if (qmsg.isVideo) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "video";
-      } catch {}
+      } catch { /* download optional */ }
     } else if (qmsg.isAudio || qmsg.mimetype?.startsWith("audio")) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "audio";
-      } catch {}
+      } catch { /* download optional */ }
     } else if (qmsg.isSticker) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "sticker";
-      } catch {}
+      } catch { /* download optional */ }
     } else if (
       qmsg.isDocument ||
       (qmsg.mimetype && !qmsg.mimetype.startsWith("text/plain"))
@@ -168,7 +168,7 @@ async function handler(m, { sock }) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "document";
-      } catch {}
+      } catch { /* download optional */ }
     }
 
     if (!text && !mediaBuffer) {

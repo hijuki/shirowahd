@@ -84,7 +84,7 @@ async function handler(m, { sock }) {
     try {
         fs.unlinkSync(inputPath);
         fs.unlinkSync(outputPath);
-    } catch (e) {}
+    } catch (e) { /* cleanup */ }
   } catch (err) {
     await m.react("❌");
     await m.reply(`❌ Maaf kak, proses enhance videonya gagal! 😭\n\nDetail: ${err.message}`);

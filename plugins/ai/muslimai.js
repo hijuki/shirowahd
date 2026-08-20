@@ -1,4 +1,3 @@
-import { f } from '../../src/lib/ourin-http.js'
 import te from '../../src/lib/ourin-error.js'
 const pluginConfig = {
     name: 'muslimai',
@@ -47,7 +46,7 @@ class MuslimAI {
             try {
                 const p = JSON.parse(l);
                 if (p.type === "text") txt += p.data;
-            } catch {}
+            } catch { /* JSON parse skip */ }
         }
         return txt || res;
     }

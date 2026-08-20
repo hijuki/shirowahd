@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import config, { getOwnerName } from "../../config.js";
 import { getDatabase } from "../../src/lib/ourin-database.js";
 import {
@@ -6,9 +5,6 @@ import {
   generateWAMessageFromContent,
   prepareWAMessageMedia,
 } from "ourin";
-import { AIRich } from "../../src/lib/ourin-builder.js";
-import axios from "axios";
-import sharp from "sharp";
 const pluginConfig = {
   name: "owner",
   alias: ["creator", "dev", "developer"],

@@ -93,10 +93,10 @@ function videoToWebp(buffer) {
     const cleanup = () => {
       try {
         if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-      } catch {}
+      } catch { /* cleanup */ }
       try {
         if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-      } catch {}
+      } catch { /* cleanup */ }
     };
     const timeout = setTimeout(() => {
       cleanup();
@@ -673,7 +673,7 @@ async function extendSocket(sock) {
             if (ct.pushName) return ct.pushName;
           }
         }
-      } catch {}
+      } catch { /* contact lookup */ }
     }
     try {
       if (sock.getBusinessProfile) {
@@ -690,7 +690,7 @@ async function extendSocket(sock) {
           }
         }
       }
-    } catch {}
+    } catch { /* business profile optional */ }
     try {
       if (sock.onWhatsApp) {
         const [result] = await sock.onWhatsApp(id).catch(() => []);
@@ -704,7 +704,7 @@ async function extendSocket(sock) {
           if (ct.notify) return ct.notify;
         }
       }
-    } catch {}
+    } catch { /* wa lookup optional */ }
     const number = id.replace(/@.+/g, "");
     if (number && number.length > 0) {
       if (number.startsWith("62")) return "+62" + number.slice(2);

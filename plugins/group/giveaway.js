@@ -354,7 +354,7 @@ async function endGiveaway(giveawayId, sock, db) {
         },
         { quoted: winnerFakeQuoted },
       );
-    } catch (e) {}
+    } catch (e) { /* ignored */ }
   }
 }
 
@@ -376,7 +376,7 @@ function startGiveawayChecker(sock, db) {
             await endGiveaway(id, currentSock, currentDb);
           }
         }
-      } catch (e) {}
+      } catch (e) { /* db optional */ }
     },
     null,
     true,
@@ -571,7 +571,7 @@ async function handler(m, { sock }) {
             `> _Ini informasi resmi dari bot._`,
           contextInfo: ctx,
         });
-      } catch (e) {}
+      } catch (e) { /* send optional */ }
     }
     return;
   }

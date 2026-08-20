@@ -9,7 +9,6 @@ import {
   getCategories,
   getPlugin,
 } from "../../src/lib/ourin-plugins.js";
-import { getDatabase } from "../../src/lib/ourin-database.js";
 import { getTimeGreeting } from "../../src/lib/ourin-formatter.js";
 import fs from "fs"
 
@@ -155,7 +154,7 @@ async function handler(m, { sock, db }) {
             modeExcludeMap[key] = val.excludeCategories;
         }
       }
-    } catch (e) { }
+    } catch (e) { /* plugin optional */ }
 
     const excludeCategories = modeExcludeMap[botMode] || modeExcludeMap.md;
 

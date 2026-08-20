@@ -4,7 +4,7 @@ import {
   generateWAMessageFromContent,
   proto,
 } from "ourin";
-import { createCanvas, loadImage, GlobalFonts } from "@napi-rs/canvas";
+import {  } from "@napi-rs/canvas";
 import _sharp from "sharp";
 import config from "../../config.js";
 import {
@@ -15,7 +15,6 @@ import {
   getCommandsByCategory,
   getCategories,
 } from "../../src/lib/ourin-plugins.js";
-import { getDatabase } from "../../src/lib/ourin-database.js";
 import fs from "fs";
 import path from "path";
 
@@ -337,7 +336,7 @@ async function buildMenuText(
         modeExcludeMap[key] = val.excludeCategories;
       }
     }
-  } catch (e) { }
+  } catch (e) { /* plugin optional */ }
   const allowedCategories = modeAllowedMap[botMode];
   const excludeCategories = modeExcludeMap[botMode] || [];
   const categoryLines = [];
@@ -1459,7 +1458,7 @@ case7Text += `Contact Admin: wa.me/6282262421536\n\n`;
               suhuStr = parts[1].trim();
             }
           }
-        } catch (e) { }
+        } catch (e) { /* fetch optional */ }
         const displayWeather = `${cuacaStr} | ${suhuStr}`;
         const senderNum = m.sender.split('@')[0];
 

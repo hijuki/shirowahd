@@ -27,7 +27,7 @@ import sharp from "sharp";
 let fetchBuffer;
 try {
   fetchBuffer = (await import("./ourin-utils.js")).fetchBuffer;
-} catch { }
+} catch (e) { console.error('[Games] fetchBuffer import failed:', e.message); }
 
 const WIN_MESSAGES = [
   "🌟 *GG WP! Otakmu encer!*",

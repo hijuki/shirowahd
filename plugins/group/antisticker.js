@@ -41,7 +41,7 @@ async function checkAntisticker(m, sock, db) {
 
     try {
         await sock.sendMessage(m.chat, { delete: m.key })
-    } catch {}
+    } catch { /* send optional */ }
 
     await sock.sendMessage(m.chat, {
         text: gpMsg('antisticker', { user: m.sender.split('@')[0] }),
