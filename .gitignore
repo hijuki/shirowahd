@@ -7,3 +7,13 @@ session/
 auth_info_baileys/
 database/ai_chat/
 deploy-worker.py
+
+# Runtime state (generated at runtime, not source code)
+database/main/
+database/autobackup.json
+database/chatgot.json
+database/lid-cache.json
+database/prefix.json
+database/sewa.json
+database/stickerCommands.json
+storage/
