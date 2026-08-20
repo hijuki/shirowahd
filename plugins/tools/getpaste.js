@@ -1,5 +1,3 @@
-import axios from 'axios'
-import * as timeHelper from '../../src/lib/ourin-time.js'
 import te from '../../src/lib/ourin-error.js'
 const pluginConfig = {
   name: "getpaste",
@@ -35,7 +33,7 @@ class GetPastebin {
       const req = await fetch(this.url + id);
       if (!req.ok) return null;
       return await req.text();
-    } catch {
+    } catch (e) {
       return null;
     }
   }

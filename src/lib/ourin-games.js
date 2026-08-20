@@ -27,7 +27,7 @@ import sharp from "sharp";
 let fetchBuffer;
 try {
   fetchBuffer = (await import("./ourin-utils.js")).fetchBuffer;
-} catch { }
+} catch (e) { console.error("[Games] Failed to import fetchBuffer:", e.message); }
 
 const WIN_MESSAGES = [
   "🌟 *GG WP! Otakmu encer!*",
@@ -130,7 +130,7 @@ class OurinGames {
         let imageBuffer;
         try {
           imageBuffer = await fetchBuffer(question[cfg.imageField]);
-        } catch {
+        } catch (e) { console.error("[Games] Failed to fetch image:", e.message); 
           await m.reply("❌ *ɢᴀɢᴀʟ ᴍᴇᴍᴜᴀᴛ ɢᴀᴍʙᴀʀ*\n\n> Coba lagi nanti!");
           return;
         }

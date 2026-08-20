@@ -483,7 +483,7 @@ async function startGroupScheduleChecker(sock) {
                   await groupScheduleSock.sendMessage(groupId, {
                     text: `⚠️ *ɢᴀɢᴀʟ ᴀᴜᴛᴏ ᴏᴘᴇɴ*\n\n> Bot bukan admin, tidak bisa mengubah pengaturan grup.\n> Jadikan bot sebagai admin untuk mengaktifkan fitur ini.`,
                   });
-                } catch { }
+                } catch (e) { console.error("[Scheduler] Auto-open warning failed:", e.message); }
               } else {
                 logger.error(
                   "GroupSchedule",
@@ -521,7 +521,7 @@ async function startGroupScheduleChecker(sock) {
                   await groupScheduleSock.sendMessage(groupId, {
                     text: `⚠️ *ɢᴀɢᴀʟ ᴀᴜᴛᴏ ᴄʟᴏsᴇ*\n\n> Bot bukan admin, tidak bisa mengubah pengaturan grup.\n> Jadikan bot sebagai admin untuk mengaktifkan fitur ini.`,
                   });
-                } catch { }
+                } catch (e) { console.error("[Scheduler] Auto-close warning failed:", e.message); }
               } else {
                 logger.error(
                   "GroupSchedule",
@@ -626,7 +626,7 @@ async function startSewaChecker(sock) {
             data._warned1h = true;
             warnedCount++;
             await new Promise((r) => setTimeout(r, 2000));
-          } catch { }
+          } catch (e) { console.error("[Scheduler] Sewa warning failed:", e.message); }
         } else if (
           remaining <= THREE_DAYS_MS &&
           remaining > ONE_HOUR_MS &&
@@ -646,7 +646,7 @@ async function startSewaChecker(sock) {
             data._warned3d = true;
             warnedCount++;
             await new Promise((r) => setTimeout(r, 2000));
-          } catch { }
+          } catch (e) { console.error("[Scheduler] Sewa expiry action failed:", e.message); }
         }
       }
 

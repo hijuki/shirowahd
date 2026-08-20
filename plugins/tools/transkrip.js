@@ -106,7 +106,7 @@ async function handler(m, { sock }) {
         }
         m.reply(te(m.prefix, m.command, m.pushName));
     } finally {
-        [inputFile, wavFile].forEach(f => { try { fs.unlinkSync(f); } catch {} });
+        [inputFile, wavFile].forEach(f => { try { fs.unlinkSync(f); } catch (e) { /* temp cleanup */ } });
     }
 }
 export { pluginConfig as config, handler }

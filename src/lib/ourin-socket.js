@@ -5,7 +5,6 @@ async function getSharp() {
   return _sharp;
 }
 import crypto from "crypto";
-import archiver from "archiver";
 import {
   prepareWAMessageMedia,
   generateWAMessageFromContent,
@@ -93,10 +92,10 @@ function videoToWebp(buffer) {
     const cleanup = () => {
       try {
         if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-      } catch {}
+      } catch (e) { /* temp cleanup */ }
       try {
         if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-      } catch {}
+      } catch (e) { /* temp cleanup */ }
     };
     const timeout = setTimeout(() => {
       cleanup();
@@ -214,7 +213,7 @@ async function extendSocket(sock) {
             await sock.uploadPreKeys(5);
           }
           return await _originalSendMessage(jid, content, options);
-        } catch {
+        } catch (e) { console.error("[Socket] sendMessage retry failed:", e.message); 
           throw err;
         }
       }
@@ -331,7 +330,7 @@ async function extendSocket(sock) {
         else {
           try {
             webpBuffer = await imageToWebp(stickerBuffer);
-          } catch {
+          } catch (e) { console.error("[Socket] imageToWebp failed:", e.message); 
             webpBuffer = await videoToWebp(stickerBuffer);
           }
         }
@@ -632,7 +631,7 @@ async function extendSocket(sock) {
         try {
           const gm = await sock.groupMetadata(groupJid);
           id = resolveAnyLidToJid(jid, gm.participants || []);
-        } catch {
+        } catch (e) { /* group metadata unavailable */ 
           id = jid.replace("@lid", "@s.whatsapp.net");
         }
       } else id = jid.replace("@lid", "@s.whatsapp.net");
@@ -643,7 +642,7 @@ async function extendSocket(sock) {
         if (!(v.name || v.subject))
           v = await sock.groupMetadata(id).catch(() => ({}));
         return v.name || v.subject || id.split("@")[0];
-      } catch {
+      } catch (e) { /* group name unavailable */ 
         return id.split("@")[0];
       }
     }
@@ -673,7 +672,7 @@ async function extendSocket(sock) {
             if (ct.pushName) return ct.pushName;
           }
         }
-      } catch {}
+      } catch (e) { /* contact lookup failed */ }
     }
     try {
       if (sock.getBusinessProfile) {
@@ -690,7 +689,7 @@ async function extendSocket(sock) {
           }
         }
       }
-    } catch {}
+    } catch (e) { /* name resolution failed */ }
     try {
       if (sock.onWhatsApp) {
         const [result] = await sock.onWhatsApp(id).catch(() => []);
@@ -704,7 +703,7 @@ async function extendSocket(sock) {
           if (ct.notify) return ct.notify;
         }
       }
-    } catch {}
+    } catch (e) { /* notify name lookup failed */ }
     const number = id.replace(/@.+/g, "");
     if (number && number.length > 0) {
       if (number.startsWith("62")) return "+62" + number.slice(2);

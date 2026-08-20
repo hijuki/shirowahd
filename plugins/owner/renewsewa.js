@@ -1,6 +1,5 @@
 import { getDatabase } from "../../src/lib/ourin-database.js";
 import * as timeHelper from "../../src/lib/ourin-time.js";
-import fs from "fs";
 import te from "../../src/lib/ourin-error.js";
 import { saluranCtx } from "../../src/lib/ourin-context.js";
 const pluginConfig = {
@@ -61,7 +60,7 @@ async function resolveGroupId(sock, input) {
       const metadata = await sock.groupGetInviteInfo(inviteCode);
       if (!metadata?.id) return null;
       return { id: metadata.id, name: metadata.subject || "Unknown" };
-    } catch {
+    } catch (e) {
       return null;
     }
   }
@@ -163,7 +162,7 @@ async function handler(m, { sock }) {
           contextInfo: saluranCtx(),
         },
       );
-    } catch {}
+    } catch (e) { console.error("[renewsewa]", e.message); }
 
     return m.reply(text);
   } catch (error) {

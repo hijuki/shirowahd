@@ -1,8 +1,5 @@
 import config from "../../config.js";
 import axios from "axios";
-import fs from "fs";
-import path from "path";
-import te from "../../src/lib/ourin-error.js";
 const pluginConfig = {
   name: "get",
   alias: ["fetch", "http", "request", "curl"],
@@ -190,7 +187,7 @@ async function handler(m, { sock }) {
 
   try {
     new URL(url);
-  } catch {
+  } catch (e) {
     return m.reply("❌ Invalid URL");
   }
 
@@ -309,7 +306,7 @@ async function handler(m, { sock }) {
               formatSize(size) +
               ")";
           }
-        } catch {}
+        } catch (e) { console.error("[get]", e.message); }
       }
       await m.reply(header + `\n\n\`\`\`${text}\`\`\``);
     } else if (category === "text" && buffer.length > MAX_CHAT_LENGTH) {
@@ -331,7 +328,7 @@ async function handler(m, { sock }) {
             },
             { quoted: m },
           );
-        } catch {
+        } catch (e) {
           const fileName = `response_${Date.now()}.${ext}`;
           await sock.sendMessage(
             m.chat,

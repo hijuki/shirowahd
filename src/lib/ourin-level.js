@@ -155,7 +155,7 @@ async function checkAndNotifyLevelUp(sock, m, db, user, oldExp, newExp) {
     let ppBuffer = null;
     try {
       ppBuffer = await sock.profilePictureUrl(m.sender, "image");
-    } catch {}
+    } catch (e) { /* profile picture unavailable */ }
 
     const txt = `🎊 *SELAMAT @${m.sender.split("@")[0]}!*
 

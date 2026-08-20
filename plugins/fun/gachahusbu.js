@@ -86,7 +86,7 @@ async function getBuffer(url) {
   try {
     const res = await axios.get(url, { responseType: "arraybuffer", timeout: 15000 });
     return Buffer.from(res.data);
-  } catch {
+  } catch (e) {
     return null;
   }
 }

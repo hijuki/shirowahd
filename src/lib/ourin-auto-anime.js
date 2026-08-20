@@ -18,23 +18,33 @@ function loadSent() {
     try {
         if (!fs.existsSync(SENT_FILE)) return new Set()
         return new Set(JSON.parse(fs.readFileSync(SENT_FILE, 'utf8')))
-    } catch {
+    } catch (e) {
+        console.error('[AutoAnime-Winbu] Failed to load sent data:', e.message)
         return new Set()
     }
 }
 
+// ponytail: simple write lock for state files; upgrade to file-level lock if multi-process
+let _stateWriting = false;
+let _stateWriteQueued = false;
+
 function saveSent(set) {
     try {
         if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
-        fs.writeFileSync(SENT_FILE, JSON.stringify([...set]))
-    } catch {}
+        const tmp = SENT_FILE + '.tmp'
+        fs.writeFileSync(tmp, JSON.stringify([...set]))
+        fs.renameSync(tmp, SENT_FILE)
+    } catch (e) {
+        console.error('[AutoAnime-Winbu] Failed to save sent data:', e.message)
+    }
 }
 
 function loadState() {
     try {
         if (!fs.existsSync(STATE_FILE)) return { enabled: false, groups: [], interval: 5 }
         return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'))
-    } catch {
+    } catch (e) {
+        console.error('[AutoAnime-Winbu] Failed to load state:', e.message)
         return { enabled: false, groups: [], interval: 5 }
     }
 }
@@ -42,8 +52,12 @@ function loadState() {
 function saveState(state) {
     try {
         if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
-        fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2))
-    } catch {}
+        const tmp = STATE_FILE + '.tmp'
+        fs.writeFileSync(tmp, JSON.stringify(state, null, 2))
+        fs.renameSync(tmp, STATE_FILE)
+    } catch (e) {
+        console.error('[AutoAnime-Winbu] Failed to save state:', e.message)
+    }
 }
 
 async function fetchPage(url) {
@@ -129,7 +143,8 @@ async function getEpisodeTime(episodeUrl) {
         if (match) return match[0]
 
         return null
-    } catch {
+    } catch (e) {
+        console.error('[AutoAnime-Winbu] Failed to get episode time:', e.message)
         return null
     }
 }
@@ -360,6 +375,7 @@ function stopAutoCheck() {
     if (autoInterval) clearInterval(autoInterval)
     autoInterval = null
     isRunning = false
+    globalSock = null  // release socket reference
 }
 
 function initAutoStart(sock) {

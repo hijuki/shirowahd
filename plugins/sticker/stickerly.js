@@ -166,7 +166,7 @@ async function downloadStickerlyPack(sock, m, packUrl) {
                     });
                     sent++;
                     await new Promise(r => setTimeout(r, 700));
-                } catch {
+                } catch (e) {
                     continue;
                 }
             }

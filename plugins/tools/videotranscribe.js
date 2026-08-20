@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import te from "../../src/lib/ourin-error.js";
 
 const pluginConfig = {
   name: "videotranscribe",
@@ -87,7 +86,7 @@ async function transcriber(url, language = DEFAULT_LANG) {
   let json;
   try {
     json = JSON.parse(text);
-  } catch {
+  } catch (e) {
     throw new Error("Response bukan JSON: " + text.slice(0, 200));
   }
   const result = cleanResult(url, json);

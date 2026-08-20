@@ -9,7 +9,6 @@ import {
   getCategories,
   getPlugin,
 } from "../../src/lib/ourin-plugins.js";
-import { getDatabase } from "../../src/lib/ourin-database.js";
 import { getTimeGreeting } from "../../src/lib/ourin-formatter.js";
 import fs from "fs"
 
@@ -320,7 +319,7 @@ async function handler(m, { sock, db }) {
               const current = res.data.current
               const kondisi = weatherCode[current.weather_code] || "🌍 Tidak diketahui"
               return `${kondisi} | 🌡️ ${Math.round(current.temperature_2m)}°C\n📍 ${loc.name}`
-            } catch {
+            } catch (e) {
               return "Cuaca tidak tersedia"
             }
           }
@@ -517,7 +516,7 @@ async function handler(m, { sock, db }) {
             const current = res.data.current
             const kondisi = weatherCode[current.weather_code] || "🌍 Tidak diketahui"
             return `${kondisi} | 🌡️ ${Math.round(current.temperature_2m)}°C\n📍 ${loc.name}`
-          } catch {
+          } catch (e) {
             return "Cuaca tidak tersedia"
           }
         }
@@ -586,7 +585,7 @@ async function handler(m, { sock, db }) {
             const current = res.data.current
             const kondisi = weatherCode[current.weather_code] || "🌍 Tidak diketahui"
             return `${kondisi} | 🌡️ ${Math.round(current.temperature_2m)}°C\n📍 ${loc.name}`
-          } catch {
+          } catch (e) {
             return "Cuaca tidak tersedia"
           }
         }

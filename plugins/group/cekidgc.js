@@ -53,7 +53,7 @@ async function handler(m, { sock }) {
       try {
         groupMeta = await sock.groupGetInviteInfo(inviteCode);
         groupJid = groupMeta?.id;
-      } catch {
+      } catch (e) {
         m.react("✘");
         return m.reply(
           `── .✦ ──\n\n> Link grup tidak valid atau sudah expired .☘︎ ݁˖`,
@@ -63,7 +63,7 @@ async function handler(m, { sock }) {
       groupJid = input;
       try {
         groupMeta = await sock.groupMetadata(groupJid);
-      } catch {
+      } catch (e) {
         m.react("✘");
         return m.reply(
           `── .✦ ──\n\n> Tidak bisa mengakses grup tersebut .☘︎ ݁˖`,
@@ -116,7 +116,7 @@ async function handler(m, { sock }) {
           ).data,
         );
       }
-    } catch {}
+    } catch (e) { console.error("[cekidgc]", e.message); }
 
     const saluranId = config.saluran?.id || "120363413208281480@newsletter";
     const saluranName = config.saluran?.name || config.bot?.name || "SHIROWAHD";
@@ -159,7 +159,7 @@ async function handler(m, { sock }) {
           { image: resized },
           { upload: sock.waUploadToServer },
         );
-      } catch {}
+      } catch (e) { console.error("[cekidgc]", e.message); }
 
       const msg = generateWAMessageFromContent(
         m.chat,

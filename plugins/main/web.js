@@ -34,7 +34,7 @@ const fmtSize = (b) => {
 async function handler(m, { sock }) {
   let vidStats = { totalActive: 0, totalSize: 0, uploadsToday: 0 }
   let vidStorage = 0
-  try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch {}
+  try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch (e) { console.error("[web]", e.message); }
 
   // Load settings for site name
   let siteName = 'SHIROWAHD'
@@ -44,7 +44,7 @@ async function handler(m, { sock }) {
       const s = JSON.parse(readFileSync(sf, 'utf8'))
       if (s.siteName) siteName = s.siteName
     }
-  } catch {}
+  } catch (e) { /* file read failed */ }
 
   const url = `https://${DOMAIN}`
 

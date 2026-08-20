@@ -33,7 +33,7 @@ async function uploadTo0x0(buffer) {
             return response.data
         }
         return null
-    } catch {
+    } catch (e) {
         return null
     }
 }

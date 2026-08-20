@@ -499,7 +499,7 @@ function matchCustomRule(text, rules = []) {
         const flags = rule.flags || "i";
         const regex = new RegExp(rule.pattern, flags);
         if (regex.test(text)) return rule;
-      } catch {}
+      } catch (e) { console.error("[GroupProtection] Regex error:", e.message); }
       continue;
     }
 
@@ -541,7 +541,7 @@ async function executeProtectionAction({
         });
       }
       return true;
-    } catch {}
+    } catch (e) { console.error("[GroupProtection] Anti-judol handler error:", e.message); }
   }
 
   await sock.sendMessage(chatId, {
@@ -604,7 +604,8 @@ async function handleTextProtection({
       kickMessageKey,
       replacements: buildReplacements(detected, m),
     });
-  } catch {
+  } catch (e) {
+    console.error('[GroupProtection] Antilink handler error:', e.message);
     return false;
   }
 }
@@ -1138,7 +1139,9 @@ async function cacheMessageForAntiRemove(m, sock, db) {
     };
 
     cacheMessage(msgId, rawMsg, null);
-  } catch {}
+  } catch (e) {
+    console.error('[GroupProtection] Message cache error:', e.message);
+  }
 }
 
 const WA_SPECIFIC_PATTERNS = [
@@ -1368,7 +1371,8 @@ async function handleAntiCustom(m, sock, db) {
         rule: rule.name || rule.pattern || "custom-rule",
       },
     });
-  } catch {
+  } catch (e) {
+    console.error('[GroupProtection] Custom rule handler error:', e.message);
     return false;
   }
 }
@@ -1413,7 +1417,8 @@ async function handleAntiSwGc(rawMsg, sock, db) {
       await sock.sendMessage(chatId, {
         delete: key,
       });
-    } catch {
+    } catch (e) {
+      console.error('[GroupProtection] Delete message failed, trying fallback:', e.message);
       await sock.sendMessage(chatId, {
         delete: {
           remoteJid: chatId,
@@ -1430,7 +1435,8 @@ async function handleAntiSwGc(rawMsg, sock, db) {
     });
 
     return true;
-  } catch {
+  } catch (e) {
+    console.error('[GroupProtection] Anti-SWGC error:', e.message);
     return false;
   }
 }

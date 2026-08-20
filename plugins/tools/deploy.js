@@ -134,7 +134,7 @@ async function handler(m, { sock }) {
                 domains.find(d => !d.name.endsWith('.vercel.app'))?.name ||
                 domains.find(d => d.name.endsWith('.vercel.app'))?.name ||
                 domain
-        } catch {
+        } catch (e) {
             // fallback ke default domain jika gagal mengambil data domain
         }
 

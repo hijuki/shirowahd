@@ -137,7 +137,7 @@ async function ttdown(url) {
     if (!url.includes("tiktok.com")) throw new Error("Invalid url.");
     try {
       return await ttdownFromYuuLabs(url);
-    } catch {
+    } catch (e) { console.error("[TikTok] YuuLabs failed, trying fallback:", e.message); 
       return await ttdownFromMusicalDown(url);
     }
   } catch (error) {

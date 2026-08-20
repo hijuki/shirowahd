@@ -99,7 +99,7 @@ async function GPT5(prompt, options = {}) {
 
         const content = json.choices?.[0]?.delta?.content;
         if (typeof content === "string") answer += content;
-      } catch {}
+      } catch (e) { /* SSE chunk parse - partial JSON expected */ }
     }
   }
 

@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 
 const API = "https://feelbetterbot.com/";
 
@@ -35,7 +34,7 @@ function parseChunk(line) {
     const openAiContent = json.choices?.[0]?.delta?.content;
     if (typeof openAiContent === "string") return openAiContent;
     return "";
-  } catch {
+  } catch (e) { console.error("[Feeb] Parse error:", e.message); 
     return data;
   }
 }

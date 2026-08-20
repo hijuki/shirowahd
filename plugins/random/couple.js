@@ -1,6 +1,4 @@
 import config from '../../config.js'
-import { downloadMediaMessage } from 'ourin'
-import fs from 'fs'
 import { default as axios } from 'axios'
 import te from '../../src/lib/ourin-error.js'
 const pluginConfig = {

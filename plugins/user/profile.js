@@ -1,7 +1,6 @@
 import config from "../../config.js";
 import { getDatabase } from "../../src/lib/ourin-database.js";
 import { getRole } from "./level.js";
-import fs from "fs";
 import { getDevice } from "ourin";
 
 const pluginConfig = {
@@ -120,7 +119,7 @@ async function handler(m, { sock }) {
     } else {
       throw new Error("No PP");
     }
-  } catch {
+  } catch (e) {
     const fallbackUrl = config.assets["pp-kosong"];
     if (fallbackUrl) {
       ppMedia = { url: fallbackUrl };

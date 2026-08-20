@@ -276,7 +276,7 @@ function readExifFromWebp(webpBuffer) {
         const jsonStart = 22;
         const jsonData = exifData.slice(jsonStart);
         return JSON.parse(jsonData.toString('utf8'));
-    } catch {
+    } catch (e) { console.error("[Exif] Parse error:", e.message); 
         return null;
     }
 }
@@ -328,7 +328,7 @@ function getWebpDimensions(buffer) {
         }
         
         return null;
-    } catch {
+    } catch (e) { console.error("[Exif] Dimension parse error:", e.message); 
         return null;
     }
 }
@@ -358,7 +358,7 @@ function cleanTempFiles(maxAge = 3600000) {
                 if (now - stat.mtimeMs > maxAge) {
                     fs.unlinkSync(filePath);
                 }
-            } catch {
+            } catch (e) { console.error("[Exif] Temp cleanup error:", e.message); 
             }
         }
     }

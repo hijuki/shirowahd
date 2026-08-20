@@ -46,10 +46,10 @@ async function toOggOpus(mp3Buf) {
   const buf = fs.readFileSync(out);
   try {
     fs.unlinkSync(inp);
-  } catch { }
+  } catch (e) { /* temp cleanup */ }
   try {
     fs.unlinkSync(out);
-  } catch { }
+  } catch (e) { /* temp cleanup */ }
   return buf;
 }
 

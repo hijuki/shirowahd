@@ -681,6 +681,7 @@ function switchTab(tab) {
   else if (tab === 'statistik') loadStatistik();
   else if (tab === 'videos') loadVideos();
   else if (tab === 'log') loadUploadLog();
+  else if (tab === 'settings' || tab === 'branding' || tab === 'notifikasi' || tab === 'security') loadSettingsData();
   else if (tab === 'monitor') loadMonitor();
   var mobActive = document.querySelector('.mob-item.active');
   if (mobActive) mobActive.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});

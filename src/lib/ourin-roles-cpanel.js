@@ -23,7 +23,7 @@ function loadRoleFile(role, server) {
     }
     try {
         return JSON.parse(fs.readFileSync(filePath, 'utf8'))
-    } catch {
+    } catch (e) { console.error("[CPanel] Load role file failed:", e.message); 
         return []
     }
 }

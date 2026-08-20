@@ -10,9 +10,6 @@ import config from "../../config.js";
 import { getDatabase } from "../../src/lib/ourin-database.js";
 import { saluranCtx } from "../../src/lib/ourin-context.js";
 import { createGoodbyeCard } from "../../src/lib/ourin-welcome-card.js";
-import { resolveAnyLidToJid } from "../../src/lib/ourin-lid.js";
-import path from "path";
-import fs from "fs";
 import te from "../../src/lib/ourin-error.js";
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
 import { prepareWAMessageMedia, generateWAMessageFromContent } from "ourin";
@@ -183,7 +180,7 @@ async function sendGoodbyeMessage(sock, groupJid, participant, groupMeta) {
       "https://cdn.gimita.id/download/pp%20kosong%20wa%20default%20(1)_1769506608569_52b57f5b.jpg";
     try {
       ppUrl = (await sock.profilePictureUrl(realParticipant, "image")) || ppUrl;
-    } catch { }
+    } catch (e) { /* profile picture unavailable */ }
     const text = await buildGoodbyeMessage(
       realParticipant,
       groupMeta?.subject,

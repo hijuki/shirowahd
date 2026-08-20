@@ -1,5 +1,4 @@
 import axios from "axios";
-import config from "../../config.js";
 import FormData from "form-data";
 import { randomUUID } from "crypto";
 

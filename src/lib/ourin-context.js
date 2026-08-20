@@ -1,10 +1,8 @@
-import fs from "fs";
 import path from "path";
 import config from "../../config.js";
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import axios from "axios";
 import { getAssetBuffer } from "./ourin-asset-manager.js";
 
 let gameThumbBuffer = null;

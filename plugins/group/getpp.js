@@ -32,7 +32,7 @@ async function handler(m, { sock }) {
     let ppUrl
     try {
         ppUrl = await sock.profilePictureUrl(target, 'image')
-    } catch {
+    } catch (e) {
         ppUrl = 'https://files.catbox.moe/ejy4ky.jpg'
     }
 

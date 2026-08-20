@@ -54,7 +54,7 @@ async function handler(m, { sock }) {
           timeout: 10000,
         });
         thumbBuffer = Buffer.from(thumbRes.data);
-      } catch {}
+      } catch (e) { console.error("[filmget]", e.message); }
     }
 
     let text = `🎬 *${film.title || "Film"}*\n\n`;

@@ -5,7 +5,6 @@ import * as _canvas from '@napi-rs/canvas'
 
 import axios from "axios";
 import fs from "fs";
-import path from "path";
 import te from "../../src/lib/ourin-error.js";
 const pluginConfig = {
   name: "fakestory",
@@ -178,7 +177,7 @@ async function getProfilePicture(sock, jid) {
   try {
     const pp = await sock.profilePictureUrl(jid, "image");
     return pp || null;
-  } catch {
+  } catch (e) {
     return null;
   }
 }
@@ -195,7 +194,7 @@ async function getAvatarBuffer(sock, jid) {
     if (ppUrl) {
       return await downloadImage(ppUrl);
     }
-  } catch {}
+  } catch (e) { console.error("[fakestory]", e.message); }
   if (fs.existsSync(DEFAULT_PP_PATH)) {
     return fs.readFileSync(DEFAULT_PP_PATH);
   }

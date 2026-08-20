@@ -1,6 +1,4 @@
 import config from '../../config.js'
-import path from 'path'
-import fs from 'fs'
 import te from '../../src/lib/ourin-error.js'
 const pluginConfig = {
     name: 'githubdl',

@@ -28,7 +28,7 @@ async function uploadToCatbox(buffer, filename = 'file.jpg') {
             timeout: 30000
         })
         return res.data?.startsWith('http') ? res.data : null
-    } catch {
+    } catch (e) {
         return null
     }
 }

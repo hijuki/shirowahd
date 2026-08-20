@@ -144,7 +144,7 @@ async function sendStoreBackup(sock) {
         
         try {
             await fs.promises.unlink(backupInfo.path)
-        } catch {}
+        } catch (e) { console.error("[StoreBackup] Temp cleanup failed:", e.message); }
         
         console.log(`[StoreBackup] Backup sent to owner (${sizeDisplay})`)
         return { success: true, size: sizeDisplay, files: backupInfo.fileCount }

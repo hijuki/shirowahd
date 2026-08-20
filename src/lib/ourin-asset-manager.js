@@ -32,7 +32,8 @@ import config from '../../config.js';
 
 /**
  * Get the cached asset buffer by key (e.g. 'hillz', 'hillz2').
- * If not in cache but available in config, loads it synchronously.
+ * Returns from cache synchronously. On cache miss, triggers async load for next call.
+ * For guaranteed async load, use getAssetBufferAsync().
  * 
  * @param {string} key - The asset key defined in config.assets
  * @param {Object} [configAssets] - Optional config.assets reference for fallback
@@ -43,15 +44,30 @@ export function getAssetBuffer(key, configAssets = null) {
     return assetCache[key];
   }
   
+  // Trigger async load to populate cache for next call
+  getAssetBufferAsync(key, configAssets).catch(() => {});
+  return null;
+}
+
+/**
+ * Async version: loads asset from disk without blocking the event loop.
+ * 
+ * @param {string} key - The asset key defined in config.assets
+ * @param {Object} [configAssets] - Optional config.assets reference for fallback
+ * @returns {Promise<Buffer | null>} The asset as a Buffer, or null if missing.
+ */
+export async function getAssetBufferAsync(key, configAssets = null) {
+  if (assetCache[key]) {
+    return assetCache[key];
+  }
+  
   const assets = configAssets || config?.assets;
   if (assets && assets[key] && !assets[key].startsWith('http')) {
     try {
       const fullPath = path.resolve(process.cwd(), assets[key]);
-      if (fs.existsSync(fullPath)) {
-        const buf = fs.readFileSync(fullPath);
-        assetCache[key] = buf; 
-        return buf;
-      }
+      const buf = await fs.promises.readFile(fullPath);
+      assetCache[key] = buf; 
+      return buf;
     } catch (e) {
       console.error(`  ✖  ERR   Failed to read ${key} from disk:`, e.message);
     }

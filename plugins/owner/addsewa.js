@@ -1,7 +1,6 @@
 import config from "../../config.js";
 import { getDatabase } from "../../src/lib/ourin-database.js";
 import * as timeHelper from "../../src/lib/ourin-time.js";
-import fs from "fs";
 import te from "../../src/lib/ourin-error.js";
 import { saluranCtx } from "../../src/lib/ourin-context.js";
 const pluginConfig = {
@@ -67,7 +66,7 @@ async function resolveGroupId(sock, input) {
         name: metadata.subject || "Unknown",
         inviteCode,
       };
-    } catch {
+    } catch (e) {
       return null;
     }
   }
@@ -79,7 +78,7 @@ async function resolveGroupId(sock, input) {
       name: metadata?.subject || "Unknown",
       inviteCode: null,
     };
-  } catch {
+  } catch (e) {
     return { id: groupId, name: "Unknown", inviteCode: null };
   }
 }
@@ -190,7 +189,7 @@ async function handler(m, { sock }) {
             contextInfo: saluranCtx(),
           },
         );
-      } catch {}
+      } catch (e) { console.error("[addsewa]", e.message); }
     } else {
       text += `⚠️ Auto-join gagal: ${joinResult.reason}\nTambahkan bot ke grup secara manual.`;
     }

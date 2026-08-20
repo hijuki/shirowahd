@@ -31,8 +31,8 @@ async function toOggOpus(inputBuf) {
     fs.writeFileSync(inp, inputBuf)
     await run(`ffmpeg -y -i "${inp}" -vn -map_metadata -1 -ac 1 -ar 48000 -c:a libopus -b:a 96k -vbr on -application audio -f ogg "${out}"`)
     const buf = fs.readFileSync(out)
-    try { fs.unlinkSync(inp) } catch {}
-    try { fs.unlinkSync(out) } catch {}
+    try { fs.unlinkSync(inp) } catch (e) { /* file read failed */ }
+    try { fs.unlinkSync(out) } catch (e) { /* temp cleanup */ }
     return buf
 }
 

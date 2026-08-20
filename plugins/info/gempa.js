@@ -56,7 +56,7 @@ async function handler(m, { sock }) {
         await sock.sendMedia(m.chat, Buffer.from(imgRes.data), text, m, {
           type: "image",
         });
-      } catch {
+      } catch (e) {
         await m.reply(text, { contextInfo: saluranCtx() });
       }
     } else {

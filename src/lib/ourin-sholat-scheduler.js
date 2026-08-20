@@ -2,7 +2,6 @@ import { getDatabase } from "./ourin-database.js";
 import { logger } from "./ourin-logger.js";
 import { CronJob } from "cron";
 import config from "../../config.js";
-import * as timeHelper from "./ourin-time.js";
 import { saluranCtx } from "./ourin-context.js";
 import { getTodaySchedule, extractPrayerTimes } from "./ourin-sholat-api.js";
 

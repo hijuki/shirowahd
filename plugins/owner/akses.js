@@ -120,7 +120,7 @@ async function handler(m, { sock, plugins }) {
         if (!durationMs)
           return m.reply(`❌ Format durasi salah! Gunakan: 1h, 1d, 30d`);
         expiredTime = Date.now() + durationMs;
-      } catch {
+      } catch (e) {
         return m.reply(`❌ Format durasi tidak dikenali!`);
       }
     }

@@ -21,9 +21,9 @@ function startTempCleaner() {
                     try {
                         fs.unlinkSync(path.join(dirPath, file))
                         totalCleaned++
-                    } catch {}
+                    } catch (e) { /* cleanup */ }
                 }
-            } catch {}
+            } catch (e) { /* cleanup */ }
         }
         if (totalCleaned > 0) {
             logger.system('temp', `cleaned ${totalCleaned} file(s)`)

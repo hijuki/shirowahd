@@ -125,9 +125,9 @@ export function deleteVideo(code) {
   const e = db[code.toUpperCase()];
   if (!e) return false;
   if (e.bundle) {
-    for (const f of e.files) { try { unlinkSync(join(VIDS_DIR, f.file)); } catch {} }
+    for (const f of e.files) { try { unlinkSync(join(VIDS_DIR, f.file)); } catch (e) { /* cleanup */ } }
   } else {
-    try { unlinkSync(resolveFile(e)); } catch {}
+    try { unlinkSync(resolveFile(e)); } catch (e) { /* cleanup */ }
   }
   delete db[code.toUpperCase()];
   save(db);
@@ -182,7 +182,7 @@ export function getTotalStorage() {
     const files = readdirSync(VIDS_DIR);
     for (const f of files) {
       if (f === 'index.json') continue;
-      try { total += statSync(join(VIDS_DIR, f)).size; } catch {}
+      try { total += statSync(join(VIDS_DIR, f)).size; } catch (e) { /* cleanup */ }
     }
     return total;
   } catch { return 0; }
@@ -196,9 +196,9 @@ function cleanup() {
   for (const [k, v] of Object.entries(db)) {
     if (now - v.ts > ttl) {
       if (v.bundle) {
-        for (const f of v.files) { try { unlinkSync(join(VIDS_DIR, f.file)); } catch {} }
+        for (const f of v.files) { try { unlinkSync(join(VIDS_DIR, f.file)); } catch (e) { /* cleanup */ } }
       } else {
-        try { unlinkSync(resolveFile(v)); } catch {}
+        try { unlinkSync(resolveFile(v)); } catch (e) { /* cleanup */ }
       }
       delete db[k];
       changed = true;

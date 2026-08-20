@@ -99,10 +99,10 @@ async function loadAllPlugins() {
               isCase: false,
             });
           }
-        } catch { }
+        } catch (e) { console.error("[carifitur]", e.message); }
       }
     }
-  } catch { }
+  } catch (e) { console.error("[carifitur]", e.message); }
   try {
     const caseCommands = getCaseCommands();
     const caseAliases = {
@@ -133,7 +133,7 @@ async function loadAllPlugins() {
         });
       }
     }
-  } catch { }
+  } catch (e) { console.error("[carifitur]", e.message); }
   return plugins;
 }
 async function handler(m, { sock }) {

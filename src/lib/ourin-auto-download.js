@@ -1,4 +1,3 @@
-import axios from "axios";
 import crypto from "crypto";
 import {
   generateWAMessage,
@@ -27,6 +26,8 @@ const SUPPORTED_PATTERNS = [
   "reddit.com",
 ];
 
+const MAX_DOWNLOAD_SIZE = 100 * 1024 * 1024; // 100MB limit
+
 function containsSupportedLink(text) {
   if (!text) return false;
   const lower = text.toLowerCase();
@@ -41,6 +42,13 @@ function extractUrl(text) {
 async function sendMediaItems(result, sock, m) {
   const media = result.media || [];
   if (!media.length) throw new Error("No media found");
+
+  // Check file sizes before downloading
+  for (const item of media) {
+    if (item.size && item.size > MAX_DOWNLOAD_SIZE) {
+      throw new Error(`File too large (${(item.size / 1024 / 1024).toFixed(1)}MB > 100MB limit)`);
+    }
+  }
 
   const images = media.filter((i) => i.type === "image");
   const videos = media.filter((i) => i.type === "video");

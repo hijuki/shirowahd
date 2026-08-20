@@ -51,7 +51,7 @@ async function handler(m)  {
                     fs.unlinkSync(filePath)
                 }
                 deleted++
-            } catch {}
+            } catch (e) { /* temp cleanup */ }
         }
         
         await m.react('✅')

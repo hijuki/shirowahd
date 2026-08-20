@@ -515,7 +515,7 @@ async function winkEnhance(video, { filename } = {}) {
     if (shouldCleanup) {
       try {
         await fsp.unlink(filePath);
-      } catch {}
+      } catch (e) { /* temp cleanup */ }
     }
   }
 }

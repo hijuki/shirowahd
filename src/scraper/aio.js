@@ -247,7 +247,7 @@ async function aiodl(url) {
     ) {
       try {
         return await handleSavefbs(url);
-      } catch {}
+      } catch (e) { console.error("[AIO] savefbs fallback failed:", e.message); }
     }
     throw err;
   }

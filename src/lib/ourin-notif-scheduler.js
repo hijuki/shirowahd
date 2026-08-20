@@ -107,7 +107,7 @@ async function processEntry(entry, jam, type, key, db, dateStr) {
                 const meta = await sock.groupMetadata(entry.chatJid)
                 const participants = (meta.participants || []).map(p => p.id)
                 mentions = [...new Set([entry.sender, ...participants])]
-            } catch {}
+            } catch (e) { console.error("[NotifScheduler] Group metadata failed:", e.message); }
         }
 
         await sock.sendMessage(entry.chatJid, { text, mentions })

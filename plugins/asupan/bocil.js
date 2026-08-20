@@ -1,7 +1,5 @@
-import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
-import { f } from '../../src/lib/ourin-http.js'
 const pluginConfig = {
     name: 'bocil',
     alias: ['bocilvid'],
@@ -24,7 +22,7 @@ function loadJsonData(filename) {
         if (fs.existsSync(filePath)) {
             return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
         }
-    } catch {}
+    } catch (e) { /* file read failed */ }
     return []
 }
 

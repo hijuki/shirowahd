@@ -84,7 +84,7 @@ async function handler(m, { sock, db }) {
     if (tempFile && fs.existsSync(tempFile)) {
       try {
         fs.unlinkSync(tempFile);
-      } catch {}
+      } catch (e) { /* temp cleanup */ }
     }
 
     let report =
@@ -147,7 +147,7 @@ async function handler(m, { sock, db }) {
         rawContent.mimetype = fileType?.mime || source.mimetype || "audio/mpeg";
         rawContent.ptt = source.msg?.ptt || false;
       }
-    } catch {
+    } catch (e) {
       return m.reply(te(m.prefix, m.command, m.pushName));
     }
   } else if (text && text.trim()) {
@@ -197,7 +197,7 @@ async function handler(m, { sock, db }) {
     let thumbnail = null;
     try {
       thumbnail = getAssetBuffer("hillz2");
-    } catch {}
+    } catch (e) { console.error("[swgcall]", e.message); }
 
     const estimatedTime = Math.ceil(groupList.length * 1.5);
 
@@ -241,7 +241,7 @@ async function handler(m, { sock, db }) {
     if (tempFile && fs.existsSync(tempFile)) {
       try {
         fs.unlinkSync(tempFile);
-      } catch {}
+      } catch (e) { /* temp cleanup */ }
     }
     global._swgcallPending?.delete(m.sender);
   }

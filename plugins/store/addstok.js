@@ -84,7 +84,7 @@ async function handler(m, { sock }) {
           let fileBuffer;
           try {
             fileBuffer = await m.quoted.download();
-          } catch {
+          } catch (e) {
             return m.reply(
               `❌ *Gagal membaca file.*\n\nPastikan file tidak kosong dan dapat diunduh 📄`,
             );

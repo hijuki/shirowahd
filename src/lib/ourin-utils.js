@@ -77,7 +77,7 @@ function isUrl(str) {
     try {
         new URL(str);
         return true;
-    } catch {
+    } catch (e) {
         return false;
     }
 }
@@ -278,7 +278,7 @@ function fromBase64(str) {
 function isFile(filePath) {
     try {
         return fs.statSync(filePath).isFile();
-    } catch {
+    } catch (e) {
         return false;
     }
 }
@@ -291,7 +291,7 @@ function isFile(filePath) {
 function isDirectory(dirPath) {
     try {
         return fs.statSync(dirPath).isDirectory();
-    } catch {
+    } catch (e) {
         return false;
     }
 }
@@ -319,7 +319,7 @@ function readJsonFile(filePath, defaultValue = {}) {
         if (!fs.existsSync(filePath)) return defaultValue;
         const content = fs.readFileSync(filePath, 'utf-8');
         return JSON.parse(content);
-    } catch {
+    } catch (e) {
         return defaultValue;
     }
 }
@@ -341,7 +341,7 @@ function writeJsonFile(filePath, data, pretty = true) {
             : JSON.stringify(data);
         fs.writeFileSync(filePath, content, 'utf-8');
         return true;
-    } catch {
+    } catch (e) {
         return false;
     }
 }

@@ -41,7 +41,7 @@ async function checkAntidocument(m, sock, db) {
 
     try {
         await sock.sendMessage(m.chat, { delete: m.key })
-    } catch {}
+    } catch (e) { console.error("[antidocument]", e.message); }
 
     await sock.sendMessage(m.chat, {
         text: gpMsg('antidocument', { user: m.sender.split('@')[0] }),

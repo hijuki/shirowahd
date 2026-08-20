@@ -68,12 +68,12 @@ async function handler(m, { sock }) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "image";
-      } catch {}
+      } catch (e) { console.error("[bcpc]", e.message); }
     } else if (qmsg.isVideo) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "video";
-      } catch {}
+      } catch (e) { console.error("[bcpc]", e.message); }
     }
 
     const privateJids = new Set();
@@ -161,7 +161,7 @@ async function handler(m, { sock }) {
           await sock.sendText(jid, input, null, { contextInfo: ctx });
         }
         success++;
-      } catch {
+      } catch (e) {
         failed++;
       }
       await new Promise((r) => setTimeout(r, jeda));

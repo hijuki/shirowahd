@@ -5,7 +5,7 @@ function getUploaderUrl() {
   try { return fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), "../../vids/uploader-url.txt"), "utf8").trim(); }
   catch { return "https://swhdhlz.my.id"; }
 }
-import { generateWAMessageFromContent, prepareWAMessageMedia, proto } from "ourin";
+import { generateWAMessageFromContent, prepareWAMessageMedia } from "ourin";
 import _sharp from "sharp";
 import config from "../../config.js";
 import axios from "axios";
@@ -338,7 +338,7 @@ async function handler(m, { sock, config: botConfig, db, uptime }) {
             const current = res.data.current
             const kondisi = weatherCode[current.weather_code] || "🌍 Tidak diketahui"
             return `${kondisi} | 🌡️ ${Math.round(current.temperature_2m)}°C\n📍 ${loc.name}`
-          } catch {
+          } catch (e) {
             return "Cuaca tidak tersedia"
           }
         }
@@ -411,7 +411,7 @@ async function handler(m, { sock, config: botConfig, db, uptime }) {
             const current = res.data.current
             const kondisi = weatherCode[current.weather_code] || "🌍 Tidak diketahui"
             return `${kondisi} | 🌡️ ${Math.round(current.temperature_2m)}°C\n📍 ${loc.name}`
-          } catch {
+          } catch (e) {
             return "Cuaca tidak tersedia"
           }
         }

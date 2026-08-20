@@ -48,10 +48,10 @@ async function fallbackToMp3Buffer(url) {
   } finally {
     try {
       if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-    } catch {}
+    } catch (e) { /* temp cleanup */ }
     try {
       if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-    } catch {}
+    } catch (e) { /* temp cleanup */ }
   }
 }
 

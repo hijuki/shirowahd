@@ -42,7 +42,7 @@ async function checkAntimedia(m, sock, db) {
 
   try {
     await sock.sendMessage(m.chat, { delete: m.key });
-  } catch {}
+  } catch (e) { console.error("[antimedia]", e.message); }
 
   await sock.sendMessage(m.chat, {
     text: gpMsg("antimedia", { user: m.sender.split("@")[0] }),

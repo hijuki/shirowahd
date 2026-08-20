@@ -77,7 +77,7 @@ async function loadAvatarSafe(avatarUrl) {
         return await loadImage(buffer);
       }
       return await loadImage(DEFAULT_AVATAR);
-    } catch {
+    } catch (e) {
       return null;
     }
   }
@@ -418,7 +418,7 @@ async function createWelcomeCardV4(
         avatarSize,
         avatarSize,
       );
-  } catch {
+  } catch (e) {
     ctx.fillStyle = "#ccc";
     ctx.fillRect(
       avatarX - avatarSize / 2,
@@ -539,7 +539,7 @@ async function createGoodbyeCardV4(
         avatarSize,
         avatarSize,
       );
-  } catch {
+  } catch (e) {
     ctx.fillStyle = "#ccc";
     ctx.fillRect(
       avatarX - avatarSize / 2,

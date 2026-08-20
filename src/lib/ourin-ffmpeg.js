@@ -1,6 +1,5 @@
 import { cpus } from 'os'
 import { exec } from 'child_process'
-import { logger } from './ourin-logger.js'
 const CONCURRENCY = Math.max(2, cpus().length)
 const TIMEOUT = 60_000
 
