@@ -26,7 +26,7 @@ function loadOwners() {
         cache.owners = data.owners || []
         cache.ownerTs = now
         return cache.owners
-    } catch (e) { console.error("[PremiumDB] Load owners failed:", e.message); 
+    } catch {
         return []
     }
 }
@@ -50,7 +50,7 @@ function loadPremium() {
         cache.premium = data.premium || []
         cache.premiumTs = now
         return cache.premium
-    } catch (e) { console.error("[PremiumDB] Load premium failed:", e.message); 
+    } catch {
         return []
     }
 }
@@ -74,7 +74,7 @@ function loadPartners() {
         cache.partners = data.partners || []
         cache.partnerTs = now
         return cache.partners
-    } catch (e) { console.error("[PremiumDB] Load partners failed:", e.message); 
+    } catch {
         return []
     }
 }

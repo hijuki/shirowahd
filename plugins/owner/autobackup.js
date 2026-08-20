@@ -1,4 +1,4 @@
-import { enableAutoBackup, disableAutoBackup, getBackupStatus, triggerManualBackup } from '../../src/lib/ourin-auto-backup.js'
+import { enableAutoBackup, disableAutoBackup, getBackupStatus, triggerManualBackup, formatInterval } from '../../src/lib/ourin-auto-backup.js'
 import * as timeHelper from '../../src/lib/ourin-time.js'
 import config from '../../config.js'
 import te from '../../src/lib/ourin-error.js'

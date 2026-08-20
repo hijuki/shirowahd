@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { isLid, lidToJid } from '../../src/lib/ourin-lid.js'
 import { getDatabase } from '../../src/lib/ourin-database.js'
+import { getGroupMode } from '../group/botmode.js'
 const pluginConfig = {
     name: 'addseller',
     alias: ['addreseller', 'delseller', 'delreseller', 'listseller', 'listreseller'],

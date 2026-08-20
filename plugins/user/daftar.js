@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { getDatabase } from "../../src/lib/ourin-database.js";
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
 import {

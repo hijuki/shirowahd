@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { uploadImage } from '../../src/lib/ourin-uploader.js'
+import te from '../../src/lib/ourin-error.js'
 import { serialize } from '../../src/lib/ourin-serialize.js'
 import { parsePhoneNumber } from 'awesome-phonenumber'
 
@@ -23,7 +24,7 @@ async function getPp(sock, jid) {
     try {
         const url = await sock.profilePictureUrl(jid, 'image')
         return url
-    } catch (e) {
+    } catch {
         return 'https://files.catbox.moe/ios0gb.jfif'
     }
 }

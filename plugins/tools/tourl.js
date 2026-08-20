@@ -30,7 +30,7 @@ async function detectExt(buffer, fallback = "bin") {
   try {
     const type = await fileTypeFromBuffer(buffer);
     return type?.ext || fallback;
-  } catch (e) {
+  } catch {
     return fallback;
   }
 }

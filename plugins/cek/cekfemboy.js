@@ -38,10 +38,10 @@ async function convertGifToMp4(buffer) {
   } finally {
     try {
       if (fs.existsSync(gifPath)) fs.unlinkSync(gifPath);
-    } catch (e) { /* temp cleanup */ }
+    } catch {}
     try {
       if (fs.existsSync(mp4Path)) fs.unlinkSync(mp4Path);
-    } catch (e) { /* temp cleanup */ }
+    } catch {}
   }
 }
 

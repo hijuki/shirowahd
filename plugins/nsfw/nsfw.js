@@ -20,7 +20,7 @@ function loadJsonUrls(filename) {
       return data
     }
     return []
-  } catch (e) {
+  } catch {
     return []
   }
 }

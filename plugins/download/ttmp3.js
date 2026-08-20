@@ -2,6 +2,7 @@ import ttdown from "../../src/scraper/tiktok.js";
 import axios from "axios";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import { saluranCtx } from "../../src/lib/ourin-context.js";
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 const pluginConfig = {
@@ -73,7 +74,7 @@ async function handler(m, { sock }) {
       if (!file) continue;
       try {
         if (fs.existsSync(file)) fs.unlinkSync(file);
-      } catch (e) { /* temp cleanup */ }
+      } catch {}
     }
     cleanupFiles = [];
   };

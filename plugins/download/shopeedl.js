@@ -1,3 +1,4 @@
+import te from "../../src/lib/ourin-error.js";
 
 const pluginConfig = {
   name: "shopeedl",

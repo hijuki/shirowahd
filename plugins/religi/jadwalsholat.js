@@ -66,7 +66,7 @@ async function handler(m, { sock }) {
         timeout: 30000,
       });
       adzanBuffer = Buffer.from(res.data);
-    } catch (e) {
+    } catch {
       adzanBuffer = null;
     }
     const contextInfo = saluranCtx();

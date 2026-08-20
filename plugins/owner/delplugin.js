@@ -67,7 +67,7 @@ async function handler(m, { sock }) {
     let unloadResult = { success: false };
     try {
       unloadResult = unloadPlugin(found.path) || { success: true };
-    } catch (e) { console.error("[delplugin]", e.message); }
+    } catch {}
 
     fs.unlinkSync(found.path);
 

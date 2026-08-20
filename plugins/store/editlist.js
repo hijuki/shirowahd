@@ -28,7 +28,7 @@ async function uploadToCatbox(buffer, filename = 'file.jpg') {
             timeout: 30000
         })
         return res.data?.startsWith('http') ? res.data : null
-    } catch (e) {
+    } catch {
         return null
     }
 }
@@ -108,7 +108,7 @@ async function handler(m, { sock }) {
                     if (url) item.image = url
                     else return m.reply(`❌ *Gagal mengunggah gambar.* Coba lagi nanti 🖼️`)
                 }
-            } catch (e) {
+            } catch {
                 return m.reply(`❌ *Gagal mengunggah gambar.* Coba lagi nanti 🖼️`)
             }
             break
@@ -125,7 +125,7 @@ async function handler(m, { sock }) {
                     if (url) item.video = url
                     else return m.reply(`❌ *Gagal mengunggah video.* Coba lagi nanti 🎬`)
                 }
-            } catch (e) {
+            } catch {
                 return m.reply(`❌ *Gagal mengunggah video.* Coba lagi nanti 🎬`)
             }
             break

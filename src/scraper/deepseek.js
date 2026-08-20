@@ -66,7 +66,7 @@ function parseSSE(rawBody) {
       if (json.reasoning) reasoning += json.reasoning;
       if (json.text) answer += json.text;
       if (json.done) break;
-    } catch (e) { /* stream chunk parse */ }
+    } catch {}
   }
 
   return {

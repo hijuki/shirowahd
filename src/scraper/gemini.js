@@ -131,7 +131,7 @@ async function gemini(input = {}) {
           parse1 = parsed;
           break;
         }
-      } catch (e) { /* SSE chunk parse */ }
+      } catch {}
     }
 
     if (!parse1) {

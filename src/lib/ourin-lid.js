@@ -17,7 +17,7 @@ function loadPersistentCache() {
         }
       }
     }
-  } catch (e) { console.error("[LID] Cache load failed:", e.message); }
+  } catch {}
 }
 
 function savePersistentCache() {
@@ -28,7 +28,7 @@ function savePersistentCache() {
     const obj = Object.fromEntries(lidCache);
     writeFileSync(LID_CACHE_PATH, JSON.stringify(obj));
     _persistDirty = false;
-  } catch (e) { console.error("[LID] Cache persist failed:", e.message); }
+  } catch {}
 }
 
 function markDirty() {
@@ -478,8 +478,8 @@ async function resolveParticipant(msg, sock) {
     try {
       const metadata = await sock.groupMetadata(msg.key.remoteJid);
       return resolveLidFromParticipants(participant, metadata.participants);
-    } catch (e) {
-      // Fallback: group metadata unavailable
+    } catch {
+      // Fallback
     }
   }
   return lidToJid(participant);
@@ -597,9 +597,7 @@ async function resolveFromSock(jid, sock) {
         }
       }
     }
-  } catch (e) {
-    console.error('[LID] Resolution failed:', e.message);
-  }
+  } catch {}
   return jid;
 }
 

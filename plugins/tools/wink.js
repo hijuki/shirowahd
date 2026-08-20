@@ -1,3 +1,4 @@
+import te from "../../src/lib/ourin-error.js";
 import winkEnhance from "../../src/scraper/wink.js";
 
 const pluginConfig = {

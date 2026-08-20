@@ -1,4 +1,5 @@
 import { getDatabase } from "../../src/lib/ourin-database.js";
+import fs from "fs";
 import te from "../../src/lib/ourin-error.js";
 import { saluranCtx } from "../../src/lib/ourin-context.js";
 const pluginConfig = {
@@ -128,7 +129,7 @@ async function handler(m, { sock }) {
           await sock.groupLeave(groupId);
           leftCount++;
           await new Promise((r) => setTimeout(r, 3000));
-        } catch (e) {
+        } catch {
           failedCount++;
         }
       }
@@ -187,7 +188,7 @@ async function handler(m, { sock }) {
           await sock.groupLeave(groupId);
           leftCount++;
           await new Promise((r) => setTimeout(r, 5000));
-        } catch (e) {
+        } catch {
           failedCount++;
         }
       }

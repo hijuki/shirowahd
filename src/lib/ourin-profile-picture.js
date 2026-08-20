@@ -19,7 +19,7 @@ async function getProfilePicture(sock, jid) {
     let url
     try {
         url = await sock.profilePictureUrl(jid, 'image')
-    } catch (e) { /* profile picture unavailable */ 
+    } catch {
         url = DEFAULT_PP
     }
 
@@ -33,7 +33,7 @@ async function getProfileBuffer(sock, jid) {
         const { f } = await import('./ourin-http.js')
         const res = await f(url, 'arrayBuffer')
         return Buffer.from(res.data)
-    } catch (e) { console.error("[ProfilePic] Download failed:", e.message); 
+    } catch {
         return null
     }
 }

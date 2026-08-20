@@ -54,7 +54,7 @@ async function handler(m, { sock }) {
           {},
         );
         filename = audioMsg.fileName || "audio.mp3";
-      } catch (e) { console.error("[musikapaini]", e.message); }
+      } catch {}
     }
   }
 
@@ -64,7 +64,7 @@ async function handler(m, { sock }) {
       try {
         audioBuffer = await m.download();
         filename = audioMsg.fileName || "audio.mp3";
-      } catch (e) { console.error("[musikapaini]", e.message); }
+      } catch {}
     }
   }
 

@@ -78,7 +78,7 @@ async function handler(m, { sock }) {
         caption: text
       }, { quoted: m })
       return
-    } catch (e) { console.error("[payment]", e.message); }
+    } catch {}
   }
 
   await sock.sendMessage(m.chat, { text }, { quoted: m })

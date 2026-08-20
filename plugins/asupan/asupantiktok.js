@@ -1,3 +1,4 @@
+import axios from "axios";
 import config from "../../config.js";
 import { f } from "../../src/lib/ourin-http.js";
 import { saluranCtx } from "../../src/lib/ourin-context.js";

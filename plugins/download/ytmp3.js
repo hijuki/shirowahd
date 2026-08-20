@@ -22,7 +22,7 @@ async function getAudioDownload(url) {
     if (download) {
       return { download, title };
     }
-  } catch (e) { console.error("[ytmp3]", e.message); }
+  } catch {}
 
   const fallback = await ytdl(url, "mp3");
   if (fallback?.status && fallback?.dl) {

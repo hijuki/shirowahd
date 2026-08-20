@@ -219,7 +219,7 @@ async function getProfilePicture(sock, jid) {
   try {
     const pp = await sock.profilePictureUrl(jid, "image");
     return pp || null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -236,7 +236,7 @@ async function getAvatarBuffer(sock, jid) {
     if (ppUrl) {
       return await downloadImage(ppUrl);
     }
-  } catch (e) { console.error("[fakestory3]", e.message); }
+  } catch {}
   if (fs.existsSync(DEFAULT_PP_PATH)) {
     return fs.readFileSync(DEFAULT_PP_PATH);
   }

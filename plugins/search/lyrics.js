@@ -1,4 +1,5 @@
 import axios from 'axios'
+import te from '../../src/lib/ourin-error.js'
 
 async function fetchLyrics(judul) {
   try {

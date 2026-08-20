@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -189,7 +190,7 @@ async function uploadImage(buffer, filename) {
 
   try {
     json = JSON.parse(result.responseText);
-  } catch (e) { console.error("[ImgDrop] JSON parse failed:", e.message); 
+  } catch {
     json = null;
   }
 

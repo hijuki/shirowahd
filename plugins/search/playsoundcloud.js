@@ -1,5 +1,6 @@
 import { scSearch } from "./soundcloud.js";
 import scdl from "../../src/scraper/soundclouddl.js";
+import te from "../../src/lib/ourin-error.js";
 
 const pluginConfig = {
   name: "playsoundcloud",

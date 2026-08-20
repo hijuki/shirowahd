@@ -1,6 +1,8 @@
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
+import fs from "fs";
 import config from "../../config.js";
 import te from "../../src/lib/ourin-error.js";
+import ourinApi from "../../src/lib/ourin-apimanager.js";
 const pluginConfig = {
   name: "brat",
   alias: ["bratmenu", "bratimg", "brattext"],

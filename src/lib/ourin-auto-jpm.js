@@ -1,6 +1,7 @@
 import { getDatabase } from "./ourin-database.js";
 import { logger } from "./ourin-logger.js";
 import { delay } from "./ourin-utils.js";
+import config from "../../config.js";
 import fs from "fs";
 import { saluranCtx } from "./ourin-context.js";
 import path from "path";

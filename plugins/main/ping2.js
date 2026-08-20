@@ -51,7 +51,7 @@ function getNetwork() {
             }
         }
         return { iface: active }
-    } catch (e) {
+    } catch {
         return { iface: 'N/A' }
     }
 }
@@ -89,7 +89,7 @@ async function handler(m, { sock }) {
                     }
                 }
             }
-        } catch (e) { console.error("[ping2]", e.message); }
+        } catch {}
 
         const heap = process.memoryUsage()
         const net = await getNetwork()
@@ -102,11 +102,11 @@ async function handler(m, { sock }) {
                 dbGroups = Object.keys(db.data.groups || {}).length
                 dbPremium = Object.values(db.data.users || {}).filter(u => u.isPremium).length
             }
-        } catch (e) { console.error("[ping2]", e.message); }
+        } catch {}
 
         let vidStats = { totalActive: 0, totalSize: 0, uploadsToday: 0 };
         let vidStorage = 0;
-        try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch (e) { console.error("[ping2]", e.message); }
+        try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch {}
 
         const totalExec = Math.round(performance.now() - execStart)
 

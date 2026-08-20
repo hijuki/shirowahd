@@ -191,36 +191,19 @@ function setCooldown(userId) {
   userCooldowns.set(userId, Date.now());
 }
 
-// ponytail: simple per-user lock to prevent concurrent history corruption; upgrade to async-mutex if needed
-const _historyLocks = new Map();
-
 function saveToHistory(autoai, senderNumber, role, content) {
   if (!autoai.sessions) autoai.sessions = {};
   if (!autoai.sessions[senderNumber]) {
     autoai.sessions[senderNumber] = { history: [] };
   }
-  // Serialize writes per user to prevent concurrent corruption
-  const lock = _historyLocks.get(senderNumber);
-  const doSave = () => {
-    const history = autoai.sessions[senderNumber].history;
-    history.push({
-      role,
-      content: content.substring(0, 500),
-      timestamp: Date.now(),
-    });
-    if (history.length > 20) {
-      autoai.sessions[senderNumber].history = history.slice(-20);
-    }
-  };
-  if (lock) {
-    _historyLocks.set(senderNumber, lock.then(doSave, doSave));
-  } else {
-    doSave();
-    _historyLocks.set(senderNumber, Promise.resolve());
-  }
-  // Clean up locks map periodically
-  if (_historyLocks.size > 1000) {
-    _historyLocks.clear();
+  const history = autoai.sessions[senderNumber].history;
+  history.push({
+    role,
+    content: content.substring(0, 500),
+    timestamp: Date.now(),
+  });
+  if (history.length > 20) {
+    autoai.sessions[senderNumber].history = history.slice(-20);
   }
 }
 
@@ -718,9 +701,7 @@ async function executeAction(action, m, sock) {
             imagenya.push({
               image: { url: imageUrl },
             });
-          } catch (e) {
-            console.error('[AutoAI PINS] Failed to add image:', e.message);
-          }
+          } catch {}
         }
         await sock.sendMessage(
           m.chat,
@@ -843,9 +824,7 @@ async function executeAction(action, m, sock) {
             ok: true,
             msg: `@${targetNum} di-kick karena 3x warning`,
           });
-        } catch (e) {
-          console.error('[AutoAI WARN] Failed to kick after 3 warnings:', e.message);
-        }
+        } catch {}
       }
       break;
     }
@@ -1098,9 +1077,7 @@ async function handleAutoAI(m, sock) {
             `ffmpeg -y -i "${mp3Path}" -c:a libopus -b:a 64k -ac 1 -ar 48000 "${oggPath}"`,
             { timeout: 30000 },
           );
-        } catch (e) {
-          console.error('[AutoAI] ffmpeg conversion failed:', e.message);
-        }
+        } catch {}
 
         let audioBuffer;
         let mime = "audio/mpeg";
@@ -1109,17 +1086,13 @@ async function handleAutoAI(m, sock) {
           mime = "audio/ogg; codecs=opus";
           try {
             fs.unlinkSync(oggPath);
-          } catch (e) {
-            console.error('[AutoAI] Failed to clean ogg temp:', e.message);
-          }
+          } catch {}
         } else {
           audioBuffer = fs.readFileSync(mp3Path);
         }
         try {
           fs.unlinkSync(mp3Path);
-        } catch (e) {
-          console.error('[AutoAI] Failed to clean mp3 temp:', e.message);
-        }
+        } catch {}
 
         await sock.sendMessage(
           m.chat,
@@ -1132,8 +1105,7 @@ async function handleAutoAI(m, sock) {
         );
 
         await sock.sendPresenceUpdate("paused", m.chat);
-      } catch (e) {
-        console.error('[AutoAI] Voice response failed:', e.message);
+      } catch {
         await m.reply(cleanResponse);
       }
     } else {
@@ -1176,9 +1148,7 @@ async function handleAutoAI(m, sock) {
     await sock.sendPresenceUpdate("paused", m.chat);
     try {
       await m.reply(getFallbackResponse());
-    } catch (e) {
-      console.error('[AutoAI] Reply fallback failed:', e.message);
-    }
+    } catch {}
     return true;
   }
 }

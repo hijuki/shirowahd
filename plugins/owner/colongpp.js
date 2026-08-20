@@ -51,7 +51,7 @@ async function handler(m, { sock }) {
         timeout: 15000,
       });
       ppBuffer = Buffer.from(res.data);
-    } catch (e) {
+    } catch {
       const res = await axios.get(FALLBACK_PP, {
         responseType: "arraybuffer",
         timeout: 15000,

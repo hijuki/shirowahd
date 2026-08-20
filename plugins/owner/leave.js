@@ -41,7 +41,7 @@ async function handler(m, { sock }) {
     try {
       const meta = m.groupMetadata;
       groupName = meta.subject || "Grup ini";
-    } catch (e) {
+    } catch {
       groupName = "Grup ini";
     }
   } else if (input) {

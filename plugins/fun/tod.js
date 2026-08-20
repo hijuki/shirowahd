@@ -1,3 +1,4 @@
+import { getDatabase } from "../../src/lib/ourin-database.js";
 import te from "../../src/lib/ourin-error.js";
 
 const pluginConfig = {

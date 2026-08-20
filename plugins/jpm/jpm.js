@@ -18,6 +18,8 @@ import {
 import config from "../../config.js";
 import te from "../../src/lib/ourin-error.js";
 import { saluranCtx } from "../../src/lib/ourin-context.js";
+import util from "util";
+import axios from "axios";
 import path from "path";
 import fs from "fs";
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
@@ -69,7 +71,7 @@ const jpmSessions = {};
 let cachedThumb = null;
 try {
   cachedThumb = getAssetBuffer("hillz2");
-} catch (e) { console.error("[jpm]", e.message); }
+} catch {}
 
 function getVerifiedQuoted() {
   const botName = config.bot?.name || "SHIROWAHD";
@@ -177,7 +179,7 @@ async function fetchAllSubscribedChannels(sock) {
         }
         break;
       }
-    } catch (e) {
+    } catch {
       continue;
     }
   }
@@ -209,7 +211,7 @@ async function sendInteractiveMessage(
         { image: cachedThumb },
         { upload: sock.waUploadToServer },
       );
-    } catch (e) { console.error("[jpm]", e.message); }
+    } catch {}
   }
 
   const botName = config.bot?.name || "SHIROWAHD";
@@ -459,7 +461,7 @@ async function runBroadcast(
         });
       }
       successCount++;
-    } catch (e) {
+    } catch {
       failedCount++;
     }
 
@@ -588,17 +590,17 @@ async function handleJpmMain(m, sock, db, fullInput) {
     try {
       mediaBuffer = await qmsg.download();
       mediaType = "image";
-    } catch (e) { console.error("[jpm]", e.message); }
+    } catch {}
   } else if (qmsg.isVideo) {
     try {
       mediaBuffer = await qmsg.download();
       mediaType = "video";
-    } catch (e) { console.error("[jpm]", e.message); }
+    } catch {}
   } else if (qmsg.isAudio || qmsg.mimetype?.startsWith("audio")) {
     try {
       mediaBuffer = await qmsg.download();
       mediaType = "audio";
-    } catch (e) { console.error("[jpm]", e.message); }
+    } catch {}
   } else if (
     qmsg.isDocument ||
     (qmsg.mimetype && !qmsg.mimetype.startsWith("text/plain"))
@@ -606,7 +608,7 @@ async function handleJpmMain(m, sock, db, fullInput) {
     try {
       mediaBuffer = await qmsg.download();
       mediaType = "document";
-    } catch (e) { console.error("[jpm]", e.message); }
+    } catch {}
   }
 
   const contentInfo =
@@ -769,12 +771,12 @@ async function handleJpmDirect(m, sock, db, text, mode) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "image";
-      } catch (e) { console.error("[jpm]", e.message); }
+      } catch {}
     } else if (qmsg.isVideo) {
       try {
         mediaBuffer = await qmsg.download();
         mediaType = "video";
-      } catch (e) { console.error("[jpm]", e.message); }
+      } catch {}
     }
 
     const { groupIds, allGroups, blacklistedCount } = await getTargetGroups(
@@ -845,12 +847,12 @@ async function handleJpmChannelWithContent(
         try {
           mediaBuffer = await qmsg.download();
           mediaType = "image";
-        } catch (e) { console.error("[jpm]", e.message); }
+        } catch {}
       } else if (qmsg.isVideo) {
         try {
           mediaBuffer = await qmsg.download();
           mediaType = "video";
-        } catch (e) { console.error("[jpm]", e.message); }
+        } catch {}
       }
     }
 
@@ -901,7 +903,7 @@ async function handleJpmChannelWithContent(
           await sock.sendMessage(chId, { text, contextInfo: ctx });
         }
         successCount++;
-      } catch (e) {
+      } catch {
         failedCount++;
       }
       await new Promise((resolve) => setTimeout(resolve, jedaJpm));
@@ -1009,7 +1011,7 @@ async function handleJpmUpdateWithContent(m, sock, db, input) {
           contextInfo: saluranCtx(),
         });
         successCount++;
-      } catch (e) {
+      } catch {
         failedCount++;
       }
       await new Promise((resolve) => setTimeout(resolve, jedaJpm));
@@ -1168,7 +1170,7 @@ async function completeAutoJpmSetup(m, sock, db, intervalStr) {
         ) {
           fs.unlinkSync(mediaData.path);
         }
-      } catch (e) { /* temp cleanup */ }
+      } catch {}
     }
     mediaData = { type: mType, path: filePath, mimetype, fileName };
   }
@@ -1278,7 +1280,7 @@ async function handleAutoJpm(m, sock, db, input, fullInput) {
           ) {
             fs.unlinkSync(mediaData.path);
           }
-        } catch (e) { /* temp cleanup */ }
+        } catch {}
       }
       mediaData = { type: mediaType, path: filePath, mimetype, fileName };
     }

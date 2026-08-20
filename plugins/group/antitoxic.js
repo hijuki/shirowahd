@@ -71,7 +71,7 @@ async function handleToxicMessage(m, sock, db, toxicWord) {
 
     try {
         await sock.sendMessage(m.chat, { delete: m.key })
-    } catch (e) { console.error("[antitoxic]", e.message); }
+    } catch {}
 
     const senderTag = m.sender.split('@')[0]
 
@@ -79,7 +79,7 @@ async function handleToxicMessage(m, sock, db, toxicWord) {
         if (method === 'kick') {
             try {
                 await sock.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
-            } catch (e) { console.error("[antitoxic]", e.message); }
+            } catch {}
         }
 
         groupData.toxicWarns[m.sender] = 0

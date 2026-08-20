@@ -43,7 +43,7 @@ async function handler(m, { sock, db }) {
       for (const [nama, waktu] of Object.entries(times)) {
         jadwalText += `- **${nama.charAt(0).toUpperCase() + nama.slice(1)}**: ${waktu}\n`;
       }
-    } catch (e) {
+    } catch {
       jadwalText = "- Gagal memuat jadwal dari MyQuran\n";
     }
 
@@ -160,7 +160,7 @@ async function runAutoSholat(sock) {
   try {
     const jadwalData = await getTodaySchedule(kotaSetting.id);
     times = extractPrayerTimes(jadwalData);
-  } catch (e) {
+  } catch {
     return;
   }
   

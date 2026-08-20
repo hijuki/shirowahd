@@ -78,7 +78,7 @@ function parsePatternAnswer(text) {
     if (!pattern) return { error: "Regex kosong. Isi setelah `regex:` ya." };
     try {
       new RegExp(pattern, "i");
-    } catch (e) {
+    } catch {
       return { error: "Regex tidak valid. Coba cek lagi polanya." };
     }
     return {

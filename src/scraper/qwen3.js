@@ -94,7 +94,7 @@ async function Qwen3(prompt, options = {}) {
         const json = JSON.parse(data);
         const content = json.choices?.[0]?.delta?.content;
         if (typeof content === "string") answer += content;
-      } catch (e) { /* SSE chunk parse */ }
+      } catch {}
     }
   }
 

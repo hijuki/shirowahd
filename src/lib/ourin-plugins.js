@@ -591,7 +591,7 @@ function unloadPlugin(name) {
     if (plugin.filePath) {
       try {
         // require.cache removed
-      } catch (e) { /* cache cleanup not needed in ESM */ }
+      } catch {}
     }
 
     logger.warn("plugin", `unloaded: ${primaryName}`);

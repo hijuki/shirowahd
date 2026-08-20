@@ -1,4 +1,5 @@
-import { getFullSchedulerStatus } from '../../src/lib/ourin-scheduler.js'
+import { getFullSchedulerStatus, formatTimeRemaining, getMsUntilTime } from '../../src/lib/ourin-scheduler.js'
+import { initSholatScheduler, stopSholatScheduler } from '../../src/lib/ourin-sholat-scheduler.js'
 import { getDatabase } from '../../src/lib/ourin-database.js'
 import { getTodaySchedule, extractPrayerTimes } from '../../src/lib/ourin-sholat-api.js'
 import te from '../../src/lib/ourin-error.js'
@@ -79,7 +80,7 @@ async function handler(m, { sock }) {
                 }
 
                 text += `   └ Next: ${nextSholat} (${nextTime} WIB)\n`;
-            } catch (e) {
+            } catch {
                 text += `   └ _Gagal memuat jadwal_\n`;
             }
         }

@@ -4,6 +4,7 @@ import {
   generateWAMessageFromContent,
   proto,
 } from "ourin";
+import { createCanvas, loadImage, GlobalFonts } from "@napi-rs/canvas";
 import _sharp from "sharp";
 import config from "../../config.js";
 import {
@@ -14,6 +15,7 @@ import {
   getCommandsByCategory,
   getCategories,
 } from "../../src/lib/ourin-plugins.js";
+import { getDatabase } from "../../src/lib/ourin-database.js";
 import fs from "fs";
 import path from "path";
 
@@ -906,7 +908,7 @@ Enjoy your use brother.`
             const kondisi = weatherCode[current.weather_code] || "🌍 Tidak diketahui"
 
             return `${kondisi} | 🌡️ ${Math.round(current.temperature_2m)}°C\n📍 ${loc.name}`
-          } catch (e) {
+          } catch {
             return "Cuaca tidak tersedia"
           }
         }
@@ -1079,7 +1081,7 @@ _i am an automated system (WhatsApp bot) that can help to do something search an
             const kondisi = weatherCode[current.weather_code] || "🌍 Tidak diketahui"
 
             return `${kondisi} | 🌡️ ${Math.round(current.temperature_2m)}°C\n📍 ${loc.name}`
-          } catch (e) {
+          } catch {
             return "Cuaca tidak tersedia"
           }
         }

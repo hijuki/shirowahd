@@ -1,6 +1,7 @@
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
 import * as _canvas from '@napi-rs/canvas';
 import axios from "axios";
+import path from "path";
 
 import te from "../../src/lib/ourin-error.js";
 

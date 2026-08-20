@@ -22,7 +22,7 @@ async function resolveGroupId(sock, input) {
     try {
       const metadata = await sock.groupGetInviteInfo(inviteCode);
       if (metadata?.id) return { id: metadata.id, name: metadata.subject };
-    } catch (e) { console.error("[delsewa]", e.message); }
+    } catch {}
     return null;
   }
   return { id: input.includes("@g.us") ? input : input + "@g.us", name: null };
@@ -91,7 +91,7 @@ async function handler(m, { sock }) {
       );
       await new Promise((r) => setTimeout(r, 2000));
       await sock.groupLeave(groupId);
-    } catch (e) { console.error("[delsewa]", e.message); }
+    } catch {}
   }
 }
 

@@ -46,6 +46,7 @@ if (!global.pushkontakSessions) global.pushkontakSessions = {};
 const SESSION_TIMEOUT = 300000;
 const SERIAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
+import axios from "axios";
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
 
 let cachedThumb = null;
@@ -55,7 +56,7 @@ try {
     cachedThumb = getAssetBuffer("hillz");
   }
   cachedDoc = fs.readFileSync("./package.json");
-} catch (e) { /* file read failed */ }
+} catch { }
 
 function serial(len) {
   let r = "";
@@ -177,7 +178,7 @@ async function sendVcf(sock, ownerJid, contacts, groupName) {
   });
   try {
     fs.unlinkSync(vcfPath);
-  } catch (e) { /* temp cleanup */ }
+  } catch { }
 }
 
 async function handleStop(m) {
@@ -673,7 +674,7 @@ async function startPush(m, sock, text) {
         await sock.sendMessage(member, { text: msgText });
         saved.push(member);
         success++;
-      } catch (e) {
+      } catch {
         failed++;
       }
 

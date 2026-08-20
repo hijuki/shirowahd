@@ -71,7 +71,7 @@ const DEFAULT_PP = 'https://files.catbox.moe/nwvkbt.png'
 async function getProfilePicture(sock, jid) {
     try {
         return await sock.profilePictureUrl(jid, 'image')
-    } catch (e) {
+    } catch {
         return DEFAULT_PP
     }
 }

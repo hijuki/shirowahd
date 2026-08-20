@@ -1,5 +1,5 @@
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';

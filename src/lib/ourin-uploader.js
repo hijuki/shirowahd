@@ -29,6 +29,7 @@ export const uploadToUguu = uploadToTermai
 
 import fs from 'fs';
 import path from 'path';
+import { ImageUploadService } from 'node-upload-images';
 import config from '../../config.js';
 
 import { updateAssetAndSave } from './ourin-asset-manager.js';

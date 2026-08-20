@@ -140,7 +140,7 @@ async function handler(m, { sock }) {
         const webp = await toWebpSticker(buf);
         stickerBuffers.push(webp);
         await new Promise((r) => setTimeout(r, DOWNLOAD_DELAY));
-      } catch (e) {
+      } catch {
         continue;
       }
     }
@@ -179,7 +179,7 @@ async function handler(m, { sock }) {
               author,
               emojis: ["❤"],
             });
-          } catch (e) { console.error("[stickerpack]", e.message); }
+          } catch {}
           await sock.sendMessage(
             m.chat,
             {
@@ -190,7 +190,7 @@ async function handler(m, { sock }) {
           );
           sent++;
           await new Promise((r) => setTimeout(r, 500));
-        } catch (e) {
+        } catch {
           continue;
         }
       }

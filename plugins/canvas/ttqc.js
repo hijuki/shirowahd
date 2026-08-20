@@ -78,7 +78,7 @@ async function loadImageSmart(src) {
   if (src.startsWith('http://') || src.startsWith('https://')) {
     try {
         return await loadImage(await fetchBuffer(src));
-    } catch (e) {
+    } catch {
         return await loadImage("https://raw.githubusercontent.com/Ditzzx-vibecoder/Assets/6b71d84a580f385bd7ee36402df5341ead4770a0/Image/artworks-gWLRE6HyPH3DgVMG-ZFFxtg-t500x500.jpg");
     }
   }
@@ -262,7 +262,7 @@ async function handler(m, { sock }) {
     let ppUrl;
     try {
       ppUrl = await sock.profilePictureUrl(targetJid, "image");
-    } catch (e) {
+    } catch {
       ppUrl = "https://raw.githubusercontent.com/Ditzzx-vibecoder/Assets/6b71d84a580f385bd7ee36402df5341ead4770a0/Image/artworks-gWLRE6HyPH3DgVMG-ZFFxtg-t500x500.jpg";
     }
 

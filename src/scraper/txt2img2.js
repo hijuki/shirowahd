@@ -33,7 +33,7 @@ async function checkPrompt(prompt) {
       flagged: text.includes('"flagged":true'),
       rateLimited: text.includes('"rateLimited":true'),
     };
-  } catch (e) { console.error("[Txt2Img] Parse error:", e.message); 
+  } catch {
     return { flagged: false, rateLimited: false };
   }
 }

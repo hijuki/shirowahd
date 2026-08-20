@@ -8,7 +8,7 @@ import {
   areJidsSameUser,
   normalizeMessageContent,
 } from "ourin";
-import { writeFileSync, mkdirSync, existsSync } from "fs";
+import { writeFileSync, mkdirSync, existsSync, unlinkSync } from "fs";
 import { join } from "path";
 import config, {
   isBanned,
@@ -29,6 +29,7 @@ import {
   cacheLidJid,
   resolveFromSock,
 } from "./ourin-lid.js";
+import util from "util";
 import axios from "axios";
 import sharp from "sharp";
 import fsc from "fs";
@@ -53,7 +54,7 @@ function getCachedPrefixes() {
       prefixList = [configPrefix, ...(prefixData.prefixes || [])];
       isNoPrefix = prefixData.noprefix === true;
     }
-  } catch (e) { console.error("[Serialize] Prefix load error:", e.message); }
+  } catch { }
   _prefixCache = { list: [...new Set(prefixList)], noprefix: isNoPrefix };
   _prefixCacheTime = now;
   return _prefixCache;
@@ -90,7 +91,7 @@ async function getCachedThumb(filePath) {
     } else {
       _thumbCache[filePath] = null;
     }
-  } catch (e) { console.error("[Serialize] Thumbnail load error:", e.message); 
+  } catch {
     _thumbCache[filePath] = null;
   }
   return _thumbCache[filePath];
@@ -118,7 +119,7 @@ async function getCachedSharpThumb(filePath, w, h) {
     } else {
       _sharpThumbCache[key] = null;
     }
-  } catch (e) { console.error("[Serialize] Sharp thumbnail error:", e.message); 
+  } catch {
     _sharpThumbCache[key] = null;
   }
   return _sharpThumbCache[key];
@@ -258,7 +259,7 @@ function getMessageBody(message, type) {
         if (parsed.selectedRowId) return parsed.selectedRowId;
         if (parsed.selected_row_id) return parsed.selected_row_id;
         return "";
-      } catch (e) { /* JSON parse of selected row failed */ 
+      } catch {
         return "";
       }
     case "pollCreationMessage":
@@ -583,7 +584,7 @@ async function serialize(sock, msg, store = {}) {
             senderJid || fallback,
             metadata?.participants || [],
           );
-        } catch (e) { /* LID resolution fallback */ 
+        } catch {
           const fallback = msg.key.participant;
           senderJid = resolveAnyLidToJid(senderJid || fallback, []);
         }

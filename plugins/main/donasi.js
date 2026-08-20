@@ -1,4 +1,6 @@
 import config from "../../config.js";
+import path from "path";
+import fs from "fs";
 import fetch from "node-fetch";
 const pluginConfig = {
   name: "donasi",

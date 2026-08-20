@@ -99,7 +99,7 @@ async function ClaudeHaiku(prompt, options = {}) {
 
         const content = json.choices?.[0]?.delta?.content;
         if (typeof content === "string") answer += content;
-      } catch (e) { /* SSE chunk parse */ }
+      } catch {}
     }
   }
 

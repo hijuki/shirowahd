@@ -21,7 +21,7 @@ function loadGcSeller(version) {
     if (!fs.existsSync(filePath)) return null
     try {
         return JSON.parse(fs.readFileSync(filePath, 'utf8'))
-    } catch (e) {
+    } catch {
         return null
     }
 }

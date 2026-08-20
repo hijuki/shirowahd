@@ -99,7 +99,7 @@ async function handler(m, { sock }) {
                 if (buffer.length > 1000) {
                     mediaList.push({ image: buffer })
                 }
-            } catch (e) { console.error("[tiktokfoto]", e.message); }
+            } catch {}
         }
 
         if (mediaList.length === 0) {
@@ -145,7 +145,7 @@ async function handler(m, { sock }) {
                     messageId: msg.key.id
                 })
             }
-        } catch (e) {
+        } catch {
             for (const content of mediaList) {
                 await sock.sendMessage(m.chat, content, { quoted: m })
             }

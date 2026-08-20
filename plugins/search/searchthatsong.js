@@ -1,5 +1,6 @@
 import http from "http";
 import https from "https";
+import te from "../../src/lib/ourin-error.js";
 
 const pluginConfig = {
   name: "searchthatsong",
@@ -49,7 +50,7 @@ function _vyrRequest(method, url, body, headers = {}) {
         const raw = Buffer.concat(chunks).toString();
         try {
           resolve({ status: res.statusCode, headers: res.headers, data: JSON.parse(raw) });
-        } catch (e) {
+        } catch {
           resolve({ status: res.statusCode, headers: res.headers, data: raw });
         }
       });

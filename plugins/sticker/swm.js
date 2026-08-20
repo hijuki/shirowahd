@@ -1,6 +1,6 @@
 import config from '../../config.js'
 import te from '../../src/lib/ourin-error.js'
-import { addExifToWebp } from '../../src/lib/ourin-exif.js'
+import { addExifToWebp, isAnimatedWebp, DEFAULT_METADATA } from '../../src/lib/ourin-exif.js'
 
 const pluginConfig = {
     name: 'swm',

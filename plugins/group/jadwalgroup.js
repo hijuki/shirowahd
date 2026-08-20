@@ -1,3 +1,4 @@
+import { getDatabase } from '../../src/lib/ourin-database.js'
 const pluginConfig = {
     name: 'jadwalgroup',
     alias: ['schedulegroup', 'jdwlgrup', 'autoopenclose'],

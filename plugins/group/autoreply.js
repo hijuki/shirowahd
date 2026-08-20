@@ -298,7 +298,7 @@ async function handler(m, { sock }) {
                     if (fs.existsSync(customReplies[existingIndex].image)) {
                         fs.unlinkSync(customReplies[existingIndex].image)
                     }
-                } catch (e) { /* temp cleanup */ }
+                } catch {}
             }
             customReplies[existingIndex] = replyData
         } else {
@@ -342,7 +342,7 @@ async function handler(m, { sock }) {
                 if (fs.existsSync(customReplies[index].image)) {
                     fs.unlinkSync(customReplies[index].image)
                 }
-            } catch (e) { /* temp cleanup */ }
+            } catch {}
         }
         
         customReplies.splice(index, 1)
@@ -401,7 +401,7 @@ async function handler(m, { sock }) {
             if (r.image) {
                 try {
                     if (fs.existsSync(r.image)) fs.unlinkSync(r.image)
-                } catch (e) { /* temp cleanup */ }
+                } catch {}
             }
         }
         

@@ -1,6 +1,7 @@
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
 import axios from "axios";
 import config from "../../config.js";
+import fs from "fs";
 import { getDatabase } from "../../src/lib/ourin-database.js";
 import te from "../../src/lib/ourin-error.js";
 const pluginConfig = {

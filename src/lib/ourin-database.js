@@ -188,9 +188,7 @@ class Database {
     const flush = () => {
       try {
         this.flushAll();
-      } catch (e) {
-        console.error('[Database] Shutdown flush failed:', e.message);
-      }
+      } catch { }
     };
     process.on("exit", flush);
     process.on("beforeExit", flush);
@@ -203,9 +201,7 @@ class Database {
   flushDirty() {
     for (const key of Object.keys(this.dirty)) {
       if (this.dirty[key] && this.stores[key]) {
-        this._asyncWrite(key).catch((e) => {
-          console.error(`[Database] Async write failed for ${key}:`, e.message);
-        });
+        this._asyncWrite(key).catch(() => { });
       }
     }
   }
@@ -229,15 +225,11 @@ class Database {
       await fs.promises.writeFile(temp, json, "utf-8");
       await fs.promises.rename(temp, filePath);
       this.dirty[key] = false;
-    } catch (e) {
-      console.error(`[Database] Write failed for ${key}:`, e.message);
-    }
+    } catch { }
     this._writing.delete(key);
     if (this._pendingWrite.has(key)) {
       this._pendingWrite.delete(key);
-      this._asyncWrite(key).catch((e) => {
-        console.error(`[Database] Pending write retry failed for ${key}:`, e.message);
-      });
+      this._asyncWrite(key).catch(() => { });
     }
   }
 
@@ -246,9 +238,7 @@ class Database {
       try {
         this.stores[key].write();
         this.dirty[key] = false;
-      } catch (e) {
-        console.error(`[Database] FlushAll write failed for ${key}:`, e.message);
-      }
+      } catch { }
     }
   }
 
@@ -256,9 +246,7 @@ class Database {
     for (const store of Object.values(this.stores)) {
       try {
         store.read();
-      } catch (e) {
-        console.error('[Database] ReadAll failed for store:', e.message);
-      }
+      } catch { }
     }
   }
 
@@ -270,7 +258,7 @@ class Database {
       } else {
         try {
           JSON.parse(content);
-        } catch (e) {
+        } catch {
           const backup = path.join(
             this.dbPath,
             `${fileName}.corrupted.${Date.now()}.bak`,
@@ -434,9 +422,7 @@ class Database {
       const isPremiumUser = config.isPremium(jid);
       if (isOwnerUser && ownerEnergi === -1) return -1;
       if (isPremiumUser && premiumEnergi === -1) return -1;
-    } catch (e) {
-      console.error('[Database] Energy config check failed:', e.message);
-    }
+    } catch { }
 
     user.energi = Math.max(0, (user.energi ?? 0) + amount);
     this.setUser(jid, user);
@@ -611,15 +597,11 @@ class Database {
       if (!fs.existsSync(filePath)) continue;
       try {
         fs.copyFileSync(filePath, path.join(backupFolder, file));
-      } catch (e) {
-        console.error(`[Database] Backup copy failed for ${file}:`, e.message);
-      }
+      } catch { }
       try {
         fs.writeFileSync(filePath, JSON.stringify(defaults, null, 2), "utf-8");
         resetCount++;
-      } catch (e) {
-        console.error(`[Database] Reset write failed for ${file}:`, e.message);
-      }
+      } catch { }
     }
 
     for (const [key, { defaults }] of Object.entries(fileMap)) {

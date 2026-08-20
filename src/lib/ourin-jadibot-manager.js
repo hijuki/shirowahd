@@ -277,7 +277,7 @@ function isSocketAlive(sock) {
     if (sock.ws && sock.ws.readyState === 1) return true;
     if (sock.user?.id) return true;
     return false;
-  } catch (e) { console.error("[Jadibot] Socket alive check failed:", e.message); 
+  } catch {
     return false;
   }
 }
@@ -287,7 +287,7 @@ async function safeSend(sock, jid, content, options = {}) {
     if (!jid) return null;
     if (!isSocketAlive(sock)) return null;
     return await sock.sendMessage(jid, content, options);
-  } catch (e) { console.error("[Jadibot] Send message failed:", e.message); 
+  } catch {
     return null;
   }
 }
@@ -360,7 +360,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
         const fresh = await childSock.groupMetadata(jid);
         groupMetadataCache.set(jid, fresh);
         return fresh;
-      } catch (e) { console.error("[Jadibot] Group metadata fetch failed:", e.message); 
+      } catch {
         return undefined;
       }
     },
@@ -397,7 +397,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
         reconnectAttempts.delete(id);
         try {
           childSock.ws.close();
-        } catch (e) { console.error("[Jadibot] WS close error:", e.message); }
+        } catch { }
         return;
       }
 
@@ -451,7 +451,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
           if (!isSocketAlive(childSock)) {
             clearInterval(heartbeatInterval);
           }
-        } catch (e) { console.error("[Jadibot] Heartbeat cleanup error:", e.message); }
+        } catch { }
       }, 30000);
 
       const session = jadibotSessions.get(id);
@@ -512,7 +512,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
             if (fs.existsSync(authPath)) {
               fs.rmSync(authPath, { recursive: true, force: true });
             }
-          } catch (e) { console.error("[Jadibot] Auth cleanup error:", e.message); }
+          } catch { }
         }
 
         let statusEmoji = "❌";
@@ -660,7 +660,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
           if (!!getAssetBuffer("hillz2")) {
             thumbnail = getAssetBuffer("hillz2");
           }
-        } catch (e) { /* thumbnail unavailable */ }
+        } catch { }
 
         await sock.sendMessage(
           m.chat,
@@ -716,7 +716,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
 
       try {
         childSock.end?.();
-      } catch (e) { console.error("[Jadibot] Socket end error:", e.message); }
+      } catch { }
       jadibotSessions.delete(id);
       reconnectAttempts.delete(id);
       throw new Error(errorMsg);
@@ -737,7 +737,7 @@ async function stopJadibot(jid, deleteSession = false) {
       }
       session.sock.ev.removeAllListeners();
       session.sock.ws.close();
-    } catch (e) { console.error("[Jadibot] Session cleanup error:", e.message); }
+    } catch { }
     jadibotSessions.delete(id);
   }
 
@@ -762,7 +762,7 @@ async function stopAllJadibots() {
       }
       session.sock.ev.removeAllListeners();
       session.sock.ws.close();
-    } catch (e) { console.error("[Jadibot] Stop session error:", e.message); }
+    } catch { }
     stopped.push(id);
   }
   jadibotSessions.clear();
@@ -782,7 +782,7 @@ async function restartJadibotSession(sock, sessionId) {
         const data = JSON.parse(fs.readFileSync(dbPath, "utf8"));
         if (data.owners?.[0]) ownerJid = data.owners[0] + "@s.whatsapp.net";
       }
-    } catch (e) { console.error("[Jadibot] Owner JID parse error:", e.message); }
+    } catch { }
 
     const mockM = {
       chat: ownerJid,

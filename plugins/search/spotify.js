@@ -1,4 +1,5 @@
 import axios from "axios";
+import te from "../../src/lib/ourin-error.js";
 import { generateWAMessageFromContent } from "ourin";
 import sharp from "sharp";
 

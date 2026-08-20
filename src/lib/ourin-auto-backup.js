@@ -3,6 +3,7 @@ import path from "path";
 import archiver from "archiver";
 import { CronJob } from "cron";
 import config from "../../config.js";
+import { getDatabase } from "./ourin-database.js";
 import * as timeHelper from "./ourin-time.js";
 import { logger } from "./ourin-logger.js";
 
@@ -116,9 +117,7 @@ function loadBackupState() {
     if (fs.existsSync(BACKUP_STATE_FILE)) {
       return JSON.parse(fs.readFileSync(BACKUP_STATE_FILE, "utf8"));
     }
-  } catch (e) {
-    console.error('[AutoBackup] Failed to load state:', e.message);
-  }
+  } catch {}
   return {
     enabled: false,
     intervalMs: 3600000,
@@ -224,14 +223,10 @@ async function createBackup() {
                 archive.file(fullPath, { name: relativePath });
                 fileCount++;
               }
-            } catch (e) {
-              console.error('[AutoBackup] Failed to stat file:', fullPath, e.message);
-            }
+            } catch {}
           }
         }
-      } catch (e) {
-        console.error('[AutoBackup] Failed to read directory:', dirPath, e.message);
-      }
+      } catch {}
     }
 
     addDirectory(rootDir).then(() => {
@@ -288,9 +283,7 @@ async function sendBackupToOwner(backupInfo) {
 
     try {
       await fs.promises.unlink(backupInfo.path);
-    } catch (e) {
-      console.error('[AutoBackup] Failed to clean temp backup:', e.message);
-    }
+    } catch {}
 
     logger.success("AutoBackup", `Backup sent to owner (${sizeInMB} MB)`);
     return true;
@@ -335,7 +328,6 @@ function stopAutoBackup() {
     activeCronJob = null;
     logger.info("AutoBackup", "Stopped");
   }
-  sockInstance = null;  // release socket reference
 }
 
 function enableAutoBackup(intervalStr, sock) {

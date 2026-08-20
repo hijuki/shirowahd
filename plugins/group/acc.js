@@ -125,7 +125,7 @@ async function handler(m, { sock }) {
                 const number = target.jid.split('@')[0]
                 text += `${ok ? '✅' : '❌'} ${number} — ${ok ? label : 'Gagal'}\n`
                 if (ok) successCount++
-            } catch (e) {
+            } catch {
                 const number = target.jid.split('@')[0]
                 text += `❌ ${number} — Error\n`
             }

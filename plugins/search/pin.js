@@ -7,6 +7,7 @@ import axios from "axios";
 import crypto from "crypto";
 import te from "../../src/lib/ourin-error.js";
 import { f } from "../../src/lib/ourin-http.js";
+import { AIRich } from "../../src/lib/ourin-builder.js";
 
 const pluginConfig = {
   name: "pin",

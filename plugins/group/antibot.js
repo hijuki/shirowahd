@@ -258,7 +258,7 @@ async function detectBot(m, sock) {
   try {
     try {
       await sock.sendMessage(m.chat, { delete: m.key });
-    } catch (e) {
+    } catch {
       await sock.sendMessage(m.chat, {
         delete: {
           remoteJid: m.chat,

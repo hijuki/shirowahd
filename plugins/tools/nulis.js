@@ -1,7 +1,10 @@
 import * as _canvas from "@napi-rs/canvas";
+import path from "path";
+import fs from "fs";
 import * as timeHelper from "../../src/lib/ourin-time.js";
 import te from "../../src/lib/ourin-error.js";
 import { saluranCtx } from "../../src/lib/ourin-context.js";
+import axios from "axios";
 import config from "../../config.js";
 import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
 const pluginConfig = {

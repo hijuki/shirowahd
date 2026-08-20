@@ -77,7 +77,7 @@ async function handler(m, { sock, store }) {
     } else if (typeof result === 'object') {
         try {
             output = util.inspect(result, { depth: 2, maxArrayLength: 50 })
-        } catch (e) {
+        } catch {
             output = String(result)
         }
     } else {

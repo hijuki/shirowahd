@@ -79,7 +79,7 @@ async function Roblox(username) {
     });
     const presJson = await pres.json();
     presence = presJson.userPresences?.[0] || null;
-  } catch (e) { console.error("[robloxstalk]", e.message); }
+  } catch {}
 
   return {
     id: detail.id,
