@@ -355,6 +355,12 @@ async function main() {
     onConnectionUpdate: async (update, sock) => {
       if (update.connection === "open") {
         logConnection("connected", sock.user?.name || "Bot");
+        try {
+          const { startBotApi } = await import("./src/lib/ourin-bot-api.js");
+          startBotApi();
+        } catch (e) {
+          logger.warn("bot-api", `Failed to start bot API: ${e.message}`);
+        }
         loadScheduledMessages(sock);
         startGroupScheduleChecker(sock);
         startSewaChecker(sock);

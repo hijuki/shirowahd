@@ -240,40 +240,57 @@ textarea{resize:vertical;min-height:60px}
 @media(max-width:768px){
   .sidebar{display:none}
   .main{margin-left:0}
-  .content{padding:18px;padding-bottom:100px}
-  .header{padding:0 18px}
+  .content{padding:14px;padding-bottom:100px}
+  .header{padding:0 14px;height:52px}
+  .header-title{font-size:.84em}
   .header-title span.desk{display:none}
   .header-uptime{display:none}
-  .stats{grid-template-columns:repeat(2,1fr);gap:10px}
-  .stat-card{padding:16px 14px}
-  .stat-val{font-size:1.2em}
-  .stat-label{font-size:.68em}
-  .stat-card .stat-bg-icon{font-size:2.5em}
+  .header-right{gap:8px}
+  .header-badge{font-size:.64em;padding:4px 8px}
+  .header-clock{font-size:.72em}
+  .stats{grid-template-columns:repeat(2,1fr);gap:8px}
+  .stat-card{padding:14px 12px}
+  .stat-val{font-size:1.1em}
+  .stat-label{font-size:.64em}
+  .stat-card .stat-bg-icon{font-size:2.2em}
   .tbl-wrap{display:none}
   .mobile-cards{display:block}
-  .chart{height:110px}
+  .chart{height:100px}
   .chart-bar-wrap{min-width:0}
-  .chart-day{font-size:.55em}
-  .chart-count{font-size:.55em}
-  .hourly-chart{height:90px;gap:2px}
-  .hourly-label{font-size:.48em}
-  .section-title{font-size:.88em}
-  .mon-grid{grid-template-columns:repeat(2,1fr);gap:8px}
-  .mon-card{padding:14px 12px}
-  .mon-card-val{font-size:.9em}
-  .item-row{flex-wrap:wrap}
-  .item-row input{min-width:0}
+  .chart-day{font-size:.5em}
+  .chart-count{font-size:.5em}
+  .hourly-chart{height:80px;gap:1px}
+  .hourly-label{font-size:.44em}
+  .section-title{font-size:.84em}
+  .section-desc{font-size:.76em}
+  .mon-grid{grid-template-columns:repeat(2,1fr);gap:6px}
+  .mon-card{padding:12px 10px}
+  .mon-card-val{font-size:.84em}
+  .item-row{flex-wrap:wrap;gap:6px}
+  .item-row input{min-width:0;width:100%}
   .pair-section input{max-width:100%}
-  .quick-actions{flex-direction:column}
+  .quick-actions{flex-direction:column;gap:6px}
   .quick-actions .btn{width:100%}
-  .inline-group{flex-direction:column}
-  .inline-group>div{min-width:0}
-  .greeting h2{font-size:1.15em}
-  .bulk-bar{flex-wrap:wrap;gap:8px}
+  .inline-group{flex-direction:column;gap:8px}
+  .inline-group>div{min-width:0;width:100%}
+  .greeting h2{font-size:1.1em}
+  .bulk-bar{flex-wrap:wrap;gap:6px}
   .bulk-bar .bulk-actions{margin-left:0;width:100%}
   .bulk-bar .bulk-actions .btn{flex:1}
-  .toast-container{top:auto;bottom:80px;right:12px;left:12px}
-  .toast{min-width:0;width:100%}
+  .toast-container{top:auto;bottom:80px;right:10px;left:10px}
+  .toast{min-width:0;width:100%;font-size:.78em;padding:10px 14px}
+  .card-panel{padding:14px 12px;border-radius:10px}
+  .btn{font-size:.78em;padding:9px 14px}
+  .btn-sm{font-size:.7em;padding:6px 10px}
+  input,select,textarea{font-size:.84em;padding:10px 12px}
+  textarea{min-height:60px}
+  label{font-size:.78em}
+  .faq-item{font-size:.84em}
+  .faq-q{padding:12px}
+  .faq-a{padding:10px 12px;font-size:.82em}
+  .login-card{padding:30px 24px;border-radius:16px}
+  .login-card h1{font-size:1.3em}
+  .login-card .logo-icon{width:46px;height:46px;font-size:1.2em;border-radius:12px}
 }
 
 /* ─── Bottom tab bar mobile ─── */
@@ -317,6 +334,8 @@ textarea{resize:vertical;min-height:60px}
       <div class="nav-item" data-tab="branding"><i class="fas fa-palette"></i> Branding</div>
       <div class="nav-item" data-tab="notifikasi"><i class="fab fa-telegram"></i> Notifikasi</div>
       <div class="nav-item" data-tab="security"><i class="fas fa-shield-halved"></i> Keamanan</div>
+      <div class="nav-item" data-tab="broadcast"><i class="fas fa-bullhorn"></i> Broadcast</div>
+      <div class="nav-item" data-tab="groups"><i class="fas fa-users-gear"></i> Grup</div>
       <div class="nav-group-label">Sistem</div>
       <div class="nav-item" data-tab="monitor"><i class="fas fa-server"></i> Monitor</div>
       <div class="nav-item" data-tab="bantuan"><i class="fas fa-circle-question"></i> Bantuan</div>
@@ -334,6 +353,8 @@ textarea{resize:vertical;min-height:60px}
     <div class="mob-item" data-tab="branding"><i class="fas fa-palette"></i>Brand</div>
     <div class="mob-item" data-tab="notifikasi"><i class="fab fa-telegram"></i>Notif</div>
     <div class="mob-item" data-tab="security"><i class="fas fa-shield-halved"></i>Security</div>
+    <div class="mob-item" data-tab="broadcast"><i class="fas fa-bullhorn"></i>Broadcast</div>
+    <div class="mob-item" data-tab="groups"><i class="fas fa-users-gear"></i>Grup</div>
     <div class="mob-item" data-tab="monitor"><i class="fas fa-server"></i>Monitor</div>
     <div class="mob-item" data-tab="bantuan"><i class="fas fa-circle-question"></i>Help</div>
   </div>
@@ -618,6 +639,76 @@ textarea{resize:vertical;min-height:60px}
         </div></div>
       </div>
 
+      <!-- TAB: Broadcast -->
+      <div class="tab-content" id="tab-broadcast">
+        <div class="section-title"><i class="fas fa-bullhorn" style="color:var(--accent)"></i> Broadcast ke Grup</div>
+        <div class="section-desc">Kirim pesan broadcast ke grup WhatsApp terdaftar</div>
+
+        <div class="card-panel" id="bcStatusCard" style="display:none;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <i class="fas fa-spinner fa-spin" style="color:var(--accent)" id="bcSpinner"></i>
+            <span style="font-weight:700;color:var(--text-bright);font-size:.88em" id="bcStatusText">Mengirim broadcast...</span>
+          </div>
+          <div class="bar-usage" style="margin-bottom:8px"><div class="bar-fill mem" id="bcProgressBar" style="width:0%;transition:width .3s"></div></div>
+          <div style="display:flex;gap:16px;font-size:.78em;color:var(--text-dim)">
+            <span>Terkirim: <span id="bcSent" class="mono" style="color:var(--green);font-weight:700">0</span></span>
+            <span>Gagal: <span id="bcFailed" class="mono" style="color:var(--red);font-weight:700">0</span></span>
+            <span>Total: <span id="bcTotal" class="mono" style="color:var(--accent);font-weight:700">0</span></span>
+          </div>
+        </div>
+
+        <div class="card-panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="font-weight:700;font-size:.88em;color:var(--text-bright)">Pilih Grup Tujuan</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-add btn-sm" onclick="bcSelectAll(true)"><i class="fas fa-check-double"></i> Semua</button>
+              <button class="btn btn-danger btn-sm" onclick="bcSelectAll(false)"><i class="fas fa-times"></i> Batal</button>
+              <button class="btn btn-add btn-sm" onclick="loadBroadcastGroups()"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+          </div>
+          <div id="bcGroupList" style="max-height:300px;overflow-y:auto">
+            <div style="color:var(--text-dim);font-size:.82em;padding:16px;text-align:center">Klik Refresh untuk memuat daftar grup</div>
+          </div>
+        </div>
+
+        <div class="card-panel" style="margin-top:12px">
+          <label>Pesan Broadcast</label>
+          <textarea id="bcMessage" placeholder="Tulis pesan broadcast..." style="min-height:100px"></textarea>
+          <div class="inline-group" style="margin-top:12px">
+            <div>
+              <label>Delay antar kirim (detik)</label>
+              <input type="number" id="bcDelay" value="3" min="1" max="30" style="max-width:120px">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button class="btn btn-primary" id="bcSendBtn" onclick="startBroadcast()"><i class="fas fa-paper-plane"></i> Kirim Broadcast</button>
+            <button class="btn btn-danger" id="bcCancelBtn" onclick="cancelBroadcast()" style="display:none"><i class="fas fa-stop"></i> Stop</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Group Manager -->
+      <div class="tab-content" id="tab-groups">
+        <div class="section-title"><i class="fas fa-users-gear" style="color:var(--accent)"></i> Manajemen Grup</div>
+        <div class="section-desc">Lihat semua grup bot, atur aktif/nonaktif, atau leave dari grup</div>
+
+        <div class="card-panel" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+            <div style="font-weight:700;font-size:.88em;color:var(--text-bright)">Daftar Grup (<span id="grpCount">0</span>)</div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="grpSearch" placeholder="Cari grup..." oninput="filterGroups()" style="max-width:200px;padding:6px 12px;font-size:.82em">
+              <button class="btn btn-add btn-sm" onclick="loadGroupManager()"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="grpList" style="display:flex;flex-direction:column;gap:8px">
+          <div style="color:var(--text-dim);font-size:.82em;padding:16px;text-align:center">Klik Refresh untuk memuat daftar grup</div>
+        </div>
+
+        <div class="msg" id="grpMsg" style="margin-top:12px"></div>
+      </div>
+
       <!-- TAB: Bantuan -->
       <div class="tab-content" id="tab-bantuan">
         <div class="section-title"><i class="fas fa-circle-question" style="color:var(--accent)"></i> FAQ & Bantuan</div>
@@ -675,13 +766,14 @@ function switchTab(tab) {
   document.querySelectorAll('.nav-item[data-tab="'+tab+'"],.mob-item[data-tab="'+tab+'"]').forEach(function(x){x.classList.add('active')});
   document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active')});
   document.getElementById('tab-' + tab).classList.add('active');
-  var names = {dashboard:'Dashboard',statistik:'Statistik',videos:'File',log:'Log Upload',settings:'Pengaturan',branding:'Branding',notifikasi:'Notifikasi',security:'Keamanan',monitor:'Monitor',bantuan:'Bantuan'};
+  var names = {dashboard:'Dashboard',statistik:'Statistik',videos:'File',log:'Log Upload',settings:'Pengaturan',branding:'Branding',notifikasi:'Notifikasi',security:'Keamanan',broadcast:'Broadcast',sendfn:'Send',monitor:'Monitor',bantuan:'Bantuan'};
   document.getElementById('headerTab').textContent = names[tab] || tab;
   if (tab === 'dashboard') loadDashboard();
   else if (tab === 'statistik') loadStatistik();
   else if (tab === 'videos') loadVideos();
   else if (tab === 'log') loadUploadLog();
   else if (tab === 'monitor') loadMonitor();
+  else if (tab === 'broadcast') loadBroadcastGroups();
   var mobActive = document.querySelector('.mob-item.active');
   if (mobActive) mobActive.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
 }
@@ -694,7 +786,7 @@ function doLogin() {
   var pwd = document.getElementById('pwd').value;
   fetch('/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) })
     .then(function(r){return r.json()}).then(function(d) {
-      if (d.ok) { token = d.token; showMsg('loginMsg', '', ''); enterAdmin(); }
+      if (d.ok) { token = d.token; localStorage.setItem('adminToken', token); showMsg('loginMsg', '', ''); enterAdmin(); }
       else showMsg('loginMsg', 'err', d.error || 'Password salah');
     }).catch(function(){showMsg('loginMsg', 'err', 'Koneksi gagal')});
 }
@@ -709,10 +801,21 @@ function enterAdmin() {
 }
 function doLogout() {
   token = null;
+  localStorage.removeItem('adminToken');
   document.getElementById('loginWrap').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('pwd').value = '';
 }
+// Auto-login from saved token
+(function() {
+  var saved = localStorage.getItem('adminToken');
+  if (saved) {
+    token = saved;
+    fetch('/admin/api/settings', { headers: { 'Authorization': 'Bearer ' + saved } })
+      .then(function(r) { if (r.ok) { enterAdmin(); } else { localStorage.removeItem('adminToken'); token = null; } })
+      .catch(function() {});
+  }
+})();
 
 // ─── API Helper ───
 function api(method, url, body) {
@@ -1224,6 +1327,163 @@ function doPairing() {
     setTimeout(function(){showMsg('pairMsg','','')}, 6000);
   });
 }
+
+// ─── Broadcast ───
+var bcGroups = [];
+var bcSending = false;
+function loadBroadcastGroups() {
+  var el = document.getElementById('bcGroupList');
+  el.innerHTML = '<div style="color:var(--text-dim);font-size:.82em;padding:16px;text-align:center"><i class="fas fa-spinner fa-spin"></i> Memuat grup...</div>';
+  api('GET', '/admin/api/bot/groups').then(function(d) {
+    if (!d.groups || d.groups.length === 0) {
+      el.innerHTML = '<div style="color:var(--text-dim);font-size:.82em;padding:16px;text-align:center">Tidak ada grup ditemukan. Pastikan bot terhubung.</div>';
+      bcGroups = [];
+      return;
+    }
+    bcGroups = d.groups;
+    var html = '';
+    // Get registered group JIDs from settings for highlighting
+    for (var i = 0; i < d.groups.length; i++) {
+      var g = d.groups[i];
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);transition:var(--transition)" class="bc-group-row">' +
+        '<input type="checkbox" class="bc-grp-chk" data-jid="' + esc(g.id) + '" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">' +
+        '<div style="flex:1;min-width:0">' +
+        '<div style="font-weight:600;font-size:.84em;color:var(--text-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(g.subject) + '</div>' +
+        '<div style="font-size:.68em;color:var(--text-dim);font-family:\'JetBrains Mono\',monospace">' + esc(g.id) + ' · ' + g.size + ' anggota</div>' +
+        '</div></div>';
+    }
+    el.innerHTML = html;
+  }).catch(function(e) {
+    el.innerHTML = '<div style="color:var(--red);font-size:.82em;padding:16px;text-align:center">Gagal memuat: Bot API tidak tersedia</div>';
+  });
+}
+function bcSelectAll(checked) {
+  document.querySelectorAll('.bc-grp-chk').forEach(function(c) { c.checked = checked; });
+}
+function startBroadcast() {
+  if (bcSending) return;
+  var msg = document.getElementById('bcMessage').value.trim();
+  if (!msg) { toast('err', 'Tulis pesan broadcast terlebih dahulu'); return; }
+  var jids = [];
+  document.querySelectorAll('.bc-grp-chk:checked').forEach(function(c) { jids.push(c.dataset.jid); });
+  if (jids.length === 0) { toast('err', 'Pilih minimal 1 grup tujuan'); return; }
+  var delay = parseInt(document.getElementById('bcDelay').value) || 3;
+  if (!confirm('Kirim broadcast ke ' + jids.length + ' grup?')) return;
+
+  bcSending = true;
+  document.getElementById('bcSendBtn').disabled = true;
+  document.getElementById('bcCancelBtn').style.display = 'inline-flex';
+  var sc = document.getElementById('bcStatusCard'); sc.style.display = 'block';
+  document.getElementById('bcSpinner').className = 'fas fa-spinner fa-spin';
+  document.getElementById('bcSpinner').style.color = 'var(--accent)';
+  document.getElementById('bcStatusText').textContent = 'Mengirim broadcast...';
+  document.getElementById('bcSent').textContent = '0';
+  document.getElementById('bcFailed').textContent = '0';
+  document.getElementById('bcTotal').textContent = jids.length;
+  document.getElementById('bcProgressBar').style.width = '0%';
+
+  api('POST', '/admin/api/bot/broadcast', { jids: jids, text: msg, delay: delay }).then(function(d) {
+    bcSending = false;
+    document.getElementById('bcSendBtn').disabled = false;
+    document.getElementById('bcCancelBtn').style.display = 'none';
+    if (d.ok) {
+      document.getElementById('bcSent').textContent = d.sent || 0;
+      document.getElementById('bcFailed').textContent = d.failed || 0;
+      document.getElementById('bcProgressBar').style.width = '100%';
+      if (d.cancelled) {
+        document.getElementById('bcStatusText').textContent = 'Broadcast dihentikan — ' + (d.sent||0) + ' terkirim';
+        document.getElementById('bcSpinner').className = 'fas fa-stop-circle';
+        document.getElementById('bcSpinner').style.color = 'var(--orange)';
+        toast('info', 'Broadcast dihentikan');
+      } else {
+        document.getElementById('bcStatusText').textContent = 'Broadcast selesai!';
+        document.getElementById('bcSpinner').className = 'fas fa-check-circle';
+        document.getElementById('bcSpinner').style.color = 'var(--green)';
+        toast('ok', 'Broadcast selesai! ' + (d.sent||0) + ' terkirim, ' + (d.failed||0) + ' gagal');
+      }
+    } else {
+      document.getElementById('bcStatusText').textContent = 'Error: ' + (d.error || 'Gagal');
+      document.getElementById('bcSpinner').className = 'fas fa-times-circle';
+      document.getElementById('bcSpinner').style.color = 'var(--red)';
+      toast('err', d.error || 'Broadcast gagal');
+    }
+  }).catch(function(e) {
+    bcSending = false;
+    document.getElementById('bcSendBtn').disabled = false;
+    document.getElementById('bcCancelBtn').style.display = 'none';
+    document.getElementById('bcStatusText').textContent = 'Koneksi gagal';
+    document.getElementById('bcSpinner').className = 'fas fa-times-circle';
+    document.getElementById('bcSpinner').style.color = 'var(--red)';
+    toast('err', 'Koneksi ke bot API gagal');
+  });
+}
+function cancelBroadcast() {
+  api('POST', '/admin/api/bot/broadcast/cancel').then(function() {
+    toast('info', 'Permintaan stop broadcast dikirim');
+  }).catch(function() {});
+}
+
+// ─── Group Manager ───
+var grpData = [];
+function loadGroupManager() {
+  document.getElementById('grpList').innerHTML = '<div style="color:var(--text-dim);font-size:.82em;padding:16px;text-align:center"><i class="fas fa-spinner fa-spin"></i> Memuat grup...</div>';
+  api('GET', '/admin/api/bot/groups').then(function(d) {
+    if (!d.groups) { document.getElementById('grpList').innerHTML = '<div style="color:var(--red);font-size:.82em;padding:16px;text-align:center">Gagal memuat grup</div>'; return; }
+    grpData = d.groups;
+    document.getElementById('grpCount').textContent = grpData.length;
+    renderGroups(grpData);
+  }).catch(function() {
+    document.getElementById('grpList').innerHTML = '<div style="color:var(--red);font-size:.82em;padding:16px;text-align:center">Bot API tidak tersedia</div>';
+  });
+}
+function filterGroups() {
+  var q = document.getElementById('grpSearch').value.toLowerCase();
+  if (!q) { renderGroups(grpData); return; }
+  renderGroups(grpData.filter(function(g) { return (g.subject || '').toLowerCase().includes(q) || g.id.includes(q); }));
+}
+function renderGroups(groups) {
+  var el = document.getElementById('grpList');
+  if (groups.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:.82em;padding:16px;text-align:center">Tidak ada grup ditemukan</div>'; return; }
+  var html = '';
+  for (var i = 0; i < groups.length; i++) {
+    var g = groups[i];
+    var disabled = g.disabled ? true : false;
+    html += '<div class="card-panel" style="display:flex;align-items:center;gap:12px;padding:14px 16px">' +
+      '<div style="width:40px;height:40px;border-radius:10px;background:var(--accent-glow);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-users" style="color:var(--accent);font-size:.9em"></i></div>' +
+      '<div style="flex:1;min-width:0">' +
+      '<div style="font-weight:700;font-size:.88em;color:var(--text-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(g.subject || 'Tanpa Nama') + '</div>' +
+      '<div style="font-size:.72em;color:var(--text-dim);font-family:JetBrains Mono,monospace">' + esc(g.id) + ' · ' + (g.size || '?') + ' anggota</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0">' +
+      '<button class="btn btn-sm ' + (disabled ? 'btn-add' : 'btn-danger') + '" onclick="toggleGroup(\'' + g.id + '\')" title="' + (disabled ? 'Aktifkan bot' : 'Nonaktifkan bot') + '">' +
+      '<i class="fas ' + (disabled ? 'fa-toggle-off' : 'fa-toggle-on') + '"></i> ' + (disabled ? 'OFF' : 'ON') + '</button>' +
+      '<button class="btn btn-sm btn-danger" onclick="leaveGroup(\'' + g.id + '\', \'' + (g.subject || 'grup').replace(/'/g,'') + '\')" title="Leave grup"><i class="fas fa-right-from-bracket"></i></button>' +
+      '</div></div>';
+  }
+  el.innerHTML = html;
+}
+function toggleGroup(gid) {
+  api('POST', '/admin/api/bot/groups/toggle', { jid: gid }).then(function(d) {
+    if (d.ok) {
+      toast('ok', d.disabled ? 'Bot dinonaktifkan di grup' : 'Bot diaktifkan di grup');
+      loadGroupManager();
+    } else {
+      toast('err', d.error || 'Gagal toggle');
+    }
+  }).catch(function() { toast('err', 'Bot API tidak tersedia'); });
+}
+function leaveGroup(gid, name) {
+  if (!confirm('Yakin mau leave dari grup "' + name + '"?\nBot akan keluar dari grup ini.')) return;
+  api('POST', '/admin/api/bot/groups/leave', { jid: gid }).then(function(d) {
+    if (d.ok) {
+      toast('ok', 'Berhasil leave dari grup');
+      loadGroupManager();
+    } else {
+      toast('err', d.error || 'Gagal leave');
+    }
+  }).catch(function() { toast('err', 'Bot API tidak tersedia'); });
+}
+
 </script>
 </body>
 </html>

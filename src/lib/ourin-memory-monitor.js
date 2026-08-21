@@ -1,5 +1,5 @@
 import { logger } from "./ourin-logger.js";
-const RSS_LIMIT = 1024 * 1024 * 1024;
+const RSS_LIMIT = 3072 * 1024 * 1024;
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let monitorTimer = null;

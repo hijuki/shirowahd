@@ -279,12 +279,23 @@ function convertToMp4(buf, originalName) {
     try { unlinkSync(tmpOut); } catch {}
     let fpsFlag = '';
     try {
-      const fps = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim();
-      if (fps && fps.includes('/')) fpsFlag = ' -r ' + fps;
+      const fps = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
+      if (fps && /^\d+\/\d+$/.test(fps)) fpsFlag = ' -r ' + fps;
     } catch {}
-    // ponytail: crf 18 = visually lossless. No resolution/quality downgrade. Just codec swap to H.264.
+    // Auto-downscale: cap at 1440p (2K). WA can't display 4K anyway.
+    let scaleFilter = '';
+    try {
+      const res = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
+      const [w, h] = res.split(',').map(Number);
+      if (w && h && Math.min(w, h) > 1440) {
+        // Landscape: height=1440, Portrait: width=1440. Keep aspect ratio.
+        if (w > h) scaleFilter = ' -vf scale=-2:1440';
+        else scaleFilter = ' -vf scale=1440:-2';
+      }
+    } catch {}
+    // ponytail: crf 18 = visually lossless. yuv420p + high profile = max WA compat. Downscale >1080p to 1080p.
     execSync(
-      'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v libx264 -preset fast -crf 18' + fpsFlag + ' -c:a aac -b:a 320k -movflags +faststart -y ' + JSON.stringify(tmpOut),
+      'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset fast -crf 18' + scaleFilter + fpsFlag + ' -c:a aac -b:a 320k -movflags +faststart -y ' + JSON.stringify(tmpOut),
       { timeout: 600000, stdio: 'pipe' }
     );
     return { buf: readFileSync(tmpOut), name: originalName.replace(/\.[^.]+$/, '.mp4') };
@@ -688,8 +699,91 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // === BOT API PROXY (to internal API on 127.0.0.1:8081) ===
+  if (url === '/admin/api/bot/groups' && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'GET', '/groups');
+    return;
+  }
+
+  if (url === '/admin/api/bot/groups/leave' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/groups/leave');
+    return;
+  }
+
+  if (url === '/admin/api/bot/groups/toggle' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/groups/toggle');
+    return;
+  }
+
+  if (url === '/admin/api/bot/broadcast' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/broadcast');
+    return;
+  }
+
+  if (url === '/admin/api/bot/broadcast/cancel' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/broadcast/cancel');
+    return;
+  }
+
+  if (url === '/admin/api/bot/send' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/send');
+    return;
+  }
+
+  if (url === '/admin/api/bot/exec' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/exec');
+    return;
+  }
+
+  if (url === '/admin/api/bot/internal-status' && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'GET', '/status');
+    return;
+  }
+
   res.writeHead(404); res.end('Not found');
 });
+
+// --- Bot API proxy helper ---
+function proxyBotApi(clientReq, clientRes, method, path) {
+  const opts = {
+    hostname: '127.0.0.1',
+    port: 8081,
+    path: path,
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 120000
+  };
+  const proxy = http.request(opts, (proxyRes) => {
+    const chunks = [];
+    proxyRes.on('data', c => chunks.push(c));
+    proxyRes.on('end', () => {
+      const body = Buffer.concat(chunks).toString();
+      clientRes.writeHead(proxyRes.statusCode, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      clientRes.end(body);
+    });
+  });
+  proxy.on('error', (e) => {
+    jsonRes(clientRes, 502, { ok: false, error: 'Bot API unavailable: ' + e.message });
+  });
+  proxy.on('timeout', () => {
+    proxy.destroy();
+    jsonRes(clientRes, 504, { ok: false, error: 'Bot API timeout' });
+  });
+  if (method === 'POST') {
+    readBody(clientReq).then(buf => { proxy.end(buf); }).catch(() => proxy.end());
+  } else {
+    proxy.end();
+  }
+}
+
 server.timeout = 600000;
 server.requestTimeout = 600000;
 server.headersTimeout = 600000;
