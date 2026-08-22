@@ -25,13 +25,16 @@ a{text-decoration:none;color:inherit}button{font:inherit}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.05);border-radius:2px}
 input[type=file]{display:none}
 
-/* ═══ SCENE EFFECTS ═══ */
-#noise{position:fixed;inset:0;pointer-events:none;z-index:20;opacity:.032;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.75'/%3E%3C/svg%3E")}
-#cursorGlow{position:fixed;width:440px;height:440px;border-radius:50%;pointer-events:none;z-index:1;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(25,136,255,.11),rgba(25,136,255,0) 65%);filter:blur(8px);display:none}
-@media(min-width:769px){#cursorGlow{display:block}}
-.grid{position:fixed;left:50%;bottom:-22%;width:1800px;height:900px;transform:translateX(-50%) perspective(700px) rotateX(64deg);background:linear-gradient(rgba(37,118,255,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(37,118,255,.13) 1px,transparent 1px);background-size:75px 75px;mask-image:linear-gradient(to bottom,transparent,black 30%,black 75%,transparent);opacity:.45;z-index:0;animation:gridMove 16s linear infinite}
-@keyframes gridMove{to{background-position:0 75px,75px 0}}
-#particles{position:fixed;inset:0;z-index:1;pointer-events:none}
+/* ═══ SCENE EFFECTS — CSS only, no JS canvas ═══ */
+#noise{display:none}
+#cursorGlow{display:none}
+.grid{display:none}
+#particles{display:none}
+
+/* Subtle CSS background glow — zero JS, zero GPU */
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 0%,rgba(22,119,255,.08),transparent 50%),
+  radial-gradient(ellipse at 80% 80%,rgba(59,200,255,.04),transparent 40%)}
 
 /* ═══ LAYOUT ═══ */
 .page{min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:0 16px 60px;position:relative;z-index:2}
@@ -243,17 +246,10 @@ input[type=file]{display:none}
   .toast-wrap{top:auto;bottom:16px;right:8px;left:8px}
   .toast{min-width:0;width:100%}
   .nav{margin-bottom:20px}
-  #noise{display:none}
-  .grid{opacity:.2}
-  #particles{opacity:.5}
 }
 </style>
 </head>
 <body>
-<div id="noise"></div>
-<div class="grid"></div>
-<div id="cursorGlow"></div>
-<canvas id="particles"></canvas>
 <div class="toast-wrap" id="toastWrap"></div>
 
 <div class="page">
@@ -354,23 +350,6 @@ input[type=file]{display:none}
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script>
-// ═══ CURSOR GLOW ═══
-var glow=document.getElementById('cursorGlow');
-window.addEventListener('pointermove',function(e){glow.animate({left:e.clientX+'px',top:e.clientY+'px'},{duration:650,fill:'forwards'})});
-
-// ═══ PARTICLES ═══
-var canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),cW,cH,pts=[];
-function pResize(){cW=canvas.width=innerWidth*devicePixelRatio;cH=canvas.height=innerHeight*devicePixelRatio;canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
-function pInit(){var count=innerWidth<768?20:50;pts=Array.from({length:count},function(){return{x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*1.2+.2,s:Math.random()*.2+.06,a:Math.random()*.4+.1}})}
-function pDraw(){ctx.clearRect(0,0,innerWidth,innerHeight);for(var i=0;i<pts.length;i++){var p=pts[i];p.y-=p.s;if(p.y<-10)p.y=innerHeight+10;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='rgba(75,170,255,'+p.a+')';ctx.fill()}requestAnimationFrame(pDraw)}
-pResize();pInit();pDraw();addEventListener('resize',function(){pResize();pInit()});
-
-// ═══ BUTTON 3D TILT ═══
-document.querySelectorAll('.btn').forEach(function(btn){
-  btn.addEventListener('pointermove',function(e){var r=btn.getBoundingClientRect();var x=(e.clientX-r.left)/r.width-.5;var y=(e.clientY-r.top)/r.height-.5;btn.style.transform='translateY(-3px) rotateX('+(-y*4)+'deg) rotateY('+(x*4)+'deg)'});
-  btn.addEventListener('pointerleave',function(){btn.style.transform=''});
-});
-
 // ═══ TOAST ═══
 function toast(type,msg,dur){dur=dur||3000;var c=document.getElementById('toastWrap');var icons={ok:'fa-check-circle',err:'fa-times-circle',info:'fa-info-circle'};var t=document.createElement('div');t.className='toast '+type;t.innerHTML='<i class="fas '+(icons[type]||icons.info)+'"></i><span>'+msg+'</span>';c.appendChild(t);setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove()},250)},dur)}
 
