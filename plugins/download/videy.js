@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { videyScraper } from '../../src/scraper/videy.js'
 import te from '../../src/lib/ourin-error.js'
 
@@ -41,20 +42,41 @@ async function handler(m, { sock }) {
             m.react('❌')
             return m.reply(`❌ Gagal mengambil video. Link tidak valid atau sudah expired.`)
         }
-        
-        await sock.sendMedia(m.chat, data.url, null, m, {
-            type: 'video',
-            contextInfo: {
-                forwardingScore: 99,
-                isForwarded: true
-            }
+
+        // Download to buffer first — sendMedia with URL sometimes fails
+        const res = await axios.get(data.url, {
+            responseType: 'arraybuffer',
+            timeout: 60000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': 'https://videy.co/',
+            },
         })
+
+        const buffer = Buffer.from(res.data)
+        if (buffer.length < 1000) {
+            m.react('❌')
+            return m.reply('❌ Video tidak ditemukan atau sudah dihapus.')
+        }
+
+        const mimetype = data.ext === 'mov' ? 'video/quicktime' : 'video/mp4'
+
+        await sock.sendMessage(m.chat, {
+            video: buffer,
+            mimetype,
+            caption: `🎬 *Videy Download*\n> ID: ${data.id}\n> Format: ${data.ext}`,
+        }, { quoted: m })
         
         m.react('✅')
         
     } catch (error) {
+        console.error('[videy]', error.message)
         m.react('☢')
-        m.reply(te(m.prefix, m.command, m.pushName))
+        if (error.response?.status === 404) {
+            m.reply('❌ Video tidak ditemukan. Mungkin sudah dihapus dari videy.co')
+        } else {
+            m.reply(te(m.prefix, m.command, m.pushName))
+        }
     }
 }
 
