@@ -24,8 +24,8 @@ try {
     console.log(`[UPDATE] ${out || 'Up to date'}`);
   } else {
     console.log('[UPDATE] Checking for updates...');
-    const out = execSync('git pull', { encoding: 'utf8', timeout: 30000 }).trim();
-    console.log(`[UPDATE] ${out}`);
+    const out = execSync('git fetch origin main && git reset --hard origin/main', { encoding: 'utf8', timeout: 30000 }).trim();
+    console.log(`[UPDATE] ${out || 'Up to date'}`);
   }
 } catch (e) { console.error(`[UPDATE] git pull failed: ${e.message}`); }
 
