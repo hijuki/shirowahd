@@ -73,7 +73,8 @@ async function handler(m, { sock }) {
       maxContentLength: 200 * 1024 * 1024,
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Referer": "https://www.terabox.com/",
+        "Referer": result.referer || "https://www.terabox.com/",
+        "Cookie": result.cookies || "",
         "Accept": "*/*",
       },
     });

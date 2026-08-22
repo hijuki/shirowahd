@@ -154,6 +154,8 @@ async function TeraBoxDL(inputUrl) {
       file_size: humanSize(fileSize),
       file_size_bytes: fileSize,
       download_url: dlink || null,
+      cookies,
+      referer: base + "/",
       thumbnail: file.thumbs?.url3 || file.thumbs?.url2 || file.thumbs?.icon || "",
       duration: file.duration || "N/A",
       extension: ext ? "." + ext : "",
