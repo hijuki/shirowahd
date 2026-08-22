@@ -38,53 +38,57 @@ function getTime() {
 }
 
 // ═══════════════════════════════════════════════════
-//  BOOT SEQUENCE — Big visual splash
+//  BOOT SEQUENCE — Clean visual splash
 // ═══════════════════════════════════════════════════
 async function playBootSequence(info = {}) {
   const { name = "SHIROWAHD", version = "3.3", mode = "public" } = info;
-  const W = 60;
-  const line = P.brand('═'.repeat(W));
-  const side = P.brand('║');
-  const pad = (s, w) => {
-    const stripped = s.replace(/\x1B\[\d+(?:;\d+)*m/g, '');
-    const diff = w - stripped.length;
-    return diff > 0 ? s + ' '.repeat(diff) : s;
+  const W = 44;
+  const hl = P.brand('═'.repeat(W));
+  const s = P.brand('║');
+  const sp = ' '.repeat(W);
+
+  // helper: pad colored string to fixed visible width
+  const pad = (str, w) => {
+    const vis = str.replace(/\x1B\[\d+(?:;\d+)*m/g, '').length;
+    return vis < w ? str + ' '.repeat(w - vis) : str;
   };
 
-  console.log('');
-  console.log(`  ${P.brand('╔')}${line}${P.brand('╗')}`);
-  console.log(`  ${side}${' '.repeat(W)}${side}`);
+  // center colored text inside W visible chars
+  const centerC = (txt, w) => {
+    const vis = txt.replace(/\x1B\[\d+(?:;\d+)*m/g, '').length;
+    const gap = Math.max(0, w - vis);
+    const left = Math.floor(gap / 2);
+    return ' '.repeat(left) + txt + ' '.repeat(gap - left);
+  };
 
-  // ASCII art lines
-  const art = [
-    ' ███████╗██╗  ██╗██╗██████╗  ██████╗ ██╗    ██╗██╗  ██╗██████╗ ',
-    ' ██╔════╝██║  ██║██║██╔══██╗██╔═══██╗██║    ██║██║  ██║██╔══██╗',
-    ' ███████╗███████║██║██████╔╝██║   ██║██║ █╗ ██║███████║██║  ██║',
-    ' ╚════██║██╔══██║██║██╔══██╗██║   ██║██║███╗██║██╔══██║██║  ██║',
-    ' ███████║██║  ██║██║██║  ██║╚██████╔╝╚███╔███╔╝██║  ██║██████╔╝',
-    ' ╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═════╝ ',
-  ];
-  for (const a of art) {
-    const trimmed = a.length > W ? a.substring(0, W) : a;
-    console.log(`  ${side}${P.cyan(pad(trimmed, W))}${side}`);
-  }
-
-  console.log(`  ${side}${' '.repeat(W)}${side}`);
-
-  // Info row
-  const infoLine = `  ${P.white(name)} ${P.dim('•')} ${P.brand(`v${version}`)} ${P.dim('•')} ${P.dim('Multi-Device Bot')}`;
-  console.log(`  ${side}${pad(infoLine, W)}${side}`);
-
-  console.log(`  ${side}${' '.repeat(W)}${side}`);
-  console.log(`  ${P.brand('╚')}${line}${P.brand('╝')}`);
-  console.log('');
-
-  // Status cards row
   const modeColor = mode === 'self' ? P.orange : P.neon;
-  const modeBadge = modeColor(` ${mode.toUpperCase()} `);
-  const timeBadge = P.sky(` ${getTime()} WIB `);
-  console.log(`  ${P.bgBrand(' ⚡ SYSTEM ')} ${P.text('Starting up...')}  ${P.bgGray(' MODE ')} ${modeBadge}  ${P.bgGray(' TIME ')} ${timeBadge}`);
+  const timeStr = getTime() + ' WIB';
+
   console.log('');
+  // ASCII art - all lines exactly 27 chars
+  const art = [
+    '███████╗██╗  ██╗██╗██████╗ ',
+    '██╔════╝██║  ██║██║██╔══██╗',
+    '███████╗███████║██║██████╔╝',
+    '╚════██║██╔══██║██║██╔══██╗',
+    '███████║██║  ██║██║██║  ██║',
+    '╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝',
+  ];
+
+  console.log(`  ${P.brand('╔')}${hl}${P.brand('╗')}`);
+  console.log(`  ${s}${sp}${s}`);
+  for (const a of art) {
+    console.log(`  ${s}${centerC(P.cyan(a), W)}${s}`);
+  }
+  console.log(`  ${s}${sp}${s}`);
+  console.log(`  ${P.brand('╠')}${P.brand('─'.repeat(W))}${P.brand('╣')}`);
+  console.log(`  ${s}${pad(`  ${P.white(name)}  ${P.dim('│')}  ${P.brand('v' + version)}  ${P.dim('│')}  ${P.dim('WhatsApp Bot')}`, W)}${s}`);
+  console.log(`  ${s}${pad(`  ${P.dim('Mode:')} ${modeColor(mode.toUpperCase())}  ${P.dim('│')}  ${P.dim('Time:')} ${P.sky(timeStr)}`, W)}${s}`);
+  console.log(`  ${s}${sp}${s}`);
+  console.log(`  ${P.brand('╚')}${hl}${P.brand('╝')}`);
+  console.log('');
+
+  logger.system("BOOT", "Memulai Sistem Utama...");
 }
 
 // ═══════════════════════════════════════════════════
