@@ -27,7 +27,8 @@ input[type=file]{display:none}
 
 /* ═══ SCENE EFFECTS ═══ */
 #noise{position:fixed;inset:0;pointer-events:none;z-index:20;opacity:.032;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.75'/%3E%3C/svg%3E")}
-#cursorGlow{position:fixed;width:440px;height:440px;border-radius:50%;pointer-events:none;z-index:1;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(25,136,255,.11),rgba(25,136,255,0) 65%);filter:blur(8px)}
+#cursorGlow{position:fixed;width:440px;height:440px;border-radius:50%;pointer-events:none;z-index:1;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(25,136,255,.11),rgba(25,136,255,0) 65%);filter:blur(8px);display:none}
+@media(min-width:769px){#cursorGlow{display:block}}
 .grid{position:fixed;left:50%;bottom:-22%;width:1800px;height:900px;transform:translateX(-50%) perspective(700px) rotateX(64deg);background:linear-gradient(rgba(37,118,255,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(37,118,255,.13) 1px,transparent 1px);background-size:75px 75px;mask-image:linear-gradient(to bottom,transparent,black 30%,black 75%,transparent);opacity:.45;z-index:0;animation:gridMove 16s linear infinite}
 @keyframes gridMove{to{background-position:0 75px,75px 0}}
 #particles{position:fixed;inset:0;z-index:1;pointer-events:none}
@@ -242,6 +243,9 @@ input[type=file]{display:none}
   .toast-wrap{top:auto;bottom:16px;right:8px;left:8px}
   .toast{min-width:0;width:100%}
   .nav{margin-bottom:20px}
+  #noise{display:none}
+  .grid{opacity:.2}
+  #particles{opacity:.5}
 }
 </style>
 </head>
@@ -357,7 +361,7 @@ window.addEventListener('pointermove',function(e){glow.animate({left:e.clientX+'
 // ═══ PARTICLES ═══
 var canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),cW,cH,pts=[];
 function pResize(){cW=canvas.width=innerWidth*devicePixelRatio;cH=canvas.height=innerHeight*devicePixelRatio;canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
-function pInit(){pts=Array.from({length:60},function(){return{x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*1.2+.2,s:Math.random()*.2+.06,a:Math.random()*.4+.1}})}
+function pInit(){var count=innerWidth<768?20:50;pts=Array.from({length:count},function(){return{x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*1.2+.2,s:Math.random()*.2+.06,a:Math.random()*.4+.1}})}
 function pDraw(){ctx.clearRect(0,0,innerWidth,innerHeight);for(var i=0;i<pts.length;i++){var p=pts[i];p.y-=p.s;if(p.y<-10)p.y=innerHeight+10;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='rgba(75,170,255,'+p.a+')';ctx.fill()}requestAnimationFrame(pDraw)}
 pResize();pInit();pDraw();addEventListener('resize',function(){pResize();pInit()});
 
