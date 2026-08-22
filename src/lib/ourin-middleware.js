@@ -51,14 +51,25 @@ function checkPermission(m, pluginConfig) {
     }
   }
 
-  if (pluginConfig.isOwner && !m.isOwner && !hasAccess) {
+  // Owner bypass ALL restrictions
+  if (m.isOwner) return { allowed: true };
+
+  // Non-premium/non-partner can't use bot in DM
+  if (!m.isGroup && !m.isPremium && !m.isPartner && !hasAccess) {
+    return {
+      allowed: false,
+      reason: "\ud83d\udc8e *Fitur DM khusus Premium!*\n\nHubungi owner bot untuk info premium.",
+    };
+  }
+
+  if (pluginConfig.isOwner && !hasAccess) {
     return {
       allowed: false,
       reason: config.messages?.ownerOnly || "🚫 Owner only!",
     };
   }
 
-  if (pluginConfig.isPartner && !m.isPartner && !m.isOwner && !hasAccess) {
+  if (pluginConfig.isPartner && !m.isPartner && !hasAccess) {
     return { allowed: false, reason: "🤝 Partner only!" };
   }
 
@@ -68,7 +79,6 @@ function checkPermission(m, pluginConfig) {
   if (
     isPremiumFeature &&
     !m.isPremium &&
-    !m.isOwner &&
     !m.isPartner &&
     !hasAccess
   ) {
@@ -96,7 +106,6 @@ function checkPermission(m, pluginConfig) {
     pluginConfig.isAdmin &&
     m.isGroup &&
     !m.isAdmin &&
-    !m.isOwner &&
     !hasAccess
   ) {
     return {
