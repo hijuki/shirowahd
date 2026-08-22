@@ -1,5 +1,14 @@
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
+
+// ─── Auto Git Pull ───
+try {
+  if (existsSync('.git')) {
+    console.log('[UPDATE] Checking for updates...');
+    const out = execSync('git pull', { encoding: 'utf8', timeout: 30000 }).trim();
+    console.log(`[UPDATE] ${out}`);
+  }
+} catch (e) { console.error(`[UPDATE] git pull failed: ${e.message}`); }
 
 const CF_ACCOUNT = 'cb4d13552885f5db1562032de5cf9d09';
 const CF_EMAIL = 'shougt12345@gmail.com';
