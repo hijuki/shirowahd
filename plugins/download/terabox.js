@@ -1,6 +1,3 @@
-import fs from "fs";
-import os from "os";
-import path from "path";
 import axios from "axios";
 import { TeraBoxDL } from "../../src/scraper/terabox.js";
 
@@ -46,11 +43,12 @@ async function handler(m, { sock }) {
     }
 
     const totalInfo = result.total_files > 1 ? `\n> 📂 Total: ${result.total_files} file (kirim file pertama)` : "";
+    const methodInfo = result.method ? `\n> ⚡ Via: ${result.method}` : "";
     let caption =
       `📦 *TeraBox*\n\n` +
       `> 📌 ${result.file_name}\n` +
       `> 📏 Size: ${result.file_size}` +
-      totalInfo;
+      totalInfo + methodInfo;
 
     // Send thumbnail if available
     if (result.thumbnail) {
@@ -61,7 +59,8 @@ async function handler(m, { sock }) {
 
     if (!result.download_url) {
       m.react("❌");
-      return m.reply(`❌ *Download URL tidak tersedia*\n\nTerabox mungkin butuh login/cookie untuk file ini.`);
+      const hint = result.error_hint ? `\n\n_${result.error_hint}_` : "";
+      return m.reply(`❌ *Download URL tidak tersedia*\n\nTerabox mungkin butuh login/cookie untuk file ini.${hint}`);
     }
 
     // Download file from Terabox CDN
@@ -72,7 +71,7 @@ async function handler(m, { sock }) {
       timeout: 180000,
       maxContentLength: 200 * 1024 * 1024,
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         "Referer": result.referer || "https://www.terabox.com/",
         "Cookie": result.cookies || "",
         "Accept": "*/*",

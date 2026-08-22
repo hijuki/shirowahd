@@ -1,7 +1,5 @@
-import config from '../../config.js'
-import { f } from '../../src/lib/ourin-http.js'
+import { videyScraper } from '../../src/scraper/videy.js'
 import te from '../../src/lib/ourin-error.js'
-const NEOXR_APIKEY = config.APIkey?.neoxr || 'Milik-Bot-OurinMD'
 
 const pluginConfig = {
     name: 'videy',
@@ -37,16 +35,14 @@ async function handler(m, { sock }) {
     m.react('🕕')
     
     try {
-        const data = await f(`https://api.neoxr.eu/api/videy?url=${encodeURIComponent(url)}&apikey=${NEOXR_APIKEY}`)
+        const data = await videyScraper(url)
         
-        if (!data?.status || !data?.data?.url) {
+        if (!data?.status || !data?.url) {
             m.react('❌')
             return m.reply(`❌ Gagal mengambil video. Link tidak valid atau sudah expired.`)
         }
         
-        const videoUrl = data.data.url
-        
-        await sock.sendMedia(m.chat, videoUrl, null, m, {
+        await sock.sendMedia(m.chat, data.url, null, m, {
             type: 'video',
             contextInfo: {
                 forwardingScore: 99,
