@@ -16,6 +16,10 @@
     {
       "name": "CLAIM DISINI",
       "link": "https://chat.whatsapp.com/E597ARKxnLnLSpTVBx5G4C"
+    },
+    {
+      "name": "REHAN",
+      "link": "https://chat.whatsapp.com/DerpXXN46tg1M4BgRxbvwA"
     }
   ],
   "adminPassword": "@Hillz126",
@@ -25,7 +29,7 @@
   "siteSubtitle": "JADIKAN SW MU BERKUALITAS",
   "expireMinutes": 60,
   "maxFileSizeMB": 100,
-  "bannerText": "JIKA ADA BUG HUBUNGI ADMIN KARENA\n MASIH BETA BELUM FINAL",
+  "bannerText": "",
   "domain": "swhdhlz.my.id",
   "telegramBotToken": "",
   "telegramChatId": "",
