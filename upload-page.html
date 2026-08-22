@@ -36,6 +36,16 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:radial-gradient(ellipse at 50% 0%,rgba(22,119,255,.08),transparent 50%),
   radial-gradient(ellipse at 80% 80%,rgba(59,200,255,.04),transparent 40%)}
 
+/* CSS Floating Orbs — lightweight GPU-accelerated */
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;will-change:transform}
+.orb-1{width:300px;height:300px;top:-8%;left:15%;background:radial-gradient(circle,rgba(22,119,255,.07),transparent 70%);animation:orbA 14s ease-in-out infinite}
+.orb-2{width:220px;height:220px;bottom:10%;right:-5%;background:radial-gradient(circle,rgba(59,200,255,.05),transparent 70%);animation:orbA 18s ease-in-out infinite reverse}
+@keyframes orbA{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-20px)}}
+
+/* Card shimmer line */
+.main-panel::after{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,rgba(22,119,255,.35),transparent);animation:shimLine 3s ease-in-out infinite}
+@keyframes shimLine{0%,100%{opacity:.2;left:20%;right:20%}50%{opacity:.6;left:10%;right:10%}}
+
 /* ═══ LAYOUT ═══ */
 .page{min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:0 16px 60px;position:relative;z-index:2}
 .wrap{width:100%;max-width:440px}
@@ -212,7 +222,53 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 .hist-file{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .hist-time{font-size:9px;color:var(--muted);font-family:var(--mono)}
 
-/* ═══ FOOTER ═══ */
+/* ═══ 3-DOT MENU ═══ */
+.menu-wrap{position:relative}
+.menu-btn{width:38px;height:38px;border-radius:10px;border:1px solid rgba(75,163,255,.22);background:rgba(8,23,53,.55);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:.28s}
+.menu-btn:hover{background:rgba(18,53,98,.7);color:#fff;border-color:var(--line2)}
+.menu-drop{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:180px;background:linear-gradient(155deg,rgba(9,26,59,.95),rgba(2,11,26,.95));border:1px solid var(--line2);border-radius:14px;padding:6px;box-shadow:0 16px 48px rgba(0,0,0,.5);z-index:50;animation:emerge .2s;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.menu-drop.v{display:block}
+.menu-drop a,.menu-drop button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border-radius:10px;transition:.2s;text-decoration:none;text-align:left}
+.menu-drop a:hover,.menu-drop button:hover{background:rgba(22,119,255,.08);color:var(--text)}
+.menu-drop a i,.menu-drop button i{width:16px;text-align:center;font-size:11px;color:var(--cyan)}
+.menu-sep{height:1px;background:var(--line);margin:4px 8px}
+
+/* ═══ INTRO POPUP ═══ */
+.intro{display:none;position:fixed;inset:0;z-index:300;align-items:center;justify-content:center;padding:16px}
+.intro.v{display:flex;animation:mFade .4s}
+.intro-bg{position:absolute;inset:0;background:rgba(2,6,23,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.intro-box{position:relative;z-index:1;width:100%;max-width:360px;border:1px solid var(--line2);border-radius:24px;background:linear-gradient(155deg,rgba(9,26,59,.95),rgba(2,11,26,.95));padding:36px 28px;box-shadow:0 0 100px rgba(22,119,255,.15),0 32px 64px rgba(0,0,0,.5);animation:introPop .6s cubic-bezier(.34,1.56,.64,1);text-align:center;overflow:hidden}
+.intro-box::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(22,119,255,.5),transparent)}
+@keyframes introPop{from{opacity:0;transform:scale(.8) translateY(40px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.intro-logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#25D366,#128C7E);display:flex;align-items:center;justify-content:center;font-size:1.8em;color:#fff;margin:0 auto 18px;box-shadow:0 0 40px rgba(37,211,102,.3),0 8px 24px rgba(0,0,0,.3);position:relative;animation:logoFloat 3s ease-in-out infinite}
+.intro-logo::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 50%)}
+.intro-logo i{position:relative;z-index:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))}
+@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.intro-title{font-family:var(--heading);font-size:24px;font-weight:700;color:var(--text);letter-spacing:-1px;margin-bottom:6px}
+.intro-title .grad{background:linear-gradient(100deg,#fff 15%,#5ec7ff 48%,#136cff 78%);-webkit-background-clip:text;color:transparent}
+.intro-desc{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:8px}
+.intro-features{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:14px 0 20px}
+.intro-feat{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:999px;background:rgba(22,119,255,.06);border:1px solid rgba(22,119,255,.1);font-size:10px;font-weight:600;color:#9cccff}
+.intro-feat i{font-size:9px;color:var(--cyan)}
+.intro-credit{font-size:10px;color:#506682;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.intro-credit b{color:var(--cyan)}
+.intro-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 32px;border-radius:12px;border:none;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#168cff,#1454ef);color:#fff;box-shadow:0 12px 40px rgba(14,115,255,.3);transition:.28s;position:relative;overflow:hidden}
+.intro-btn::before{content:'';position:absolute;top:-50%;left:-40%;width:20%;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:rotate(20deg);transition:.7s}
+.intro-btn:hover{transform:translateY(-3px);box-shadow:0 18px 55px rgba(14,115,255,.45)}
+.intro-btn:hover::before{left:130%}
+
+/* ═══ FAQ POPUP ═══ */
+.faq-modal{display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center;padding:16px}
+.faq-modal.v{display:flex;animation:mFade .3s}
+.faq-box{position:relative;z-index:1;width:100%;max-width:400px;max-height:80vh;overflow-y:auto;border:1px solid var(--line2);border-radius:22px;background:linear-gradient(155deg,rgba(9,26,59,.95),rgba(2,11,26,.95));padding:24px 20px;box-shadow:var(--shadow)}
+.faq-title{font-family:var(--heading);font-size:18px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.faq-item{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;font-weight:700;font-size:12px;color:var(--text);transition:.2s}
+.faq-q:hover{background:rgba(22,119,255,.04)}
+.faq-q i{font-size:9px;color:var(--muted);transition:transform .3s}
+.faq-q.open i{transform:rotate(180deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s;padding:0 16px;font-size:11px;color:var(--muted);line-height:1.7}
+.faq-a.open{max-height:400px;padding:0 16px 14px}
 .ftr{margin-top:28px;text-align:center}
 .ftr-links{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px}
 .ftr-links a{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:999px;font-size:11px;font-weight:600;transition:.28s;backdrop-filter:blur(8px)}
@@ -251,6 +307,26 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 </head>
 <body>
 <div class="toast-wrap" id="toastWrap"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- INTRO POPUP -->
+<div class="intro v" id="introPopup" onclick="if(event.target===this||event.target.classList.contains('intro-bg'))closeIntro()">
+  <div class="intro-bg"></div>
+  <div class="intro-box">
+    <div class="intro-logo"><i class="fab fa-whatsapp"></i></div>
+    <div class="intro-title">Selamat Datang di <span class="grad">SHIROWAHD</span></div>
+    <div class="intro-desc">Platform upload & claim file via WhatsApp. Upload file, dapatkan kode unik, claim di grup WA.</div>
+    <div class="intro-features">
+      <span class="intro-feat"><i class="fas fa-bolt"></i> Upload Cepat</span>
+      <span class="intro-feat"><i class="fas fa-shield-halved"></i> Auto Expire</span>
+      <span class="intro-feat"><i class="fas fa-infinity"></i> Unlimited</span>
+      <span class="intro-feat"><i class="fab fa-whatsapp"></i> Claim via WA</span>
+    </div>
+    <button class="intro-btn" onclick="closeIntro()"><i class="fas fa-arrow-right"></i> Mulai Upload</button>
+    <div class="intro-credit">Developed by <b>HILLZ</b> • Powered by <b>SHIROWAHD Engine</b></div>
+  </div>
+</div>
 
 <div class="page">
 <div class="wrap">
@@ -260,6 +336,15 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
       <div><div class="brand" id="heroTitle">SHIROWAHD</div><div class="brand-sub" id="heroSub">Upload & claim video HD</div></div>
     </div>
     <a href="/admin" class="nav-btn"><i class="fas fa-cog"></i> Admin</a>
+    <div class="menu-wrap">
+      <button class="menu-btn" onclick="toggleMenu()" id="menuBtn"><i class="fas fa-ellipsis-vertical"></i></button>
+      <div class="menu-drop" id="menuDrop">
+        <a href="/admin"><i class="fas fa-gauge-high"></i> Admin Panel</a>
+        <button onclick="showFaq()"><i class="fas fa-circle-question"></i> FAQ & Bantuan</button>
+        <div class="menu-sep"></div>
+        <button onclick="showIntro()"><i class="fas fa-info-circle"></i> Tentang</button>
+      </div>
+    </div>
   </nav>
 
   <div class="banner" id="announceBanner"><i class="fas fa-bullhorn" style="font-size:.85em"></i><span id="bannerTxt"></span></div>
@@ -348,10 +433,36 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   <button class="btn ghost" onclick="resetFoto()" style="margin-top:12px"><i class="fas fa-plus"></i> Upload Foto Lagi</button>
 </div></div>
 
+<!-- FAQ POPUP -->
+<div class="faq-modal" id="faqModal" onclick="if(event.target===this)this.classList.remove('v')">
+  <div class="modal-bg"></div>
+  <div class="faq-box">
+    <button class="modal-close" onclick="document.getElementById('faqModal').classList.remove('v')" style="position:absolute;top:14px;right:14px"><i class="fas fa-xmark"></i></button>
+    <div class="faq-title"><i class="fas fa-circle-question" style="color:var(--cyan)"></i> FAQ & Bantuan</div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fas fa-upload" style="color:var(--blue);margin-right:6px"></i>Cara upload video</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><p>1. Klik area upload atau drag file<br>2. Tunggu proses upload selesai<br>3. Copy kode yang muncul<br>4. Kirim <code>.claim KODE</code> di grup WhatsApp</p></div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fab fa-whatsapp" style="color:#25D366;margin-right:6px"></i>Cara claim di grup</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><p>1. Join grup claim yang tersedia<br>2. Kirim <code>.claim KODE</code><br>3. Bot akan kirim file dalam beberapa detik<br>4. Kode yang expired tidak bisa di-claim</p></div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fas fa-clock" style="color:var(--cyan);margin-right:6px"></i>Berapa lama kode valid?</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><p>Kode valid sesuai pengaturan admin (default 60 menit). Setelah expire, file otomatis dihapus.</p></div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span><i class="fas fa-file" style="color:var(--cyan);margin-right:6px"></i>Format file yang didukung?</span><i class="fas fa-chevron-down"></i></div><div class="faq-a"><p>Video: MP4, MKV, AVI, MOV, WEBM, 3GP<br>Foto: JPG, PNG, GIF, WEBP<br>Dan semua format file lainnya.</p></div></div>
+  </div>
+</div>
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script>
 // ═══ TOAST ═══
 function toast(type,msg,dur){dur=dur||3000;var c=document.getElementById('toastWrap');var icons={ok:'fa-check-circle',err:'fa-times-circle',info:'fa-info-circle'};var t=document.createElement('div');t.className='toast '+type;t.innerHTML='<i class="fas '+(icons[type]||icons.info)+'"></i><span>'+msg+'</span>';c.appendChild(t);setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove()},250)},dur)}
+
+// ═══ MENU ═══
+function toggleMenu(){document.getElementById('menuDrop').classList.toggle('v')}
+document.addEventListener('click',function(e){if(!e.target.closest('.menu-wrap'))document.getElementById('menuDrop').classList.remove('v')})
+
+// ═══ INTRO POPUP ═══
+function closeIntro(){document.getElementById('introPopup').classList.remove('v');localStorage.setItem('swhdIntroSeen','1')}
+function showIntro(){document.getElementById('introPopup').classList.add('v');document.getElementById('menuDrop').classList.remove('v')}
+(function(){if(localStorage.getItem('swhdIntroSeen'))document.getElementById('introPopup').classList.remove('v')})()
+
+// ═══ FAQ ═══
+function showFaq(){document.getElementById('faqModal').classList.add('v');document.getElementById('menuDrop').classList.remove('v')}
+function toggleFaq(el){el.classList.toggle('open');var a=el.nextElementSibling;a.classList.toggle('open')}
 
 // ═══ TABS ═══
 var currentTab='video';function switchTab(tab){currentTab=tab;document.getElementById('tabVideo').classList.toggle('active',tab==='video');document.getElementById('tabFoto').classList.toggle('active',tab==='foto');document.getElementById('sectionVideo').classList.toggle('active',tab==='video');document.getElementById('sectionFoto').classList.toggle('active',tab==='foto');document.getElementById('badgeText').textContent='Online \u2022 '+(tab==='video'?'Unlimited':'No Kompresi');document.getElementById('step1txt').textContent=tab==='video'?'Upload file':'Pilih foto'}
