@@ -43,7 +43,7 @@ html,body{min-height:100dvh;font-family:var(--font);background:var(--bg);color:v
 
 /* ─── Toast ─── */
 .toast-container{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{padding:12px 16px;border-radius:var(--radius);font-size:.82em;font-weight:600;display:flex;align-items:center;gap:8px;animation:toastIn .3s ease;backdrop-filter:blur(20px);min-width:220px;pointer-events:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.toast{padding:12px 16px;border-radius:var(--radius);font-size:.82em;font-weight:600;display:flex;align-items:center;gap:8px;animation:toastIn .3s ease;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);min-width:220px;pointer-events:auto;box-shadow:0 8px 32px rgba(0,0,0,.4)}
 .toast.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:var(--green)}
 .toast.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--red)}
 .toast.info{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--accent)}
@@ -61,7 +61,7 @@ html,body{min-height:100dvh;font-family:var(--font);background:var(--bg);color:v
 /* ─── Header ─── */
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding:0 2px}
 .header-left{display:flex;align-items:center;gap:10px}
-.logo-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:.85em;color:#fff;box-shadow:0 4px 16px rgba(59,130,246,.25);flex-shrink:0}
+.logo-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7C5CFF,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:1.1em;color:#fff;box-shadow:0 4px 16px rgba(124,92,255,.35);flex-shrink:0}
 .logo-text{font-size:1.15em;font-weight:800;color:var(--text-bright);letter-spacing:-.03em}
 .subtitle{color:var(--text-dim);font-size:.7em;font-weight:500;margin-top:1px}
 .header-actions{display:flex;align-items:center;gap:6px}
@@ -73,10 +73,10 @@ html,body{min-height:100dvh;font-family:var(--font);background:var(--bg);color:v
 .announce.v{display:flex;align-items:center;justify-content:center;gap:8px;animation:fadeUp .3s}
 
 /* ─── Card ─── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.1),0 8px 40px rgba(0,0,0,.08)}
+.card{background:rgba(24,24,27,.65);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-xl);padding:20px;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.1),0 8px 40px rgba(0,0,0,.15)}
 
 /* ─── Tabs ─── */
-.tabs{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius);padding:3px;margin-bottom:16px}
+.tabs{display:flex;gap:2px;background:rgba(31,31,35,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--radius);padding:3px;margin-bottom:16px;border:1px solid rgba(255,255,255,.04)}
 .tab{flex:1;padding:8px 0;border:none;border-radius:8px;background:transparent;color:var(--text-dim);font-family:var(--font);font-weight:600;font-size:.78em;cursor:pointer;transition:var(--transition);min-height:36px}
 .tab.active{background:var(--bg);color:var(--text-bright);box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .tab:not(.active):hover{color:var(--text)}
@@ -90,14 +90,14 @@ html,body{min-height:100dvh;font-family:var(--font);background:var(--bg);color:v
 .file-count-badge{font-size:.68em;font-weight:700;color:var(--accent);font-family:var(--mono);background:var(--accent-dim);padding:3px 8px;border-radius:6px}
 
 /* ─── Steps ─── */
-.steps{display:flex;align-items:center;gap:0;margin-bottom:16px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)}
+.steps{display:flex;align-items:center;gap:0;margin-bottom:16px;padding:8px 12px;background:rgba(31,31,35,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:var(--radius);border:1px solid rgba(255,255,255,.05)}
 .step{flex:1;text-align:center;padding:2px}
 .step-num{width:22px;height:22px;border-radius:50%;background:var(--surface3);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.62em;font-weight:700;color:var(--text-dim);margin-bottom:2px}
 .step-txt{font-size:.62em;font-weight:600;color:var(--text-dim)}
 .step-arr{color:var(--text-dim);font-size:.4em;padding:0 2px;opacity:.3}
 
 /* ─── Drop Zone ─── */
-.drop{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:40px 20px;text-align:center;cursor:pointer;transition:var(--transition);background:transparent;position:relative;overflow:hidden}
+.drop{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:40px 20px;text-align:center;cursor:pointer;transition:var(--transition);background:rgba(255,255,255,.02);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:relative;overflow:hidden}
 .drop::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,var(--accent-dim),transparent 70%);opacity:0;transition:opacity .3s}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-dim)}
 .drop:hover::before,.drop.over::before{opacity:1}
@@ -153,8 +153,12 @@ input[type=file]{display:none}
 .btn-upload:disabled{opacity:.25;cursor:not-allowed}
 
 /* ─── Result ─── */
-.result{display:none;margin-top:16px}
-.result.v{display:block;animation:fadeUp .4s}
+.result{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:20px}
+.result.v{display:flex;animation:modalIn .35s ease}
+.result-inner{background:rgba(24,24,27,.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-xl);padding:28px 24px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.5);animation:fadeUp .4s ease}
+@keyframes modalIn{from{opacity:0}to{opacity:1}}
+.result-close{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8em;transition:var(--transition)}
+.result-close:hover{background:rgba(255,255,255,.1);color:var(--text-bright)}
 .result-header{text-align:center;margin-bottom:14px}
 .result-check{width:44px;height:44px;border-radius:50%;background:rgba(34,197,94,.08);border:1.5px solid rgba(34,197,94,.15);display:inline-flex;align-items:center;justify-content:center;margin-bottom:8px;animation:bounceIn .4s cubic-bezier(.16,1,.3,1)}
 @keyframes bounceIn{0%{transform:scale(0);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
@@ -276,7 +280,7 @@ input[type=file]{display:none}
     <!-- Header -->
     <div class="header">
       <div class="header-left">
-        <div class="logo-mark"><i class="fas fa-bolt"></i></div>
+        <div class="logo-mark"><i class="fab fa-whatsapp"></i></div>
         <div>
           <div class="logo-text" id="heroTitle">SHIROWAHD</div>
           <div class="subtitle" id="heroSub">Upload & claim video HD</div>
@@ -324,7 +328,7 @@ input[type=file]{display:none}
             <span class="drop-format-tag">MOV</span>
           </div>
         </div>
-        <input type="file" id="inp" multiple>
+        <input type="file" id="inp" accept="*/*" multiple>
 
         <div class="file-queue" id="fileQueue"></div>
 
@@ -339,7 +343,9 @@ input[type=file]{display:none}
 
         <button class="btn-upload" id="btnUp" onclick="uploadQueue()" disabled><i class="fas fa-arrow-up-from-bracket"></i> Upload File</button>
 
-        <div class="result" id="res">
+        <div class="result" id="res" onclick="if(event.target===this)this.classList.remove('v')">
+          <div class="result-inner" style="position:relative">
+          <button class="result-close" onclick="document.getElementById('res').classList.remove('v')"><i class="fas fa-xmark"></i></button>
           <div class="result-header">
             <div class="result-check"><i class="fas fa-check"></i></div>
             <div class="result-title">Upload Berhasil!</div>
@@ -381,6 +387,7 @@ input[type=file]{display:none}
             </button>
             <button class="reset-btn" onclick="resetVideo()"><i class="fas fa-plus" style="margin-right:4px"></i> Upload Lagi</button>
           </div>
+          </div><!-- /result-inner -->
         </div>
         <div class="err-msg" id="err"></div>
       </div>
@@ -413,7 +420,9 @@ input[type=file]{display:none}
 
         <button class="btn-upload" id="btnFotoUp" onclick="uploadFoto()" disabled><i class="fas fa-camera"></i> Upload Foto</button>
 
-        <div class="result" id="fotoRes">
+                <div class="result" id="fotoRes" onclick="if(event.target===this)this.classList.remove('v')">
+          <div class="result-inner" style="position:relative">
+          <button class="result-close" onclick="document.getElementById('fotoRes').classList.remove('v')"><i class="fas fa-xmark"></i></button>
           <div class="result-header">
             <div class="result-check"><i class="fas fa-check"></i></div>
             <div class="result-title">Upload Berhasil!</div>
@@ -455,6 +464,7 @@ input[type=file]{display:none}
             </button>
             <button class="reset-btn" onclick="resetFoto()"><i class="fas fa-plus" style="margin-right:4px"></i> Upload Foto Lagi</button>
           </div>
+          </div><!-- /result-inner -->
         </div>
         <div class="err-msg" id="fotoErr"></div>
       </div>
