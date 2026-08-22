@@ -283,9 +283,9 @@ function convertToMp4(buf, originalName) {
       if (fps && /^\d+\/\d+$/.test(fps)) {
         const [num, den] = fps.split('/').map(Number);
         const fpsVal = den ? num / den : num;
-        // Cap at 60fps — prevents ffmpeg meltdown from variable-rate videos reporting 1000000/1
-        if (fpsVal > 0 && fpsVal <= 60) fpsFlag = ' -r ' + fps;
-        else if (fpsVal > 60) fpsFlag = ' -r 60';
+        // Cap at 90fps — prevents ffmpeg meltdown from variable-rate videos reporting 1000000/1
+        if (fpsVal > 0 && fpsVal <= 90) fpsFlag = ' -r ' + fps;
+        else if (fpsVal > 90) fpsFlag = ' -r 90';
       }
     } catch {}
     // Auto-downscale: cap at 1440p (2K). WA can't display 4K anyway.
