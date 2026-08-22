@@ -2,20 +2,44 @@ import chalk from "chalk";
 import * as timeHelper from "./ourin-time.js";
 import { getCachedJid, isLidConverted } from "./ourin-lid.js";
 
-// Detect color support: Pterodactyl console is !isTTY
-const supportsColor = process.stdout.isTTY || process.env.FORCE_COLOR === "1";
-if (!supportsColor) {
-  chalk.level = 0;
-}
-
 // Mock gradient-string if any other file imports it from here
 const gradientMock = (text) => text;
 const gradient = () => gradientMock;
 
-// 3 Main Colors (chalk.level=0 makes these no-ops automatically)
-const cGreen = chalk.greenBright;
-const cWhite = chalk.whiteBright;
-const cGray = chalk.gray;
+// ─── Color Palette ───
+const colors = {
+  brand:    chalk.hex('#7C5CFF'),   // purple accent
+  success:  chalk.hex('#00E676'),   // neon green
+  error:    chalk.hex('#FF5252'),   // red
+  warn:     chalk.hex('#FFD740'),   // amber
+  info:     chalk.hex('#40C4FF'),   // sky blue
+  system:   chalk.hex('#B388FF'),   // light purple
+  debug:    chalk.hex('#78909C'),   // blue-gray
+  dim:      chalk.hex('#546E7A'),   // muted
+  text:     chalk.hex('#ECEFF1'),   // near-white
+  bright:   chalk.hex('#FFFFFF'),   // white
+  muted:    chalk.hex('#37474F'),   // dark muted
+  cyan:     chalk.hex('#18FFFF'),   // cyan accent
+  orange:   chalk.hex('#FF9100'),   // orange
+  pink:     chalk.hex('#FF4081'),   // pink
+  lime:     chalk.hex('#C6FF00'),   // lime
+};
+
+// ─── Tag Builder ───
+const TAG_CONFIG = {
+  'OK':   { icon: '✔', color: colors.success },
+  'DONE': { icon: '✔', color: colors.success },
+  'FAIL': { icon: '✖', color: colors.error },
+  'ERR':  { icon: '✖', color: colors.error },
+  'NO':   { icon: '✖', color: colors.error },
+  'WARN': { icon: '⚠', color: colors.warn },
+  'WN':   { icon: '⚠', color: colors.warn },
+  'INFO': { icon: '●', color: colors.info },
+  'BOOT': { icon: '◆', color: colors.brand },
+  'SYS':  { icon: '⚙', color: colors.system },
+  'WAIT': { icon: '◌', color: colors.warn },
+  'DBG':  { icon: '○', color: colors.debug },
+};
 
 function getTime() {
   return timeHelper.formatTime("HH:mm:ss");
@@ -23,194 +47,145 @@ function getTime() {
 
 function makeTag(label, isSuccess = false, isError = false) {
   const l = label.toUpperCase().trim();
-  const text = l.substring(0, 4).padEnd(4, " ");
+  const text = l.substring(0, 5).padEnd(5, " ");
 
-  if (!supportsColor) {
-    return `[${getTime()}] [${text}]`;
+  let cfg = TAG_CONFIG[l];
+  if (!cfg) {
+    if (isSuccess) cfg = TAG_CONFIG['OK'];
+    else if (isError) cfg = TAG_CONFIG['FAIL'];
+    else cfg = { icon: '●', color: colors.info };
   }
 
-  let icon = "•";
-  let colorFn = chalk.white;
-
-  if (isSuccess || l === "OK" || l === "DONE") {
-    icon = "✔";
-    colorFn = chalk.green;
-  } else if (isError || l === "FAIL" || l === "ERR" || l === "NO") {
-    icon = "✖";
-    colorFn = chalk.red;
-  } else if (l === "WARN" || l === "WN") {
-    icon = "⚠";
-    colorFn = chalk.yellow;
-  } else if (l === "INFO") {
-    icon = "ℹ";
-    colorFn = chalk.blue;
-  } else if (l === "BOOT") {
-    icon = "❖";
-    colorFn = chalk.magenta;
-  } else if (l === "SYS") {
-    icon = "⚙";
-    colorFn = chalk.cyan;
-  } else if (l === "WAIT") {
-    icon = "⟳";
-    colorFn = chalk.yellow;
-  } else if (l === "DBG") {
-    icon = "🐛";
-    colorFn = chalk.white;
-  }
-
-  return `  ${colorFn(icon)}  ${colorFn(text)}`;
+  const time = colors.dim(getTime());
+  const tag = cfg.color(`${cfg.icon} ${text}`);
+  return `  ${time} ${colors.muted('│')} ${tag} ${colors.muted('│')}`;
 }
 
-const SYM = {
-  ok: () => makeTag("OK", true),
-  no: () => makeTag("FAIL", false, true),
-  wn: () => makeTag("WARN"),
-  info: () => makeTag("INFO"),
-  sys: () => makeTag("SYS"),
-  dbg: () => makeTag("DBG"),
-};
-
+// ─── Core Logger ───
 function writeLog(kind, label, detail = "") {
-  const tags = {
-    info: SYM.info,
-    success: SYM.ok,
-    warn: SYM.wn,
-    error: SYM.no,
-    system: SYM.sys,
-    debug: SYM.dbg,
+  const kindMap = {
+    info:    { isSuccess: false, isError: false },
+    success: { isSuccess: true,  isError: false },
+    warn:    { isSuccess: false, isError: false },
+    error:   { isSuccess: false, isError: true  },
+    system:  { isSuccess: false, isError: false },
+    debug:   { isSuccess: false, isError: false },
   };
-  const tagFn = tags[kind] || SYM.info;
-  const tag = tagFn();
+  const tagLabelMap = {
+    info: 'INFO', success: 'OK', warn: 'WARN',
+    error: 'FAIL', system: 'SYS', debug: 'DBG',
+  };
 
-  if (!supportsColor) {
-    const msg = `${tag} ${label}${detail ? " " + detail : ""}`;
-    console.log(msg);
-    return;
-  }
+  const { isSuccess, isError } = kindMap[kind] || kindMap.info;
+  const tagLabel = tagLabelMap[kind] || 'INFO';
+  const tag = makeTag(tagLabel, isSuccess, isError);
 
-  const msg = `${tag} ${chalk.cyanBright(label)}${detail ? " " + cWhite(detail) : ""}`;
-  console.log(msg);
+  const kindColorMap = {
+    info:    colors.info,
+    success: colors.success,
+    warn:    colors.warn,
+    error:   colors.error,
+    system:  colors.system,
+    debug:   colors.debug,
+  };
+  const colorFn = kindColorMap[kind] || colors.text;
+
+  const labelText = colors.bright(label);
+  const detailText = detail ? ` ${colors.text(detail)}` : "";
+  console.log(`${tag} ${labelText}${detailText}`);
 }
 
 const logger = {
-  info: (label, detail = "") => writeLog("info", label, detail),
+  info:    (label, detail = "") => writeLog("info",    label, detail),
   success: (label, detail = "") => writeLog("success", label, detail),
-  warn: (label, detail = "") => writeLog("warn", label, detail),
-  error: (label, detail = "") => writeLog("error", label, detail),
-  system: (label, detail = "") => writeLog("system", label, detail),
-  debug: (label, detail = "") => writeLog("debug", label, detail),
+  warn:    (label, detail = "") => writeLog("warn",    label, detail),
+  error:   (label, detail = "") => writeLog("error",   label, detail),
+  system:  (label, detail = "") => writeLog("system",  label, detail),
+  debug:   (label, detail = "") => writeLog("debug",   label, detail),
   tag: (label, msg, detail = "") => {
-    const tag = makeTag(label.substring(0, 4));
-    if (!supportsColor) {
-      console.log(`${tag} ${msg}${detail ? " " + detail : ""}`);
-    } else {
-      console.log(`${tag} ${cWhite(msg)}${detail ? " " + cGray(detail) : ""}`);
-    }
+    const tag = makeTag(label.substring(0, 5));
+    const detailText = detail ? ` ${colors.dim(detail)}` : "";
+    console.log(`${tag} ${colors.text(msg)}${detailText}`);
   },
 };
 
+// ─── Spinner (simplified) ───
 function createSpinner(label = "SYS", text = "loading", options = {}) {
   let active = false;
   return {
     start() {
       active = true;
-      console.log(`${makeTag(label)} ${supportsColor ? cWhite(text) : text}...`);
+      console.log(`${makeTag(label)} ${colors.text(text)}...`);
     },
     update(nextText) {
-      if (active) console.log(`${makeTag(label)} ${supportsColor ? cWhite(nextText) : nextText}...`);
+      if (active) console.log(`${makeTag(label)} ${colors.text(nextText)}...`);
     },
-    stop() {
-      active = false;
-    },
-    succeed(detail = text) {
-      this.stop();
-      logger.success(label, detail);
-    },
-    warn(detail = text) {
-      this.stop();
-      logger.warn(label, detail);
-    },
-    fail(detail = text) {
-      this.stop();
-      logger.error(label, detail);
-    },
-    isActive() {
-      return active;
-    }
+    stop() { active = false; },
+    succeed(detail = text) { this.stop(); logger.success(label, detail); },
+    warn(detail = text) { this.stop(); logger.warn(label, detail); },
+    fail(detail = text) { this.stop(); logger.error(label, detail); },
+    isActive() { return active; },
   };
 }
 
 async function spinText(label, text, options = {}) {
-  const tag = makeTag("OK", true);
-  console.log(`${tag} ${supportsColor ? cWhite(text) : text}`);
+  logger.success(label || "SYS", text);
 }
 
 async function typeLine(text, options = {}) {
   const clean = text.replace(/\x1B\[\d+m/g, "");
-  const tag = makeTag("OK", true);
-  console.log(`${tag} ${supportsColor ? cWhite(clean) : clean}`);
+  logger.success("SYS", clean);
 }
 
 async function runLoader(text = "memuat", options = {}) {
-  const tag = makeTag("OK", true);
-  console.log(`${tag} ${supportsColor ? cWhite(text) : text}`);
+  logger.success("SYS", text);
 }
 
+// ─── Boot Sequence ───
 async function playBootSequence(info = {}) {
   const { name = "SHIROWAHD", version = "3.3", mode = "public" } = info;
 
   console.log("");
-
-  if (supportsColor) {
-    console.log(chalk.cyan(`
-     ███████╗██╗  ██╗██╗██████╗  ██████╗ ██╗    ██╗ █████╗ ██╗  ██╗██████╗
-     ██╔════╝██║  ██║██║██╔══██╗██╔═══██╗██║    ██║██╔══██╗██║  ██║██╔══██╗
-     ███████╗███████║██║██████╔╝██║   ██║██║ █╗ ██║███████║███████║██║  ██║
-     ╚════██║██╔══██║██║██╔══██╗██║   ██║██║███╗██║██╔══██║██╔══██║██║  ██║
-     ███████║██║  ██║██║██║  ██║╚██████╔╝╚███╔███╔╝██║  ██║██║  ██║██████╔╝
-     ╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
-`));
-    console.log(`         ${chalk.magenta.bold("►")} ${chalk.white("SHIROWAHD MULTI-DEVICE BOT")} ${chalk.gray(`v${version}`)}`);
-    console.log(`         ${chalk.magenta("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")}`);
-  } else {
-    console.log("========================================");
-    console.log(`  SHIROWAHD MULTI-DEVICE BOT v${version}`);
-    console.log("========================================");
-  }
-
+  console.log(colors.brand(`
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                                                                       │
+  │   ███████╗██╗  ██╗██╗██████╗  ██████╗ ██╗    ██╗ █████╗ ██╗  ██╗██████╗  │
+  │   ██╔════╝██║  ██║██║██╔══██╗██╔═══██╗██║    ██║██╔══██╗██║  ██║██╔══██╗ │
+  │   ███████╗███████║██║██████╔╝██║   ██║██║ █╗ ██║███████║███████║██║  ██║ │
+  │   ╚════██║██╔══██║██║██╔══██╗██║   ██║██║███╗██║██╔══██║██╔══██║██║  ██║ │
+  │   ███████║██║  ██║██║██║  ██║╚██████╔╝╚███╔███╔╝██║  ██║██║  ██║██████╔╝│
+  │   ╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ │
+  │                                                                       │
+  └─────────────────────────────────────────────────────────────────────────┘`));
   console.log("");
-  console.log(`${makeTag("BOOT", true)} ${supportsColor ? cWhite("Memulai Sistem Utama...") : "Memulai Sistem Utama..."}`);
-  console.log(`${makeTag("INFO")} ${supportsColor ? cWhite(`Mode: ${chalk.cyan(mode)}`) : `Mode: ${mode}`}`);
+  console.log(`  ${colors.brand('▸')} ${colors.bright('SHIROWAHD')} ${colors.dim('Multi-Device WhatsApp Bot')} ${colors.brand(`v${version}`)}`);
+  console.log(`  ${colors.dim('━'.repeat(55))}`);
+  console.log("");
+
+  logger.system("BOOT", "Memulai Sistem Utama...");
+  logger.info("MODE", mode.toUpperCase());
 }
 
+// ─── Message Type Tag ───
 function getTypeTag(msgType, isNewsletter) {
   if (isNewsletter) return "Channel";
-
   const map = {
-    imageMessage: "Image",
-    videoMessage: "Video",
-    audioMessage: "Audio",
-    stickerMessage: "Sticker",
-    documentMessage: "Doc",
-    contactMessage: "Contact",
-    locationMessage: "Location",
-    viewOnceMessageV2: "1xView",
-    extendedTextMessage: "Text",
-    conversation: "Text",
-    interactiveResponseMessage: "Button",
-    pollCreationMessage: "Poll",
-    reactionMessage: "Reaction",
+    imageMessage: "IMG", videoMessage: "VID", audioMessage: "AUD",
+    stickerMessage: "STK", documentMessage: "DOC", contactMessage: "VCF",
+    locationMessage: "LOC", viewOnceMessageV2: "1xV",
+    extendedTextMessage: "TXT", conversation: "TXT",
+    interactiveResponseMessage: "BTN", pollCreationMessage: "POL",
+    reactionMessage: "RCT",
   };
-  return map[msgType] || "Message";
+  return map[msgType] || "MSG";
 }
 
+// ─── Message Logger ───
 function logMessage(info) {
   if (typeof info === "string") {
     const [chatType, sender, message] = arguments;
     info = {
-      chatType,
-      sender,
-      message,
+      chatType, sender, message,
       pushName: sender,
       groupName: chatType === "group" ? "Unknown" : "Private",
     };
@@ -232,70 +207,57 @@ function logMessage(info) {
     return match;
   });
 
-  const time = timeHelper.formatTime("HH:mm:ss");
+  const time = getTime();
   const typeTag = getTypeTag(messageType, isNewsletter || chatType === "newsletter");
   const location = chatType === "group" || chatType === "newsletter" ? (groupName || "Group") : "Private";
   const senderName = pushName || num;
+  const device = info.device || "Unknown";
 
-  // Word-wrap message
-  const maxWidth = 55;
+  // Word-wrap
+  const maxWidth = 50;
   const msgLines = [];
   msg.split('\n').forEach(line => {
-    let currentLine = "";
+    let cur = "";
     line.split(' ').forEach(word => {
-      if ((currentLine + word).length > maxWidth) {
-        if (currentLine) {
-          msgLines.push(currentLine.trimEnd());
-          currentLine = word + " ";
-        } else {
+      if ((cur + word).length > maxWidth) {
+        if (cur) { msgLines.push(cur.trimEnd()); cur = word + " "; }
+        else {
           const chunks = word.match(new RegExp(`.{1,${maxWidth}}`, 'g')) || [];
           chunks.slice(0, -1).forEach(c => msgLines.push(c));
-          currentLine = (chunks[chunks.length - 1] || "") + " ";
+          cur = (chunks[chunks.length - 1] || "") + " ";
         }
-      } else {
-        currentLine += word + " ";
-      }
+      } else { cur += word + " "; }
     });
-    if (currentLine) {
-      msgLines.push(currentLine.trimEnd());
-    }
+    if (cur) msgLines.push(cur.trimEnd());
   });
 
-  if (!supportsColor) {
-    // Plain text format for Pterodactyl
-    const locLabel = chatType === "private" ? "Private" : `Group: ${location}`;
-    console.log("");
-    console.log(`[${time}] [MSG ] ${locLabel} | ${senderName} (${num}) | ${typeTag}`);
-    msgLines.forEach(line => {
-      console.log(`         ${line}`);
-    });
-  } else {
-    // Color format for TTY
-    console.log("");
-    console.log(`  ${cWhite("╭─")} ${chalk.bgWhiteBright("Hey, ada pesan masuk nih :3")} ${cGray("•")} ${chatType === "private" ? chalk.yellow("Private") : chalk.whiteBright("Dari Grup") + " " + chalk.bgCyanBright(location)}`);
-    console.log(`  ${cWhite("│")}  👤 ${chalk.greenBright(senderName)} ${cGray(`(${num})`)}`);
-    console.log(`  ${cWhite("│")}  📱 ${chalk.yellowBright(info.device || "Unknown")} ${chalk.red(`• ${time} • ${typeTag}`)}`);
-    msgLines.forEach((line, index) => {
-      if (index === 0) {
-        console.log(`  ${cWhite("│")}  💬 ${chalk.whiteBright(line)}`);
-      } else {
-        console.log(`  ${cWhite("│")}     ${chalk.whiteBright(line)}`);
-      }
-    });
-    console.log(`  ${cWhite("╰─")}`);
-  }
+  // Pretty message box
+  const isPrivate = chatType === "private";
+  const locColor = isPrivate ? colors.orange : colors.cyan;
+  const locLabel = isPrivate ? "PRIVATE" : location;
+  const typeBadge = colors.brand(`[${typeTag}]`);
+
+  console.log("");
+  console.log(`  ${colors.dim(time)} ${colors.muted('│')} ${colors.success('▶')} ${colors.bright('MESSAGE')} ${typeBadge} ${locColor(locLabel)}`);
+  console.log(`  ${colors.dim('     ')} ${colors.muted('│')}   ${colors.dim('from')} ${colors.success(senderName)} ${colors.dim(`(${num})`)} ${colors.dim('via')} ${colors.dim(device)}`);
+
+  msgLines.forEach((line, i) => {
+    if (i === 0) {
+      console.log(`  ${colors.dim('     ')} ${colors.muted('│')}   ${colors.dim('»')} ${colors.text(line)}`);
+    } else {
+      console.log(`  ${colors.dim('     ')} ${colors.muted('│')}     ${colors.text(line)}`);
+    }
+  });
 }
 
+// ─── Plugin Logger ───
 function logPlugin(name, category) {
-  if (!supportsColor) {
-    console.log(`  |- ${name} [${category}]`);
-  } else {
-    console.log(`  ${cGray("├─")} ${cWhite(name)} ${cGray(`[${category}]`)}`);
-  }
+  console.log(`  ${colors.dim('├─')} ${colors.text(name)} ${colors.dim(`[${category}]`)}`);
 }
 
+// ─── Connection Logger ───
 function logConnection(status, info = "") {
-  const detail = info ? ` - ${info}` : "";
+  const detail = info ? ` — ${info}` : "";
   if (status === "connected") {
     logger.success("CONN", `Connected${detail}`);
   } else if (status === "connecting") {
@@ -305,17 +267,17 @@ function logConnection(status, info = "") {
   }
 }
 
+// ─── Error Box ───
 function logErrorBox(title, message) {
-  logger.error(title, message);
+  console.log("");
+  console.log(`  ${colors.error('┌─ ERROR ──────────────────────────────────')}`);
+  console.log(`  ${colors.error('│')} ${colors.bright(title)}`);
+  console.log(`  ${colors.error('│')} ${colors.dim(message)}`);
+  console.log(`  ${colors.error('└──────────────────────────────────────────')}`);
 }
 
-function printBanner(mini = false) {
-  // No banner for linux style
-}
-
-function printStartup(info = {}) {
-  // Already handled by boot sequence
-}
+function printBanner(mini = false) {}
+function printStartup(info = {}) {}
 
 const CODES = {
   reset: "", bold: "", dim: "", italic: "", underline: "",
@@ -324,81 +286,62 @@ const CODES = {
   cyan: "", magenta: "", bgBlack: "", bgGray: "",
 };
 
-// Map all colors to our 3 colors
+// Compat color map
 const c = {
-  green: cGreen,
-  purple: cWhite,
-  white: cWhite,
-  gray: cGray,
+  green: colors.success,
+  purple: colors.brand,
+  white: colors.text,
+  gray: colors.dim,
   bold: (v) => v,
-  dim: cGray,
-  greenBold: cGreen,
-  purpleBold: cWhite,
-  whiteBold: cWhite,
-  grayDim: cGray,
-  red: cWhite,
-  yellow: cWhite,
-  cyan: cWhite,
-  blue: cWhite,
-  magenta: cWhite,
+  dim: colors.dim,
+  greenBold: colors.success,
+  purpleBold: colors.brand,
+  whiteBold: colors.bright,
+  grayDim: colors.dim,
+  red: colors.error,
+  yellow: colors.warn,
+  cyan: colors.cyan,
+  blue: colors.info,
+  magenta: colors.pink,
 };
 
 function divider() {
-  console.log("");
+  console.log(`  ${colors.muted('─'.repeat(55))}`);
 }
 
 function createBanner(lines, color = "green") {
-  if (!supportsColor) {
-    return lines.map(l => `| ${l}`).join("\n");
-  }
-  return lines.map(l => `${cGray("│")} ${cWhite(l)}`).join("\n");
+  return lines.map(l => `  ${colors.muted('│')} ${colors.text(l)}`).join("\n");
 }
 
 function getTimestamp() {
-  return supportsColor ? cGray(timeHelper.formatTime("HH:mm:ss")) : timeHelper.formatTime("HH:mm:ss");
+  return colors.dim(getTime());
 }
 
 const theme = {
-  primary: cWhite,
-  secondary: cWhite,
-  accent: cGreen,
-  text: cWhite,
-  dim: cGray,
-  muted: cGray,
-  success: cGreen,
-  error: cWhite,
-  warning: cWhite,
-  info: cWhite,
-  debug: cGray,
-  border: cGray,
-  tag: cWhite,
+  primary: colors.brand,
+  secondary: colors.text,
+  accent: colors.success,
+  text: colors.text,
+  dim: colors.dim,
+  muted: colors.dim,
+  success: colors.success,
+  error: colors.error,
+  warning: colors.warn,
+  info: colors.info,
+  debug: colors.debug,
+  border: colors.muted,
+  tag: colors.text,
   pill: (t) => t,
   rainbow: gradientMock,
-  borderFx: (t) => cGray(t),
-  mintFx: (t) => cGreen(t),
-  warmFx: (t) => cWhite(t),
-  colorizeCategory: (t) => cWhite(t),
+  borderFx: (t) => colors.muted(t),
+  mintFx: (t) => colors.success(t),
+  warmFx: (t) => colors.warn(t),
+  colorizeCategory: (t) => colors.brand(t),
 };
 
 export {
-  c,
-  CODES,
-  logger,
-  createSpinner,
-  spinText,
-  typeLine,
-  runLoader,
-  playBootSequence,
-  logMessage,
-  logPlugin,
-  logConnection,
-  logErrorBox,
-  printBanner,
-  printStartup,
-  createBanner,
-  getTimestamp,
-  divider,
-  theme,
-  chalk,
-  gradient
+  c, CODES, logger, createSpinner, spinText, typeLine, runLoader,
+  playBootSequence, logMessage, logPlugin, logConnection, logErrorBox,
+  printBanner, printStartup, createBanner, getTimestamp, divider,
+  theme, chalk, gradient
 };
