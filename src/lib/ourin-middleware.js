@@ -58,7 +58,7 @@ function checkPermission(m, pluginConfig) {
   if (!m.isGroup && !m.isPremium && !m.isPartner && !hasAccess) {
     return {
       allowed: false,
-      reason: "\ud83d\udc8e *Fitur DM khusus Premium!*\n\nHubungi owner bot untuk info premium.",
+      reason: "\ud83d\udc8e *Fitur DM khusus Premium!*\n\nUntuk menggunakan bot di DM, kamu harus menjadi member premium.\n\n\ud83d\udcde *Hubungi Owner:*\n> wa.me/6282262421536",
     };
   }
 
