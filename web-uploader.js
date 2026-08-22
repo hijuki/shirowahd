@@ -280,7 +280,13 @@ function convertToMp4(buf, originalName) {
     let fpsFlag = '';
     try {
       const fps = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
-      if (fps && /^\d+\/\d+$/.test(fps)) fpsFlag = ' -r ' + fps;
+      if (fps && /^\d+\/\d+$/.test(fps)) {
+        const [num, den] = fps.split('/').map(Number);
+        const fpsVal = den ? num / den : num;
+        // Cap at 60fps — prevents ffmpeg meltdown from variable-rate videos reporting 1000000/1
+        if (fpsVal > 0 && fpsVal <= 60) fpsFlag = ' -r ' + fps;
+        else if (fpsVal > 60) fpsFlag = ' -r 60';
+      }
     } catch {}
     // Auto-downscale: cap at 1440p (2K). WA can't display 4K anyway.
     let scaleFilter = '';
@@ -293,9 +299,9 @@ function convertToMp4(buf, originalName) {
         else scaleFilter = ' -vf scale=1440:-2';
       }
     } catch {}
-    // ponytail: crf 18 = visually lossless. yuv420p + high profile = max WA compat. Downscale >1080p to 1080p.
+    // ponytail: crf 23 = good quality, lighter than 18. veryfast preset = much less CPU. Upgrade to crf 18 + fast if server has dedicated GPU/power.
     execSync(
-      'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset fast -crf 18' + scaleFilter + fpsFlag + ' -c:a aac -b:a 320k -movflags +faststart -y ' + JSON.stringify(tmpOut),
+      'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset veryfast -crf 23' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -y ' + JSON.stringify(tmpOut),
       { timeout: 600000, stdio: 'pipe' }
     );
     return { buf: readFileSync(tmpOut), name: originalName.replace(/\.[^.]+$/, '.mp4') };
