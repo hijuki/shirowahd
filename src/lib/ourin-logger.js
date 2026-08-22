@@ -5,9 +5,9 @@ import { getCachedJid, isLidConverted } from "./ourin-lid.js";
 const gradientMock = (text) => text;
 const gradient = () => gradientMock;
 
-// ═══════════════════════════════════════════════════
-//  COLOR PALETTE
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
+//  PALETTE
+// ═══════════════════════════════════════
 const P = {
   brand:   chalk.hex('#7C5CFF'),
   brand2:  chalk.hex('#A78BFA'),
@@ -37,79 +37,72 @@ function getTime() {
   return timeHelper.formatTime("HH:mm:ss");
 }
 
-// ═══════════════════════════════════════════════════
-//  BOOT SEQUENCE — Clean visual splash
-// ═══════════════════════════════════════════════════
-async function playBootSequence(info = {}) {
-  const { name = "SHIROWAHD", version = "3.3", mode = "public" } = info;
-  const W = 44;
-  const hl = P.brand('═'.repeat(W));
-  const s = P.brand('║');
-  const sp = ' '.repeat(W);
+// ═══════════════════════════════════════
+//  BOOT STATE — suppress loading logs
+// ═══════════════════════════════════════
+let _booting = true;
+let _bootLogs = [];
+let _bootStart = Date.now();
 
-  // helper: pad colored string to fixed visible width
-  const pad = (str, w) => {
-    const vis = str.replace(/\x1B\[\d+(?:;\d+)*m/g, '').length;
-    return vis < w ? str + ' '.repeat(w - vis) : str;
-  };
+function finishBoot() {
+  if (!_booting) return;
+  _booting = false;
+  const elapsed = ((Date.now() - _bootStart) / 1000).toFixed(1);
 
-  // center colored text inside W visible chars
-  const centerC = (txt, w) => {
-    const vis = txt.replace(/\x1B\[\d+(?:;\d+)*m/g, '').length;
-    const gap = Math.max(0, w - vis);
-    const left = Math.floor(gap / 2);
-    return ' '.repeat(left) + txt + ' '.repeat(gap - left);
-  };
+  // Clear screen for clean look
+  process.stdout.write('\x1Bc');
 
-  const modeColor = mode === 'self' ? P.orange : P.neon;
-  const timeStr = getTime() + ' WIB';
+  const W = 50;
+  const sep = P.muted('─'.repeat(W));
 
   console.log('');
-  // ASCII art - all lines exactly 27 chars
-  const art = [
-    '███████╗██╗  ██╗██╗██████╗ ',
-    '██╔════╝██║  ██║██║██╔══██╗',
-    '███████╗███████║██║██████╔╝',
-    '╚════██║██╔══██║██║██╔══██╗',
-    '███████║██║  ██║██║██║  ██║',
-    '╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝',
-  ];
+  console.log(`  ${P.brand('S H I R O W A H D')}`);
+  console.log(`  ${sep}`);
+  console.log('');
 
-  console.log(`  ${P.brand('╔')}${hl}${P.brand('╗')}`);
-  console.log(`  ${s}${sp}${s}`);
-  for (const a of art) {
-    console.log(`  ${s}${centerC(P.cyan(a), W)}${s}`);
+  // Status dashboard
+  const bootCount = _bootLogs.length;
+  const errors = _bootLogs.filter(l => l.kind === 'error').length;
+  const warns = _bootLogs.filter(l => l.kind === 'warn').length;
+
+  console.log(`  ${P.bgBrand(' STATUS ')}  ${P.neon('● Online')}    ${P.bgGray(' BOOT ')}  ${P.text(elapsed + 's')}    ${P.bgGray(' LOGS ')}  ${P.text(bootCount + ' loaded')}`);
+
+  if (errors > 0 || warns > 0) {
+    const parts = [];
+    if (errors > 0) parts.push(P.red(`${errors} error${errors > 1 ? 's' : ''}`));
+    if (warns > 0) parts.push(P.amber(`${warns} warning${warns > 1 ? 's' : ''}`));
+    console.log(`  ${P.bgAmber(' ISSUES ')}  ${parts.join('  ')}`);
   }
-  console.log(`  ${s}${sp}${s}`);
-  console.log(`  ${P.brand('╠')}${P.brand('─'.repeat(W))}${P.brand('╣')}`);
-  console.log(`  ${s}${pad(`  ${P.white(name)}  ${P.dim('│')}  ${P.brand('v' + version)}  ${P.dim('│')}  ${P.dim('WhatsApp Bot')}`, W)}${s}`);
-  console.log(`  ${s}${pad(`  ${P.dim('Mode:')} ${modeColor(mode.toUpperCase())}  ${P.dim('│')}  ${P.dim('Time:')} ${P.sky(timeStr)}`, W)}${s}`);
-  console.log(`  ${s}${sp}${s}`);
-  console.log(`  ${P.brand('╚')}${hl}${P.brand('╝')}`);
-  console.log('');
 
-  logger.system("BOOT", "Memulai Sistem Utama...");
+  console.log('');
+  console.log(`  ${sep}`);
+  console.log(`  ${P.dim('Ready — listening for messages')}`);
+  console.log(`  ${sep}`);
+  console.log('');
 }
 
-// ═══════════════════════════════════════════════════
-//  LOGGER — Badge-style tags
-// ═══════════════════════════════════════════════════
-const BADGES = {
-  success: { badge: P.bgNeon,  icon: ' ✔ ', label: ' OK ' },
-  error:   { badge: P.bgRed,   icon: ' ✖ ', label: ' ERR ' },
-  warn:    { badge: P.bgAmber,  icon: ' ⚠ ', label: ' WARN ' },
-  info:    { badge: P.bgSky,    icon: ' ● ', label: ' INFO ' },
-  system:  { badge: P.bgBrand,  icon: ' ⚙ ', label: ' SYS ' },
-  debug:   { badge: P.bgGray,   icon: ' ○ ', label: ' DBG ' },
-};
-
+// ═══════════════════════════════════════
+//  LOGGER
+// ═══════════════════════════════════════
 function writeLog(kind, label, detail = "") {
-  const b = BADGES[kind] || BADGES.info;
+  // During boot: collect silently, don't print
+  if (_booting) {
+    _bootLogs.push({ kind, label, detail, time: getTime() });
+    return;
+  }
+
   const time = P.dim(getTime());
-  const badge = b.badge(b.label);
-  const labelText = P.white(label);
+  const badges = {
+    success: P.bgNeon(' ✔ '),
+    error:   P.bgRed(' ✖ '),
+    warn:    P.bgAmber(' ⚠ '),
+    info:    P.bgSky(' ● '),
+    system:  P.bgBrand(' ⚙ '),
+    debug:   P.bgGray(' ○ '),
+  };
+  const badge = badges[kind] || badges.info;
   const detailText = detail ? ` ${P.text(detail)}` : "";
-  console.log(`  ${time}  ${badge}  ${labelText}${detailText}`);
+  console.log(`  ${time}  ${badge}  ${P.white(label)}${detailText}`);
 }
 
 const logger = {
@@ -120,17 +113,17 @@ const logger = {
   system:  (label, detail = "") => writeLog("system",  label, detail),
   debug:   (label, detail = "") => writeLog("debug",   label, detail),
   tag: (label, msg, detail = "") => {
+    if (_booting) { _bootLogs.push({ kind: 'info', label, detail: msg + (detail ? ' ' + detail : ''), time: getTime() }); return; }
     const time = P.dim(getTime());
-    const badge = P.bgGray(` ${label.substring(0,4).toUpperCase()} `);
-    const detailText = detail ? ` ${P.dim(detail)}` : "";
-    console.log(`  ${time}  ${badge}  ${P.text(msg)}${detailText}`);
+    const badge = P.bgGray(` ${label.substring(0,3).toUpperCase()} `);
+    console.log(`  ${time}  ${badge}  ${P.text(msg)}${detail ? ' ' + P.dim(detail) : ''}`);
   },
 };
 
-// ═══════════════════════════════════════════════════
-//  SPINNER / LOADER (simplified)
-// ═══════════════════════════════════════════════════
-function createSpinner(label = "SYS", text = "loading", options = {}) {
+// ═══════════════════════════════════════
+//  SPINNER / LOADER — silent during boot
+// ═══════════════════════════════════════
+function createSpinner(label = "SYS", text = "loading") {
   let active = false;
   return {
     start() { active = true; logger.info(label, text + "..."); },
@@ -143,13 +136,24 @@ function createSpinner(label = "SYS", text = "loading", options = {}) {
   };
 }
 
-async function spinText(label, text) { logger.success(label || "SYS", text); }
-async function typeLine(text) { logger.success("SYS", text.replace(/\x1B\[\d+m/g, "")); }
-async function runLoader(text = "memuat") { logger.success("SYS", text); }
+async function spinText(label, text) { logger.info(label || "SYS", text); }
+async function typeLine(text) { logger.info("SYS", text.replace(/\x1B\[\d+m/g, "")); }
+async function runLoader(text = "memuat") { logger.info("SYS", text); }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
+//  BOOT SEQUENCE — just mark start
+// ═══════════════════════════════════════
+async function playBootSequence(info = {}) {
+  _booting = true;
+  _bootStart = Date.now();
+  _bootLogs = [];
+  // Show a simple loading indicator
+  process.stdout.write(P.dim('  Loading SHIROWAHD...'));
+}
+
+// ═══════════════════════════════════════
 //  MESSAGE TYPE
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 function getTypeTag(msgType, isNewsletter) {
   if (isNewsletter) return "CH";
   const map = {
@@ -163,9 +167,9 @@ function getTypeTag(msgType, isNewsletter) {
   return map[msgType] || "MSG";
 }
 
-// ═══════════════════════════════════════════════════
-//  MESSAGE LOGGER — Card-style box
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
+//  MESSAGE — clean card
+// ═══════════════════════════════════════
 function logMessage(info) {
   if (typeof info === "string") {
     const [chatType, sender, message] = arguments;
@@ -179,11 +183,9 @@ function logMessage(info) {
   let msg = message;
 
   msg = msg.replace(/@(\d{10,})/g, (match, n) => {
-    const lidJid = n + "@lid";
-    const resolved = getCachedJid(lidJid);
+    const resolved = getCachedJid(n + "@lid");
     if (resolved && !isLidConverted(resolved)) return "@" + resolved.replace(/@.+/g, "");
-    const swJid = n + "@s.whatsapp.net";
-    const resolved2 = getCachedJid(swJid);
+    const resolved2 = getCachedJid(n + "@s.whatsapp.net");
     if (resolved2 && !isLidConverted(resolved2)) return "@" + resolved2.replace(/@.+/g, "");
     return match;
   });
@@ -192,84 +194,52 @@ function logMessage(info) {
   const typeTag = getTypeTag(messageType, isNewsletter || chatType === "newsletter");
   const location = chatType === "group" || chatType === "newsletter" ? (groupName || "Group") : "Private";
   const senderName = pushName || num;
-  const device = info.device || "Unknown";
   const isPrivate = chatType === "private";
 
-  // Word-wrap
-  const maxWidth = 48;
-  const msgLines = [];
-  msg.split('\n').forEach(line => {
-    let cur = "";
-    line.split(' ').forEach(word => {
-      if ((cur + word).length > maxWidth) {
-        if (cur) { msgLines.push(cur.trimEnd()); cur = word + " "; }
-        else {
-          const chunks = word.match(new RegExp(`.{1,${maxWidth}}`, 'g')) || [];
-          chunks.slice(0, -1).forEach(ch => msgLines.push(ch));
-          cur = (chunks[chunks.length - 1] || "") + " ";
-        }
-      } else { cur += word + " "; }
-    });
-    if (cur) msgLines.push(cur.trimEnd());
-  });
+  // Truncate message for single line display
+  const maxLen = 60;
+  const flat = msg.replace(/\n/g, ' ').trim();
+  const preview = flat.length > maxLen ? flat.substring(0, maxLen) + '…' : flat;
 
-  // ── Card Design ──
-  const W = 56;
-  const border = P.dim('─'.repeat(W));
-  const locBadge = isPrivate ? P.bgAmber(` PRIVATE `) : P.bgSky(` ${location.substring(0, 20)} `);
+  const locBadge = isPrivate ? P.bgAmber(` DM `) : P.bgSky(` ${location.substring(0, 15)} `);
   const typeBadge = P.bgBrand(` ${typeTag} `);
 
-  console.log('');
-  console.log(`  ${P.dim('┌')}${border}${P.dim('┐')}`);
-  console.log(`  ${P.dim('│')} ${P.neon('◆')} ${P.white(senderName)} ${P.dim(`(${num})`)}${' '.repeat(Math.max(0, W - senderName.length - num.length - 7))}${P.dim('│')}`);
-  console.log(`  ${P.dim('│')} ${P.dim(time)} ${P.dim('•')} ${typeBadge} ${locBadge} ${P.dim(`• ${device}`)}${' '.repeat(Math.max(0, 5))}${P.dim('│')}`);
-  console.log(`  ${P.dim('├')}${P.dim('─'.repeat(W))}${P.dim('┤')}`);
-
-  for (const line of msgLines) {
-    const padding = Math.max(0, W - line.length - 3);
-    console.log(`  ${P.dim('│')}  ${P.text(line)}${' '.repeat(padding)} ${P.dim('│')}`);
-  }
-
-  console.log(`  ${P.dim('└')}${border}${P.dim('┘')}`);
+  console.log(`  ${P.dim(time)}  ${typeBadge} ${locBadge}  ${P.neon(senderName)} ${P.dim('›')} ${P.text(preview)}`);
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 //  PLUGIN / CONNECTION / ERROR
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 function logPlugin(name, category) {
-  console.log(`    ${P.dim('├─')} ${P.text(name)} ${P.dim(`[${category}]`)}`);
+  // Silent during boot
+  if (_booting) { _bootLogs.push({ kind: 'info', label: 'plugin', detail: name, time: getTime() }); return; }
+  console.log(`    ${P.dim('·')} ${P.text(name)} ${P.dim(category)}`);
 }
 
 function logConnection(status, info = "") {
-  const detail = info ? ` — ${info}` : "";
   if (status === "connected") {
-    console.log('');
-    console.log(`  ${P.bgNeon(' ✔ CONNECTED ')} ${P.white(info || 'Bot')}`);
-    console.log('');
+    // Connection = boot finished! Show clean dashboard
+    finishBoot();
   } else if (status === "connecting") {
-    console.log(`  ${P.bgAmber(' ◌ CONNECTING ')} ${P.text(info || '...')}`);
+    // Silent during boot
+    if (_booting) { _bootLogs.push({ kind: 'info', label: 'conn', detail: 'Connecting' + (info ? ' — ' + info : ''), time: getTime() }); return; }
+    logger.info("CONN", `Connecting${info ? ' — ' + info : ''}`);
   } else {
-    console.log(`  ${P.bgRed(' ✖ DISCONNECTED ')} ${P.text(info || '')}`);
+    logger.error("CONN", `Disconnected${info ? ' — ' + info : ''}`);
   }
 }
 
 function logErrorBox(title, message) {
-  const W = 56;
-  console.log('');
-  console.log(`  ${P.red('╔')}${P.red('═'.repeat(W))}${P.red('╗')}`);
-  console.log(`  ${P.red('║')} ${P.bgRed(' ✖ ERROR ')} ${P.white(title)}${' '.repeat(Math.max(0, W - title.length - 12))}${P.red('║')}`);
-  console.log(`  ${P.red('║')} ${P.dim(message.substring(0, W - 2))}${' '.repeat(Math.max(0, W - message.substring(0, W - 2).length - 2))}${P.red('║')}`);
-  console.log(`  ${P.red('╚')}${P.red('═'.repeat(W))}${P.red('╝')}`);
-  console.log('');
+  console.log(`  ${P.bgRed(' ERROR ')}  ${P.white(title)} ${P.dim('—')} ${P.dim(message.substring(0, 80))}`);
 }
 
 function divider() {
-  console.log(`  ${P.muted('━'.repeat(56))}`);
+  console.log(`  ${P.muted('─'.repeat(50))}`);
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 //  COMPAT EXPORTS
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 function printBanner() {}
 function printStartup() {}
 
@@ -295,6 +265,13 @@ function getTimestamp() {
   return P.dim(getTime());
 }
 
+function makeTag(label, isSuccess = false, isError = false) {
+  const l = label.toUpperCase().trim().substring(0, 5).padEnd(5);
+  if (isSuccess) return P.bgNeon(` ${l} `);
+  if (isError) return P.bgRed(` ${l} `);
+  return P.bgGray(` ${l} `);
+}
+
 const theme = {
   primary: P.brand, secondary: P.text, accent: P.neon,
   text: P.text, dim: P.dim, muted: P.dim,
@@ -305,16 +282,9 @@ const theme = {
   warmFx: (t) => P.amber(t), colorizeCategory: (t) => P.brand(t),
 };
 
-function makeTag(label, isSuccess = false, isError = false) {
-  const l = label.toUpperCase().trim().substring(0, 5).padEnd(5);
-  if (isSuccess) return P.bgNeon(` ${l} `);
-  if (isError) return P.bgRed(` ${l} `);
-  return P.bgGray(` ${l} `);
-}
-
 export {
   c, CODES, logger, createSpinner, spinText, typeLine, runLoader,
   playBootSequence, logMessage, logPlugin, logConnection, logErrorBox,
   printBanner, printStartup, createBanner, getTimestamp, divider,
-  theme, chalk, gradient
+  theme, chalk, gradient, makeTag, finishBoot
 };
