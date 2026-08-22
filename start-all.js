@@ -1,9 +1,28 @@
 import { spawn, execSync } from 'child_process';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 
-// ─── Auto Git Pull ───
+// ─── Auto Git Pull (setup repo if needed) ───
 try {
-  if (existsSync('.git')) {
+  const GIT_REPO = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
+  const GIT_TOKEN = process.env.ACCESS_TOKEN || '';
+  const GIT_USER = process.env.USERNAME || '';
+  const GIT_BRANCH = process.env.BRANCH || 'main';
+
+  if (!existsSync('.git')) {
+    console.log('[UPDATE] No .git found — initializing repo...');
+    execSync('git init && git checkout -b ' + GIT_BRANCH, { encoding: 'utf8', timeout: 15000 });
+    // Build remote URL with token for private repos
+    let remoteUrl = GIT_REPO;
+    if (GIT_TOKEN && GIT_USER) {
+      remoteUrl = GIT_REPO.replace('https://', `https://${GIT_USER}:${GIT_TOKEN}@`);
+    } else if (GIT_TOKEN) {
+      remoteUrl = GIT_REPO.replace('https://', `https://${GIT_TOKEN}@`);
+    }
+    execSync(`git remote add origin ${remoteUrl}`, { encoding: 'utf8', timeout: 5000 });
+    console.log('[UPDATE] Git repo initialized, pulling...');
+    const out = execSync(`git fetch origin ${GIT_BRANCH} && git reset --hard origin/${GIT_BRANCH}`, { encoding: 'utf8', timeout: 60000 }).trim();
+    console.log(`[UPDATE] ${out || 'Up to date'}`);
+  } else {
     console.log('[UPDATE] Checking for updates...');
     const out = execSync('git pull', { encoding: 'utf8', timeout: 30000 }).trim();
     console.log(`[UPDATE] ${out}`);
