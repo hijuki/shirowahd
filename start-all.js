@@ -8,6 +8,15 @@ const CF_WORKER = 'swhdhlz-redirect';
 const CF_TUNNEL_ID = 'a4064acb-4df6-419d-9fc7-39cdfa8ca0af';
 const DOMAIN = 'swhdhlz.my.id';
 
+function ts() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+function log(tag, msg) {
+  console.log(`[${ts()}] [${tag.padEnd(4)}] ${msg}`);
+}
+
 // 0. Patch Baileys for large file upload (80MB+)
 try {
   const { execSync } = await import('child_process');
@@ -19,7 +28,7 @@ try {
     if (src.includes('maxContentLengthBytes:') && !src.includes('maxContentLengthBytes: Infinity')) {
       src = src.replace(/maxContentLengthBytes:\s*\d+/g, 'maxContentLengthBytes: Infinity');
       writeFileSync(sendFile, src);
-      console.log('[PATCH] Baileys messages-send.js patched (maxContentLengthBytes → Infinity)');
+      log('PTCH', 'Baileys messages-send.js patched (maxContentLengthBytes -> Infinity)');
     }
   }
   
@@ -28,15 +37,15 @@ try {
     if (src.includes('opts?.maxContentLength') && !src.includes('if (false && opts?.maxContentLength')) {
       src = src.replace(/if \(opts\?\.maxContentLength/g, 'if (false && opts?.maxContentLength');
       writeFileSync(mediaFile, src);
-      console.log('[PATCH] Baileys messages-media.js patched (maxContentLength check disabled)');
+      log('PTCH', 'Baileys messages-media.js patched (maxContentLength check disabled)');
     }
   }
-} catch (e) { console.error('[PATCH] Baileys patch error:', e.message); }
+} catch (e) { log('PTCH', `Baileys patch error: ${e.message}`); }
 
 // 1. Start web-uploader as child process
-console.log('[START] Launching web-uploader...');
+log('BOOT', 'Launching web-uploader...');
 const webUp = spawn('node', ['web-uploader.js'], { stdio: 'inherit' });
-webUp.on('error', e => console.error('[WEB-UPLOADER] Error:', e.message));
+webUp.on('error', e => log('WEBU', `Error: ${e.message}`));
 
 // 2. Update admin-settings.json with domain
 try {
@@ -46,10 +55,10 @@ try {
     if (!s.domain || s.domain !== DOMAIN) {
       s.domain = DOMAIN;
       writeFileSync(sf, JSON.stringify(s, null, 2));
-      console.log('[START] Domain set to', DOMAIN);
+      log('BOOT', `Domain set to ${DOMAIN}`);
     }
   }
-} catch (e) { console.error('[START] Settings update error:', e.message); }
+} catch (e) { log('BOOT', `Settings update error: ${e.message}`); }
 
 // 3. Try to get tunnel token and run cloudflared via npx
 async function startTunnel() {
@@ -59,7 +68,7 @@ async function startTunnel() {
     });
     const data = await res.json();
     if (!data.success || !data.result) {
-      console.error('[TUNNEL] Failed to get token:', data.errors);
+      log('TUNL', `Failed to get token: ${JSON.stringify(data.errors)}`);
       return;
     }
     const token = data.result;
@@ -67,27 +76,27 @@ async function startTunnel() {
     // Try downloading cloudflared binary
     const { execSync } = await import('child_process');
     if (!existsSync('./cloudflared')) {
-      console.log('[TUNNEL] Downloading cloudflared...');
+      log('TUNL', 'Downloading cloudflared...');
       try {
         execSync('curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o ./cloudflared && chmod +x ./cloudflared', { timeout: 60000 });
-        console.log('[TUNNEL] Downloaded OK');
+        log('TUNL', 'Downloaded OK');
       } catch (e) {
-        console.error('[TUNNEL] Download failed:', e.message);
+        log('TUNL', `Download failed: ${e.message}`);
         return;
       }
     }
     
-    console.log('[TUNNEL] Starting cloudflared tunnel...');
+    log('TUNL', 'Starting cloudflared tunnel...');
     const cf = spawn('./cloudflared', ['tunnel', '--no-autoupdate', 'run', '--token', token], { stdio: 'inherit' });
-    cf.on('error', e => console.error('[TUNNEL] Error:', e.message));
-    cf.on('exit', code => console.log('[TUNNEL] Exited with code', code));
+    cf.on('error', e => log('TUNL', `Error: ${e.message}`));
+    cf.on('exit', code => log('TUNL', `Exited with code ${code}`));
   } catch (e) {
-    console.error('[TUNNEL] Setup error:', e.message);
+    log('TUNL', `Setup error: ${e.message}`);
   }
 }
 
 startTunnel();
 
 // 4. Start bot (main process)
-console.log('[START] Launching bot...');
+log('BOOT', 'Launching bot...');
 await import('./index.js');

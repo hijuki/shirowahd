@@ -373,9 +373,7 @@ async function main() {
             await import("./plugins/religi/autosahur.js");
           initSahurCron(sock);
         } catch { }
-        try {
-          startOrderPoller(sock);
-        } catch { }
+        // ponytail: startOrderPoller removed — function never existed. Re-add when ourin-order-poller.js is created.
         try {
           const { startOtpPoller: _startOtp } =
             await import("./src/lib/ourin-otp-poller.js");

@@ -2,17 +2,33 @@ import chalk from "chalk";
 import * as timeHelper from "./ourin-time.js";
 import { getCachedJid, isLidConverted } from "./ourin-lid.js";
 
+// Detect color support: Pterodactyl console is !isTTY
+const supportsColor = process.stdout.isTTY || process.env.FORCE_COLOR === "1";
+if (!supportsColor) {
+  chalk.level = 0;
+}
+
 // Mock gradient-string if any other file imports it from here
 const gradientMock = (text) => text;
 const gradient = () => gradientMock;
 
-// 3 Main Colors
+// 3 Main Colors (chalk.level=0 makes these no-ops automatically)
 const cGreen = chalk.greenBright;
 const cWhite = chalk.whiteBright;
 const cGray = chalk.gray;
 
+function getTime() {
+  return timeHelper.formatTime("HH:mm:ss");
+}
+
 function makeTag(label, isSuccess = false, isError = false) {
   const l = label.toUpperCase().trim();
+  const text = l.substring(0, 4).padEnd(4, " ");
+
+  if (!supportsColor) {
+    return `[${getTime()}] [${text}]`;
+  }
+
   let icon = "•";
   let colorFn = chalk.white;
 
@@ -42,17 +58,16 @@ function makeTag(label, isSuccess = false, isError = false) {
     colorFn = chalk.white;
   }
 
-  const text = l.substring(0, 4).padEnd(4, " ");
   return `  ${colorFn(icon)}  ${colorFn(text)}`;
 }
 
 const SYM = {
-  ok: makeTag("OK", true),
-  no: makeTag("FAIL", false, true),
-  wn: makeTag("WARN"),
-  info: makeTag("INFO"),
-  sys: makeTag("SYS"),
-  dbg: makeTag("DBG"),
+  ok: () => makeTag("OK", true),
+  no: () => makeTag("FAIL", false, true),
+  wn: () => makeTag("WARN"),
+  info: () => makeTag("INFO"),
+  sys: () => makeTag("SYS"),
+  dbg: () => makeTag("DBG"),
 };
 
 function writeLog(kind, label, detail = "") {
@@ -64,9 +79,15 @@ function writeLog(kind, label, detail = "") {
     system: SYM.sys,
     debug: SYM.dbg,
   };
-  const tag = tags[kind] || SYM.info;
+  const tagFn = tags[kind] || SYM.info;
+  const tag = tagFn();
 
-  // Format: [  OK  ] Started SHIROWAHD AI
+  if (!supportsColor) {
+    const msg = `${tag} ${label}${detail ? " " + detail : ""}`;
+    console.log(msg);
+    return;
+  }
+
   const msg = `${tag} ${chalk.cyanBright(label)}${detail ? " " + cWhite(detail) : ""}`;
   console.log(msg);
 }
@@ -79,20 +100,24 @@ const logger = {
   system: (label, detail = "") => writeLog("system", label, detail),
   debug: (label, detail = "") => writeLog("debug", label, detail),
   tag: (label, msg, detail = "") => {
-    console.log(`${makeTag(label.substring(0, 4))} ${cWhite(msg)}${detail ? " " + cGray(detail) : ""}`);
+    const tag = makeTag(label.substring(0, 4));
+    if (!supportsColor) {
+      console.log(`${tag} ${msg}${detail ? " " + detail : ""}`);
+    } else {
+      console.log(`${tag} ${cWhite(msg)}${detail ? " " + cGray(detail) : ""}`);
+    }
   },
 };
 
 function createSpinner(label = "SYS", text = "loading", options = {}) {
-  // Simplified spinner for linux style (just log the start)
   let active = false;
   return {
     start() {
       active = true;
-      console.log(`${makeTag(label)} ${cWhite(text)}...`);
+      console.log(`${makeTag(label)} ${supportsColor ? cWhite(text) : text}...`);
     },
     update(nextText) {
-      if (active) console.log(`${makeTag(label)} ${cWhite(nextText)}...`);
+      if (active) console.log(`${makeTag(label)} ${supportsColor ? cWhite(nextText) : nextText}...`);
     },
     stop() {
       active = false;
@@ -116,24 +141,28 @@ function createSpinner(label = "SYS", text = "loading", options = {}) {
 }
 
 async function spinText(label, text, options = {}) {
-  // Directly print success since we want a fast, simple boot
-  console.log(`${makeTag("OK", true)} ${cWhite(text)}`);
+  const tag = makeTag("OK", true);
+  console.log(`${tag} ${supportsColor ? cWhite(text) : text}`);
 }
 
 async function typeLine(text, options = {}) {
-  // Strip formatting from caller if it used old colors
   const clean = text.replace(/\x1B\[\d+m/g, "");
-  console.log(`${makeTag("OK", true)} ${cWhite(clean)}`);
+  const tag = makeTag("OK", true);
+  console.log(`${tag} ${supportsColor ? cWhite(clean) : clean}`);
 }
 
 async function runLoader(text = "memuat", options = {}) {
-  console.log(`${makeTag("OK", true)} ${cWhite(text)}`);
+  const tag = makeTag("OK", true);
+  console.log(`${tag} ${supportsColor ? cWhite(text) : text}`);
 }
 
 async function playBootSequence(info = {}) {
   const { name = "SHIROWAHD", version = "3.3", mode = "public" } = info;
+
   console.log("");
-  console.log(chalk.cyan(`
+
+  if (supportsColor) {
+    console.log(chalk.cyan(`
      ███████╗██╗  ██╗██╗██████╗  ██████╗ ██╗    ██╗ █████╗ ██╗  ██╗██████╗
      ██╔════╝██║  ██║██║██╔══██╗██╔═══██╗██║    ██║██╔══██╗██║  ██║██╔══██╗
      ███████╗███████║██║██████╔╝██║   ██║██║ █╗ ██║███████║███████║██║  ██║
@@ -141,11 +170,17 @@ async function playBootSequence(info = {}) {
      ███████║██║  ██║██║██║  ██║╚██████╔╝╚███╔███╔╝██║  ██║██║  ██║██████╔╝
      ╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
 `));
-  console.log(`         ${chalk.magenta.bold("►")} ${chalk.white("SHIROWAHD MULTI-DEVICE BOT")} ${chalk.gray(`v${version}`)}`);
-  console.log(`         ${chalk.magenta("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")}`);
+    console.log(`         ${chalk.magenta.bold("►")} ${chalk.white("SHIROWAHD MULTI-DEVICE BOT")} ${chalk.gray(`v${version}`)}`);
+    console.log(`         ${chalk.magenta("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")}`);
+  } else {
+    console.log("========================================");
+    console.log(`  SHIROWAHD MULTI-DEVICE BOT v${version}`);
+    console.log("========================================");
+  }
+
   console.log("");
-  console.log(`${makeTag("BOOT", true)} ${cWhite(`Memulai Sistem Utama...`)}`);
-  console.log(`${makeTag("INFO")} ${cWhite(`Mode: ${chalk.cyan(mode)}`)}`);
+  console.log(`${makeTag("BOOT", true)} ${supportsColor ? cWhite("Memulai Sistem Utama...") : "Memulai Sistem Utama..."}`);
+  console.log(`${makeTag("INFO")} ${supportsColor ? cWhite(`Mode: ${chalk.cyan(mode)}`) : `Mode: ${mode}`}`);
 }
 
 function getTypeTag(msgType, isNewsletter) {
@@ -198,19 +233,13 @@ function logMessage(info) {
   });
 
   const time = timeHelper.formatTime("HH:mm:ss");
-  const date = timeHelper.formatTime("DD/MM/YYYY");
   const typeTag = getTypeTag(messageType, isNewsletter || chatType === "newsletter");
-
   const location = chatType === "group" || chatType === "newsletter" ? (groupName || "Group") : "Private";
   const senderName = pushName || num;
 
-  console.log("");
-  console.log(`  ${cWhite("╭─")} ${chalk.bgWhiteBright("Hey, ada pesan masuk nih :3")} ${cGray("•")} ${chatType === "private" ? chalk.yellow("Private") : chalk.whiteBright("Dari Grup") + " " + chalk.bgCyanBright(location)}`);
-  console.log(`  ${cWhite("│")}  👤 ${chalk.greenBright(senderName)} ${cGray(`(${num})`)}`);
-  console.log(`  ${cWhite("│")}  📱 ${chalk.yellowBright(info.device || "Unknown")} ${chalk.red(`• ${time} • ${typeTag}`)}`);
+  // Word-wrap message
   const maxWidth = 55;
   const msgLines = [];
-
   msg.split('\n').forEach(line => {
     let currentLine = "";
     line.split(' ').forEach(word => {
@@ -232,33 +261,52 @@ function logMessage(info) {
     }
   });
 
-  msgLines.forEach((line, index) => {
-    if (index === 0) {
-      console.log(`  ${cWhite("│")}  💬 ${chalk.whiteBright(line)}`);
-    } else {
-      console.log(`  ${cWhite("│")}     ${chalk.whiteBright(line)}`);
-    }
-  });
-  console.log(`  ${cWhite("╰─")}`);
+  if (!supportsColor) {
+    // Plain text format for Pterodactyl
+    const locLabel = chatType === "private" ? "Private" : `Group: ${location}`;
+    console.log("");
+    console.log(`[${time}] [MSG ] ${locLabel} | ${senderName} (${num}) | ${typeTag}`);
+    msgLines.forEach(line => {
+      console.log(`         ${line}`);
+    });
+  } else {
+    // Color format for TTY
+    console.log("");
+    console.log(`  ${cWhite("╭─")} ${chalk.bgWhiteBright("Hey, ada pesan masuk nih :3")} ${cGray("•")} ${chatType === "private" ? chalk.yellow("Private") : chalk.whiteBright("Dari Grup") + " " + chalk.bgCyanBright(location)}`);
+    console.log(`  ${cWhite("│")}  👤 ${chalk.greenBright(senderName)} ${cGray(`(${num})`)}`);
+    console.log(`  ${cWhite("│")}  📱 ${chalk.yellowBright(info.device || "Unknown")} ${chalk.red(`• ${time} • ${typeTag}`)}`);
+    msgLines.forEach((line, index) => {
+      if (index === 0) {
+        console.log(`  ${cWhite("│")}  💬 ${chalk.whiteBright(line)}`);
+      } else {
+        console.log(`  ${cWhite("│")}     ${chalk.whiteBright(line)}`);
+      }
+    });
+    console.log(`  ${cWhite("╰─")}`);
+  }
 }
 
 function logPlugin(name, category) {
-  // Simple tree view for plugin
-  console.log(`  ${cGray("├─")} ${cWhite(name)} ${cGray(`[${category}]`)}`);
+  if (!supportsColor) {
+    console.log(`  |- ${name} [${category}]`);
+  } else {
+    console.log(`  ${cGray("├─")} ${cWhite(name)} ${cGray(`[${category}]`)}`);
+  }
 }
 
 function logConnection(status, info = "") {
+  const detail = info ? ` - ${info}` : "";
   if (status === "connected") {
-    console.log(`${makeTag("OK", true)} ${cWhite("Connected")} ${cWhite(info ? `— ${info}` : "")}`);
+    logger.success("CONN", `Connected${detail}`);
   } else if (status === "connecting") {
-    console.log(`${makeTag("WAIT")} ${cWhite("Connecting")} ${cWhite(info ? `— ${info}` : "")}`);
+    logger.info("CONN", `Connecting${detail}`);
   } else {
-    console.log(`${makeTag("FAIL", false, true)} ${cWhite("Disconnected")} ${cWhite(info ? `— ${info}` : "")}`);
+    logger.error("CONN", `Disconnected${detail}`);
   }
 }
 
 function logErrorBox(title, message) {
-  console.log(`${makeTag("ERR", false, true)} ${cWhite(title)}: ${cGray(message)}`);
+  logger.error(title, message);
 }
 
 function printBanner(mini = false) {
@@ -296,16 +344,18 @@ const c = {
 };
 
 function divider() {
-  // No divider for minimalism, or just a new line
   console.log("");
 }
 
 function createBanner(lines, color = "green") {
+  if (!supportsColor) {
+    return lines.map(l => `| ${l}`).join("\n");
+  }
   return lines.map(l => `${cGray("│")} ${cWhite(l)}`).join("\n");
 }
 
 function getTimestamp() {
-  return cGray(timeHelper.formatTime("HH:mm:ss"));
+  return supportsColor ? cGray(timeHelper.formatTime("HH:mm:ss")) : timeHelper.formatTime("HH:mm:ss");
 }
 
 const theme = {
