@@ -2,8 +2,8 @@
   "ownerWhatsapp": "6282262421536",
   "groups": [
     {
-      "name": "SHIROWAHD",
-      "link": "https://chat.whatsapp.com/L4J6dYuP3bX0aNzmMW6pnp"
+      "name": "SWHD",
+      "link": "https://chat.whatsapp.com/E597ARKxnLnLSpTVBx5G4C"
     }
   ],
   "channels": [
@@ -14,15 +14,7 @@
   ],
   "claimGroups": [
     {
-      "name": "SHIROWAHD",
-      "link": "https://chat.whatsapp.com/LWKuppGygGW0z0Rq1lr1qo"
-    },
-    {
-      "name": "MAYA ILANG",
-      "link": "https://chat.whatsapp.com/KjMH5lqh85fIOwOu4VGxMq"
-    },
-    {
-      "name": "TEST",
+      "name": "CLAIM DISINI",
       "link": "https://chat.whatsapp.com/E597ARKxnLnLSpTVBx5G4C"
     }
   ],
@@ -34,5 +26,15 @@
   "expireMinutes": 60,
   "maxFileSizeMB": 100,
   "bannerText": "JIKA ADA BUG HUBUNGI ADMIN KARENA\n MASIH BETA BELUM FINAL",
-  "domain": "swhdhlz.my.id"
+  "domain": "swhdhlz.my.id",
+  "telegramBotToken": "",
+  "telegramChatId": "",
+  "telegramNotifyUpload": false,
+  "telegramNotifyClaim": false,
+  "telegramNotifyError": false,
+  "rateLimit": 0,
+  "rateCooldown": 0,
+  "autoCleanup": false,
+  "autoCleanupInterval": 30,
+  "storageQuotaMB": 0
 }
