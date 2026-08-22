@@ -335,7 +335,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
       <div class="logo-icon"><i class="fab fa-whatsapp"></i></div>
       <div><div class="brand" id="heroTitle">SHIROWAHD</div><div class="brand-sub" id="heroSub">Upload & claim video HD</div></div>
     </div>
-    <div class="menu-wrap">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(11,49,101,.22);border:1px solid rgba(70,158,255,.15);font-size:9px;font-weight:700;font-family:var(--mono)">
+        <span class="pulse-dot" id="botDot"></span>
+        <span id="botStatusText" style="color:#9cccff">Checking...</span>
+        <span style="color:var(--muted)">•</span>
+        <span id="headerClock" style="color:var(--muted)"></span>
+      </div>
+      <div class="menu-wrap">
       <button class="menu-btn" onclick="toggleMenu()" id="menuBtn"><i class="fas fa-ellipsis-vertical"></i></button>
       <div class="menu-drop" id="menuDrop">
         <a href="/admin"><i class="fas fa-gauge-high"></i> Admin Panel</a>
@@ -466,6 +473,13 @@ function showIntro(){document.getElementById('introPopup').classList.add('v');do
 // ═══ FAQ ═══
 function showFaq(){document.getElementById('faqModal').classList.add('v');document.getElementById('menuDrop').classList.remove('v')}
 function toggleFaq(el){el.classList.toggle('open');var a=el.nextElementSibling;a.classList.toggle('open')}
+
+// ═══ CLOCK + BOT STATUS ═══
+function updateClock(){var d=new Date();var wib=new Date(d.getTime()+(7*3600000)+(d.getTimezoneOffset()*60000));var h=String(wib.getHours()).padStart(2,'0'),m=String(wib.getMinutes()).padStart(2,'0'),s=String(wib.getSeconds()).padStart(2,'0');var el=document.getElementById('headerClock');if(el)el.textContent=h+':'+m+':'+s+' WIB'}
+setInterval(updateClock,1000);updateClock();
+
+function checkBotStatus(){fetch('/admin/api/bot/status').then(function(r){return r.json()}).then(function(d){var dot=document.getElementById('botDot');var txt=document.getElementById('botStatusText');if(d.ok&&d.botOnline){dot.style.background='#34d399';dot.style.boxShadow='0 0 14px #34d399';txt.textContent='Online';txt.style.color='#34d399'}else{dot.style.background='#f87171';dot.style.boxShadow='0 0 14px #f87171';txt.textContent='Offline';txt.style.color='#f87171'}}).catch(function(){var txt=document.getElementById('botStatusText');if(txt){txt.textContent='Offline';txt.style.color='#f87171'}})}
+checkBotStatus();setInterval(checkBotStatus,30000);
 
 // ═══ TABS ═══
 var currentTab='video';function switchTab(tab){currentTab=tab;document.getElementById('tabVideo').classList.toggle('active',tab==='video');document.getElementById('tabFoto').classList.toggle('active',tab==='foto');document.getElementById('sectionVideo').classList.toggle('active',tab==='video');document.getElementById('sectionFoto').classList.toggle('active',tab==='foto');document.getElementById('badgeText').textContent='Online \u2022 '+(tab==='video'?'Unlimited':'No Kompresi');document.getElementById('step1txt').textContent=tab==='video'?'Upload file':'Pilih foto'}
