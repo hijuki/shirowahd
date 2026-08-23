@@ -1,23 +1,23 @@
-node_modules/
-.env
-*.log
-tmp/
-tmp_caller/
-session/
+
+assets/image/shuffle/
 auth_info_baileys/
 database/ai_chat/
-deploy-worker.py
-
-# Runtime state (generated at runtime, not source code)
-database/main/
 database/autobackup.json
 database/chatgot.json
+database/cpanel/
 database/lid-cache.json
+database/main/
 database/prefix.json
 database/sewa.json
 database/stickerCommands.json
-database/cpanel/
-storage/
-assets/image/shuffle/
+deploy-worker.py
+.env
+*.log
+node_modules/
+# Runtime state (generated at runtime, not source code)
+session/
 src/data/autoanime_winbu_sent.json
 src/data/autoanime_winbu_state.json
+storage/
+tmp/
+tmp_caller/
