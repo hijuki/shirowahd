@@ -1,19 +1,61 @@
 import { spawn, execSync } from 'child_process';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
+import chalk from 'chalk';
 
-// ─── Auto-kill old processes ───
+// ─── Colors ───
+const c = {
+  brand:  chalk.hex('#7C5CFF'),
+  ok:     chalk.hex('#00E676'),
+  err:    chalk.hex('#FF5252'),
+  dim:    chalk.hex('#546E7A'),
+  muted:  chalk.hex('#37474F'),
+  info:   chalk.hex('#40C4FF'),
+  white:  chalk.hex('#FFFFFF'),
+  text:   chalk.hex('#B0BEC5'),
+};
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ─── Boot Banner ───
+console.clear();
+console.log('');
+console.log(c.brand('  ╔══════════════════════════════════════╗'));
+console.log(c.brand('  ║') + c.white.bold('      ⚡ SHIROWAHD BOT ENGINE ⚡      ') + c.brand('║'));
+console.log(c.brand('  ╚══════════════════════════════════════╝'));
+console.log('');
+
+// ─── Step Logger ───
+let stepNum = 0;
+function step(label) {
+  stepNum++;
+  process.stdout.write(c.dim(`  [${stepNum}] `) + c.text(label) + c.dim(' ... '));
+}
+function done(msg) { console.log(c.ok('✔ ') + c.dim(msg || '')); }
+function fail(msg) { console.log(c.err('✖ ') + c.err(msg)); }
+function skip(msg) { console.log(c.info('⊘ ') + c.dim(msg || 'skipped')); }
+
+// ═══════════════════════════════════════
+// 1. Kill old processes
+// ═══════════════════════════════════════
+step('Cleaning old processes');
 try {
-  // Kill any existing node processes (bot, web-uploader, etc) except current PID
   const myPid = process.pid;
-  execSync(`pgrep -f 'node (main|bot|index|start|web-uploader)' | grep -v ${myPid} | xargs -r kill -9 2>/dev/null`, { stdio: 'ignore', timeout: 5000 });
-  // Free port 8080 if still occupied
+  execSync(`pgrep -f 'node.*(main|bot|index|start|web-uploader)' 2>/dev/null | grep -v ${myPid} | xargs -r kill -9 2>/dev/null`, { stdio: 'ignore', timeout: 5000 });
   execSync('fuser -k 8080/tcp 2>/dev/null', { stdio: 'ignore', timeout: 3000 });
-} catch {}
+  done('killed');
+} catch { done('clean'); }
 
-// ─── Load .env ───
-try { process.loadEnvFile(); } catch {}
+await sleep(300);
 
-// ─── Config ───
+// ═══════════════════════════════════════
+// 2. Load .env
+// ═══════════════════════════════════════
+step('Loading .env');
+try {
+  process.loadEnvFile();
+  done();
+} catch { skip('no .env found'); }
+
 const CF_ACCOUNT   = process.env.CF_ACCOUNT   || '';
 const CF_EMAIL     = process.env.CF_EMAIL      || '';
 const CF_KEY       = process.env.CF_KEY        || '';
@@ -21,58 +63,41 @@ const CF_TUNNEL_ID = process.env.CF_TUNNEL_ID  || '';
 const DOMAIN       = process.env.DOMAIN        || 'swhdhlz.my.id';
 const ENABLE_TUNNEL = process.env.ENABLE_TUNNEL === '1';
 
-// ─── Mini Logger ───
-import chalk from 'chalk';
+await sleep(200);
 
-const _dim   = chalk.hex('#546E7A');
-const _muted = chalk.hex('#37474F');
-const _brand = chalk.hex('#7C5CFF');
-const _ok    = chalk.hex('#00E676');
-const _err   = chalk.hex('#FF5252');
-const _info  = chalk.hex('#40C4FF');
-const _text  = chalk.hex('#ECEFF1');
-
-function ts() {
-  const d = new Date();
-  return [d.getHours(), d.getMinutes(), d.getSeconds()]
-    .map(n => String(n).padStart(2, '0')).join(':');
-}
-
-function log(icon, color, tag, msg) {
-  const sep = _muted('│');
-  console.log(`  ${_dim(ts())} ${sep} ${color(`${icon} ${tag.padEnd(5)}`)} ${sep} ${_text(msg)}`);
-}
-
-const ok   = (tag, msg) => log('✔', _ok,   tag, msg);
-const info = (tag, msg) => log('●', _info, tag, msg);
-const err  = (tag, msg) => log('✖', _err,  tag, msg);
-const sys  = (tag, msg) => log('⚙', _brand, tag, msg);
-
-// ─── 0. Auto Git Pull ───
+// ═══════════════════════════════════════
+// 3. Git Pull
+// ═══════════════════════════════════════
+step('Git pull');
 try {
-  const GIT_REPO   = process.env.GIT_ADDRESS  || 'https://github.com/hijuki/shirowahd';
-  const GIT_TOKEN  = process.env.ACCESS_TOKEN  || '';
-  const GIT_USER   = process.env.USERNAME      || '';
-  const GIT_BRANCH = process.env.BRANCH        || 'main';
+  const GIT_REPO   = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
+  const GIT_TOKEN  = process.env.GIT_TOKEN   || '';
+  const GIT_USER   = process.env.USERNAME    || '';
+  const GIT_BRANCH = process.env.BRANCH      || 'main';
 
   if (!existsSync('.git')) {
-    info('GIT', 'No .git found — initializing repo...');
-    execSync('git init && git checkout -b ' + GIT_BRANCH, { encoding: 'utf8', timeout: 15000 });
+    execSync('git init && git checkout -b ' + GIT_BRANCH, { stdio: 'ignore', timeout: 15000 });
     let remoteUrl = GIT_REPO;
     if (GIT_TOKEN && GIT_USER) remoteUrl = GIT_REPO.replace('https://', `https://${GIT_USER}:${GIT_TOKEN}@`);
     else if (GIT_TOKEN) remoteUrl = GIT_REPO.replace('https://', `https://${GIT_TOKEN}@`);
-    execSync(`git remote add origin ${remoteUrl}`, { encoding: 'utf8', timeout: 5000 });
-    const out = execSync(`git fetch origin ${GIT_BRANCH} && git reset --hard origin/${GIT_BRANCH}`, { encoding: 'utf8', timeout: 60000 }).trim();
-    ok('GIT', out || 'Up to date');
+    execSync(`git remote add origin ${remoteUrl}`, { stdio: 'ignore', timeout: 5000 });
+    execSync(`git fetch origin ${GIT_BRANCH} && git reset --hard origin/${GIT_BRANCH}`, { stdio: 'ignore', timeout: 60000 });
+    done('initialized');
   } else {
-    info('GIT', 'Checking for updates...');
-    const out = execSync('git fetch origin main && git reset --hard origin/main', { encoding: 'utf8', timeout: 30000 }).trim();
-    ok('GIT', out || 'Up to date');
+    const out = execSync('git fetch origin main && git reset --hard origin/main 2>&1', { encoding: 'utf8', timeout: 30000 }).trim();
+    const short = out.includes('Already up to date') ? 'up to date' : out.split('\n').pop();
+    done(short);
   }
-} catch (e) { err('GIT', `git pull failed: ${e.message}`); }
+} catch (e) { fail(e.message.split('\n')[0]); }
 
-// ─── 1. Patch Baileys (large file upload 80MB+) ───
+await sleep(200);
+
+// ═══════════════════════════════════════
+// 4. Patch Baileys
+// ═══════════════════════════════════════
+step('Patching Baileys');
 try {
+  let patched = 0;
   const sendFile  = './node_modules/@whiskeysockets/baileys/lib/Socket/messages-send.js';
   const mediaFile = './node_modules/@whiskeysockets/baileys/lib/Utils/messages-media.js';
 
@@ -81,26 +106,26 @@ try {
     if (src.includes('maxContentLengthBytes:') && !src.includes('maxContentLengthBytes: Infinity')) {
       src = src.replace(/maxContentLengthBytes:\s*\d+/g, 'maxContentLengthBytes: Infinity');
       writeFileSync(sendFile, src);
-      ok('PATCH', 'Baileys messages-send.js (maxContentLengthBytes → Infinity)');
+      patched++;
     }
   }
-
   if (existsSync(mediaFile)) {
     let src = readFileSync(mediaFile, 'utf8');
     if (src.includes('opts?.maxContentLength') && !src.includes('if (false && opts?.maxContentLength')) {
       src = src.replace(/if \(opts\?\.maxContentLength/g, 'if (false && opts?.maxContentLength');
       writeFileSync(mediaFile, src);
-      ok('PATCH', 'Baileys messages-media.js (maxContentLength check disabled)');
+      patched++;
     }
   }
-} catch (e) { err('PATCH', `Baileys patch error: ${e.message}`); }
+  patched ? done(`${patched} file(s)`) : done('already patched');
+} catch (e) { fail(e.message.split('\n')[0]); }
 
-// ─── 2. Web Uploader ───
-sys('BOOT', 'Launching web-uploader...');
-const webUp = spawn('node', ['web-uploader.js'], { stdio: 'inherit' });
-webUp.on('error', e => err('WEB', `Error: ${e.message}`));
+await sleep(200);
 
-// ─── 3. Admin Settings ───
+// ═══════════════════════════════════════
+// 5. Admin Settings
+// ═══════════════════════════════════════
+step('Setting domain');
 try {
   const sf = './admin-settings.json';
   if (existsSync(sf)) {
@@ -108,49 +133,85 @@ try {
     if (!s.domain || s.domain !== DOMAIN) {
       s.domain = DOMAIN;
       writeFileSync(sf, JSON.stringify(s, null, 2));
-      ok('BOOT', `Domain set to ${DOMAIN}`);
+      done(DOMAIN);
+    } else {
+      done(DOMAIN);
     }
-  }
-} catch (e) { err('BOOT', `Settings update error: ${e.message}`); }
+  } else { skip('no settings file'); }
+} catch (e) { fail(e.message.split('\n')[0]); }
 
-// ─── 4. Cloudflare Tunnel (optional) ───
-async function startTunnel() {
-  if (!ENABLE_TUNNEL) {
-    info('TUNL', 'Tunnel disabled — using direct A record + Cloudflare proxy');
-    return;
+await sleep(200);
+
+// ═══════════════════════════════════════
+// 6. Web Uploader
+// ═══════════════════════════════════════
+step('Starting web uploader');
+const webUp = spawn('node', ['web-uploader.js'], {
+  stdio: ['ignore', 'pipe', 'pipe']
+});
+let webReady = false;
+webUp.stdout.on('data', d => {
+  if (!webReady && d.toString().includes('listening')) {
+    webReady = true;
   }
-  if (!CF_ACCOUNT || !CF_KEY || !CF_TUNNEL_ID) {
-    err('TUNL', 'Missing CF_ACCOUNT / CF_KEY / CF_TUNNEL_ID in .env');
-    return;
-  }
+});
+webUp.stderr.on('data', d => {
+  const msg = d.toString().trim();
+  if (msg) console.log(c.err(`  [WEB] ${msg}`));
+});
+webUp.on('error', e => console.log(c.err(`  [WEB] ${e.message}`)));
+
+// Wait for web uploader to bind port (max 5s)
+await new Promise(resolve => {
+  const check = setInterval(() => {
+    try {
+      execSync('fuser 8080/tcp 2>/dev/null', { stdio: 'ignore' });
+      clearInterval(check);
+      resolve();
+    } catch {}
+  }, 500);
+  setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+});
+done('port 8080');
+
+await sleep(200);
+
+// ═══════════════════════════════════════
+// 7. Cloudflare Tunnel
+// ═══════════════════════════════════════
+step('Cloudflare tunnel');
+if (!ENABLE_TUNNEL) {
+  skip('disabled');
+} else if (!CF_ACCOUNT || !CF_KEY || !CF_TUNNEL_ID) {
+  fail('missing CF credentials in .env');
+} else {
   try {
-    info('TUNL', 'Fetching tunnel token...');
     const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/cfd_tunnel/${CF_TUNNEL_ID}/token`, {
       headers: { 'X-Auth-Email': CF_EMAIL, 'X-Auth-Key': CF_KEY }
     });
     const data = await res.json();
     if (!data.success || !data.result) {
-      err('TUNL', `Token fetch failed: ${JSON.stringify(data.errors)}`);
-      return;
+      fail(JSON.stringify(data.errors));
+    } else {
+      if (!existsSync('./cloudflared')) {
+        execSync('curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o ./cloudflared && chmod +x ./cloudflared', { stdio: 'ignore', timeout: 60000 });
+      }
+      const cf = spawn('./cloudflared', ['tunnel', '--no-autoupdate', '--protocol', 'http2', 'run', '--token', data.result], { stdio: 'ignore' });
+      cf.on('error', e => console.log(c.err(`  [TUNNEL] ${e.message}`)));
+      done('running');
     }
-
-    if (!existsSync('./cloudflared')) {
-      info('TUNL', 'Downloading cloudflared...');
-      try {
-        execSync('curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o ./cloudflared && chmod +x ./cloudflared', { timeout: 60000 });
-        ok('TUNL', 'Downloaded OK');
-      } catch (e) { err('TUNL', `Download failed: ${e.message}`); return; }
-    }
-
-    sys('TUNL', 'Starting cloudflared tunnel...');
-    const cf = spawn('./cloudflared', ['tunnel', '--no-autoupdate', '--protocol', 'http2', 'run', '--token', data.result], { stdio: 'inherit' });
-    cf.on('error', e => err('TUNL', `Error: ${e.message}`));
-    cf.on('exit', code => info('TUNL', `Exited with code ${code}`));
-  } catch (e) { err('TUNL', `Setup error: ${e.message}`); }
+  } catch (e) { fail(e.message.split('\n')[0]); }
 }
 
-startTunnel();
+await sleep(300);
 
-// ─── 5. Bot ───
-sys('BOOT', 'Launching bot...');
+// ═══════════════════════════════════════
+// 8. Bot
+// ═══════════════════════════════════════
+console.log('');
+console.log(c.muted('  ──────────────────────────────────────'));
+console.log(c.brand('  ⚡ ') + c.white.bold('Starting SHIROWAHD Bot...'));
+console.log(c.muted('  ──────────────────────────────────────'));
+console.log('');
+
 await import('./index.js');
