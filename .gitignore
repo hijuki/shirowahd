@@ -21,3 +21,4 @@ src/data/autoanime_winbu_state.json
 storage/
 tmp/
 tmp_caller/
+*.vid
