@@ -1,6 +1,15 @@
 import { spawn, execSync } from 'child_process';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 
+// ─── Auto-kill old processes ───
+try {
+  // Kill any existing node processes (bot, web-uploader, etc) except current PID
+  const myPid = process.pid;
+  execSync(`pgrep -f 'node (main|bot|index|start|web-uploader)' | grep -v ${myPid} | xargs -r kill -9 2>/dev/null`, { stdio: 'ignore', timeout: 5000 });
+  // Free port 8080 if still occupied
+  execSync('fuser -k 8080/tcp 2>/dev/null', { stdio: 'ignore', timeout: 3000 });
+} catch {}
+
 // ─── Load .env ───
 try { process.loadEnvFile(); } catch {}
 
