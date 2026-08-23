@@ -38,46 +38,59 @@ function getTime() {
 }
 
 // ═══════════════════════════════════════
-//  BOOT STATE — suppress loading logs
+//  BOOT STATE
 // ═══════════════════════════════════════
 let _booting = true;
 let _bootLogs = [];
 let _bootStart = Date.now();
+let _bootStepCount = 0;
 
 function finishBoot() {
   if (!_booting) return;
   _booting = false;
   const elapsed = ((Date.now() - _bootStart) / 1000).toFixed(1);
 
-  // Clear screen for clean look
+  // Clear screen
   process.stdout.write('\x1Bc');
 
-  const W = 50;
-  const sep = P.muted('─'.repeat(W));
-
-  console.log('');
-  console.log(`  ${P.brand('S H I R O W A H D')}`);
-  console.log(`  ${sep}`);
-  console.log('');
-
-  // Status dashboard
-  const bootCount = _bootLogs.length;
   const errors = _bootLogs.filter(l => l.kind === 'error').length;
-  const warns = _bootLogs.filter(l => l.kind === 'warn').length;
+  const warns  = _bootLogs.filter(l => l.kind === 'warn').length;
+  const plugins = _bootLogs.filter(l => l.label === 'plugin').length;
 
-  console.log(`  ${P.bgBrand(' STATUS ')}  ${P.neon('● Online')}    ${P.bgGray(' BOOT ')}  ${P.text(elapsed + 's')}    ${P.bgGray(' LOGS ')}  ${P.text(bootCount + ' loaded')}`);
+  // ── Banner ──
+  console.log('');
+  console.log(P.brand('  ┌─────────────────────────────────────────────┐'));
+  console.log(P.brand('  │                                             │'));
+  console.log(P.brand('  │') + P.white.bold('        ⚡  S H I R O W A H D  ⚡         ') + P.brand('│'));
+  console.log(P.brand('  │') + P.dim('            WhatsApp Bot Engine             ') + P.brand('│'));
+  console.log(P.brand('  │                                             │'));
+  console.log(P.brand('  └─────────────────────────────────────────────┘'));
+  console.log('');
 
+  // ── Stats Row ──
+  const statusDot = errors > 0 ? P.red('●') : P.neon('●');
+  const statusTxt = errors > 0 ? P.red('Issues') : P.neon('Online');
+  console.log(`  ${statusDot} ${statusTxt}  ${P.muted('│')}  ${P.dim('Boot')} ${P.text(elapsed + 's')}  ${P.muted('│')}  ${P.dim('Plugins')} ${P.text(String(plugins))}  ${P.muted('│')}  ${P.dim('Logs')} ${P.text(String(_bootLogs.length))}`);
+
+  // ── Errors/Warnings (only if any) ──
   if (errors > 0 || warns > 0) {
-    const parts = [];
-    if (errors > 0) parts.push(P.red(`${errors} error${errors > 1 ? 's' : ''}`));
-    if (warns > 0) parts.push(P.amber(`${warns} warning${warns > 1 ? 's' : ''}`));
-    console.log(`  ${P.bgAmber(' ISSUES ')}  ${parts.join('  ')}`);
+    console.log('');
+    if (errors > 0) {
+      _bootLogs.filter(l => l.kind === 'error').forEach(l => {
+        console.log(`  ${P.red('  ✖')} ${P.red(l.label)} ${P.dim(l.detail)}`);
+      });
+    }
+    if (warns > 0) {
+      _bootLogs.filter(l => l.kind === 'warn').forEach(l => {
+        console.log(`  ${P.amber('  ⚠')} ${P.amber(l.label)} ${P.dim(l.detail)}`);
+      });
+    }
   }
 
   console.log('');
-  console.log(`  ${sep}`);
-  console.log(`  ${P.dim('Ready — listening for messages')}`);
-  console.log(`  ${sep}`);
+  console.log(P.muted('  ─────────────────────────────────────────────'));
+  console.log(`  ${P.neon('▸')} ${P.white('Ready')} ${P.dim('— listening for messages')}`);
+  console.log(P.muted('  ─────────────────────────────────────────────'));
   console.log('');
 }
 
@@ -85,24 +98,19 @@ function finishBoot() {
 //  LOGGER
 // ═══════════════════════════════════════
 function writeLog(kind, label, detail = "") {
-  // During boot: collect silently, don't print
+  // During boot: collect silently
   if (_booting) {
     _bootLogs.push({ kind, label, detail, time: getTime() });
     return;
   }
 
+  // Runtime: only show errors/warnings by default, success/info minimal
   const time = P.dim(getTime());
-  const badges = {
-    success: P.bgNeon(' ✔ '),
-    error:   P.bgRed(' ✖ '),
-    warn:    P.bgAmber(' ⚠ '),
-    info:    P.bgSky(' ● '),
-    system:  P.bgBrand(' ⚙ '),
-    debug:   P.bgGray(' ○ '),
-  };
-  const badge = badges[kind] || badges.info;
+  const icons = { success: P.neon('✔'), error: P.red('✖'), warn: P.amber('⚠'), info: P.sky('●'), system: P.brand('⚙'), debug: P.dim('○') };
+  const icon = icons[kind] || icons.info;
+  const labelColor = kind === 'error' ? P.red : kind === 'warn' ? P.amber : P.dim;
   const detailText = detail ? ` ${P.text(detail)}` : "";
-  console.log(`  ${time}  ${badge}  ${P.white(label)}${detailText}`);
+  console.log(`  ${time} ${icon} ${labelColor(label)}${detailText}`);
 }
 
 const logger = {
@@ -115,8 +123,7 @@ const logger = {
   tag: (label, msg, detail = "") => {
     if (_booting) { _bootLogs.push({ kind: 'info', label, detail: msg + (detail ? ' ' + detail : ''), time: getTime() }); return; }
     const time = P.dim(getTime());
-    const badge = P.bgGray(` ${label.substring(0,3).toUpperCase()} `);
-    console.log(`  ${time}  ${badge}  ${P.text(msg)}${detail ? ' ' + P.dim(detail) : ''}`);
+    console.log(`  ${time} ${P.dim('●')} ${P.dim(label)} ${P.text(msg)}${detail ? ' ' + P.dim(detail) : ''}`);
   },
 };
 
@@ -141,14 +148,13 @@ async function typeLine(text) { logger.info("SYS", text.replace(/\x1B\[\d+m/g, "
 async function runLoader(text = "memuat") { logger.info("SYS", text); }
 
 // ═══════════════════════════════════════
-//  BOOT SEQUENCE — just mark start
+//  BOOT SEQUENCE
 // ═══════════════════════════════════════
 async function playBootSequence(info = {}) {
   _booting = true;
   _bootStart = Date.now();
   _bootLogs = [];
-  // Show a simple loading indicator
-  process.stdout.write(P.dim('  Loading SHIROWAHD...'));
+  _bootStepCount = 0;
 }
 
 // ═══════════════════════════════════════
@@ -168,7 +174,7 @@ function getTypeTag(msgType, isNewsletter) {
 }
 
 // ═══════════════════════════════════════
-//  MESSAGE — clean card
+//  MESSAGE LOG — clean single line
 // ═══════════════════════════════════════
 function logMessage(info) {
   if (typeof info === "string") {
@@ -192,36 +198,32 @@ function logMessage(info) {
 
   const time = getTime();
   const typeTag = getTypeTag(messageType, isNewsletter || chatType === "newsletter");
-  const location = chatType === "group" || chatType === "newsletter" ? (groupName || "Group") : "Private";
-  const senderName = pushName || num;
   const isPrivate = chatType === "private";
+  const senderName = pushName || num;
 
-  // Truncate message for single line display
-  const maxLen = 60;
+  // Truncate
+  const maxLen = 50;
   const flat = msg.replace(/\n/g, ' ').trim();
   const preview = flat.length > maxLen ? flat.substring(0, maxLen) + '…' : flat;
 
-  const locBadge = isPrivate ? P.bgAmber(` DM `) : P.bgSky(` ${location.substring(0, 15)} `);
-  const typeBadge = P.bgBrand(` ${typeTag} `);
+  // Location tag
+  const loc = isPrivate ? P.amber('DM') : P.sky(groupName ? groupName.substring(0, 18) : 'Group');
 
-  console.log(`  ${P.dim(time)}  ${typeBadge} ${locBadge}  ${P.neon(senderName)} ${P.dim('›')} ${P.text(preview)}`);
+  console.log(`  ${P.dim(time)} ${P.muted('│')} ${P.brand(typeTag.padEnd(3))} ${P.muted('│')} ${loc} ${P.muted('│')} ${P.neon(senderName)} ${P.muted('›')} ${P.text(preview)}`);
 }
 
 // ═══════════════════════════════════════
 //  PLUGIN / CONNECTION / ERROR
 // ═══════════════════════════════════════
 function logPlugin(name, category) {
-  // Silent during boot
   if (_booting) { _bootLogs.push({ kind: 'info', label: 'plugin', detail: name, time: getTime() }); return; }
   console.log(`    ${P.dim('·')} ${P.text(name)} ${P.dim(category)}`);
 }
 
 function logConnection(status, info = "") {
   if (status === "connected") {
-    // Connection = boot finished! Show clean dashboard
     finishBoot();
   } else if (status === "connecting") {
-    // Silent during boot
     if (_booting) { _bootLogs.push({ kind: 'info', label: 'conn', detail: 'Connecting' + (info ? ' — ' + info : ''), time: getTime() }); return; }
     logger.info("CONN", `Connecting${info ? ' — ' + info : ''}`);
   } else {
@@ -230,11 +232,11 @@ function logConnection(status, info = "") {
 }
 
 function logErrorBox(title, message) {
-  console.log(`  ${P.bgRed(' ERROR ')}  ${P.white(title)} ${P.dim('—')} ${P.dim(message.substring(0, 80))}`);
+  console.log(`  ${P.red('✖')} ${P.red(title)} ${P.dim('—')} ${P.dim(message.substring(0, 80))}`);
 }
 
 function divider() {
-  console.log(`  ${P.muted('─'.repeat(50))}`);
+  console.log(P.muted('  ─────────────────────────────────────────────'));
 }
 
 // ═══════════════════════════════════════
