@@ -45,52 +45,48 @@ let _bootLogs = [];
 let _bootStart = Date.now();
 let _bootStepCount = 0;
 
+function line() {
+  console.log(P.muted('--------------------------------------'));
+}
+
 function finishBoot() {
   if (!_booting) return;
   _booting = false;
   const elapsed = ((Date.now() - _bootStart) / 1000).toFixed(1);
 
-  // Clear screen
   process.stdout.write('\x1Bc');
 
   const errors = _bootLogs.filter(l => l.kind === 'error').length;
   const warns  = _bootLogs.filter(l => l.kind === 'warn').length;
   const plugins = _bootLogs.filter(l => l.label === 'plugin').length;
 
-  // ── Banner ──
   console.log('');
-  console.log(P.brand('  ┌─────────────────────────────────────────────┐'));
-  console.log(P.brand('  │                                             │'));
-  console.log(P.brand('  │') + P.white.bold('        ⚡  S H I R O W A H D  ⚡         ') + P.brand('│'));
-  console.log(P.brand('  │') + P.dim('            WhatsApp Bot Engine             ') + P.brand('│'));
-  console.log(P.brand('  │                                             │'));
-  console.log(P.brand('  └─────────────────────────────────────────────┘'));
+  console.log(P.brand.bold('  SHIROWAHD'));
+  console.log(P.dim('  WhatsApp Bot Engine'));
   console.log('');
+  line();
 
-  // ── Stats Row ──
-  const statusDot = errors > 0 ? P.red('●') : P.neon('●');
-  const statusTxt = errors > 0 ? P.red('Issues') : P.neon('Online');
-  console.log(`  ${statusDot} ${statusTxt}  ${P.muted('│')}  ${P.dim('Boot')} ${P.text(elapsed + 's')}  ${P.muted('│')}  ${P.dim('Plugins')} ${P.text(String(plugins))}  ${P.muted('│')}  ${P.dim('Logs')} ${P.text(String(_bootLogs.length))}`);
+  // Stats
+  const dot = errors > 0 ? P.red('*') : P.neon('*');
+  const stat = errors > 0 ? P.red('Issues') : P.neon('Online');
+  console.log(`  ${dot} ${stat}  Boot: ${P.text(elapsed + 's')}  Plugins: ${P.text(String(plugins))}`);
+  line();
 
-  // ── Errors/Warnings (only if any) ──
-  if (errors > 0 || warns > 0) {
-    console.log('');
-    if (errors > 0) {
-      _bootLogs.filter(l => l.kind === 'error').forEach(l => {
-        console.log(`  ${P.red('  ✖')} ${P.red(l.label)} ${P.dim(l.detail)}`);
-      });
-    }
-    if (warns > 0) {
-      _bootLogs.filter(l => l.kind === 'warn').forEach(l => {
-        console.log(`  ${P.amber('  ⚠')} ${P.amber(l.label)} ${P.dim(l.detail)}`);
-      });
-    }
+  // Errors only
+  if (errors > 0) {
+    _bootLogs.filter(l => l.kind === 'error').forEach(l => {
+      console.log(P.red(`  X ${l.label} ${l.detail}`));
+    });
   }
+  if (warns > 0) {
+    _bootLogs.filter(l => l.kind === 'warn').forEach(l => {
+      console.log(P.amber(`  ! ${l.label} ${l.detail}`));
+    });
+  }
+  if (errors > 0 || warns > 0) line();
 
   console.log('');
-  console.log(P.muted('  ─────────────────────────────────────────────'));
-  console.log(`  ${P.neon('▸')} ${P.white('Ready')} ${P.dim('— listening for messages')}`);
-  console.log(P.muted('  ─────────────────────────────────────────────'));
+  console.log(`  ${P.neon('>')} ${P.white('Ready')} ${P.dim('- listening for messages')}`);
   console.log('');
 }
 
@@ -98,19 +94,17 @@ function finishBoot() {
 //  LOGGER
 // ═══════════════════════════════════════
 function writeLog(kind, label, detail = "") {
-  // During boot: collect silently
   if (_booting) {
     _bootLogs.push({ kind, label, detail, time: getTime() });
     return;
   }
 
-  // Runtime: only show errors/warnings by default, success/info minimal
   const time = P.dim(getTime());
-  const icons = { success: P.neon('✔'), error: P.red('✖'), warn: P.amber('⚠'), info: P.sky('●'), system: P.brand('⚙'), debug: P.dim('○') };
+  const icons = { success: P.neon('+'), error: P.red('X'), warn: P.amber('!'), info: P.sky('.'), system: P.brand('*'), debug: P.dim('-') };
   const icon = icons[kind] || icons.info;
   const labelColor = kind === 'error' ? P.red : kind === 'warn' ? P.amber : P.dim;
   const detailText = detail ? ` ${P.text(detail)}` : "";
-  console.log(`  ${time} ${icon} ${labelColor(label)}${detailText}`);
+  console.log(`${time} ${icon} ${labelColor(label)}${detailText}`);
 }
 
 const logger = {
@@ -123,12 +117,12 @@ const logger = {
   tag: (label, msg, detail = "") => {
     if (_booting) { _bootLogs.push({ kind: 'info', label, detail: msg + (detail ? ' ' + detail : ''), time: getTime() }); return; }
     const time = P.dim(getTime());
-    console.log(`  ${time} ${P.dim('●')} ${P.dim(label)} ${P.text(msg)}${detail ? ' ' + P.dim(detail) : ''}`);
+    console.log(`${time} ${P.dim('.')} ${P.dim(label)} ${P.text(msg)}${detail ? ' ' + P.dim(detail) : ''}`);
   },
 };
 
 // ═══════════════════════════════════════
-//  SPINNER / LOADER — silent during boot
+//  SPINNER / LOADER
 // ═══════════════════════════════════════
 function createSpinner(label = "SYS", text = "loading") {
   let active = false;
@@ -174,7 +168,7 @@ function getTypeTag(msgType, isNewsletter) {
 }
 
 // ═══════════════════════════════════════
-//  MESSAGE LOG — clean single line
+//  MESSAGE LOG
 // ═══════════════════════════════════════
 function logMessage(info) {
   if (typeof info === "string") {
@@ -201,15 +195,13 @@ function logMessage(info) {
   const isPrivate = chatType === "private";
   const senderName = pushName || num;
 
-  // Truncate
-  const maxLen = 50;
+  const maxLen = 45;
   const flat = msg.replace(/\n/g, ' ').trim();
-  const preview = flat.length > maxLen ? flat.substring(0, maxLen) + '…' : flat;
+  const preview = flat.length > maxLen ? flat.substring(0, maxLen) + '..' : flat;
 
-  // Location tag
-  const loc = isPrivate ? P.amber('DM') : P.sky(groupName ? groupName.substring(0, 18) : 'Group');
+  const loc = isPrivate ? P.amber('DM') : P.sky(groupName ? groupName.substring(0, 15) : 'GC');
 
-  console.log(`  ${P.dim(time)} ${P.muted('│')} ${P.brand(typeTag.padEnd(3))} ${P.muted('│')} ${loc} ${P.muted('│')} ${P.neon(senderName)} ${P.muted('›')} ${P.text(preview)}`);
+  console.log(`${P.dim(time)} ${P.brand(typeTag)} ${loc} ${P.neon(senderName)} ${P.dim('>')} ${P.text(preview)}`);
 }
 
 // ═══════════════════════════════════════
@@ -217,26 +209,26 @@ function logMessage(info) {
 // ═══════════════════════════════════════
 function logPlugin(name, category) {
   if (_booting) { _bootLogs.push({ kind: 'info', label: 'plugin', detail: name, time: getTime() }); return; }
-  console.log(`    ${P.dim('·')} ${P.text(name)} ${P.dim(category)}`);
+  console.log(`  ${P.dim('-')} ${P.text(name)} ${P.dim(category)}`);
 }
 
 function logConnection(status, info = "") {
   if (status === "connected") {
     finishBoot();
   } else if (status === "connecting") {
-    if (_booting) { _bootLogs.push({ kind: 'info', label: 'conn', detail: 'Connecting' + (info ? ' — ' + info : ''), time: getTime() }); return; }
-    logger.info("CONN", `Connecting${info ? ' — ' + info : ''}`);
+    if (_booting) { _bootLogs.push({ kind: 'info', label: 'conn', detail: 'Connecting' + (info ? ' - ' + info : ''), time: getTime() }); return; }
+    logger.info("CONN", `Connecting${info ? ' - ' + info : ''}`);
   } else {
-    logger.error("CONN", `Disconnected${info ? ' — ' + info : ''}`);
+    logger.error("CONN", `Disconnected${info ? ' - ' + info : ''}`);
   }
 }
 
 function logErrorBox(title, message) {
-  console.log(`  ${P.red('✖')} ${P.red(title)} ${P.dim('—')} ${P.dim(message.substring(0, 80))}`);
+  console.log(`${P.red('X')} ${P.red(title)} ${P.dim('-')} ${P.dim(message.substring(0, 60))}`);
 }
 
 function divider() {
-  console.log(P.muted('  ─────────────────────────────────────────────'));
+  line();
 }
 
 // ═══════════════════════════════════════
@@ -260,7 +252,7 @@ const c = {
 };
 
 function createBanner(lines) {
-  return lines.map(l => `  ${P.muted('│')} ${P.text(l)}`).join("\n");
+  return lines.map(l => `  ${P.muted('|')} ${P.text(l)}`).join("\n");
 }
 
 function getTimestamp() {
