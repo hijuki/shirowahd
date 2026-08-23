@@ -247,6 +247,77 @@ Kalau mau pake tunnel instead of direct A record:
 
 ---
 
+## Konfigurasi Bot (`config.js`)
+
+File ini **harus diedit** sebelum bot jalan. Buka `config.js` dan ubah:
+
+```js
+owner: {
+  name: "SHIROWAHD",
+  number: ["628xxxxxxxxx"],  // Nomor WA owner (format: 628xxx)
+},
+
+session: {
+  pairingNumber: "628xxxxxxxxx",  // Nomor WA bot yang mau di-pair
+  usePairingCode: true,            // true = pairing code, false = QR
+},
+
+bot: {
+  name: "SHIROWAHD",
+  version: "3.3",
+  developer: "HILLZ",
+},
+
+info: {
+  website: "https://domainlu.com",
+  grupwa: "https://chat.whatsapp.com/xxxx",
+},
+
+command: {
+  prefix: ".",  // Prefix command (. / ! / # dll)
+},
+
+sticker: {
+  packname: "SHIROWAHD",
+  author: "HILLZ",
+},
+```
+
+**Yang WAJIB diubah:**
+- `owner.number` — nomor WA owner (buat akses command owner)
+- `session.pairingNumber` — nomor WA yang bakal jadi bot
+
+**Optional:**
+- `bot.name`, `bot.developer` — branding
+- `info.website` — domain web uploader
+- `payment` / `donasi` — isi kalau mau fitur pembayaran
+- `saluran` — channel WhatsApp bot
+- `vercel.token` — kalau mau fitur `.deploy`
+
+---
+
+## Pairing Number (`.pair-number`)
+
+File `.pair-number` berisi nomor WA bot (1 baris, format `628xxx`). Ini dipakai buat auto-pairing.
+
+Bikin/edit:
+
+```bash
+echo "628xxxxxxxxx" > .pair-number
+```
+
+Ganti `628xxxxxxxxx` dengan nomor WA yang mau dijadiin bot.
+
+Nomor ini **harus sama** dengan `session.pairingNumber` di `config.js`.
+
+Pas pertama kali run `node main.js`, bot bakal minta pairing code. Masukkan code-nya di WhatsApp:
+1. Buka WhatsApp di HP
+2. Settings > Linked Devices > Link a Device
+3. Pilih "Link with phone number instead"
+4. Masukkan pairing code yang muncul di terminal
+
+---
+
 ## Project Structure
 
 ```
