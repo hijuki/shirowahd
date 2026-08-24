@@ -936,28 +936,198 @@ body {
   border-radius: 50%;
 }
 
-/* Light theme overrides for specific components */
-[data-theme="light"] .bg-aurora::before { opacity: .4; }
-[data-theme="light"] .bg-grid { opacity: .15; }
-[data-theme="light"] .bg-noise { opacity: .03; }
+/* ===== Light theme — full overhaul ===== */
+[data-theme="light"] body { background: var(--t-bg); color: var(--t-ink); }
+[data-theme="light"] .bg-aurora::before {
+  background:
+    radial-gradient(ellipse 40% 35% at 25% 20%, rgba(59,130,246,.10), transparent 60%),
+    radial-gradient(ellipse 35% 30% at 80% 15%, rgba(34,211,238,.08), transparent 60%),
+    radial-gradient(ellipse 45% 40% at 70% 75%, rgba(52,211,153,.06), transparent 60%);
+  opacity: 1;
+}
+[data-theme="light"] .bg-grid { opacity: .08; }
+[data-theme="light"] .bg-noise { opacity: .02; }
+
+/* Gradient text — darker ocean for readability on white */
 [data-theme="light"] .grad-text {
-  background: linear-gradient(100deg, #0f172a 10%, #0891b2 40%, #2563eb 70%, #059669 95%);
+  background: linear-gradient(100deg, #0c4a6e 10%, #0891b2 40%, #2563eb 70%, #047857 95%);
   background-size: 200% auto;
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 [data-theme="light"] .anime-text {
-  background: linear-gradient(90deg, #0f172a 0%, #0891b2 25%, #2563eb 50%, #059669 75%, #0f172a 100%);
+  background: linear-gradient(90deg, #0c4a6e 0%, #0891b2 25%, #2563eb 50%, #047857 75%, #0c4a6e 100%);
   background-size: 200% auto;
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 [data-theme="light"] ::selection { background: rgba(34,211,238,.25); color: #000; }
-[data-theme="light"] .glass {
-  background: rgba(255,255,255,.6);
-  border-color: rgba(59,130,246,.15);
-  box-shadow: 0 24px 64px -16px rgba(0,0,0,.1);
+
+/* Nav pill */
+[data-theme="light"] .nav-pill {
+  background: rgba(255,255,255,.82);
+  border-color: rgba(59,130,246,.12);
+  box-shadow: 0 4px 24px -6px rgba(59,130,246,.10), 0 1px 3px rgba(0,0,0,.06);
+  backdrop-filter: blur(16px);
 }
+
+/* Glass panels */
+[data-theme="light"] .glass {
+  background: rgba(255,255,255,.7);
+  border-color: rgba(59,130,246,.12);
+  box-shadow: 0 8px 32px -8px rgba(59,130,246,.08), 0 1px 2px rgba(0,0,0,.04);
+}
+
+/* Toast */
 [data-theme="light"] .toast-card {
-  background: rgba(255,255,255,.92);
-  border-color: rgba(59,130,246,.1);
-  box-shadow: 0 12px 40px -10px rgba(0,0,0,.15);
+  background: rgba(255,255,255,.95);
+  border-color: rgba(59,130,246,.10);
+  box-shadow: 0 8px 32px -8px rgba(0,0,0,.12);
+  color: var(--t-ink);
+}
+
+/* Card surfaces — white glass with ocean tint border */
+[data-theme="light"] .card-3d,
+[data-theme="light"] .step-3d {
+  background: rgba(255,255,255,.65) !important;
+  border-color: rgba(59,130,246,.10) !important;
+  box-shadow: 0 4px 20px -6px rgba(59,130,246,.08), 0 1px 2px rgba(0,0,0,.04);
+}
+
+/* Drop zone */
+[data-theme="light"] .drop-luxe {
+  background: rgba(255,255,255,.5);
+  border-color: rgba(59,130,246,.20) !important;
+}
+[data-theme="light"] .drop-luxe:hover {
+  background: rgba(240,249,255,.7);
+  border-color: rgba(34,211,238,.35) !important;
+}
+
+/* Buttons — light glass */
+[data-theme="light"] .btn-3d {
+  background: rgba(255,255,255,.7);
+  border-color: rgba(59,130,246,.12);
+  color: var(--t-ink);
+  box-shadow: 0 2px 8px -2px rgba(59,130,246,.08);
+}
+[data-theme="light"] .btn-3d:hover {
+  background: rgba(240,249,255,.9);
+  box-shadow: 0 4px 16px -4px rgba(59,130,246,.15);
+}
+
+/* Orbs — softer on light */
+[data-theme="light"] .orb-float,
+[data-theme="light"] .orb-float-2 {
+  opacity: .3;
+}
+
+/* Sparkles — slightly more visible */
+[data-theme="light"] .anime-sparkle { filter: brightness(0.7); }
+
+/* Energy ring */
+[data-theme="light"] .energy-ring { border-color: rgba(34,211,238,.20); }
+
+/* Expire bar bg */
+[data-theme="light"] .expire-bar {
+  background: rgba(59,130,246,.08);
+}
+
+/* Code cards in modals */
+[data-theme="light"] .code-text { color: #0c4a6e; }
+
+/* History cards */
+[data-theme="light"] .hist-item,
+[data-theme="light"] [class*="rounded"][class*="border-white"] {
+  border-color: rgba(59,130,246,.10) !important;
+}
+
+/* Modal */
+[data-theme="light"] .modal-card {
+  background: rgba(255,255,255,.95);
+  border-color: rgba(59,130,246,.12);
+  box-shadow: 0 32px 80px -12px rgba(0,0,0,.15);
+}
+
+/* Announcement / banner */
+[data-theme="light"] [class*="border-\\[#fbbf24\\]"] {
+  background: rgba(251,191,36,.06);
+}
+
+/* Status chips */
+[data-theme="light"] [class*="bg-ok"],
+[data-theme="light"] [class*="bg-\\[#3b82f6\\]"],
+[data-theme="light"] [class*="bg-\\[#22d3ee\\]"] {
+  backdrop-filter: blur(4px);
+}
+
+/* Skeleton — light shimmer */
+[data-theme="light"] .skeleton {
+  background: linear-gradient(90deg, rgba(59,130,246,.06) 25%, rgba(59,130,246,.12) 50%, rgba(59,130,246,.06) 75%);
+  background-size: 200% 100%;
+}
+
+/* 3D shadows — softer on light */
+[data-theme="light"] .nav-3d {
+  box-shadow: 0 4px 16px -4px rgba(59,130,246,.08), 0 1px 2px rgba(0,0,0,.04);
+}
+[data-theme="light"] .logo-3d {
+  box-shadow: 0 8px 24px -6px rgba(59,130,246,.12);
+}
+
+/* Nav icon buttons \u2014 light */
+[data-theme="light"] .nav-icon-btn {
+  background: rgba(59,130,246,.05) !important;
+  border-color: rgba(59,130,246,.10) !important;
+}
+[data-theme="light"] .nav-icon-btn:hover {
+  background: rgba(59,130,246,.10) !important;
+}
+
+/* Logo containers \u2014 light */
+[data-theme="light"] [class*="bg-\[#080e1c\]"] {
+  background: rgba(255,255,255,.8) !important;
+  border-color: rgba(59,130,246,.12) !important;
+}
+
+/* Modal card bg \u2014 light */
+[data-theme="light"] [class*="bg-\[#0a1020\]"] {
+  background: rgba(255,255,255,.97) !important;
+  border-color: rgba(59,130,246,.12) !important;
+  box-shadow: 0 32px 80px -12px rgba(0,0,0,.12) !important;
+}
+
+/* Code cards in SuccessModal \u2014 light */
+[data-theme="light"] [class*="bg-\[var(--t-surface)\]"][class*="border-\[#22d3ee\]"] {
+  background: rgba(240,249,255,.7) !important;
+}
+
+/* Upload panel white/[.0x] backgrounds \u2014 light */
+[data-theme="light"] [class*="bg-white\/\["] {
+  background-color: rgba(59,130,246,.04);
+}
+
+/* History cards \u2014 light */
+[data-theme="light"] [class*="border-white\/\[\.06\]"] {
+  border-color: rgba(59,130,246,.10) !important;
+}
+
+/* Progress bar track \u2014 light */
+[data-theme="light"] [class*="bg-white\/\[\.06\]"][class*="rounded-full"] {
+  background: rgba(59,130,246,.08) !important;
+}
+
+/* Confetti/sparkles visibility on light bg */
+[data-theme="light"] .confetti-particle { filter: saturate(1.3) brightness(0.8); }
+
+/* Floating orb visibility reduce on light */
+[data-theme="light"] [class*="orb-float"] { opacity: .2 !important; }
+
+/* Link buttons in modals */
+[data-theme="light"] .link-btn-premium {
+  background: rgba(52,211,153,.06) !important;
+  border-color: rgba(52,211,153,.15) !important;
+}
+
+/* Divider glow */
+[data-theme="light"] .divider-glow {
+  background: linear-gradient(90deg, transparent, rgba(59,130,246,.15), transparent) !important;
 }

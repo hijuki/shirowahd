@@ -2,32 +2,36 @@
 import { useState, useEffect, useRef } from 'react'
 import { ModalShell } from './Modals'
 
-/* Sound effects — tiny inline base64 audio */
+/* Sound effects — musical chimes via Web Audio API */
 const playSound = (type) => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain); gain.connect(ctx.destination)
+    const t = ctx.currentTime
+
+    const note = (freq, start, dur, vol = 0.12, wave = 'sine') => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = wave
+      osc.frequency.setValueAtTime(freq, t + start)
+      gain.gain.setValueAtTime(0, t + start)
+      gain.gain.linearRampToValueAtTime(vol, t + start + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, t + start + dur)
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.start(t + start); osc.stop(t + start + dur)
+    }
+
     if (type === 'success') {
-      osc.type = 'sine'; osc.frequency.value = 880
-      gain.gain.setValueAtTime(0.15, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4)
-      osc.start(); osc.stop(ctx.currentTime + 0.4)
-      // Second note
-      setTimeout(() => {
-        const o2 = ctx.createOscillator(), g2 = ctx.createGain()
-        o2.connect(g2); g2.connect(ctx.destination)
-        o2.type = 'sine'; o2.frequency.value = 1320
-        g2.gain.setValueAtTime(0.12, ctx.currentTime)
-        g2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
-        o2.start(); o2.stop(ctx.currentTime + 0.3)
-      }, 150)
+      // C6 → E6 → G6 → C7 arpeggio chime (major chord ascending)
+      note(1047, 0, 0.35, 0.10)     // C6
+      note(1319, 0.08, 0.30, 0.10)  // E6
+      note(1568, 0.16, 0.28, 0.12)  // G6
+      note(2093, 0.26, 0.50, 0.08)  // C7 — linger
+      // Soft shimmer layer
+      note(1568, 0.26, 0.45, 0.04, 'triangle') // G6 triangle harmony
     } else if (type === 'copy') {
-      osc.type = 'sine'; osc.frequency.value = 1200
-      gain.gain.setValueAtTime(0.1, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15)
-      osc.start(); osc.stop(ctx.currentTime + 0.15)
+      // Quick 2-note pop: G5 → B5 (bright minor third)
+      note(784, 0, 0.10, 0.10)
+      note(988, 0.06, 0.12, 0.08)
     }
   } catch {}
 }

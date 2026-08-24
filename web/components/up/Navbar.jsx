@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 
 export default function Navbar({ settings, onFaq, onAbout }) {
-  const btn = 'w-9 h-9 rounded-full grid place-items-center border transition-all duration-[200ms] active:scale-90'
+  const btn = 'w-9 h-9 rounded-full grid place-items-center border transition-all duration-[200ms] active:scale-90 nav-icon-btn'
   const logoUrl = settings?.logoUrl || ''
 
   const [theme, setTheme] = useState('dark')
