@@ -172,7 +172,7 @@ await new Promise(resolve => {
   }, 500);
   setTimeout(() => { clearInterval(check); resolve(); }, 5000);
 });
-done('port 8080');
+done('port 80');
 
 await sleep(200);
 
