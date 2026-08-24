@@ -714,37 +714,57 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url === '/admin/api/backup') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     try {
-      const { execSync } = require('child_process');
       const cwd = __dirname;
-      const git = (cmd) => execSync(cmd, { cwd, encoding: 'utf8', timeout: 60000 }).trim();
-      // Configure git identity
-      git('git config user.name "shirowahd-admin"');
-      git('git config user.email "admin@shirowahd.local"');
-      // Build push URL with token from env (same as main.js)
-      const GIT_REPO = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
-      const GIT_TOKEN = process.env.GIT_TOKEN || process.env.GITHUB_TOKEN || '';
-      const GIT_USER = process.env.USERNAME || '';
-      let pushUrl = 'origin';
-      if (GIT_TOKEN) {
-        if (GIT_USER) pushUrl = GIT_REPO.replace('https://', `https://${GIT_USER}:${GIT_TOKEN}@`);
-        else pushUrl = GIT_REPO.replace('https://', `https://${GIT_TOKEN}@`);
-      }
-      // Stage all tracked + important files
-      git('git add -A');
-      // Check if anything to commit
+      const run = (cmd) => {
+        try { return execSync(cmd, { cwd, encoding: 'utf8', timeout: 60000 }).trim(); }
+        catch (e) { throw new Error(e.stderr ? e.stderr.toString().trim() : e.message); }
+      };
+      run('git config user.name "shirowahd-admin"');
+      run('git config user.email "admin@shirowahd.local"');
+
+      // Stage only safe files (skip node_modules/storage/session)
+      run('git add admin-settings.json .gitignore main.js web-uploader.js 2>/dev/null || true');
+      try { run('git add plugins/ src/ database/ 2>/dev/null || true'); } catch {}
+
       let status = '';
-      try { status = git('git status --porcelain'); } catch {}
+      try { status = run('git status --porcelain'); } catch {}
       if (!status) {
         jsonRes(res, 200, { ok: true, message: 'Tidak ada perubahan untuk di-backup', changed: 0 });
         return;
       }
       const lines = status.split('\n').filter(Boolean).length;
       const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      git(`git commit -m "backup: auto-backup ${ts} (${lines} files)"`);
-      git(`git push ${pushUrl} main`);
+      run(`git commit -m "backup: ${ts} (${lines} files)"`);
+
+      // Try push with existing origin first
+      let pushed = false;
+      try { run('git push origin main 2>&1'); pushed = true; } catch {}
+
+      // Fallback: build auth URL from env
+      if (!pushed) {
+        const repo = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
+        const token = process.env.GIT_TOKEN || '';
+        if (!token) {
+          // Try reading from .env file directly
+          let envToken = '';
+          try {
+            const envFile = require('fs').readFileSync(require('path').join(__dirname, '.env'), 'utf8');
+            const m = envFile.match(/GIT_TOKEN=([^\s]+)/);
+            if (m) envToken = m[1];
+          } catch {}
+          if (!envToken) throw new Error('GIT_TOKEN tidak ditemukan di environment atau .env — tambahkan GIT_TOKEN=ghp_xxx di file .env');
+          const authUrl = repo.replace('https://', `https://${envToken}@`);
+          run(`git push ${authUrl} main 2>&1`);
+        } else {
+          const authUrl = repo.replace('https://', `https://${token}@`);
+          run(`git push ${authUrl} main 2>&1`);
+        }
+      }
+
       jsonRes(res, 200, { ok: true, message: `Backup berhasil! ${lines} file di-push ke GitHub`, changed: lines });
     } catch (e) {
-      jsonRes(res, 500, { ok: false, error: e.message.split('\n')[0] });
+      const msg = (e.message || 'Unknown error').replace(/https:\/\/[^@]+@/g, 'https://***@');
+      jsonRes(res, 500, { ok: false, error: msg });
     }
     return;
   }
