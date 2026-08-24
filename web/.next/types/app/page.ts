@@ -1,4 +1,4 @@
-// File: /tmp/shirowahd/web/app/page.jsx
+// File: /root/shirowahd/web/app/page.jsx
 import * as entry from '../../../app/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
