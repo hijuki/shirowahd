@@ -9,7 +9,7 @@ import { execSync, exec as execCb } from 'child_process';
 import { tmpdir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = 8080;
+const PORT = 80;
 const PAGE = join(__dirname, 'upload-page.html');
 const ADMIN_PAGE = join(__dirname, 'admin.html');
 const SETTINGS_FILE = join(__dirname, 'admin-settings.json');
