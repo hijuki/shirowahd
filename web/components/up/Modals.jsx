@@ -7,16 +7,16 @@ function ModalShell({ onClose, children, wide }) {
   const close = () => { setVis(false); setTimeout(onClose, 280) }
   return (
     <div className={`fixed inset-0 z-[80] flex items-center justify-center p-4 transition-opacity duration-[280ms] ${vis ? 'opacity-100' : 'opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-      <div className="absolute inset-0 bg-[#020510]/[.985] backdrop-blur-xl" onClick={close} />
+      <div className="absolute inset-0 bg-[#020510]/90 backdrop-blur-md" onClick={close} />
       <div className={`relative z-10 w-full ${wide ? 'max-w-md' : 'max-w-[400px]'} transition-all duration-[350ms] ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.92] translate-y-6 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <div className="absolute -inset-8 rounded-[40px] bg-gradient-to-b from-[#22d3ee]/[.08] via-[#3b82f6]/[.05] to-transparent blur-2xl pointer-events-none" />
-        <div className="relative rounded-[24px] border border-white/[.1] bg-[#080e1c] backdrop-blur-2xl shadow-[0_32px_80px_-16px_rgba(0,0,0,.9)] overflow-y-auto max-h-[calc(100dvh-32px)]" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="relative rounded-[24px] border border-white/[.08] bg-[#080e1c]/85 backdrop-blur-2xl shadow-[0_32px_80px_-16px_rgba(0,0,0,.8)] overflow-hidden max-h-[90dvh] overflow-y-auto">
           <div className="absolute top-0 inset-x-0 h-px">
             <div className="h-full bg-gradient-to-r from-transparent via-[#22d3ee]/60 to-transparent modal-shimmer" />
           </div>
           <div className="absolute top-8 bottom-8 left-0 w-px bg-gradient-to-b from-transparent via-[#3b82f6]/20 to-transparent" />
           <div className="absolute top-8 bottom-8 right-0 w-px bg-gradient-to-b from-transparent via-[#22d3ee]/20 to-transparent" />
-          <div className="p-4 sm:p-6">{children}</div>
+          <div className="p-6">{children}</div>
         </div>
       </div>
     </div>
