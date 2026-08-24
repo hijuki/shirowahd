@@ -1,3 +1,5 @@
+import './globals.css'
+
 export const metadata = {
   title: 'SHIROWAHD',
   description: 'Upload media ke grup WhatsApp via bot — cepat, aman, tanpa ribet',
