@@ -82,7 +82,7 @@ export default function Dashboard({ toast }) {
           <Stat icon="fa-calendar-day" label="Hari Ini" value={stats.uploadsToday ?? 0} color="#3b82f6" />
           <Stat icon="fa-database" label="Total Tersimpan" value={fmtBytes(stats?.totalStorage)} color="#34d399" />
           <Stat icon="fa-weight-hanging" label="Ukuran Aktif" value={fmtBytes(stats?.totalSize)} color="#fbbf24" />
-          <Stat icon="fa-database" label="Penyimpanan Disk" value={fmtBytes(stats?.totalStorage)} color="#34d399" />
+          <Stat icon="fa-clock" label="Expire" value={`${stats?.expireMinutes ?? 60}m`} color="#34d399" />
           <Stat icon="fa-chart-simple" label="Rata-rata Ukuran" value={fmtBytes(stats?.totalActive ? Math.round((stats?.totalSize || 0) / stats.totalActive) : 0)} color="#fb7185" />
         </div>
       )}

@@ -389,10 +389,10 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url === '/api/settings/public') {
     jsonRes(res, 200, {
       ownerWhatsapp: settings.ownerWhatsapp,
-      groups: settings.groups,
-      channels: settings.channels,
-      claimGroups: settings.claimGroups || (settings.claimGroup ? [settings.claimGroup] : []),
-      popupButtons: settings.popupButtons || [],
+      groups: (settings.groups || []).filter(g => g.visible !== false),
+      channels: (settings.channels || []).filter(c => c.visible !== false),
+      claimGroups: (settings.claimGroups || (settings.claimGroup ? [settings.claimGroup] : [])).filter(g => g.visible !== false),
+      popupButtons: (settings.popupButtons || []).filter(b => b.visible !== false),
       siteName: settings.siteName || 'SHIROWAHD',
       siteSubtitle: settings.siteSubtitle || 'Upload & claim video HD',
       maintenance: !!settings.maintenance,
