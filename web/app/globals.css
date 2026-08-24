@@ -560,3 +560,10 @@ body {
 }
 .confetti-particle:nth-child(odd) { border-radius: 50%; width: 5px; height: 5px; }
 .confetti-particle:nth-child(3n)  { width: 8px; height: 3px; border-radius: 1px; }
+
+/* ===== Nav slide down ===== */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-slide-down { animation: slideDown 450ms var(--ease-out) both; }

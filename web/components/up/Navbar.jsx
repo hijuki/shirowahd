@@ -1,61 +1,32 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
 
 export default function Navbar({ settings, onFaq, onAbout }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
-  useEffect(() => {
-    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
-    document.addEventListener('click', h)
-    return () => document.removeEventListener('click', h)
-  }, [])
-  const items = [
-    { icon: 'fa-user-shield', label: 'Admin Panel', href: '/admin' },
-    { icon: 'fa-circle-question', label: 'FAQ', action: onFaq },
-    { icon: 'fa-circle-info', label: 'About', action: onAbout },
-  ]
+  const btn = 'w-9 h-9 rounded-full grid place-items-center border transition-all duration-[200ms] active:scale-90'
   return (
-    <nav className="nav-pill rounded-[20px] px-4 py-3 flex items-center justify-between mb-7 mt-4 anim-entrance">
-      <div className="flex items-center gap-3">
-        <div className="relative w-10 h-10 rounded-[12px] bg-gradient-to-br from-[#25D366] to-[#0e7a5f] grid place-items-center shadow-[0_8px_24px_-6px_rgba(37,211,102,.55)]">
-          <span className="absolute inset-0 rounded-[12px] bg-gradient-to-br from-white/25 to-transparent pointer-events-none" />
-          <i className="fa-brands fa-whatsapp text-white text-lg relative" />
+    <nav className="sticky top-3 z-40 nav-pill rounded-[18px] px-3 py-2.5 flex items-center justify-between mb-6 anim-slide-down">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="relative w-9 h-9 shrink-0 rounded-[11px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_4px_16px_-4px_rgba(37,211,102,.5)]">
+          <span className="absolute inset-[1px] rounded-[10px] bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+          <i className="fa-brands fa-whatsapp text-white text-[15px] relative" />
         </div>
-        <div>
-          <p className="font-[family-name:var(--font-display)] font-bold text-[16px] tracking-tight leading-none">{settings?.siteName || 'SHIROWAHD'}</p>
-          <p className="text-[#7e90ad] text-[10px] font-medium mt-1">{settings?.siteSubtitle || 'Upload & claim video HD'}</p>
+        <div className="min-w-0 leading-tight">
+          <p className="font-[family-name:var(--font-display)] font-bold text-[14px] tracking-tight truncate">{settings?.siteName || 'SHIROWAHD'}</p>
+          <p className="text-[#7e90ad] text-[8px] font-bold tracking-[.15em] uppercase truncate">SWHDHLZ · BY HILLZ</p>
         </div>
       </div>
-      <div className="relative" ref={menuRef}>
-        <button
-          onClick={() => setMenuOpen(o => !o)}
-          className="w-9 h-9 rounded-[12px] border border-white/[.07] bg-white/[.04] text-[#e8f1ff] hover:bg-[#3b82f6]/15 hover:border-[#3b82f6]/30 transition-all duration-[150ms] flex items-center justify-center"
-          style={{ transitionTimingFunction: 'var(--ease-out)' }}
-        >
-          <i className={`fa-solid ${menuOpen ? 'fa-xmark' : 'fa-bars-staggered'} text-[13px]`} />
+
+      {/* Quick actions */}
+      <div className="flex items-center gap-1.5">
+        <button onClick={onFaq} title="FAQ" className={`${btn} bg-white/[.04] border-white/[.08] text-[#7e90ad] hover:text-[#22d3ee] hover:border-[#22d3ee]/30 hover:bg-[#22d3ee]/[.08]`}>
+          <i className="fa-solid fa-circle-question text-[13px]" />
         </button>
-        {menuOpen && (
-          <div className="absolute right-0 top-full mt-2 w-48 glass rounded-[20px] p-2 z-50 anim-pop">
-            {items.map(it =>
-              it.href ? (
-                <a key={it.label} href={it.href} className="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[12px] font-semibold text-[#e8f1ff]/90 hover:bg-[#3b82f6]/12 transition-all duration-[150ms]">
-                  <span className="icon-tile w-7 h-7 !rounded-[8px]"><i className={`fa-solid ${it.icon} text-[#22d3ee] text-[11px]`} /></span>
-                  {it.label}
-                  <i className="fa-solid fa-arrow-up-right-from-square ml-auto text-[#7e90ad] text-[9px]" />
-                </a>
-              ) : (
-                <button
-                  key={it.label}
-                  onClick={() => { setMenuOpen(false); it.action() }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[12px] font-semibold text-[#e8f1ff]/90 hover:bg-[#3b82f6]/12 transition-all duration-[150ms]"
-                >
-                  <span className="icon-tile w-7 h-7 !rounded-[8px]"><i className={`fa-solid ${it.icon} text-[#22d3ee] text-[11px]`} /></span>
-                  {it.label}
-                </button>
-              )
-            )}
-          </div>
-        )}
+        <button onClick={onAbout} title="Tentang" className={`${btn} bg-white/[.04] border-white/[.08] text-[#7e90ad] hover:text-[#3b82f6] hover:border-[#3b82f6]/30 hover:bg-[#3b82f6]/[.08]`}>
+          <i className="fa-solid fa-circle-info text-[13px]" />
+        </button>
+        <a href="/admin" title="Admin" className={`${btn} bg-white/[.04] border-white/[.08] text-[#7e90ad] hover:text-[#34d399] hover:border-[#34d399]/30 hover:bg-[#34d399]/[.08]`}>
+          <i className="fa-solid fa-user-shield text-[12px]" />
+        </a>
       </div>
     </nav>
   )

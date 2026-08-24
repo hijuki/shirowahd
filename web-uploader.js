@@ -35,6 +35,7 @@ function loadSettings() {
   return {
     ownerWhatsapp: '', groups: [], channels: [],
     claimGroups: [],
+    popupButtons: [],
     adminPassword: '@Hillz126',
     maintenance: false,
     ipBlacklist: [],
@@ -64,6 +65,7 @@ function saveSettings(data) {
     groups: data.groups ?? cur.groups ?? [],
     channels: data.channels ?? cur.channels ?? [],
     claimGroups: data.claimGroups ?? cur.claimGroups ?? (cur.claimGroup ? [cur.claimGroup] : []),
+    popupButtons: data.popupButtons ?? cur.popupButtons ?? [],
     adminPassword: data.adminPassword ?? cur.adminPassword ?? '@Hillz126',
     maintenance: data.maintenance ?? cur.maintenance ?? false,
     ipBlacklist: data.ipBlacklist ?? cur.ipBlacklist ?? [],
@@ -378,6 +380,7 @@ const server = http.createServer(async (req, res) => {
       groups: settings.groups,
       channels: settings.channels,
       claimGroups: settings.claimGroups || (settings.claimGroup ? [settings.claimGroup] : []),
+      popupButtons: settings.popupButtons || [],
       siteName: settings.siteName || 'SHIROWAHD',
       siteSubtitle: settings.siteSubtitle || 'Upload & claim video HD',
       maintenance: !!settings.maintenance,

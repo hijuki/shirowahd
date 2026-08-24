@@ -16,6 +16,7 @@ const textareaFields = [
   { key: 'groups', label: 'Grup WhatsApp', placeholder: 'Nama — https://chat.whatsapp.com/xxx (satu per baris)' },
   { key: 'channels', label: 'Channels', placeholder: 'Nama — https://whatsapp.com/channel/xxx (satu per baris)' },
   { key: 'claimGroups', label: 'Claim Groups', placeholder: 'Nama — https://chat.whatsapp.com/xxx (satu per baris)' },
+  { key: 'popupButtons', label: 'Popup Buttons (Welcome & Kode)', placeholder: 'Label — https://link (satu per baris)\nContoh: Grup Claim — https://chat.whatsapp.com/xxx' },
 ]
 
 // server menyimpan {name, link}[] — tampilkan sebagai "Nama — link" per baris

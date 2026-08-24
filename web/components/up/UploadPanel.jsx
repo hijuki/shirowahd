@@ -54,45 +54,23 @@ export default function UploadPanel({ settings, toast }) {
 
   const removeFile = (f) => setFiles(prev => prev.filter(x => x !== f))
   const clearAll = () => { setFiles([]); setThumbs({}) }
-
   const handleDrop = (e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files) }
 
   const doUpload = async () => {
     if (!files.length || uploading) return
-    setUploading(true)
-    setProgress(0)
+    setUploading(true); setProgress(0)
     abortRef.current = new AbortController()
     try {
-      const res = await uploadFiles(files, {
-        field,
-        onProgress: p => setProgress(p),
-        signal: abortRef.current.signal,
-      })
-      saveHistory({
-        code: res.code, codes: res.codes, bundle: res.bundle, count: res.count,
-        files: files.map(f => f.name),
-        totalSize: files.reduce((s, f) => s + f.size, 0),
-        timestamp: Date.now(),
-        expireMinutes: settings?.expireMinutes || 60,
-      })
+      const res = await uploadFiles(files, { field, onProgress: p => setProgress(p), signal: abortRef.current.signal })
+      saveHistory({ code: res.code, codes: res.codes, bundle: res.bundle, count: res.count, files: files.map(f => f.name), totalSize: files.reduce((s, f) => s + f.size, 0), timestamp: Date.now(), expireMinutes: settings?.expireMinutes || 60 })
       setResult({ ...res, expireMinutes: settings?.expireMinutes || 60 })
       toast('Upload berhasil!', 'success')
-      setFiles([])
-      setThumbs({})
-    } catch (e) {
-      if (e.message !== 'Upload dibatalkan') toast(e.message, 'error')
-    } finally {
-      setUploading(false)
-      setProgress(0)
-    }
+      setFiles([]); setThumbs({})
+    } catch (e) { if (e.message !== 'Upload dibatalkan') toast(e.message, 'error') }
+    finally { setUploading(false); setProgress(0) }
   }
 
-  const cancelUpload = () => {
-    abortRef.current?.abort()
-    setUploading(false)
-    setProgress(0)
-    toast('Upload dibatalkan', 'info')
-  }
+  const cancelUpload = () => { abortRef.current?.abort(); setUploading(false); setProgress(0); toast('Upload dibatalkan', 'info') }
 
   if (settings?.maintenance) {
     return (
@@ -108,152 +86,154 @@ export default function UploadPanel({ settings, toast }) {
 
   return (
     <>
-      <div className="card overflow-visible">
-        {/* Ambient glow behind card */}
-        <div className="absolute -inset-6 -z-10 rounded-[32px] bg-gradient-to-b from-[#22d3ee]/[.06] via-transparent to-[#3b82f6]/[.04] blur-xl pointer-events-none" />
+      <div className="space-y-4">
+        {/* Tab selector — standalone card */}
+        <div className="flex gap-2">
+          {[['video', 'fa-video', 'Video'], ['image', 'fa-image', 'Foto']].map(([t, icon, label]) => (
+            <button key={t} onClick={() => { if (!uploading) { setTab(t); clearAll() } }}
+              className={`flex-1 py-3.5 rounded-[16px] font-bold text-[13px] tracking-wide border transition-all duration-[250ms] active:scale-[.97] ${tab === t
+                ? 'bg-gradient-to-r from-[#22d3ee]/15 to-[#3b82f6]/10 border-[#22d3ee]/30 text-[#e8f1ff] shadow-[0_0_24px_-8px_rgba(34,211,238,.35)]'
+                : 'bg-white/[.02] border-white/[.06] text-[#7e90ad] hover:bg-white/[.05] hover:border-white/[.10]'}`}
+              style={{ transitionTimingFunction: 'var(--ease-out)' }}
+            >
+              <i className={`fa-solid ${icon} mr-2 ${tab === t ? 'text-[#22d3ee]' : ''}`} />{label}
+            </button>
+          ))}
+        </div>
 
-        <div className="p-5">
-          {/* Tabs */}
-          <div className="flex gap-1.5 p-1.5 rounded-[16px] bg-black/30 border border-white/[.06] mb-5">
-            {[['video', 'fa-video', 'Video'], ['image', 'fa-image', 'Foto']].map(([t, icon, label]) => (
-              <button
-                key={t}
-                onClick={() => { if (!uploading) { setTab(t); clearAll() } }}
-                className={`tab-pill flex-1 py-3 rounded-[12px] font-bold text-[12px] tracking-wide ${tab === t ? 'active text-white' : 'text-[#7e90ad] hover:text-[#e8f1ff]'}`}
-              >
-                <i className={`fa-solid ${icon} mr-1.5`} />{label}
-              </button>
-            ))}
-          </div>
-
-          {/* Format tags */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {exts.map(ext => (
-              <span key={ext} className="px-2.5 py-1 rounded-[8px] text-[9px] font-extrabold tracking-widest border"
-                style={{
-                  color: TAG_COLORS[ext.toLowerCase()] || '#8892b0',
-                  borderColor: `${TAG_COLORS[ext.toLowerCase()] || '#8892b0'}35`,
-                  background: `${TAG_COLORS[ext.toLowerCase()] || '#8892b0'}0a`
-                }}>
-                {ext}
+        {/* Main upload card */}
+        <div className="card overflow-visible">
+          <div className="absolute -inset-6 -z-10 rounded-[32px] bg-gradient-to-b from-[#22d3ee]/[.04] via-transparent to-[#3b82f6]/[.03] blur-xl pointer-events-none" />
+          <div className="p-5">
+            {/* Format badges + server info */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap gap-1.5">
+                {exts.map(ext => (
+                  <span key={ext} className="px-2 py-0.5 rounded-[6px] text-[8px] font-extrabold tracking-[.12em] border"
+                    style={{ color: TAG_COLORS[ext.toLowerCase()], borderColor: `${TAG_COLORS[ext.toLowerCase()]}30`, background: `${TAG_COLORS[ext.toLowerCase()]}08` }}>
+                    {ext}
+                  </span>
+                ))}
+              </div>
+              <span className="text-[8px] font-mono font-bold tracking-wider text-[#7e90ad]/60 uppercase">
+                {settings?.maxFileSizeMB > 0 ? `≤${settings.maxFileSizeMB}MB` : '∞'}
               </span>
-            ))}
-          </div>
-
-          {/* Drop zone */}
-          <div
-            onClick={() => { if (!uploading) fileRef.current?.click() }}
-            onDrop={handleDrop}
-            onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
-            onDragLeave={() => setDrag(false)}
-            className={`drop-luxe py-14 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
-          >
-            <input ref={fileRef} type="file" accept={accept} multiple className="hidden" onChange={e => addFiles(e.target.files)} />
-            <div className="drop-halo">
-              <div className={`w-[76px] h-[76px] mx-auto rounded-[22px] grid place-items-center mb-5 transition-all duration-[250ms] floaty ${isImg
-                ? 'bg-gradient-to-br from-[#34d399]/20 to-[#34d399]/5 border border-[#34d399]/30 shadow-[0_0_44px_-8px_rgba(52,211,153,.5)]'
-                : 'bg-gradient-to-br from-[#22d3ee]/20 to-[#3b82f6]/8 border border-[#3b82f6]/40 shadow-[0_0_44px_-8px_rgba(59,130,246,.55)]'}`}>
-                <i className={`fa-solid ${isImg ? 'fa-images text-[#34d399]' : 'fa-cloud-arrow-up text-[#67e8f9]'} text-[28px] drop-shadow-[0_2px_8px_rgba(0,0,0,.3)]`} />
-              </div>
             </div>
-            <p className="font-[family-name:var(--font-display)] font-bold text-[16px]">
-              {tab === 'video' ? 'Drop video di sini' : 'Drop foto di sini'}
-            </p>
-            <p className="text-[#7e90ad] text-[11px] mt-2">
-              atau <span className="text-[#22d3ee] font-semibold underline underline-offset-4 decoration-[#22d3ee]/40 hover:decoration-[#22d3ee] transition-all duration-[150ms]">klik untuk memilih file</span>
-            </p>
-            <p className="text-[#7e90ad]/40 text-[9px] mt-4 font-mono uppercase tracking-[.15em]">
-              {tab === 'video' ? '⚡ Auto convert MP4 H.264' : '📸 Multiple select supported'}
-            </p>
-          </div>
 
-          {/* File list */}
-          {files.length > 0 && (
-            <div className="mt-5 stagger">
-              <div className="flex items-center justify-between px-1 mb-2">
-                <span className="text-[#7e90ad] text-[10px] font-bold">
-                  <i className="fa-solid fa-layer-group mr-1 text-[#22d3ee] opacity-70" />
-                  {files.length} file · {fmtSize(files.reduce((s, f) => s + f.size, 0))}
-                </span>
-                <button onClick={clearAll} disabled={uploading} className="text-bad/70 text-[10px] font-bold hover:text-bad transition-all duration-[150ms] disabled:opacity-30">
-                  <i className="fa-solid fa-trash-can mr-1" />Hapus semua
-                </button>
-              </div>
-
-              {isImg ? (
-                <div className="grid grid-cols-3 gap-2.5">
-                  {files.map(f => {
-                    const key = f.name + f.size
-                    return (
-                      <div key={key} className="relative aspect-square rounded-[14px] overflow-hidden border border-white/[.07] group hover:border-[#3b82f6]/30 transition-all duration-[150ms]">
-                        {thumbs[key] && <img src={thumbs[key]} alt="" className="w-full h-full object-cover" />}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[150ms]" />
-                        <p className="absolute bottom-1.5 left-2 right-2 text-[8px] text-white font-bold truncate opacity-0 group-hover:opacity-100 transition-opacity duration-[150ms]">{f.name}</p>
-                        {!uploading && (
-                          <button onClick={(e) => { e.stopPropagation(); removeFile(f) }} className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-bad/90 text-white text-[9px] grid place-items-center opacity-0 group-hover:opacity-100 transition-all duration-[150ms] hover:scale-110">
-                            <i className="fa-solid fa-xmark" />
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
+            {/* Drop zone */}
+            <div
+              onClick={() => { if (!uploading) fileRef.current?.click() }}
+              onDrop={handleDrop}
+              onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
+              onDragLeave={() => setDrag(false)}
+              className={`drop-luxe py-10 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
+            >
+              <input ref={fileRef} type="file" accept={accept} multiple className="hidden" onChange={e => addFiles(e.target.files)} />
+              <div className="drop-halo">
+                <div className={`w-16 h-16 mx-auto rounded-[18px] grid place-items-center mb-4 transition-all duration-[250ms] floaty ${isImg
+                  ? 'bg-[#34d399]/12 border border-[#34d399]/25 shadow-[0_0_36px_-8px_rgba(52,211,153,.4)]'
+                  : 'bg-[#22d3ee]/12 border border-[#3b82f6]/30 shadow-[0_0_36px_-8px_rgba(59,130,246,.4)]'}`}>
+                  <i className={`fa-solid ${isImg ? 'fa-images text-[#34d399]' : 'fa-cloud-arrow-up text-[#67e8f9]'} text-[22px]`} />
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {files.map(f => {
-                    const ext = f.name.split('.').pop().toUpperCase()
-                    return (
-                      <div key={f.name + f.size} className="flex items-center gap-3 p-3 rounded-[16px] bg-white/[.03] border border-white/[.06] group hover:border-[#3b82f6]/25 transition-all duration-[150ms] hover-lift">
-                        <span className="icon-tile w-10 h-10 shrink-0"><i className="fa-solid fa-film text-[#67e8f9] text-sm" /></span>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[12px] truncate">{f.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[#7e90ad] text-[10px] font-mono">{fmtSize(f.size)}</span>
-                            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-[6px]" style={{ color: TAG_COLORS[ext.toLowerCase()] || '#8892b0', background: `${TAG_COLORS[ext.toLowerCase()] || '#8892b0'}15` }}>{ext}</span>
-                          </div>
+              </div>
+              <p className="font-[family-name:var(--font-display)] font-bold text-[15px] tracking-tight">
+                {tab === 'video' ? 'Drop video di sini' : 'Drop foto di sini'}
+              </p>
+              <p className="text-[#7e90ad] text-[11px] mt-1.5">
+                atau <span className="text-[#22d3ee] font-semibold underline underline-offset-4 decoration-[#22d3ee]/40">pilih file</span>
+              </p>
+              <p className="text-[#7e90ad]/35 text-[8px] mt-3 font-mono uppercase tracking-[.15em]">
+                {tab === 'video' ? 'Auto convert MP4 H.264' : 'Multiple select'}
+              </p>
+            </div>
+
+            {/* File list */}
+            {files.length > 0 && (
+              <div className="mt-4 stagger">
+                <div className="flex items-center justify-between px-0.5 mb-2">
+                  <span className="text-[#7e90ad] text-[10px] font-bold">
+                    {files.length} file · {fmtSize(files.reduce((s, f) => s + f.size, 0))}
+                  </span>
+                  <button onClick={clearAll} disabled={uploading} className="text-bad/60 text-[10px] font-bold hover:text-bad transition-all duration-[150ms] disabled:opacity-30">
+                    <i className="fa-solid fa-trash-can mr-1" />Hapus
+                  </button>
+                </div>
+
+                {isImg ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {files.map(f => {
+                      const key = f.name + f.size
+                      return (
+                        <div key={key} className="relative aspect-square rounded-[12px] overflow-hidden border border-white/[.07] group hover:border-[#3b82f6]/30 transition-all duration-[150ms]">
+                          {thumbs[key] && <img src={thumbs[key]} alt="" className="w-full h-full object-cover" />}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[150ms]" />
+                          <p className="absolute bottom-1 left-1.5 right-1.5 text-[7px] text-white font-bold truncate opacity-0 group-hover:opacity-100 transition-opacity duration-[150ms]">{f.name}</p>
+                          {!uploading && (
+                            <button onClick={(e) => { e.stopPropagation(); removeFile(f) }} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-bad/90 text-white text-[8px] grid place-items-center opacity-0 group-hover:opacity-100 transition-all duration-[150ms]">
+                              <i className="fa-solid fa-xmark" />
+                            </button>
+                          )}
                         </div>
-                        {!uploading && (
-                          <button onClick={() => removeFile(f)} className="w-7 h-7 shrink-0 rounded-[10px] bg-bad/10 border border-bad/20 text-bad text-[10px] grid place-items-center opacity-0 group-hover:opacity-100 hover:bg-bad/20 transition-all duration-[150ms]">
-                            <i className="fa-solid fa-xmark" />
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Progress */}
-          {uploading && (
-            <div className="mt-5 space-y-2.5 anim-fade">
-              <div className="flex items-center justify-between text-[11px] font-bold">
-                <span className="text-[#7e90ad]"><i className="fa-solid fa-paper-plane mr-1.5 text-[#22d3ee]" />Mengupload…</span>
-                <span className="font-mono text-[#22d3ee]">{progress}%</span>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {files.map(f => {
+                      const ext = f.name.split('.').pop().toUpperCase()
+                      return (
+                        <div key={f.name + f.size} className="flex items-center gap-2.5 py-2.5 px-3 rounded-[14px] bg-white/[.02] border border-white/[.05] group hover:border-white/[.10] transition-all duration-[150ms]">
+                          <span className="w-8 h-8 shrink-0 rounded-[10px] bg-[#3b82f6]/10 border border-[#3b82f6]/15 grid place-items-center">
+                            <i className="fa-solid fa-film text-[#67e8f9] text-[11px]" />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-[11px] truncate">{f.name}</p>
+                            <span className="text-[#7e90ad] text-[9px] font-mono">{fmtSize(f.size)}</span>
+                          </div>
+                          <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded-[5px]" style={{ color: TAG_COLORS[ext.toLowerCase()], background: `${TAG_COLORS[ext.toLowerCase()]}12` }}>{ext}</span>
+                          {!uploading && (
+                            <button onClick={() => removeFile(f)} className="w-6 h-6 shrink-0 rounded-full bg-bad/10 text-bad text-[9px] grid place-items-center opacity-0 group-hover:opacity-100 transition-all duration-[150ms]">
+                              <i className="fa-solid fa-xmark" />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-              <div className="progress-track"><div className="progress-fill" style={{ width: progress + '%' }} /></div>
-            </div>
-          )}
+            )}
 
-          {/* Upload / Cancel button */}
-          {files.length > 0 && (
-            <div className="mt-5">
-              {uploading ? (
-                <button onClick={cancelUpload} className="w-full py-3.5 rounded-[14px] font-bold text-sm text-bad bg-bad/10 border border-bad/30 hover:bg-bad/20 active:scale-[.97] transition-all duration-[150ms]">
-                  <i className="fa-solid fa-circle-stop mr-2" />Batalkan Upload
-                </button>
-              ) : (
-                <button onClick={doUpload} className="btn-primary w-full py-3.5 rounded-[14px] font-bold text-sm">
-                  <i className="fa-solid fa-cloud-arrow-up mr-2" />Upload {files.length} {tab === 'video' ? 'Video' : 'Foto'}
-                </button>
-              )}
-            </div>
-          )}
+            {/* Progress */}
+            {uploading && (
+              <div className="mt-4 anim-fade">
+                <div className="flex items-center justify-between mb-2 text-[11px] font-bold">
+                  <span className="text-[#7e90ad]"><i className="fa-solid fa-paper-plane mr-1.5 text-[#22d3ee]" />Mengupload…</span>
+                  <span className="font-mono text-[#22d3ee]">{progress}%</span>
+                </div>
+                <div className="progress-track"><div className="progress-fill" style={{ width: progress + '%' }} /></div>
+              </div>
+            )}
+
+            {/* Upload / Cancel button */}
+            {files.length > 0 && (
+              <div className="mt-4">
+                {uploading ? (
+                  <button onClick={cancelUpload} className="w-full py-3.5 rounded-[14px] font-bold text-sm text-bad bg-bad/8 border border-bad/25 hover:bg-bad/15 active:scale-[.97] transition-all duration-[150ms]">
+                    <i className="fa-solid fa-circle-stop mr-2" />Batalkan
+                  </button>
+                ) : (
+                  <button onClick={doUpload} className="btn-primary w-full py-3.5 rounded-[14px] font-bold text-sm">
+                    <i className="fa-solid fa-cloud-arrow-up mr-2" />Upload {files.length} {tab === 'video' ? 'Video' : 'Foto'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {result && <SuccessModal result={result} expireMinutes={result.expireMinutes} onClose={() => setResult(null)} />}
+      {result && <SuccessModal result={result} settings={settings} expireMinutes={result.expireMinutes} onClose={() => setResult(null)} />}
     </>
   )
 }
