@@ -567,3 +567,27 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 .anim-slide-down { animation: slideDown 450ms var(--ease-out) both; }
+
+/* ===== Hide scrollbar but keep scroll ===== */
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ===== Upload progress shimmer ===== */
+.progress-fill::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.25) 50%, transparent 100%);
+  animation: progressShimmer 1.5s ease-in-out infinite;
+}
+@keyframes progressShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.progress-fill { position: relative; overflow: hidden; }
+
+/* ===== Upload pulse glow on button ===== */
+@keyframes uploadPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,211,238,.3); }
+  50%      { box-shadow: 0 0 20px 4px rgba(34,211,238,.15); }
+}
+.upload-pulse { animation: uploadPulse 2s ease-in-out infinite; }

@@ -28,8 +28,8 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
   const linkBtns = popupBtns.length ? popupBtns : claimGrps
 
   return (
-    <div className={`fixed inset-0 z-[80] flex items-center justify-center p-4 transition-opacity duration-[280ms] ${vis ? 'opacity-100' : 'opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-      <div className="absolute inset-0 bg-[#020510]/92 backdrop-blur-md" />
+    <div className={`fixed inset-0 z-[80] overflow-hidden flex items-center justify-center p-3 sm:p-4 transition-opacity duration-[280ms] ${vis ? 'opacity-100' : 'opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+      <div className="absolute inset-0 bg-[#020510]/97 backdrop-blur-xl" />
 
       {/* Confetti */}
       {vis && (
@@ -40,19 +40,19 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
         </div>
       )}
 
-      <div className={`relative z-20 w-full max-w-[400px] max-h-[92dvh] overflow-y-auto transition-all duration-[400ms] ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.9] translate-y-8 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+      <div className={`relative z-20 w-full max-w-[400px] max-h-[calc(100dvh-24px)] transition-all duration-[400ms] ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.9] translate-y-8 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <div className="absolute -inset-10 rounded-[44px] bg-gradient-to-b from-ok/[.10] via-[#22d3ee]/[.05] to-transparent blur-3xl pointer-events-none" />
-        <div className="relative rounded-[24px] border border-white/[.08] bg-[#080e1c]/88 backdrop-blur-2xl shadow-[0_40px_100px_-20px_rgba(0,0,0,.85)] overflow-hidden">
+        <div className="relative max-h-[calc(100dvh-24px)] rounded-[24px] border border-white/[.1] bg-[#06101f]/[.98] backdrop-blur-2xl shadow-[0_40px_100px_-20px_rgba(0,0,0,.95)] overflow-hidden flex flex-col">
           {/* Top shimmer */}
           <div className="absolute top-0 inset-x-0 h-px"><div className="h-full bg-gradient-to-r from-transparent via-ok/60 to-transparent modal-shimmer" /></div>
 
           {/* ─── Header ─── */}
-          <div className="text-center pt-7 pb-3 px-6">
+          <div className="text-center pt-5 sm:pt-7 pb-3 px-6 shrink-0">
             <div className="relative inline-block mb-4">
               <div className="absolute -inset-6 rounded-full success-ring-1" />
               <div className="absolute -inset-10 rounded-full success-ring-2" />
               <div className="absolute -inset-5 rounded-full bg-ok/12 blur-xl success-halo pointer-events-none" />
-              <div className={`relative w-[68px] h-[68px] mx-auto rounded-full grid place-items-center transition-all duration-[500ms] ${checkDone ? 'scale-100 rotate-0' : 'scale-0 -rotate-45'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+              <div className={`relative w-[58px] h-[58px] mx-auto rounded-full grid place-items-center transition-all duration-[500ms] ${checkDone ? 'scale-100 rotate-0' : 'scale-0 -rotate-45'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}> 
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/25 to-ok/5 border border-ok/35" />
                 <i className="fa-solid fa-check text-ok text-[26px] relative drop-shadow-[0_0_14px_rgba(52,211,153,.8)]" />
               </div>
@@ -66,12 +66,12 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           </div>
 
           {/* ─── Code cards ─── */}
-          <div className="px-5 space-y-2.5">
+          <div className="px-5 space-y-2.5 overflow-y-auto overscroll-contain scrollbar-none">
             {codes.map(({ code, name }) => (
               <div key={code} onClick={() => copy(code)} className="relative rounded-[16px] bg-[#04101f]/90 border border-[#22d3ee]/20 p-4 text-center cursor-pointer group hover:border-[#22d3ee]/40 transition-all duration-[200ms] active:scale-[.98] overflow-hidden">
                 <div className="absolute top-0 left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-[#22d3ee]/35 to-transparent" />
                 {name && <p className="text-[#7e90ad] text-[9px] truncate mb-1.5 relative">{name}</p>}
-                <p className="font-mono font-bold text-[24px] tracking-[.08em] code-text select-all relative">.claim {code}</p>
+                <p className="font-mono font-bold text-[22px] sm:text-[24px] tracking-[.06em] code-text select-all relative">.claim {code}</p>
                 <p className={`text-[9px] font-bold mt-2 transition-colors duration-[150ms] ${copied === code ? 'text-ok' : 'text-[#7e90ad]/60 group-hover:text-[#22d3ee]/80'}`}>
                   <i className={`fa-solid ${copied === code ? 'fa-check' : 'fa-copy'} mr-1`} />
                   {copied === code ? 'Tersalin!' : 'Tap untuk salin kode'}
@@ -128,7 +128,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
             </a>
           </div>
 
-          <div className="p-5 pt-3">
+          <div className="p-5 pt-3 shrink-0 bg-[#06101f]/[.98]">
             <button onClick={close} className="btn-primary w-full py-3.5 rounded-[14px] font-bold text-[13px] group">
               Selesai <i className="fa-solid fa-arrow-right ml-1.5 group-hover:translate-x-1 transition-transform duration-[150ms]" />
             </button>
