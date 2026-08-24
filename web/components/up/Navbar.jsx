@@ -1,30 +1,31 @@
 'use client'
 
 export default function Navbar({ settings, onFaq, onAbout }) {
+  const btn = 'w-9 h-9 rounded-full grid place-items-center border transition-all duration-[200ms] active:scale-90'
   return (
-    <nav className="flex items-center justify-between py-3 mb-4 anim-entrance">
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#25D366] to-[#128C7E] grid place-items-center shrink-0">
-          <i className="fa-brands fa-whatsapp text-white text-sm" />
+    <nav className="sticky top-3 z-40 nav-pill rounded-[18px] px-3 py-2.5 flex items-center justify-between mb-6 anim-slide-down">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="relative w-9 h-9 shrink-0 rounded-[11px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_4px_16px_-4px_rgba(37,211,102,.5)]">
+          <span className="absolute inset-[1px] rounded-[10px] bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+          <i className="fa-brands fa-whatsapp text-white text-[15px] relative" />
         </div>
-        <div className="min-w-0">
-          <p className="text-sm font-bold truncate leading-tight">{settings?.siteName || 'SHIROWAHD'}</p>
-          <p className="text-[8px] text-[#7e90ad]/50 font-bold tracking-[.12em] uppercase">SWHDHLZ</p>
+        <div className="min-w-0 leading-tight">
+          <p className="font-[family-name:var(--font-display)] font-bold text-[14px] tracking-tight truncate">{settings?.siteName || 'SHIROWAHD'}</p>
+          <p className="text-[#7e90ad] text-[8px] font-bold tracking-[.15em] uppercase truncate">SWHDHLZ · BY HILLZ</p>
         </div>
       </div>
-      <div className="flex items-center gap-1">
-        {[
-          { fn: onFaq, i: 'fa-circle-question', t: 'FAQ' },
-          { fn: onAbout, i: 'fa-circle-info', t: 'About' },
-        ].map(b => (
-          <button key={b.t} onClick={b.fn} title={b.t}
-            className="w-8 h-8 rounded-lg grid place-items-center text-[#7e90ad]/50 hover:text-[#7e90ad] hover:bg-white/[.04] active:scale-90 transition-all duration-150">
-            <i className={`fa-solid ${b.i} text-sm`} />
-          </button>
-        ))}
-        <a href="/admin" title="Admin"
-          className="w-8 h-8 rounded-lg grid place-items-center text-[#7e90ad]/50 hover:text-[#7e90ad] hover:bg-white/[.04] active:scale-90 transition-all duration-150">
-          <i className="fa-solid fa-gear text-sm" />
+
+      {/* Quick actions */}
+      <div className="flex items-center gap-1.5">
+        <button onClick={onFaq} title="FAQ" className={`${btn} bg-white/[.04] border-white/[.08] text-[#7e90ad] hover:text-[#22d3ee] hover:border-[#22d3ee]/30 hover:bg-[#22d3ee]/[.08]`}>
+          <i className="fa-solid fa-circle-question text-[13px]" />
+        </button>
+        <button onClick={onAbout} title="Tentang" className={`${btn} bg-white/[.04] border-white/[.08] text-[#7e90ad] hover:text-[#3b82f6] hover:border-[#3b82f6]/30 hover:bg-[#3b82f6]/[.08]`}>
+          <i className="fa-solid fa-circle-info text-[13px]" />
+        </button>
+        <a href="/admin" title="Admin" className={`${btn} bg-white/[.04] border-white/[.08] text-[#7e90ad] hover:text-[#34d399] hover:border-[#34d399]/30 hover:bg-[#34d399]/[.08]`}>
+          <i className="fa-solid fa-user-shield text-[12px]" />
         </a>
       </div>
     </nav>
