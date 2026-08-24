@@ -102,7 +102,7 @@ export default function UploadPanel({ settings, toast }) {
         </div>
 
         {/* Main upload card */}
-        <div className="card overflow-visible">
+        <div className="card card-3d overflow-visible">
           <div className="absolute -inset-6 -z-10 rounded-[32px] bg-gradient-to-b from-[#22d3ee]/[.04] via-transparent to-[#3b82f6]/[.03] blur-xl pointer-events-none" />
           <div className="p-5">
             {/* Format badges + server info */}
@@ -126,7 +126,7 @@ export default function UploadPanel({ settings, toast }) {
               onDrop={handleDrop}
               onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
               onDragLeave={() => setDrag(false)}
-              className={`drop-luxe py-10 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
+              className={`drop-luxe drop-3d py-10 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
             >
               <input ref={fileRef} type="file" accept={accept} multiple className="hidden" onChange={e => addFiles(e.target.files)} />
               <div className="drop-halo">
@@ -254,11 +254,11 @@ export default function UploadPanel({ settings, toast }) {
             {files.length > 0 && (
               <div className="mt-4">
                 {uploading ? (
-                  <button onClick={cancelUpload} className="w-full py-3.5 rounded-[14px] font-bold text-sm text-bad bg-bad/8 border border-bad/25 hover:bg-bad/15 active:scale-[.97] transition-all duration-[150ms]">
+                  <button onClick={cancelUpload} className="w-full py-3.5 rounded-[14px] font-bold text-sm text-bad bg-bad/8 border border-bad/25 hover:bg-bad/15 btn-3d active:scale-[.97] transition-all duration-[150ms]">
                     <i className="fa-solid fa-circle-stop mr-2" />Batalkan
                   </button>
                 ) : (
-                  <button onClick={doUpload} className="btn-primary w-full py-3.5 rounded-[14px] font-bold text-sm">
+                  <button onClick={doUpload} className="btn-primary btn-3d w-full py-3.5 rounded-[14px] font-bold text-sm">
                     <i className="fa-solid fa-cloud-arrow-up mr-2" />Upload {files.length} {tab === 'video' ? 'Video' : 'Foto'}
                   </button>
                 )}

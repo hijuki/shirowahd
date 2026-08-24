@@ -4,7 +4,7 @@ export default function Navbar({ settings, onFaq, onAbout }) {
   const btn = 'w-9 h-9 rounded-full grid place-items-center border transition-all duration-[200ms] active:scale-90'
   const logoUrl = settings?.logoUrl || ''
   return (
-    <nav className="sticky top-3 z-40 nav-pill rounded-[18px] px-3 py-2.5 flex items-center justify-between mb-6 anim-slide-down">
+    <nav className="sticky top-3 z-40 nav-pill nav-3d rounded-[18px] px-3 py-2.5 flex items-center justify-between mb-6 anim-slide-down">
       {/* Brand */}
       <div className="flex items-center gap-2.5 min-w-0">
         {logoUrl ? (

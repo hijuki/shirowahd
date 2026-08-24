@@ -48,17 +48,17 @@ export default function UploaderPage() {
           <Navbar settings={settings} onFaq={() => setFaqOpen(true)} onAbout={() => setAboutOpen(true)} />
 
           {/* Hero */}
-          <header className="text-center mb-8 anim-entrance" style={{ animationDelay: '60ms' }}>
+          <header className="text-center mb-8 anim-entrance perspective-container" style={{ animationDelay: '60ms' }}>
             {/* Logo */}
             <div className="relative inline-block mb-5">
               <div className="absolute -inset-3 rounded-[26px] border-ring-spin pointer-events-none" />
               <div className="absolute -inset-5 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
               {logoUrl ? (
-                <div className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden shadow-[0_0_60px_-8px_rgba(34,211,238,.55)] floaty bg-[#080e1c]">
+                <div className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden logo-3d bg-[#080e1c]">
                   <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
                 </div>
               ) : (
-                <div className="relative w-[76px] h-[76px] rounded-[24px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_0_60px_-8px_rgba(34,211,238,.55)] floaty">
+                <div className="relative w-[76px] h-[76px] rounded-[24px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center logo-3d">
                   <span className="absolute inset-[2px] rounded-[22px] bg-[#080e1c]/70 backdrop-blur-sm" />
                   <i className="fa-brands fa-whatsapp text-white text-[34px] relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
                 </div>
@@ -81,14 +81,14 @@ export default function UploaderPage() {
             </div>
           </header>
 
-          {/* 3-step guide — glass cards */}
-          <div className="grid grid-cols-3 gap-2 mb-6 anim-entrance" style={{ animationDelay: '120ms' }}>
+          {/* 3-step guide — 3D glass cards */}
+          <div className="grid grid-cols-3 gap-2 mb-6 anim-entrance perspective-container" style={{ animationDelay: '120ms' }}>
             {[
               { n: 1, t: 'Upload', sub: 'Pilih file', i: 'fa-cloud-arrow-up', c: '#22d3ee' },
               { n: 2, t: 'Kode', sub: 'Dapat klaim', i: 'fa-key', c: '#3b82f6' },
               { n: 3, t: 'Claim', sub: 'Kirim di grup', i: 'fa-comments', c: '#34d399' },
             ].map((s, i) => (
-              <div key={s.n} className="relative rounded-[18px] border border-white/[.06] overflow-hidden group step-card-hover" style={{ animationDelay: `${120 + i * 80}ms` }}>
+              <div key={s.n} className="relative rounded-[18px] border border-white/[.06] overflow-hidden group step-3d" style={{ animationDelay: `${120 + i * 80}ms` }}>
                 <div className="absolute inset-0 bg-gradient-to-b from-white/[.02] to-transparent" />
                 <div className="absolute top-0 left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent to-transparent" style={{ '--tw-gradient-via': `${s.c}40`, backgroundImage: `linear-gradient(to right, transparent, ${s.c}40, transparent)` }} />
                 <div className="relative flex flex-col items-center py-4 px-2 text-center">
