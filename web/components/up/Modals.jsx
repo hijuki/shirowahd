@@ -97,11 +97,12 @@ function CloseBtn({ onClick }) {
 }
 
 /* ─── Link buttons ─── */
-export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], groups = [] }) {
+export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], popupButtons = [], settings = {} }) {
   const items = []
-  if (ownerWhatsapp) items.push({ i: 'fa-brands fa-whatsapp', t: 'Chat Developer', s: 'Hubungi langsung', href: `https://wa.me/${String(ownerWhatsapp).replace(/[^0-9]/g, '')}`, c: '#25D366', feat: true })
-  channels.slice(0, 2).forEach(ch => items.push({ i: 'fa-solid fa-tower-broadcast', t: ch.name || 'Saluran', s: 'Saluran resmi', href: ch.link, c: '#22d3ee' }))
-  claimGroups.slice(0, 2).forEach(g => items.push({ i: 'fa-solid fa-comments', t: g.name || 'Grup Claim', s: 'Klaim file di sini', href: g.link, c: '#34d399' }))
+  if (ownerWhatsapp && settings.showOwnerBtn !== false) items.push({ i: 'fa-brands fa-whatsapp', t: 'Chat Developer', s: 'Hubungi langsung', href: `https://wa.me/${String(ownerWhatsapp).replace(/[^0-9]/g, '')}`, c: '#25D366', feat: true })
+  if (settings.showChannelsBtn !== false) channels.slice(0, 2).forEach(ch => items.push({ i: 'fa-solid fa-tower-broadcast', t: ch.name || 'Saluran', s: 'Saluran resmi', href: ch.link, c: '#22d3ee' }))
+  if (settings.showClaimBtn !== false) claimGroups.slice(0, 2).forEach(g => items.push({ i: 'fa-solid fa-comments', t: g.name || 'Grup Claim', s: 'Klaim file di sini', href: g.link, c: '#34d399' }))
+  if (settings.showPopupBtns !== false) popupButtons.filter(b => b.link).slice(0, 3).forEach(b => items.push({ i: 'fa-solid fa-link', t: b.name || 'Link', s: 'Buka link', href: b.link, c: '#3b82f6' }))
   if (!items.length) return null
   return (
     <div className={`grid gap-2 ${items.length === 1 ? '' : items.length <= 4 && items.length % 2 === 0 ? 'grid-cols-2' : ''}`}>
@@ -224,13 +225,13 @@ export function IntroModal({ onDone, settings }) {
 
       {/* ── Contacts ── */}
       <div className={`transition-all duration-[500ms] ${phase >= 4 ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-        {(settings?.ownerWhatsapp || settings?.channels?.length || settings?.claimGroups?.length) ? (
+        {(settings?.ownerWhatsapp || settings?.channels?.length || settings?.claimGroups?.length || settings?.popupButtons?.length) ? (
           <>
             <p className="text-[8px] font-extrabold tracking-[.18em] uppercase text-[#7e90ad]/60 mb-2 flex items-center gap-2">
               <span className="flex-1 h-px bg-white/[.06]" />Terhubung<span className="flex-1 h-px bg-white/[.06]" />
             </p>
             <div className="mb-5">
-              <LinkButtons ownerWhatsapp={settings?.ownerWhatsapp} channels={settings?.channels} claimGroups={settings?.claimGroups} groups={settings?.groups} />
+              <LinkButtons ownerWhatsapp={settings?.ownerWhatsapp} channels={settings?.channels} claimGroups={settings?.claimGroups} popupButtons={settings?.popupButtons} settings={settings} />
             </div>
           </>
         ) : null}

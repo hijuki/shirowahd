@@ -25,8 +25,9 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
   const pct = Math.max(0, (left / (expireMinutes * 60000)) * 100)
   const urgent = left < 5 * 60000
 
-  const popupBtns = settings?.popupButtons?.filter(b => b.link) || []
-  const claimGrps = settings?.claimGroups?.filter(g => g.link) || []
+  // Respect admin toggles
+  const popupBtns = (settings?.showPopupBtns !== false && settings?.popupButtons?.filter(b => b.link)) || []
+  const claimGrps = (settings?.showClaimBtn !== false && settings?.claimGroups?.filter(g => g.link)) || []
   const linkBtns = popupBtns.length ? popupBtns : claimGrps
 
   return (
