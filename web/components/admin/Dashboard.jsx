@@ -139,7 +139,7 @@ export default function Dashboard({ toast }) {
               </div>
               <div className="divider-glow my-2" />
               <div className="flex justify-between text-sm"><span className="text-[#7e90ad]"><i className="fa-solid fa-clock mr-2" />Uptime</span><span className="font-semibold font-mono">{fmtUptime(system.uptime)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-[#7e90ad]"><i className="fa-solid fa-gauge-high mr-2" />Load Avg</span><span className="font-mono text-xs">{(system.loadavg || []).map(l => Number(l).toFixed(2)).join(' · ') || '—'}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-[#7e90ad]"><i className="fa-solid fa-gauge-high mr-2" />Load Avg</span><span className="font-mono text-xs">{(typeof system.loadavg === "string" ? system.loadavg.split(" ") : (system.loadavg || [])).map(l => Number(l).toFixed(2)).join(' · ') || '—'}</span></div>
             </>
           )}
           <div className="divider-glow my-2" />
