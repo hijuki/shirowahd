@@ -567,3 +567,89 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 .anim-slide-down { animation: slideDown 450ms var(--ease-out) both; }
+
+/* ═══════════════════════════════════════════
+   NEW POPUP SYSTEM — Premium Effects v2
+   ═══════════════════════════════════════════ */
+
+/* Hide scrollbar in modal scroll area */
+.modal-scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.modal-scroll-hide::-webkit-scrollbar { display: none; }
+
+/* ── Floating sparkle dots in backdrop ── */
+@keyframes sparklePulse {
+  0%   { transform: scale(0) translate(0, 0); opacity: 0; }
+  20%  { transform: scale(1); opacity: .8; }
+  80%  { opacity: .3; }
+  100% { transform: scale(0) translate(10px, -20px); opacity: 0; }
+}
+.sparkle-dot {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--sparkle-color, #22d3ee);
+  box-shadow: 0 0 6px var(--sparkle-color, #22d3ee);
+  animation: sparklePulse 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Animated gradient border sweep (top of modal) ── */
+@keyframes gradBorderSweep {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+.grad-border-sweep {
+  background: linear-gradient(90deg, transparent, #22d3ee, #3b82f6, #34d399, #3b82f6, #22d3ee, transparent);
+  animation: gradBorderSweep 3s ease-in-out infinite alternate;
+}
+
+/* ── Button shine sweep ── */
+@keyframes shineSweep {
+  0%   { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+.btn-shine-sweep::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.2) 50%, transparent 60%);
+  animation: shineSweep 3s ease-in-out infinite;
+}
+
+/* ── Check sparkle burst particles ── */
+@keyframes checkSparkleBurst {
+  0%   { transform: translate(0, 0) scale(0); opacity: 0; }
+  30%  { transform: translate(
+           calc(cos(var(--angle)) * var(--dist)),
+           calc(sin(var(--angle)) * var(--dist))
+         ) scale(1.5); opacity: 1; }
+  100% { transform: translate(
+           calc(cos(var(--angle)) * var(--dist) * 1.5),
+           calc(sin(var(--angle)) * var(--dist) * 1.5)
+         ) scale(0); opacity: 0; }
+}
+.check-sparkle {
+  background: var(--color, #34d399);
+  box-shadow: 0 0 4px var(--color, #34d399);
+  animation: checkSparkleBurst 800ms var(--ease-out) both;
+  pointer-events: none;
+}
+
+/* ── Link button hover glow ── */
+.link-btn-premium {
+  transition: all 200ms var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+.link-btn-premium::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(52,211,153,.08), transparent 70%);
+  opacity: 0;
+  transition: opacity 200ms;
+}
+.link-btn-premium:hover::before { opacity: 1; }
+.link-btn-premium:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+.link-btn-premium:active { transform: scale(.97); }
