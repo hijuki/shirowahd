@@ -11,6 +11,7 @@ import { tmpdir } from 'os';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 80;
 const PAGE = join(__dirname, 'upload-page.html');
+const DIST = join(__dirname, 'upload-app', 'dist');
 const ADMIN_PAGE = join(__dirname, 'admin.html');
 const SETTINGS_FILE = join(__dirname, 'admin-settings.json');
 const UPLOAD_LOG_FILE = join(__dirname, 'upload-log.json');
@@ -343,12 +344,42 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && (url === '/' || url === '')) {
+    // ponytail: no cache headers — single VPS, low traffic; add Cache-Control when traffic grows
+    const indexHtml = join(DIST, 'index.html');
+    if (existsSync(indexHtml)) {
+      try {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(readFileSync(indexHtml));
+        return;
+      } catch {}
+    }
     try {
       const html = readFileSync(PAGE, 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
     } catch { res.writeHead(500); res.end('Page not found'); }
     return;
+  }
+
+  // static assets from upload-app/dist
+  if (req.method === 'GET' && url.startsWith('/assets/')) {
+    const rel = url.split('?')[0].replace(/\.\./g, '');
+    const file = join(DIST, rel);
+    if (existsSync(file) && file.startsWith(DIST)) {
+      const types = { '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.map': 'application/json' };
+      res.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream' });
+      res.end(readFileSync(file));
+      return;
+    }
+  }
+
+  if (req.method === 'GET' && url === '/favicon.svg') {
+    const fav = join(DIST, 'favicon.svg');
+    if (existsSync(fav)) {
+      res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+      res.end(readFileSync(fav));
+      return;
+    }
   }
 
   if (req.method === 'GET' && url === '/api/settings/public') {

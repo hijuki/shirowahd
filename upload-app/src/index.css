@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #020617;
+  --color-panel: rgba(8, 18, 42, 0.62);
+  --color-line: rgba(121, 180, 255, 0.15);
+  --color-line2: rgba(66, 156, 255, 0.35);
+  --color-ink: #f5f9ff;
+  --color-muted: #8196b8;
+  --color-brand: #1677ff;
+  --color-brand2: #168cff;
+  --color-cyan: #3bc8ff;
+  --color-ok: #34d399;
+  --color-bad: #f87171;
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(0, 119, 255, 0.18), transparent 28%),
+    radial-gradient(circle at 5% 60%, rgba(0, 90, 255, 0.10), transparent 25%),
+    radial-gradient(circle at 95% 40%, rgba(0, 207, 255, 0.08), transparent 25%),
+    #020617;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(22, 119, 255, 0.08), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(59, 200, 255, 0.04), transparent 40%);
+}
+
+::selection { background: #2497ff; color: #fff; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 2px; }
+
+@keyframes emerge {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseDot {
+  50% { transform: scale(1.7); opacity: .5; }
+}
+@keyframes shimLine {
+  0%, 100% { opacity: .2; left: 20%; right: 20%; }
+  50%      { opacity: .6; left: 10%; right: 10%; }
+}
+@keyframes orbA {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(30px, -20px); }
+}
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.92) translateY(14px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-12px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.anim-emerge { animation: emerge .6s cubic-bezier(.16, 1, .3, 1) both; }
+.anim-pop { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) both; }
+.anim-fade { animation: fadeIn .3s ease both; }
+
+.glass {
+  background: linear-gradient(155deg, rgba(9,26,59,.84), rgba(2,11,26,.82));
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 25px 80px rgba(0,80,255,.12), inset 0 1px rgba(255,255,255,.06);
+  position: relative;
+  overflow: hidden;
+}
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(125deg, rgba(255,255,255,.05), transparent 18%, transparent 75%, rgba(34,142,255,.04));
+}
+.shimmer-top::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(22,119,255,.35), transparent);
+  animation: shimLine 3s ease-in-out infinite;
+}
+
+.grad-text {
+  background: linear-gradient(100deg, #fff 15%, #5ec7ff 48%, #136cff 78%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
