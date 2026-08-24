@@ -462,3 +462,101 @@ body {
 @keyframes rippleOut {
   to { transform: scale(2.5); opacity: 0; }
 }
+
+/* ===== Logo rotating ring (conic border) ===== */
+@keyframes ringSpin { to { transform: rotate(360deg); } }
+.border-ring-spin {
+  border-radius: 28px;
+  padding: 1.5px;
+  background: conic-gradient(from 0deg, transparent 0%, rgba(34,211,238,.7) 12%, transparent 25%, transparent 50%, rgba(59,130,246,.6) 62%, transparent 75%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: ringSpin 6s linear infinite;
+}
+
+/* ===== Floating orbs ===== */
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(30px, -40px) scale(1.15); }
+  66%      { transform: translate(-20px, 25px) scale(.92); }
+}
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(-35px, -25px) scale(.9); }
+  66%      { transform: translate(20px, 30px) scale(1.1); }
+}
+.orb-float   { animation: orbFloat1 18s ease-in-out infinite; }
+.orb-float-2 { animation: orbFloat2 22s ease-in-out infinite; }
+
+/* ===== Step cards hover ===== */
+.step-card-hover { transition: all 250ms var(--ease-out); background: rgba(255,255,255,.02); }
+.step-card-hover:hover {
+  transform: translateY(-3px);
+  background: rgba(255,255,255,.05);
+  box-shadow: 0 14px 34px -10px rgba(34,211,238,.25);
+}
+
+/* ===== Contact/link buttons ===== */
+.contact-btn { transition: all 200ms var(--ease-out); backdrop-filter: blur(8px); }
+.contact-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.25);
+}
+.contact-btn:hover .contact-glow { opacity: 1; }
+
+/* ===== Expire progress ring/bar ===== */
+.expire-bar {
+  height: 4px; border-radius: 99px; overflow: hidden;
+  background: rgba(255,255,255,.06);
+}
+.expire-bar > div {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #34d399, #22d3ee);
+  transition: width 1s linear;
+  box-shadow: 0 0 12px rgba(34,211,238,.5);
+}
+
+/* ===== Success burst rings ===== */
+@keyframes ringBurst1 {
+  0%   { transform: scale(0); opacity: .8; border-width: 3px; }
+  80%  { transform: scale(1.8); opacity: 0; border-width: 1px; }
+  100% { transform: scale(2); opacity: 0; border-width: 0; }
+}
+@keyframes ringBurst2 {
+  0%   { transform: scale(0); opacity: .5; border-width: 2px; }
+  80%  { transform: scale(2.2); opacity: 0; border-width: 1px; }
+  100% { transform: scale(2.5); opacity: 0; border-width: 0; }
+}
+.success-ring-1 {
+  border: 2px solid rgba(52,211,153,.4);
+  animation: ringBurst1 1s var(--ease-out) both;
+  animation-delay: 300ms;
+  pointer-events: none;
+}
+.success-ring-2 {
+  border: 2px solid rgba(34,211,238,.3);
+  animation: ringBurst2 1.2s var(--ease-out) both;
+  animation-delay: 500ms;
+  pointer-events: none;
+}
+
+/* ===== Confetti particles ===== */
+@keyframes confettiFall {
+  0%   { transform: translate(0, -20px) rotate(0deg) scale(0); opacity: 0; }
+  15%  { opacity: 1; transform: translate(0, 0) rotate(30deg) scale(1); }
+  100% { transform: translate(var(--drift), 85vh) rotate(540deg) scale(.3); opacity: 0; }
+}
+.confetti-particle {
+  position: absolute;
+  top: 20%;
+  left: var(--x);
+  width: 6px; height: 6px;
+  border-radius: 2px;
+  background: var(--color);
+  animation: confettiFall 2.8s var(--ease-out) both;
+  animation-delay: var(--delay);
+  pointer-events: none;
+}
+.confetti-particle:nth-child(odd) { border-radius: 50%; width: 5px; height: 5px; }
+.confetti-particle:nth-child(3n)  { width: 8px; height: 3px; border-radius: 1px; }
