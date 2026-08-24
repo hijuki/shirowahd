@@ -29,6 +29,16 @@ export default function HistorySection() {
 
   const copyCode = (code, ts) => {
     navigator.clipboard.writeText(code)
+    // Pop sound
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = ctx.createOscillator(), gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = 'sine'; osc.frequency.value = 1200
+      gain.gain.setValueAtTime(0.1, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15)
+      osc.start(); osc.stop(ctx.currentTime + 0.15)
+    } catch {}
     setCopied(ts)
     setTimeout(() => setCopied(null), 1500)
   }

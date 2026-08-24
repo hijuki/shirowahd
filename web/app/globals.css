@@ -25,22 +25,56 @@
 html { scroll-behavior: smooth; }
 body {
   min-height: 100dvh;
-  color: var(--color-ink);
+  color: var(--t-ink);
   font-family: var(--font-sans);
   font-size: 15px;
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
-  background: #04070f;
+  background: var(--t-bg);
+  transition: background 450ms var(--ease-out), color 450ms var(--ease-out);
 }
 
 ::selection { background: rgba(34,211,238,.35); color: #fff; }
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(59,130,246,.25); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: var(--t-scrollbar); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,.45); }
 
 /* ===== Easing token ===== */
-:root { --ease-out: cubic-bezier(.22,1,.36,1); }
+:root {
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  /* Dark theme (default) */
+  --t-bg: #04070f;
+  --t-surface: rgba(255,255,255,.04);
+  --t-surface2: rgba(255,255,255,.02);
+  --t-border: rgba(255,255,255,.07);
+  --t-border2: rgba(255,255,255,.04);
+  --t-ink: #e8f1ff;
+  --t-muted: #7e90ad;
+  --t-nav: rgba(4,7,15,.8);
+  --t-overlay: rgba(0,0,0,.7);
+  --t-aurora-blue: rgba(59,130,246,.18);
+  --t-aurora-cyan: rgba(34,211,238,.14);
+  --t-aurora-green: rgba(52,211,153,.10);
+  --t-shadow: rgba(0,0,0,.5);
+  --t-scrollbar: rgba(59,130,246,.25);
+}
+[data-theme="light"] {
+  --t-bg: #f0f4f8;
+  --t-surface: rgba(255,255,255,.75);
+  --t-surface2: rgba(255,255,255,.5);
+  --t-border: rgba(59,130,246,.12);
+  --t-border2: rgba(59,130,246,.08);
+  --t-ink: #0f172a;
+  --t-muted: #475569;
+  --t-nav: rgba(255,255,255,.85);
+  --t-overlay: rgba(0,0,0,.4);
+  --t-aurora-blue: rgba(59,130,246,.08);
+  --t-aurora-cyan: rgba(34,211,238,.06);
+  --t-aurora-green: rgba(52,211,153,.05);
+  --t-shadow: rgba(0,0,0,.12);
+  --t-scrollbar: rgba(59,130,246,.15);
+}
 
 /* ===== Aurora background ===== */
 .bg-aurora {
@@ -110,13 +144,14 @@ body {
 
 /* ===== Card recipe ===== */
 .card {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-radius: 20px;
   position: relative;
   overflow: hidden;
+  transition: background 450ms var(--ease-out), border-color 450ms var(--ease-out);
 }
 .card::before {
   content: "";
@@ -206,11 +241,12 @@ body {
 
 /* ===== Nav pill ===== */
 .nav-pill {
-  background: rgba(4,7,15,.8);
+  background: var(--t-nav);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,.07);
-  box-shadow: 0 10px 32px -10px rgba(0,0,0,.5);
+  border: 1px solid var(--t-border);
+  box-shadow: 0 10px 32px -10px var(--t-shadow);
+  transition: background 450ms var(--ease-out), border-color 450ms var(--ease-out);
 }
 
 /* ===== Tab pill ===== */
@@ -223,7 +259,7 @@ body {
 /* ===== Drop zone ===== */
 .drop-luxe {
   position: relative; border-radius: 20px;
-  overflow: hidden; background: rgba(59,130,246,.03);
+  overflow: hidden; background: var(--t-surface2);
 }
 .drop-luxe::before {
   content: '';
@@ -780,4 +816,148 @@ body {
   box-shadow:
     0 20px 40px -8px rgba(0,0,0,.5),
     0 0 32px -4px rgba(34,211,238,.3);
+}
+
+/* ===== ANIME EFFECTS ===== */
+
+/* Sparkle/star burst — floating sparkles */
+@keyframes animeSparkle {
+  0%   { transform: scale(0) rotate(0deg); opacity: 0; }
+  20%  { transform: scale(1) rotate(90deg); opacity: 1; }
+  80%  { transform: scale(.8) rotate(270deg); opacity: .6; }
+  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+}
+.anime-sparkle {
+  position: absolute;
+  width: 6px; height: 6px;
+  background: #fff;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  animation: animeSparkle 2s var(--ease-out) infinite;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* Speed lines — horizontal zoom */
+@keyframes speedLine {
+  0%   { transform: translateX(-100%) scaleX(0); opacity: 0; }
+  20%  { opacity: .6; }
+  100% { transform: translateX(200%) scaleX(1); opacity: 0; }
+}
+.speed-lines {
+  position: absolute; inset: 0;
+  overflow: hidden; pointer-events: none;
+}
+.speed-lines::before,
+.speed-lines::after {
+  content: '';
+  position: absolute;
+  height: 1px;
+  width: 60%;
+  background: linear-gradient(90deg, transparent, rgba(34,211,238,.5), transparent);
+  animation: speedLine 1.5s ease-in-out infinite;
+}
+.speed-lines::before { top: 30%; left: 0; animation-delay: 0s; }
+.speed-lines::after  { top: 70%; left: 10%; animation-delay: .5s; }
+
+/* Manga burst ring — radial impact */
+@keyframes mangaBurst {
+  0%   { transform: scale(0); opacity: 1; border-width: 3px; }
+  60%  { opacity: .6; }
+  100% { transform: scale(2.5); opacity: 0; border-width: 1px; }
+}
+.manga-burst {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid rgba(34,211,238,.6);
+  animation: mangaBurst 1s var(--ease-out) both;
+  pointer-events: none;
+}
+
+/* Anime glow pulse */
+@keyframes animeGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(34,211,238,.2), 0 0 24px rgba(59,130,246,.1); }
+  50%      { box-shadow: 0 0 24px rgba(34,211,238,.4), 0 0 48px rgba(59,130,246,.2); }
+}
+.anime-glow { animation: animeGlow 3s ease-in-out infinite; }
+
+/* Anime text shimmer — gradient slide */
+@keyframes animeTextShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.anime-text {
+  background: linear-gradient(90deg, #e8f1ff 0%, #22d3ee 25%, #3b82f6 50%, #34d399 75%, #e8f1ff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: animeTextShimmer 4s linear infinite;
+}
+
+/* Kawaii bounce */
+@keyframes kawaiiPop {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.15) rotate(-2deg); }
+  50%  { transform: scale(.95) rotate(1deg); }
+  70%  { transform: scale(1.05); }
+  100% { transform: scale(1) rotate(0); }
+}
+.kawaii-pop { animation: kawaiiPop 600ms var(--ease-out); }
+
+/* Anime energy ring around elements */
+@keyframes energyRing {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.energy-ring {
+  position: absolute; inset: -6px;
+  border-radius: 50%;
+  border: 2px dashed rgba(34,211,238,.3);
+  animation: energyRing 8s linear infinite;
+  pointer-events: none;
+}
+
+/* Skeleton shimmer */
+@keyframes skeletonShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--t-surface) 25%, rgba(34,211,238,.06) 50%, var(--t-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+  border-radius: 12px;
+}
+.skeleton-text {
+  height: 12px;
+  border-radius: 6px;
+}
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+/* Light theme overrides for specific components */
+[data-theme="light"] .bg-aurora::before { opacity: .4; }
+[data-theme="light"] .bg-grid { opacity: .15; }
+[data-theme="light"] .bg-noise { opacity: .03; }
+[data-theme="light"] .grad-text {
+  background: linear-gradient(100deg, #0f172a 10%, #0891b2 40%, #2563eb 70%, #059669 95%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+[data-theme="light"] .anime-text {
+  background: linear-gradient(90deg, #0f172a 0%, #0891b2 25%, #2563eb 50%, #059669 75%, #0f172a 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+[data-theme="light"] ::selection { background: rgba(34,211,238,.25); color: #000; }
+[data-theme="light"] .glass {
+  background: rgba(255,255,255,.6);
+  border-color: rgba(59,130,246,.15);
+  box-shadow: 0 24px 64px -16px rgba(0,0,0,.1);
+}
+[data-theme="light"] .toast-card {
+  background: rgba(255,255,255,.92);
+  border-color: rgba(59,130,246,.1);
+  box-shadow: 0 12px 40px -10px rgba(0,0,0,.15);
 }
