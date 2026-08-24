@@ -710,6 +710,39 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // === BACKUP TO GITHUB ===
+  if (req.method === 'POST' && url === '/admin/api/backup') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const { execSync } = require('child_process');
+      const cwd = __dirname;
+      const git = (cmd) => execSync(cmd, { cwd, encoding: 'utf8', timeout: 30000 }).trim();
+      // Configure git identity
+      git('git config user.name "shirowahd-admin"');
+      git('git config user.email "admin@shirowahd.local"');
+      // Stage important files
+      git('git add admin-settings.json web-uploader.js .gitignore');
+      // Try staging database files that aren't gitignored
+      try { git('git add -f database/*.json 2>/dev/null || true'); } catch {}
+      try { git('git add -f plugins/ src/ 2>/dev/null || true'); } catch {}
+      // Check if anything to commit
+      let status = '';
+      try { status = git('git status --porcelain'); } catch {}
+      if (!status) {
+        jsonRes(res, 200, { ok: true, message: 'Tidak ada perubahan untuk di-backup', changed: 0 });
+        return;
+      }
+      const lines = status.split('\n').filter(Boolean).length;
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      git(`git commit -m "backup: auto-backup ${ts} (${lines} files)"`);
+      git('git push origin main');
+      jsonRes(res, 200, { ok: true, message: `Backup berhasil! ${lines} file di-push ke GitHub`, changed: lines });
+    } catch (e) {
+      jsonRes(res, 500, { ok: false, error: e.message.split('\n')[0] });
+    }
+    return;
+  }
+
   // === MONITORING API ===
 
     // ponytail: pm2 endpoints removed — not used on Pterodactyl

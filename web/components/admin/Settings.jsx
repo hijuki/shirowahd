@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSettings, saveSettings } from '@/lib/admin-api'
+import { getSettings, saveSettings, backupToGithub } from '@/lib/admin-api'
 
 const inputFields = [
   { key: 'siteName', label: 'Nama Situs', ph: 'ShiroWahd', icon: 'fa-globe' },
@@ -135,6 +135,16 @@ export default function Settings({ toast }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [backupBusy, setBackupBusy] = useState(false)
+
+  const doBackup = async () => {
+    setBackupBusy(true)
+    try {
+      const r = await backupToGithub()
+      toast(r.message || 'Backup berhasil!', 'success')
+    } catch (e) { toast('Backup gagal: ' + e.message, 'error') }
+    setBackupBusy(false)
+  }
 
   useEffect(() => {
     getSettings().then(s => {
@@ -331,6 +341,12 @@ export default function Settings({ toast }) {
 
         <button type="submit" disabled={busy} className="btn-primary w-full sm:w-auto rounded-xl px-8 py-3 font-bold">
           {busy ? <><i className="fa-solid fa-spinner fa-spin mr-2" />Menyimpan…</> : <><i className="fa-solid fa-floppy-disk mr-2" />Simpan</>}
+        </button>
+
+        {/* Backup to GitHub */}
+        <button type="button" onClick={doBackup} disabled={backupBusy}
+          className="w-full sm:w-auto rounded-xl px-8 py-3 font-bold bg-[#24292e] hover:bg-[#2f363d] text-white border border-white/[.08] hover:border-white/[.15] transition-all duration-[200ms] active:scale-[.97] flex items-center justify-center gap-2">
+          {backupBusy ? <><i className="fa-solid fa-spinner fa-spin" />Backup...</> : <><i className="fa-brands fa-github" />Backup ke GitHub</>}
         </button>
       </form>
     </div>
