@@ -685,6 +685,13 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && url === '/admin/api/blacklist') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    const s = loadSettings();
+    jsonRes(res, 200, s.ipBlacklist || []);
+    return;
+  }
+
   if (req.method === 'POST' && url === '/admin/api/blacklist') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     try {
