@@ -16,30 +16,30 @@ export default function Navbar({ onFaq, onAbout }) {
     { icon: 'fa-circle-info', label: 'About', action: onAbout },
   ]
   return (
-    <nav className="h-[72px] flex items-center justify-between border-b border-white/[.06] mb-6">
+    <nav className="nav-pill rounded-2xl px-4 py-3 flex items-center justify-between mb-7 mt-4">
       <div className="flex items-center gap-3">
-        <div className="relative w-[34px] h-[34px] rounded-[10px] bg-gradient-to-br from-[#25D366] to-[#128C7E] grid place-items-center shadow-[0_0_28px_rgba(37,211,102,.35)]">
-          <span className="absolute inset-0 rounded-[10px] bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
-          <i className="fa-brands fa-whatsapp text-white relative" />
+        <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#25D366] to-[#0e7a5f] grid place-items-center shadow-[0_8px_24px_-6px_rgba(37,211,102,.55)]">
+          <span className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/25 to-transparent pointer-events-none" />
+          <i className="fa-brands fa-whatsapp text-white text-lg relative" />
         </div>
         <div>
-          <p className="font-display font-bold text-[17px] tracking-tight leading-none">{settings?.siteName || 'SHIROWAHD'}</p>
+          <p className="font-display font-bold text-[16px] tracking-tight leading-none">{settings?.siteName || 'SHIROWAHD'}</p>
           <p className="text-muted text-[10px] font-medium mt-1">{settings?.siteSubtitle || 'Upload & claim video HD'}</p>
         </div>
       </div>
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(o => !o)}
-          className="px-3.5 py-2 rounded-[10px] border border-[rgba(75,163,255,.22)] bg-[rgba(8,23,53,.55)] text-[11px] font-bold text-[#d5e7ff] hover:bg-[rgba(18,53,98,.7)] transition flex items-center gap-1.5"
+          className="w-9 h-9 rounded-xl border border-line bg-white/[.03] text-ink hover:bg-brand/15 hover:border-line2 transition flex items-center justify-center"
         >
-          <i className="fa-solid fa-bars" />
+          <i className={`fa-solid ${menuOpen ? 'fa-xmark' : 'fa-bars-staggered'} text-[13px]`} />
         </button>
         {menuOpen && (
-          <div className="absolute right-0 top-full mt-2 w-44 glass rounded-xl p-1.5 z-50 anim-pop">
+          <div className="absolute right-0 top-full mt-2 w-48 glass rounded-2xl p-2 z-50 anim-pop">
             {items.map(it =>
               it.href ? (
-                <a key={it.label} href={it.href} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[12px] font-semibold text-ink/90 hover:bg-brand/15 transition">
-                  <i className={`fa-solid ${it.icon} text-cyan text-xs w-4`} />
+                <a key={it.label} href={it.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[12px] font-semibold text-ink/90 hover:bg-brand/15 transition">
+                  <span className="icon-tile w-7 h-7 !rounded-lg"><i className={`fa-solid ${it.icon} text-cyan text-[11px]`} /></span>
                   {it.label}
                   <i className="fa-solid fa-arrow-up-right-from-square ml-auto text-muted text-[9px]" />
                 </a>
@@ -47,9 +47,9 @@ export default function Navbar({ onFaq, onAbout }) {
                 <button
                   key={it.label}
                   onClick={() => { setMenuOpen(false); it.action() }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[12px] font-semibold text-ink/90 hover:bg-brand/15 transition"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[12px] font-semibold text-ink/90 hover:bg-brand/15 transition"
                 >
-                  <i className={`fa-solid ${it.icon} text-cyan text-xs w-4`} />
+                  <span className="icon-tile w-7 h-7 !rounded-lg"><i className={`fa-solid ${it.icon} text-cyan text-[11px]`} /></span>
                   {it.label}
                 </button>
               )

@@ -10,9 +10,8 @@ import { tmpdir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 80;
-const PAGE = join(__dirname, 'upload-page.html');
 const DIST = join(__dirname, 'upload-app', 'dist');
-const ADMIN_PAGE = join(__dirname, 'admin.html');
+const ADMIN_DIST = join(__dirname, 'admin-app', 'dist');
 const SETTINGS_FILE = join(__dirname, 'admin-settings.json');
 const UPLOAD_LOG_FILE = join(__dirname, 'upload-log.json');
 
@@ -344,19 +343,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && (url === '/' || url === '')) {
-    // ponytail: no cache headers — single VPS, low traffic; add Cache-Control when traffic grows
     const indexHtml = join(DIST, 'index.html');
-    if (existsSync(indexHtml)) {
-      try {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(readFileSync(indexHtml));
-        return;
-      } catch {}
-    }
     try {
-      const html = readFileSync(PAGE, 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(html);
+      res.end(readFileSync(indexHtml));
     } catch { res.writeHead(500); res.end('Page not found'); }
     return;
   }
@@ -497,13 +487,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === 'GET' && url === '/admin') {
+  // admin panel (React SPA)
+  if (req.method === 'GET' && (url === '/admin' || url === '/admin/')) {
     try {
-      const html = readFileSync(ADMIN_PAGE, 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(html);
+      res.end(readFileSync(join(ADMIN_DIST, 'index.html')));
     } catch { res.writeHead(500); res.end('Admin page not found'); }
     return;
+  }
+  if (req.method === 'GET' && url.startsWith('/admin/assets/')) {
+    const rel = url.slice('/admin'.length).split('?')[0].replace(/\.\./g, '');
+    const file = join(ADMIN_DIST, rel);
+    if (existsSync(file) && file.startsWith(ADMIN_DIST)) {
+      const types = { '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.map': 'application/json' };
+      res.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream' });
+      res.end(readFileSync(file));
+      return;
+    }
   }
 
   if (req.method === 'POST' && url === '/admin/login') {

@@ -1,38 +1,30 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+
+let toastId = 0
+
+export function useToasts() {
+  const [toasts, setToasts] = useState([])
+  const add = useCallback((msg, type = 'info') => {
+    const id = ++toastId
+    setToasts(t => [...t, { id, msg, type }])
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000)
+  }, [])
+  return { toasts, add }
+}
+
+const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' }
+const colors = { success: 'text-ok border-ok/30', error: 'text-bad border-bad/30', info: 'text-cyan border-cyan/30' }
 
 export default function Toasts({ toasts }) {
+  if (!toasts.length) return null
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[90] w-[calc(100%-32px)] max-w-sm space-y-2 pointer-events-none">
+    <div className="fixed top-4 right-4 z-[999] flex flex-col gap-2 max-w-[320px]">
       {toasts.map(t => (
-        <div
-          key={t.id}
-          className={`anim-pop flex items-center gap-2.5 px-4 py-3 rounded-xl border backdrop-blur-xl text-[12.5px] font-semibold shadow-2xl ${
-            t.type === 'error'
-              ? 'bg-red-950/70 border-bad/40 text-red-200'
-              : t.type === 'success'
-                ? 'bg-emerald-950/70 border-ok/40 text-emerald-100'
-                : 'bg-slate-900/80 border-line text-ink'
-          }`}
-        >
-          <i
-            className={`fa-solid ${
-              t.type === 'error' ? 'fa-circle-exclamation text-bad' : t.type === 'success' ? 'fa-circle-check text-ok' : 'fa-circle-info text-cyan'
-            }`}
-          />
-          {t.msg}
+        <div key={t.id} className={`toast-card rounded-2xl px-4 py-3 flex items-center gap-3 anim-pop border-l-[3px] ${colors[t.type] || colors.info}`}>
+          <i className={`fa-solid ${icons[t.type] || icons.info} text-sm shrink-0`} />
+          <span className="text-[12px] font-semibold text-ink/90 leading-relaxed">{t.msg}</span>
         </div>
       ))}
     </div>
   )
-}
-
-let nextId = 1
-export function useToasts() {
-  const [toasts, setToasts] = useState([])
-  const add = (msg, type = 'info') => {
-    const id = nextId++
-    setToasts(t => [...t, { id, msg, type }])
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3200)
-  }
-  return { toasts, add }
 }

@@ -1,65 +1,58 @@
-import { useState, useEffect } from 'react'
-import { getHistory, clearHistory, timeAgo } from './api'
+import { useState } from 'react'
+import { getHistory, clearHistory } from './api'
 
-export default function HistorySection({ onCodeCopied }) {
-  const [history, setHistory] = useState([])
-  const [copiedId, setCopiedId] = useState(null)
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000)
+  if (s < 60) return 'baru aja'
+  if (s < 3600) return `${Math.floor(s / 60)}m lalu`
+  if (s < 86400) return `${Math.floor(s / 3600)}j lalu`
+  return `${Math.floor(s / 86400)}h lalu`
+}
 
-  useEffect(() => {
-    setHistory(getHistory())
-    const onStorage = () => setHistory(getHistory())
-    window.addEventListener('sw-history-updated', onStorage)
-    return () => window.removeEventListener('sw-history-updated', onStorage)
-  }, [])
+export default function HistorySection() {
+  const [history, setHistory] = useState(getHistory())
+  const [open, setOpen] = useState(false)
 
   if (!history.length) return null
 
-  const copy = async (code) => {
-    try {
-      await navigator.clipboard.writeText('.claim ' + code)
-    } catch {
-      // ponytail: clipboard API blocked on plain http; fallback execCommand
-      const ta = document.createElement('textarea')
-      ta.value = '.claim ' + code
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      ta.remove()
-    }
-    setCopiedId(code)
-    setTimeout(() => setCopiedId(null), 1500)
-  }
-
   return (
-    <div className="glass rounded-[22px] p-5 anim-emerge mt-4" style={{ animationDelay: '.15s' }}>
+    <div className="glass mt-5 p-4 anim-emerge" style={{ animationDelay: '.18s' }}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display font-bold text-sm flex items-center gap-2">
-          <i className="fa-solid fa-clock-rotate-left text-cyan" /> Riwayat Upload
-        </h3>
-        <button
-          onClick={() => { clearHistory(); dispatchEvent(new Event('sw-history-updated')) }}
-          className="text-bad/70 text-[10px] font-bold hover:text-bad transition"
-        >
-          Hapus semua
+        <button onClick={() => setOpen(o => !o)} className="flex items-center gap-2 font-display font-bold text-[13px]">
+          <span className="icon-tile w-7 h-7 !rounded-lg"><i className="fa-solid fa-clock-rotate-left text-cyan text-[11px]" /></span>
+          Riwayat Upload
+          <span className="chip text-[9px] px-2 py-0.5 bg-brand/20 border border-line2/50 text-indigo-200">{history.length}</span>
+          <i className={`fa-solid fa-chevron-down text-[9px] text-muted ml-1 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
         </button>
-      </div>
-      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-        {history.map((h, i) => (
-          <button key={i} onClick={() => copy(h.code)} className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-white/[.03] border border-white/5 hover:bg-brand/10 hover:border-line2/50 transition text-left group">
-            <div className={`w-8 h-8 shrink-0 rounded-lg grid place-items-center ${h.bundle ? 'bg-pink-500/10 border border-pink-500/25' : 'bg-brand/10 border border-brand/25'}`}>
-              <i className={`fa-solid ${h.bundle ? 'fa-images text-pink-400' : 'fa-video text-brand2'} text-xs`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-mono font-bold text-[12px] text-cyan truncate">.claim {h.code}</p>
-              <p className="text-muted text-[10px] truncate">{(h.files || []).join(', ')}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-muted text-[9px]">{timeAgo(h.timestamp)}</p>
-              <i className={`fa-solid ${copiedId === h.code ? 'fa-check text-ok' : 'fa-copy text-muted'} text-[10px] group-hover:text-cyan transition-colors`} />
-            </div>
+        {open && (
+          <button onClick={() => { clearHistory(); setHistory([]) }} className="text-bad/80 text-[10px] font-bold hover:text-bad transition">
+            <i className="fa-solid fa-trash-can mr-1" />Bersihkan
           </button>
-        ))}
+        )}
       </div>
+
+      {open && (
+        <div className="space-y-2 anim-fade">
+          {history.map(h => (
+            <div key={h.timestamp} className="hist-item flex items-center gap-3 p-2.5 rounded-xl">
+              <span className="icon-tile w-9 h-9 shrink-0 !rounded-lg">
+                <i className={`fa-solid ${h.bundle ? 'fa-boxes-stacked' : 'fa-film'} text-indigo-300 text-[11px]`} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-[11px] truncate">{h.files?.[0] || h.code}{h.count > 1 && ` +${h.count - 1}`}</p>
+                <p className="text-muted text-[9px] font-mono">{timeAgo(h.timestamp)}</p>
+              </div>
+              <button
+                onClick={() => navigator.clipboard.writeText(h.bundle || h.code)}
+                className="code-chip px-2.5 py-1.5 text-[10px] code-text font-bold shrink-0"
+                title="Copy kode"
+              >
+                {h.bundle ? h.bundle : h.code}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
