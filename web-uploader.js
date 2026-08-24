@@ -10,8 +10,7 @@ import { tmpdir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 80;
-const DIST = join(__dirname, 'upload-app', 'dist');
-const ADMIN_DIST = join(__dirname, 'admin-app', 'dist');
+const WEB_OUT = join(__dirname, 'web', 'out');
 const SETTINGS_FILE = join(__dirname, 'admin-settings.json');
 const UPLOAD_LOG_FILE = join(__dirname, 'upload-log.json');
 
@@ -343,28 +342,29 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && (url === '/' || url === '')) {
-    const indexHtml = join(DIST, 'index.html');
     try {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(readFileSync(indexHtml));
+      res.end(readFileSync(join(WEB_OUT, 'index.html')));
     } catch { res.writeHead(500); res.end('Page not found'); }
     return;
   }
 
-  // static assets from upload-app/dist
-  if (req.method === 'GET' && url.startsWith('/assets/')) {
+  // Next.js static assets
+  if (req.method === 'GET' && url.startsWith('/_next/')) {
     const rel = url.split('?')[0].replace(/\.\./g, '');
-    const file = join(DIST, rel);
-    if (existsSync(file) && file.startsWith(DIST)) {
-      const types = { '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.map': 'application/json' };
+    const file = join(WEB_OUT, rel);
+    if (existsSync(file) && file.startsWith(WEB_OUT)) {
+      const types = { '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.map': 'application/json' };
       res.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream' });
       res.end(readFileSync(file));
       return;
     }
+    res.writeHead(404); res.end('Not found'); return;
   }
 
+
   if (req.method === 'GET' && url === '/favicon.svg') {
-    const fav = join(DIST, 'favicon.svg');
+    const fav = join(WEB_OUT, 'favicon.svg');
     if (existsSync(fav)) {
       res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
       res.end(readFileSync(fav));
@@ -487,23 +487,13 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // admin panel (React SPA)
-  if (req.method === 'GET' && (url === '/admin' || url === '/admin/')) {
+  // admin panel (Next.js export)
+  if (req.method === 'GET' && (url === '/admin' || url === '/admin/' || url === '/admin.html')) {
     try {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(readFileSync(join(ADMIN_DIST, 'index.html')));
+      res.end(readFileSync(join(WEB_OUT, 'admin.html')));
     } catch { res.writeHead(500); res.end('Admin page not found'); }
     return;
-  }
-  if (req.method === 'GET' && url.startsWith('/admin/assets/')) {
-    const rel = url.slice('/admin'.length).split('?')[0].replace(/\.\./g, '');
-    const file = join(ADMIN_DIST, rel);
-    if (existsSync(file) && file.startsWith(ADMIN_DIST)) {
-      const types = { '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.map': 'application/json' };
-      res.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream' });
-      res.end(readFileSync(file));
-      return;
-    }
   }
 
   if (req.method === 'POST' && url === '/admin/login') {
