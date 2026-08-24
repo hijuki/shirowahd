@@ -9,40 +9,43 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
   const ref = useRef(null)
   useEffect(() => { requestAnimationFrame(() => setVis(true)) }, [])
   const close = onClose ? () => { setVis(false); setTimeout(onClose, 320) } : null
-
-  // Accent color map
   const ac = accent === 'green' ? '#34d399' : '#22d3ee'
 
   return (
     <div className={`fixed inset-0 z-[80] transition-all duration-[320ms] ${vis ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-      {/* Solid dark backdrop */}
       <div className="absolute inset-0 bg-[#020408]/[.97]" onClick={close} />
 
-      {/* Floating sparkle particles in backdrop */}
+      {/* Floating sparkle particles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(8)].map((_, i) => (
+        {[...Array(12)].map((_, i) => (
           <div key={i} className="sparkle-dot" style={{
-            left: `${10 + (i * 11) % 80}%`,
-            top: `${15 + (i * 17) % 65}%`,
-            animationDelay: `${i * 0.4}s`,
-            '--sparkle-color': ['#22d3ee', '#3b82f6', '#34d399', '#22d3ee'][i % 4],
+            left: `${8 + (i * 7.5) % 84}%`,
+            top: `${10 + (i * 13) % 75}%`,
+            animationDelay: `${i * 0.35}s`,
+            animationDuration: `${2.5 + (i % 3) * 0.8}s`,
+            '--sparkle-color': ['#22d3ee', '#3b82f6', '#34d399', '#22d3ee', '#3b82f6'][i % 5],
           }} />
         ))}
       </div>
 
-      {/* Centered scroll wrapper */}
+      {/* Floating orbs in background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute w-[200px] h-[200px] rounded-full bg-[#22d3ee]/[.04] blur-[80px] orb-float" style={{ top: '10%', left: '15%' }} />
+        <div className="absolute w-[160px] h-[160px] rounded-full bg-[#3b82f6]/[.05] blur-[60px] orb-float-2" style={{ top: '60%', right: '10%' }} />
+      </div>
+
       <div className="absolute inset-0 z-10 overflow-y-auto modal-scroll-hide" onClick={close}>
         <div className="min-h-full flex items-center justify-center p-4 py-6">
           <div
             ref={ref}
             onClick={e => e.stopPropagation()}
-            className={`relative w-full max-w-[400px] transition-all duration-[420ms] ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.88] translate-y-10 opacity-0'}`}
+            className={`relative w-full max-w-[400px] transition-all duration-[500ms] ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.85] translate-y-12 opacity-0'}`}
             style={{ transitionTimingFunction: 'var(--ease-out)' }}
           >
-            {/* Outer glow */}
-            <div className="absolute -inset-12 rounded-[48px] pointer-events-none" style={{
-              background: `radial-gradient(ellipse at center, ${ac}15, transparent 70%)`,
-              filter: 'blur(40px)',
+            {/* Outer glow halo */}
+            <div className="absolute -inset-16 rounded-[60px] pointer-events-none" style={{
+              background: `radial-gradient(ellipse at center, ${ac}12, transparent 70%)`,
+              filter: 'blur(50px)',
             }} />
 
             {/* Card */}
@@ -52,17 +55,27 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
                 <div className="h-full w-[200%] grad-border-sweep" />
               </div>
 
-              {/* Side accent lines */}
-              <div className="absolute top-10 bottom-10 left-0 w-px bg-gradient-to-b from-transparent via-[#3b82f6]/15 to-transparent" />
-              <div className="absolute top-10 bottom-10 right-0 w-px bg-gradient-to-b from-transparent via-[#22d3ee]/15 to-transparent" />
+              {/* Bottom edge glow */}
+              <div className="absolute bottom-0 inset-x-0 h-px overflow-hidden rounded-b-[22px]">
+                <div className="h-full w-[200%] grad-border-sweep" style={{ animationDelay: '1.5s' }} />
+              </div>
 
-              {/* Inner subtle grid pattern */}
-              <div className="absolute inset-0 opacity-[.03] pointer-events-none" style={{
-                backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)',
-                backgroundSize: '32px 32px',
+              {/* Side accent lines */}
+              <div className="absolute top-8 bottom-8 left-0 w-px bg-gradient-to-b from-transparent via-[#3b82f6]/15 to-transparent" />
+              <div className="absolute top-8 bottom-8 right-0 w-px bg-gradient-to-b from-transparent via-[#22d3ee]/15 to-transparent" />
+
+              {/* Corner accent dots */}
+              <div className="absolute top-3 left-3 w-1 h-1 rounded-full bg-[#22d3ee]/30" />
+              <div className="absolute top-3 right-3 w-1 h-1 rounded-full bg-[#3b82f6]/30" />
+              <div className="absolute bottom-3 left-3 w-1 h-1 rounded-full bg-[#3b82f6]/20" />
+              <div className="absolute bottom-3 right-3 w-1 h-1 rounded-full bg-[#22d3ee]/20" />
+
+              {/* Inner grid pattern */}
+              <div className="absolute inset-0 opacity-[.025] pointer-events-none" style={{
+                backgroundImage: 'linear-gradient(rgba(255,255,255,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.15) 1px, transparent 1px)',
+                backgroundSize: '28px 28px',
               }} />
 
-              {/* Content */}
               <div className="relative p-5">{children}</div>
             </div>
           </div>
@@ -83,26 +96,7 @@ function CloseBtn({ onClick }) {
   )
 }
 
-/* ─── Premium button with shine effect ─── */
-function PremiumBtn({ onClick, href, children, variant = 'primary', className = '' }) {
-  const base = 'relative overflow-hidden font-bold transition-all duration-[200ms] active:scale-[.96] flex items-center justify-center gap-2'
-  const styles = {
-    primary: 'bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white shadow-[0_4px_20px_-4px_rgba(34,211,238,.5)] hover:shadow-[0_6px_28px_-4px_rgba(34,211,238,.65)] hover:brightness-110',
-    ghost: 'bg-white/[.04] border border-white/[.08] text-[#e8f1ff] hover:bg-white/[.08] hover:border-white/[.15]',
-    green: 'bg-[#34d399]/[.08] border border-[#34d399]/20 text-[#34d399] hover:bg-[#34d399]/[.15] hover:border-[#34d399]/30',
-    wa: 'bg-[#25D366]/[.08] border border-[#25D366]/20 text-[#7ce8a8] hover:bg-[#25D366]/[.15] hover:border-[#25D366]/30',
-  }
-  const Tag = href ? 'a' : 'button'
-  const props = href ? { href, target: '_blank', rel: 'noreferrer' } : { onClick }
-  return (
-    <Tag {...props} className={`${base} ${styles[variant] || styles.ghost} ${className}`}>
-      {variant === 'primary' && <span className="absolute inset-0 btn-shine-sweep pointer-events-none" />}
-      {children}
-    </Tag>
-  )
-}
-
-/* ─── Link buttons (Welcome popup) ─── */
+/* ─── Link buttons ─── */
 export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], groups = [] }) {
   const items = []
   if (ownerWhatsapp) items.push({ i: 'fa-brands fa-whatsapp', t: 'Chat Developer', s: 'Hubungi langsung', href: `https://wa.me/${String(ownerWhatsapp).replace(/[^0-9]/g, '')}`, c: '#25D366', feat: true })
@@ -117,6 +111,8 @@ export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], gr
           style={{ background: `${it.c}0a`, borderColor: `${it.c}20`, animationDelay: `${idx * 80}ms` }}>
           <span className="w-9 h-9 shrink-0 rounded-[11px] grid place-items-center relative overflow-hidden" style={{ background: `${it.c}15`, border: `1px solid ${it.c}30` }}>
             <i className={`${it.i} text-[14px]`} style={{ color: it.c }} />
+            {/* Icon inner shimmer */}
+            <span className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </span>
           <span className="min-w-0 flex-1 text-left">
             <span className="block font-bold text-[12px] truncate">{it.t}</span>
@@ -130,76 +126,128 @@ export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], gr
 }
 
 /* ═══════════════════════════════════════
-   WELCOME / INTRO
+   WELCOME / INTRO — Premium animated
    ═══════════════════════════════════════ */
 export function IntroModal({ onDone, settings }) {
-  const [step, setStep] = useState(-1)
+  const [phase, setPhase] = useState(0)
   useEffect(() => {
-    const ts = [250, 450, 650].map((d, i) => setTimeout(() => setStep(i), d))
-    return () => ts.forEach(clearTimeout)
+    const t1 = setTimeout(() => setPhase(1), 150)   // logo appears
+    const t2 = setTimeout(() => setPhase(2), 500)   // title + badge
+    const t3 = setTimeout(() => setPhase(3), 800)   // steps start
+    const t4 = setTimeout(() => setPhase(4), 1400)  // contacts + button
+    return () => [t1, t2, t3, t4].forEach(clearTimeout)
   }, [])
+
   const steps = [
     { i: 'fa-cloud-arrow-up', t: 'Upload file', d: 'Pilih video atau foto dari galeri kamu.', c: '#22d3ee' },
     { i: 'fa-key', t: 'Dapat kode unik', d: 'Kode seperti .claim A1B2C3 langsung tersedia.', c: '#3b82f6' },
     { i: 'fa-paper-plane', t: 'Kirim di grup', d: 'Paste kode di grup WhatsApp — bot kirim filenya.', c: '#34d399' },
   ]
+
   return (
     <ModalShell>
-      {/* Brand header */}
-      <div className="text-center mb-5">
-        <div className="relative inline-block mb-4">
-          <div className="absolute -inset-4 rounded-full bg-[#25D366]/10 blur-xl animate-pulse pointer-events-none" />
-          <div className="absolute -inset-3 rounded-[24px] border-ring-spin pointer-events-none" />
-          <div className="relative w-[64px] h-[64px] rounded-[20px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
-            <span className="absolute inset-[1px] rounded-[19px] bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-            <i className="fa-brands fa-whatsapp text-white text-[28px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
-          </div>
-        </div>
-        <h2 className="font-[family-name:var(--font-display)] font-bold text-[21px] tracking-tight leading-none">
-          {settings?.siteName || 'SHIROWAHD'}
-        </h2>
-        <p className="text-[#7e90ad] text-[10px] mt-1.5 tracking-wide">Upload media HD ke grup WhatsApp</p>
+      {/* ── Confetti on welcome ── */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[22px]">
+        {[...Array(10)].map((_, i) => (
+          <div key={i} className="confetti-particle" style={{
+            '--x': `${8 + Math.random() * 84}%`,
+            '--delay': `${0.2 + i * 0.15}s`,
+            '--color': ['#22d3ee', '#3b82f6', '#34d399', '#fbbf24', '#22d3ee'][i % 5],
+            '--drift': `${-30 + Math.random() * 60}px`,
+          }} />
+        ))}
+      </div>
 
-        <div className="mt-3 inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white/[.03] border border-white/[.06]">
-          <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white">H</span>
-          <span className="text-[9px] tracking-wider"><span className="text-[#7e90ad] font-semibold">SWHDHLZ</span> <span className="text-[#7e90ad]/40">BY</span> <span className="grad-text font-extrabold">HILLZ</span></span>
+      {/* ── Brand header ── */}
+      <div className="text-center mb-5 relative">
+        {/* Logo with burst effect */}
+        <div className={`relative inline-block mb-4 transition-all duration-[600ms] ${phase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+          {/* Burst rings */}
+          <div className={`absolute -inset-6 rounded-full transition-all duration-[800ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.3)' }} />
+          <div className={`absolute -inset-10 rounded-full transition-all duration-[1000ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.15)' }} />
+
+          <div className="absolute -inset-5 rounded-full bg-[#25D366]/12 blur-xl success-halo pointer-events-none" />
+          <div className="absolute -inset-3 rounded-[24px] border-ring-spin pointer-events-none" />
+          <div className="relative w-[68px] h-[68px] rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
+            <span className="absolute inset-[1px] rounded-[21px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+            <i className="fa-brands fa-whatsapp text-white text-[30px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
+          </div>
+
+          {/* Sparkles around logo */}
+          {phase >= 1 && [...Array(5)].map((_, i) => (
+            <div key={i} className="absolute w-1 h-1 rounded-full check-sparkle" style={{
+              top: '50%', left: '50%',
+              '--angle': `${i * 72}deg`,
+              '--dist': `${32 + (i % 2) * 10}px`,
+              '--color': ['#25D366', '#22d3ee', '#3b82f6', '#34d399', '#25D366'][i],
+              animationDelay: `${200 + i * 100}ms`,
+            }} />
+          ))}
+        </div>
+
+        {/* Title */}
+        <div className={`transition-all duration-[500ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+          <h2 className="font-[family-name:var(--font-display)] font-bold text-[22px] tracking-tight leading-none grad-text">
+            {settings?.siteName || 'SHIROWAHD'}
+          </h2>
+          <p className="text-[#7e90ad] text-[10px] mt-1.5 tracking-wide">Upload media HD ke grup WhatsApp</p>
+        </div>
+
+        {/* Badge */}
+        <div className={`mt-3 transition-all duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-2 opacity-0 scale-95'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+          <span className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white/[.03] border border-white/[.06]">
+            <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white">H</span>
+            <span className="text-[9px] tracking-wider"><span className="text-[#7e90ad] font-semibold">SWHDHLZ</span> <span className="text-[#7e90ad]/40">BY</span> <span className="grad-text font-extrabold">HILLZ</span></span>
+          </span>
         </div>
       </div>
 
-      {/* Steps */}
+      {/* ── Steps with staggered reveal ── */}
       <div className="space-y-2 mb-5">
         {steps.map((s, idx) => (
           <div key={s.t}
-            className={`flex items-center gap-3 p-3 rounded-[14px] border transition-all duration-[450ms] ${idx <= step ? 'bg-white/[.03] border-white/[.07] translate-x-0 opacity-100' : 'bg-transparent border-transparent translate-x-4 opacity-0'}`}
-            style={{ transitionTimingFunction: 'var(--ease-out)', transitionDelay: `${idx * 60}ms` }}>
-            <div className="w-9 h-9 shrink-0 rounded-[11px] grid place-items-center" style={{ background: `${s.c}12`, border: `1px solid ${s.c}28` }}>
-              <i className={`fa-solid ${s.i} text-[13px]`} style={{ color: s.c }} />
+            className={`flex items-center gap-3 p-3 rounded-[14px] border transition-all duration-[500ms] ${phase >= 3 ? 'bg-white/[.03] border-white/[.07] translate-x-0 opacity-100' : 'bg-transparent border-transparent translate-x-6 opacity-0'}`}
+            style={{ transitionTimingFunction: 'var(--ease-out)', transitionDelay: `${idx * 120}ms` }}>
+            <div className="w-10 h-10 shrink-0 rounded-[12px] grid place-items-center relative overflow-hidden group" style={{ background: `${s.c}12`, border: `1px solid ${s.c}28` }}>
+              <i className={`fa-solid ${s.i} text-[14px] relative z-10`} style={{ color: s.c }} />
+              {/* Icon pulse ring */}
+              <div className="absolute inset-0 rounded-[12px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ boxShadow: `inset 0 0 20px ${s.c}20` }} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-[11px]">{s.t}</p>
+              <p className="font-bold text-[12px]">{s.t}</p>
               <p className="text-[#7e90ad] text-[9px] leading-snug mt-0.5">{s.d}</p>
             </div>
-            <span className="w-5 h-5 shrink-0 rounded-full grid place-items-center text-[9px] font-extrabold" style={{ background: `${s.c}12`, color: s.c }}>{idx + 1}</span>
+            <span className="w-6 h-6 shrink-0 rounded-full grid place-items-center text-[9px] font-extrabold border" style={{ background: `${s.c}10`, color: s.c, borderColor: `${s.c}25` }}>{idx + 1}</span>
           </div>
         ))}
       </div>
 
-      {/* Contacts */}
-      {(settings?.ownerWhatsapp || settings?.channels?.length || settings?.claimGroups?.length) ? (
-        <>
-          <p className="text-[8px] font-extrabold tracking-[.18em] uppercase text-[#7e90ad]/60 mb-2 flex items-center gap-2">
-            <span className="flex-1 h-px bg-white/[.06]" />Terhubung<span className="flex-1 h-px bg-white/[.06]" />
-          </p>
-          <div className="mb-5 stagger">
-            <LinkButtons ownerWhatsapp={settings?.ownerWhatsapp} channels={settings?.channels} claimGroups={settings?.claimGroups} groups={settings?.groups} />
-          </div>
-        </>
-      ) : null}
+      {/* ── Contacts ── */}
+      <div className={`transition-all duration-[500ms] ${phase >= 4 ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        {(settings?.ownerWhatsapp || settings?.channels?.length || settings?.claimGroups?.length) ? (
+          <>
+            <p className="text-[8px] font-extrabold tracking-[.18em] uppercase text-[#7e90ad]/60 mb-2 flex items-center gap-2">
+              <span className="flex-1 h-px bg-white/[.06]" />Terhubung<span className="flex-1 h-px bg-white/[.06]" />
+            </p>
+            <div className="mb-5">
+              <LinkButtons ownerWhatsapp={settings?.ownerWhatsapp} channels={settings?.channels} claimGroups={settings?.claimGroups} groups={settings?.groups} />
+            </div>
+          </>
+        ) : null}
 
-      <PremiumBtn onClick={onDone} variant="primary" className="w-full py-3.5 rounded-[14px] text-[13px]">
-        Mulai Upload <i className="fa-solid fa-arrow-right ml-1.5 group-hover:translate-x-1 transition-transform" />
-      </PremiumBtn>
-      <p className="text-center text-[#7e90ad]/25 text-[8px] mt-3 tracking-wide">© {new Date().getFullYear()} SWHDHLZ · BY HILLZ</p>
+        {/* Premium CTA button */}
+        <button onClick={onDone}
+          className="relative overflow-hidden w-full py-3.5 rounded-[14px] bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white font-bold text-[13px] shadow-[0_4px_24px_-4px_rgba(34,211,238,.5)] hover:shadow-[0_8px_32px_-4px_rgba(34,211,238,.65)] hover:brightness-110 active:scale-[.97] transition-all duration-[200ms] group">
+          <span className="absolute inset-0 btn-shine-sweep pointer-events-none" />
+          <span className="relative flex items-center justify-center gap-2">
+            <i className="fa-solid fa-rocket text-[11px] group-hover:-translate-y-0.5 transition-transform duration-200" />
+            Mulai Upload
+            <i className="fa-solid fa-arrow-right text-[11px] group-hover:translate-x-1 transition-transform duration-200" />
+          </span>
+        </button>
+
+        <p className="text-center text-[#7e90ad]/20 text-[8px] mt-3 tracking-wide">© {new Date().getFullYear()} SWHDHLZ · BY HILLZ</p>
+      </div>
     </ModalShell>
   )
 }
@@ -264,7 +312,6 @@ export function AboutModal({ onClose }) {
       </div>
 
       <div className="space-y-3">
-        {/* Dev card */}
         <div className="relative rounded-[16px] p-4 overflow-hidden border border-white/[.06] text-center">
           <div className="absolute inset-0 bg-gradient-to-br from-[#22d3ee]/[.06] via-transparent to-[#3b82f6]/[.06]" />
           <div className="relative">
