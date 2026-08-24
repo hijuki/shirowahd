@@ -2,17 +2,24 @@
 
 export default function Navbar({ settings, onFaq, onAbout }) {
   const btn = 'w-9 h-9 rounded-full grid place-items-center border transition-all duration-[200ms] active:scale-90'
+  const logoUrl = settings?.logoUrl || ''
   return (
     <nav className="sticky top-3 z-40 nav-pill rounded-[18px] px-3 py-2.5 flex items-center justify-between mb-6 anim-slide-down">
       {/* Brand */}
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="relative w-9 h-9 shrink-0 rounded-[11px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_4px_16px_-4px_rgba(37,211,102,.5)]">
-          <span className="absolute inset-[1px] rounded-[10px] bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-          <i className="fa-brands fa-whatsapp text-white text-[15px] relative" />
-        </div>
+        {logoUrl ? (
+          <div className="w-9 h-9 shrink-0 rounded-[11px] overflow-hidden bg-[#080e1c] border border-white/[.08] shadow-[0_4px_16px_-4px_rgba(34,211,238,.3)]">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        ) : (
+          <div className="relative w-9 h-9 shrink-0 rounded-[11px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_4px_16px_-4px_rgba(37,211,102,.5)]">
+            <span className="absolute inset-[1px] rounded-[10px] bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+            <i className="fa-brands fa-whatsapp text-white text-[15px] relative" />
+          </div>
+        )}
         <div className="min-w-0 leading-tight">
           <p className="font-[family-name:var(--font-display)] font-bold text-[14px] tracking-tight truncate">{settings?.siteName || 'SHIROWAHD'}</p>
-          <p className="text-[#7e90ad] text-[8px] font-bold tracking-[.15em] uppercase truncate">SWHDHLZ · BY HILLZ</p>
+          <p className="text-[#7e90ad] text-[8px] font-bold tracking-[.15em] uppercase truncate">{settings?.siteSubtitle || 'SWHDHLZ · BY HILLZ'}</p>
         </div>
       </div>
 

@@ -19,9 +19,14 @@ export default function UploaderPage() {
   }, [])
   useEffect(reload, [reload])
   useEffect(() => {
-    // respect admin toggle
     if (settings && settings.showWelcome !== false) setShowWelcome(true)
   }, [settings])
+
+  const heroTitle = settings?.heroTitle || 'Upload'
+  const heroHighlight = settings?.heroSubtitle || 'Media HD'
+  const heroDesc = settings?.heroDesc || 'Kirim video & foto ke grup WhatsApp\nlewat kode klaim — cepat & mudah'
+  const logoUrl = settings?.logoUrl || ''
+  const footerText = settings?.footerText || ''
 
   return (
     <>
@@ -44,21 +49,27 @@ export default function UploaderPage() {
 
           {/* Hero */}
           <header className="text-center mb-8 anim-entrance" style={{ animationDelay: '60ms' }}>
-            {/* Animated logo ring */}
+            {/* Logo */}
             <div className="relative inline-block mb-5">
               <div className="absolute -inset-3 rounded-[26px] border-ring-spin pointer-events-none" />
               <div className="absolute -inset-5 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
-              <div className="relative w-[76px] h-[76px] rounded-[24px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_0_60px_-8px_rgba(34,211,238,.55)] floaty">
-                <span className="absolute inset-[2px] rounded-[22px] bg-[#080e1c]/70 backdrop-blur-sm" />
-                <i className="fa-brands fa-whatsapp text-white text-[34px] relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
-              </div>
+              {logoUrl ? (
+                <div className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden shadow-[0_0_60px_-8px_rgba(34,211,238,.55)] floaty bg-[#080e1c]">
+                  <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+                </div>
+              ) : (
+                <div className="relative w-[76px] h-[76px] rounded-[24px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_0_60px_-8px_rgba(34,211,238,.55)] floaty">
+                  <span className="absolute inset-[2px] rounded-[22px] bg-[#080e1c]/70 backdrop-blur-sm" />
+                  <i className="fa-brands fa-whatsapp text-white text-[34px] relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
+                </div>
+              )}
             </div>
 
             <h1 className="font-[family-name:var(--font-display)] font-bold text-[28px] leading-tight tracking-tight">
-              Upload <span className="grad-text">Media HD</span>
+              {heroTitle}{' '}<span className="grad-text">{heroHighlight}</span>
             </h1>
-            <p className="text-[#7e90ad] text-[12px] mt-2.5 max-w-[300px] mx-auto leading-relaxed">
-              Kirim video &amp; foto ke grup WhatsApp<br/>lewat kode klaim — cepat &amp; mudah
+            <p className="text-[#7e90ad] text-[12px] mt-2.5 max-w-[300px] mx-auto leading-relaxed whitespace-pre-line">
+              {heroDesc}
             </p>
 
             {/* Inline dev credit */}
@@ -144,7 +155,7 @@ export default function UploaderPage() {
           <footer className="mt-10 text-center anim-fade" style={{ animationDelay: '500ms' }}>
             <div className="divider-glow mb-3" />
             <p className="text-[#7e90ad]/35 text-[9px] font-medium tracking-[.18em] uppercase">
-              {settings?.siteName || 'SHIROWAHD'} · SWHDHLZ BY HILLZ
+              {footerText || `${settings?.siteName || 'SHIROWAHD'} · SWHDHLZ BY HILLZ`}
             </p>
           </footer>
         </div>

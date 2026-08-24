@@ -231,6 +231,46 @@ export default function Settings({ toast }) {
           </div>
         </div>
 
+        {/* Tampilan Web Uploader */}
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
+            <i className="fa-solid fa-palette text-[#22d3ee]" /> Tampilan Web Uploader
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Judul Hero</label>
+              <input type="text" value={data.heroTitle ?? ''} onChange={e => set('heroTitle', e.target.value)} placeholder="Upload Media HD"
+                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
+              <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Kosong = default "Upload Media HD"</p>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Highlight Text</label>
+              <input type="text" value={data.heroSubtitle ?? ''} onChange={e => set('heroSubtitle', e.target.value)} placeholder="Media HD"
+                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
+              <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Bagian yang gradient warna (kosong = "Media HD")</p>
+            </div>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Deskripsi Hero</label>
+            <textarea value={data.heroDesc ?? ''} onChange={e => set('heroDesc', e.target.value)} rows={2}
+              placeholder="Kirim video & foto ke grup WhatsApp lewat kode klaim — cepat & mudah"
+              className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm resize-y transition-colors duration-[150ms]" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">URL Logo</label>
+              <input type="text" value={data.logoUrl ?? ''} onChange={e => set('logoUrl', e.target.value)} placeholder="/logo.svg atau https://..."
+                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
+              <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Kosong = ikon WhatsApp default</p>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Footer Text</label>
+              <input type="text" value={data.footerText ?? ''} onChange={e => set('footerText', e.target.value)} placeholder="SWHDHLZ · BY HILLZ"
+                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
+            </div>
+          </div>
+        </div>
+
         {/* Pengumuman */}
         <div className="card p-5 space-y-3">
           <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
