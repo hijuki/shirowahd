@@ -78,12 +78,12 @@ export default function Dashboard({ toast }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          <Stat icon="fa-cloud-arrow-up" label="Total Upload" value={stats.totalUploads} color="#22d3ee" />
-          <Stat icon="fa-calendar-day" label="Hari Ini" value={stats.todayUploads} color="#3b82f6" />
-          <Stat icon="fa-film" label="Video" value={stats.videoCount} color="#34d399" />
-          <Stat icon="fa-image" label="Foto" value={stats.fotoCount} color="#fbbf24" />
-          <Stat icon="fa-database" label="Penyimpanan" value={fmtBytes(stats?.totalStorage)} color="#34d399" />
-          <Stat icon="fa-chart-simple" label="Rata-rata Ukuran" value={fmtBytes(stats?.avgSize)} color="#fb7185" />
+          <Stat icon="fa-cloud-arrow-up" label="File Aktif" value={stats.totalActive ?? 0} color="#22d3ee" />
+          <Stat icon="fa-calendar-day" label="Hari Ini" value={stats.uploadsToday ?? 0} color="#3b82f6" />
+          <Stat icon="fa-database" label="Total Tersimpan" value={fmtBytes(stats?.totalStorage)} color="#34d399" />
+          <Stat icon="fa-weight-hanging" label="Ukuran Aktif" value={fmtBytes(stats?.totalSize)} color="#fbbf24" />
+          <Stat icon="fa-database" label="Penyimpanan Disk" value={fmtBytes(stats?.totalStorage)} color="#34d399" />
+          <Stat icon="fa-chart-simple" label="Rata-rata Ukuran" value={fmtBytes(stats?.totalActive ? Math.round((stats?.totalSize || 0) / stats.totalActive) : 0)} color="#fb7185" />
         </div>
       )}
 

@@ -139,7 +139,7 @@ export default function Files({ toast }) {
                     <td className="px-4 py-3">{fmtBytes(v.size)}</td>
                     <td className="px-4 py-3"><span className={`chip px-2.5 py-1 text-[11px] ${v.type === 'video' ? 'bg-[#3b82f6]/15 text-[#93c5fd]' : 'bg-emerald-500/15 text-emerald-300'}`}>{v.type}</span></td>
                     <td className="px-4 py-3">{remainingLabel(v)}</td>
-                    <td className="px-4 py-3 text-[#7e90ad]">{fmtTime(v.timestamp)}</td>
+                    <td className="px-4 py-3 text-[#7e90ad]">{fmtTime(v.ts || v.timestamp)}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <button onClick={() => extOne(v.code)} disabled={busy} title="Perpanjang 1 jam" className="text-[#22d3ee] hover:text-[#a5f3fc] px-2 transition-all duration-[150ms]"><i className="fa-solid fa-clock-rotate-left" /></button>
                       <button onClick={() => delOne(v.code)} disabled={busy} title="Hapus" className="text-bad hover:text-bad/70 px-2 transition-all duration-[150ms]"><i className="fa-solid fa-trash" /></button>
@@ -156,7 +156,7 @@ export default function Files({ toast }) {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">{v.name}</p>
                     <p className="text-xs text-[#7e90ad] mt-0.5 font-mono text-[#67e8f9]">{v.code} · {fmtBytes(v.size)} · {v.type}</p>
-                    <p className="text-xs text-[#7e90ad] mt-0.5"><i className="fa-solid fa-clock mr-1" />Sisa {remainingLabel(v)} · {fmtTime(v.timestamp)}</p>
+                    <p className="text-xs text-[#7e90ad] mt-0.5"><i className="fa-solid fa-clock mr-1" />Sisa {remainingLabel(v)} · {fmtTime(v.ts || v.timestamp)}</p>
                     <div className="mt-2 flex gap-2">
                       <button onClick={() => extOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-2.5 py-1.5 bg-[#22d3ee]/15 text-[#67e8f9] border border-[#22d3ee]/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1" />+1 Jam</button>
                       <button onClick={() => delOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-2.5 py-1.5 bg-bad/15 text-bad border border-bad/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-trash mr-1" />Hapus</button>
@@ -183,7 +183,7 @@ export default function Files({ toast }) {
               <i className={`fa-solid ${l.type === 'video' ? 'fa-film text-[#67e8f9]' : 'fa-image text-emerald-300'} shrink-0`} />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{l.filename}</p>
-                <p className="text-xs text-[#7e90ad]">{fmtTime(l.timestamp)} · IP {l.ip} · {fmtBytes(l.size)}</p>
+                <p className="text-xs text-[#7e90ad]">{fmtTime(l.ts || l.timestamp)} · IP {l.ip} · {fmtBytes(l.size)}</p>
               </div>
               <span className="font-mono text-xs text-[#67e8f9] shrink-0">{l.code}</span>
             </div>

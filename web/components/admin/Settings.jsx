@@ -13,10 +13,23 @@ const fields = [
 ]
 
 const textareaFields = [
-  { key: 'groups', label: 'Grup WhatsApp', placeholder: 'JID grup, pisahkan koma' },
-  { key: 'channels', label: 'Channels', placeholder: 'Channel ID, pisahkan koma' },
-  { key: 'claimGroups', label: 'Claim Groups', placeholder: 'JID grup klaim, pisahkan koma' },
+  { key: 'groups', label: 'Grup WhatsApp', placeholder: 'Nama — https://chat.whatsapp.com/xxx (satu per baris)' },
+  { key: 'channels', label: 'Channels', placeholder: 'Nama — https://whatsapp.com/channel/xxx (satu per baris)' },
+  { key: 'claimGroups', label: 'Claim Groups', placeholder: 'Nama — https://chat.whatsapp.com/xxx (satu per baris)' },
 ]
+
+// server menyimpan {name, link}[] — tampilkan sebagai "Nama — link" per baris
+const fmtList = (v) => {
+  if (!Array.isArray(v)) return v ?? ''
+  return v.map(x => {
+    if (typeof x === 'string') return x
+    return [x.name, x.link].filter(Boolean).join(' — ')
+  }).join('\n')
+}
+const parseList = (str) => String(str || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean).map(s => {
+  const parts = s.split(/\s+—\s+/)
+  return parts.length >= 2 ? { name: parts[0], link: parts.slice(1).join(' — ') } : { name: s }
+})
 
 export default function Settings({ toast }) {
   const [data, setData] = useState({})
@@ -26,9 +39,7 @@ export default function Settings({ toast }) {
   useEffect(() => {
     getSettings().then(s => {
       if (s) {
-        for (const f of textareaFields) {
-          if (Array.isArray(s[f.key])) s[f.key] = s[f.key].join(', ')
-        }
+        for (const f of textareaFields) s[f.key] = fmtList(s[f.key])
         setData(s)
       }
     }).finally(() => setLoading(false))
@@ -40,9 +51,7 @@ export default function Settings({ toast }) {
     try {
       const payload = { ...data }
       for (const f of textareaFields) {
-        if (typeof payload[f.key] === 'string') {
-          payload[f.key] = payload[f.key].split(',').map(s => s.trim()).filter(Boolean)
-        }
+        payload[f.key] = parseList(payload[f.key])
       }
       if (payload.maxFileSizeMB != null) payload.maxFileSizeMB = Number(payload.maxFileSizeMB)
       if (payload.expireMinutes != null) payload.expireMinutes = Number(payload.expireMinutes)

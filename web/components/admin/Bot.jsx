@@ -95,8 +95,10 @@ export default function Bot({ toast }) {
   const groupName = (g) => g.name || g.subject || g.jid || g.id
   const groupJid = (g) => g.jid || g.id
   const fmtUptime = (s) => {
-    s = Number(s) || 0
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60)
+    // ponytail: server kadang kirim epoch ms (Date.now()-t0), kadang detik — bedakan via magnitude
+    let n = Number(s) || 0
+    if (n > 1e12) n = Math.max(0, (Date.now() - n) / 1000)
+    const h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60)
     return h ? `${h}j ${m}m` : `${m}m`
   }
 
@@ -152,7 +154,7 @@ export default function Bot({ toast }) {
           <div className="grid md:grid-cols-2 gap-2.5">
             {groups.map(g => {
               const jid = groupJid(g)
-              const enabled = g.enabled !== false
+              const enabled = !g.disabled && g.enabled !== false
               return (
                 <div key={jid} className="hist-item rounded-[12px] bg-white/[.04] border border-white/[.05] px-4 py-3 flex items-center gap-3">
                   <input type="checkbox" checked={selJids.has(jid)} onChange={() => toggleSel(jid)} title="Pilih untuk broadcast" />

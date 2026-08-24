@@ -100,7 +100,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/root/shirowahd",
+    "outputFileTracingRoot": "/tmp",
     "experimental": {
       "useSkewCookie": false,
       "cacheLife": {
@@ -159,7 +159,7 @@
       "middlewarePrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 1,
+      "cpus": 3,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,
@@ -289,11 +289,11 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.mjs",
     "turbopack": {
-      "root": "/root/shirowahd"
+      "root": "/tmp"
     }
   },
-  "appDir": "/root/shirowahd/web",
-  "relativeAppDir": "web",
+  "appDir": "/tmp/shirowahd/web",
+  "relativeAppDir": "shirowahd/web",
   "files": [
     ".next/routes-manifest.json",
     ".next/server/pages-manifest.json",
