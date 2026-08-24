@@ -716,15 +716,21 @@ const server = http.createServer(async (req, res) => {
     try {
       const { execSync } = require('child_process');
       const cwd = __dirname;
-      const git = (cmd) => execSync(cmd, { cwd, encoding: 'utf8', timeout: 30000 }).trim();
+      const git = (cmd) => execSync(cmd, { cwd, encoding: 'utf8', timeout: 60000 }).trim();
       // Configure git identity
       git('git config user.name "shirowahd-admin"');
       git('git config user.email "admin@shirowahd.local"');
-      // Stage important files
-      git('git add admin-settings.json web-uploader.js .gitignore');
-      // Try staging database files that aren't gitignored
-      try { git('git add -f database/*.json 2>/dev/null || true'); } catch {}
-      try { git('git add -f plugins/ src/ 2>/dev/null || true'); } catch {}
+      // Build push URL with token from env (same as main.js)
+      const GIT_REPO = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
+      const GIT_TOKEN = process.env.GIT_TOKEN || process.env.GITHUB_TOKEN || '';
+      const GIT_USER = process.env.USERNAME || '';
+      let pushUrl = 'origin';
+      if (GIT_TOKEN) {
+        if (GIT_USER) pushUrl = GIT_REPO.replace('https://', `https://${GIT_USER}:${GIT_TOKEN}@`);
+        else pushUrl = GIT_REPO.replace('https://', `https://${GIT_TOKEN}@`);
+      }
+      // Stage all tracked + important files
+      git('git add -A');
       // Check if anything to commit
       let status = '';
       try { status = git('git status --porcelain'); } catch {}
@@ -735,7 +741,7 @@ const server = http.createServer(async (req, res) => {
       const lines = status.split('\n').filter(Boolean).length;
       const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       git(`git commit -m "backup: auto-backup ${ts} (${lines} files)"`);
-      git('git push origin main');
+      git(`git push ${pushUrl} main`);
       jsonRes(res, 200, { ok: true, message: `Backup berhasil! ${lines} file di-push ke GitHub`, changed: lines });
     } catch (e) {
       jsonRes(res, 500, { ok: false, error: e.message.split('\n')[0] });
