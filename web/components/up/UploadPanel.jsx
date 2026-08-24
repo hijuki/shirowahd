@@ -16,7 +16,7 @@ export default function UploadPanel({ settings, toast }) {
   const [tab, setTab] = useState('video')
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
+  const [progress, setProgress] = useState({ pct: 0, loaded: 0, total: 0, speed: 0 })
   const [result, setResult] = useState(null)
   const fileRef = useRef(null)
   const [drag, setDrag] = useState(false)
@@ -58,7 +58,7 @@ export default function UploadPanel({ settings, toast }) {
 
   const doUpload = async () => {
     if (!files.length || uploading) return
-    setUploading(true); setProgress(0)
+    setUploading(true); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 })
     abortRef.current = new AbortController()
     try {
       const res = await uploadFiles(files, { field, onProgress: p => setProgress(p), signal: abortRef.current.signal })
@@ -67,7 +67,7 @@ export default function UploadPanel({ settings, toast }) {
       toast('Upload berhasil!', 'success')
       setFiles([]); setThumbs({})
     } catch (e) { if (e.message !== 'Upload dibatalkan') toast(e.message, 'error') }
-    finally { setUploading(false); setProgress(0) }
+    finally { setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }) }
   }
 
   const cancelUpload = () => { abortRef.current?.abort(); setUploading(false); setProgress(0); toast('Upload dibatalkan', 'info') }
@@ -205,11 +205,48 @@ export default function UploadPanel({ settings, toast }) {
             {/* Progress */}
             {uploading && (
               <div className="mt-4 anim-fade">
-                <div className="flex items-center justify-between mb-2 text-[11px] font-bold">
-                  <span className="text-[#7e90ad]"><i className="fa-solid fa-paper-plane mr-1.5 text-[#22d3ee]" />Mengupload…</span>
-                  <span className="font-mono text-[#22d3ee]">{progress}%</span>
+                {/* Stats row */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-[8px] bg-[#22d3ee]/10 border border-[#22d3ee]/20 grid place-items-center">
+                      <i className="fa-solid fa-cloud-arrow-up text-[#22d3ee] text-[10px] animate-bounce" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-[#e8f1ff]">Mengupload…</p>
+                      <p className="text-[8px] font-mono text-[#7e90ad]">
+                        {fmtSize(progress.loaded)} / {fmtSize(progress.total)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[16px] font-[family-name:var(--font-display)] font-extrabold grad-text tabular-nums">{progress.pct}%</p>
+                    <p className="text-[9px] font-mono font-bold text-[#67e8f9]">
+                      {progress.speed > 0 ? `${(progress.speed * 8 / 1000000).toFixed(1)} Mbps` : '—'}
+                    </p>
+                  </div>
                 </div>
-                <div className="progress-track"><div className="progress-fill" style={{ width: progress + '%' }} /></div>
+
+                {/* Progress bar */}
+                <div className="relative h-[6px] rounded-full bg-white/[.06] overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full transition-all duration-[250ms]"
+                    style={{
+                      width: progress.pct + '%',
+                      background: 'linear-gradient(90deg, #22d3ee, #3b82f6, #34d399)',
+                      boxShadow: '0 0 16px rgba(34,211,238,.5), 0 0 4px rgba(34,211,238,.8)',
+                      transitionTimingFunction: 'var(--ease-out)',
+                    }}
+                  />
+                  {/* Shimmer overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[.15] to-transparent" style={{ animation: 'shimmer 1.2s linear infinite' }} />
+                </div>
+
+                {/* ETA */}
+                {progress.speed > 0 && progress.pct < 100 && (
+                  <p className="text-[8px] text-[#7e90ad]/60 font-mono mt-1.5 text-right">
+                    ≈ {Math.ceil((progress.total - progress.loaded) / progress.speed)}s tersisa
+                  </p>
+                )}
               </div>
             )}
 

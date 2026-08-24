@@ -11,8 +11,13 @@ export function uploadFiles(files, { onProgress, field, signal }) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', '/upload')
+    let lastLoaded = 0, lastTime = Date.now()
     xhr.upload.onprogress = e => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100))
+      if (!e.lengthComputable || !onProgress) return
+      const now = Date.now(), dt = (now - lastTime) / 1000
+      const speed = dt > 0.1 ? (e.loaded - lastLoaded) / dt : 0
+      lastLoaded = e.loaded; lastTime = now
+      onProgress({ pct: Math.round((e.loaded / e.total) * 100), loaded: e.loaded, total: e.total, speed })
     }
     xhr.onload = () => {
       try {
