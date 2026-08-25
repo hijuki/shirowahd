@@ -22,3 +22,4 @@ storage/
 tmp/
 tmp_caller/
 *.vid
+web/.next/

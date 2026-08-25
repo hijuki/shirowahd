@@ -1,190 +1,143 @@
 'use client'
-import { useState } from 'react'
-import { getHistory, clearHistory, fmtSize } from '@/lib/up-api'
+import { useState, useEffect, useCallback } from 'react'
+import { fmtSize } from '@/lib/up-api'
 
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000)
-  if (s < 60) return 'baru aja'
+  if (s < 60) return 'baru saja'
   if (s < 3600) return `${Math.floor(s / 60)}m lalu`
   if (s < 86400) return `${Math.floor(s / 3600)}j lalu`
   return `${Math.floor(s / 86400)}h lalu`
 }
 
-function expirePercent(h) {
-  if (!h.timestamp || !h.expireMinutes) return 0
-  const elapsed = Date.now() - h.timestamp
-  const total = h.expireMinutes * 60 * 1000
-  return Math.min(100, Math.max(0, (elapsed / total) * 100))
-}
-
-function isExpired(h) { return expirePercent(h) >= 100 }
-
-export default function HistorySection() {
-  const [history, setHistory] = useState(() => {
-    if (typeof window === 'undefined') return []
-    return getHistory()
-  })
-  const [open, setOpen] = useState(false)
+export default function HistorySection({ onToast: toast }) {
+  const [history, setHistory] = useState([])
+  const [open, setOpen] = useState(true)
   const [copied, setCopied] = useState(null)
 
-  const copyCode = (code, ts) => {
-    navigator.clipboard.writeText(code)
-    // Pop sound — bright 2-note chime
+  const load = useCallback(() => {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const t = ctx.currentTime
-      const pop = (freq, start, dur, vol = 0.10) => {
-        const o = ctx.createOscillator(), g = ctx.createGain()
-        o.type = 'sine'; o.frequency.setValueAtTime(freq, t + start)
-        g.gain.setValueAtTime(0, t + start)
-        g.gain.linearRampToValueAtTime(vol, t + start + 0.02)
-        g.gain.exponentialRampToValueAtTime(0.001, t + start + dur)
-        o.connect(g); g.connect(ctx.destination)
-        o.start(t + start); o.stop(t + start + dur)
-      }
-      pop(784, 0, 0.10, 0.10)   // G5
-      pop(988, 0.06, 0.12, 0.08) // B5
-    } catch {}
-    setCopied(ts)
-    setTimeout(() => setCopied(null), 1500)
+      setHistory(JSON.parse(localStorage.getItem('sw_history') || '[]'))
+    } catch { /* fresh */ }
+  }, [])
+
+  useEffect(() => {
+    load()
+    if (!open) return
+    const iv = setInterval(load, 5000)
+    return () => clearInterval(iv)
+  }, [load, open])
+
+  useEffect(() => {
+    if (copied === null) return
+    const t = setTimeout(() => setCopied(null), 1500)
+    return () => clearTimeout(t)
+  }, [copied])
+
+  const copyCode = async (code, ts) => {
+    try {
+      await navigator.clipboard.writeText(code)
+      toast('Kode disalin!', 'success')
+      setCopied(ts)
+    } catch { toast('Gagal menyalin', 'error') }
   }
 
-  if (!history.length) return null
+  const now = Date.now()
+  const active = history.filter(h => now - h.timestamp < (h.expireMinutes || 60) * 60000)
+  const expired = history.filter(h => now - h.timestamp >= (h.expireMinutes || 60) * 60000)
 
-  const active = history.filter(h => !isExpired(h))
-  const expired = history.filter(h => isExpired(h))
+  const clearHistory = () => localStorage.removeItem('sw_history')
 
   return (
-    <div className="mt-6">
-      {/* Header toggle */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-1 mb-3 group"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-[#22d3ee]/15 to-[#3b82f6]/10 border border-[#22d3ee]/20 grid place-items-center shadow-[0_0_16px_-4px_rgba(34,211,238,.25)]">
-            <i className="fa-solid fa-clock-rotate-left text-[#22d3ee] text-[11px]" />
-          </div>
-          <span className="font-[family-name:var(--font-display)] font-bold text-[14px] tracking-tight">Riwayat</span>
-          <span className="px-2 py-0.5 rounded-full bg-[#22d3ee]/10 border border-[#22d3ee]/20 text-[#67e8f9] text-[9px] font-extrabold tracking-wider">
+    <div className="card p-4">
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between mb-1 group">
+        <div className="flex items-center gap-2">
+          <i className="fa-solid fa-clock-rotate-left text-[var(--t-muted)] text-[12px]" />
+          <span className="font-black text-[13px] tracking-tight">Riwayat Klaim</span>
+          <span className="px-1.5 py-0.5 rounded-[2px] bg-[var(--t-surface2)] border border-[var(--t-line)] font-mono text-[9px] font-bold tnum">
             {history.length}
           </span>
         </div>
         <div className="flex items-center gap-2">
           {active.length > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-ok/10 border border-ok/20 text-ok text-[8px] font-extrabold tracking-wider">
+            <span className="px-1.5 py-0.5 rounded-[2px] border border-[var(--t-ok)]/30 bg-[var(--t-ok)]/10 text-[var(--t-ok)] font-mono text-[9px] font-bold tracking-wider">
               {active.length} AKTIF
             </span>
           )}
-          <i className={`fa-solid fa-chevron-down text-[10px] text-[#7e90ad] transition-transform duration-[250ms] ${open ? 'rotate-180' : ''}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
+          <i className={`fa-solid fa-chevron-down text-[10px] text-[var(--t-muted)] transition-transform duration-[200ms] ${open ? 'rotate-180' : ''}`} />
         </div>
       </button>
 
       {open && (
-        <div className="space-y-2 anim-fade">
-          {/* Active uploads */}
+        <div className="anim-fade space-y-1.5 mt-3">
+          {!history.length && (
+            <p className="text-center text-[11px] font-mono text-[var(--t-muted)] py-4 border border-dashed border-[var(--t-line)] rounded-[3px]">
+              — BELUM ADA RIWAYAT KLAIM —
+            </p>
+          )}
+
+          {/* Active */}
           {active.map(h => {
-            const pct = expirePercent(h)
             const code = h.bundle || h.code
             const isCopied = copied === h.timestamp
-            const remaining = Math.max(0, Math.ceil((h.expireMinutes || 60) - (Date.now() - h.timestamp) / 60000))
+            const remaining = Math.max(0, Math.ceil((h.expireMinutes || 60) - (now - h.timestamp) / 60000))
+            const pct = remaining / ((h.expireMinutes || 60) / 100)
+            const urgent = remaining <= 10
             return (
-              <div key={h.timestamp} className="relative rounded-[16px] border border-white/[.06] overflow-hidden group hover:border-[#22d3ee]/25 transition-all duration-[250ms]" style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-                {/* Glow top edge */}
-                <div className="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-[#22d3ee]/30 to-transparent" />
-
-                <div className="relative p-3.5 bg-white/[.02]">
-                  <div className="flex items-start gap-3">
-                    {/* Icon */}
-                    <div className="w-10 h-10 shrink-0 rounded-[12px] bg-gradient-to-br from-[#22d3ee]/12 to-[#3b82f6]/8 border border-[#22d3ee]/20 grid place-items-center shadow-[0_0_20px_-6px_rgba(34,211,238,.2)]">
-                      <i className={`fa-solid ${h.bundle ? 'fa-layer-group' : h.count > 1 ? 'fa-images' : 'fa-film'} text-[#67e8f9] text-[13px]`} />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-bold text-[12px] truncate max-w-[160px]">
-                          {h.files?.[0] || code}
-                        </p>
-                        {h.count > 1 && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-[#3b82f6]/10 border border-[#3b82f6]/20 text-[#93c5fd] text-[8px] font-extrabold shrink-0">
-                            +{h.count - 1}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-[9px] text-[#7e90ad]">
-                        <span className="flex items-center gap-1">
-                          <i className="fa-regular fa-clock text-[7px] opacity-60" />
-                          {timeAgo(h.timestamp)}
-                        </span>
-                        {h.totalSize > 0 && (
-                          <span className="flex items-center gap-1">
-                            <i className="fa-solid fa-hard-drive text-[7px] opacity-60" />
-                            {fmtSize(h.totalSize)}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1 text-ok">
-                          <i className="fa-solid fa-hourglass-half text-[7px]" />
-                          {remaining}m
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Copy code button */}
-                    <button
-                      onClick={() => copyCode(code, h.timestamp)}
-                      className={`shrink-0 px-3 py-2 rounded-[12px] text-[11px] font-mono font-bold transition-all duration-[250ms] active:scale-95 ${isCopied
-                        ? 'bg-ok/15 border border-ok/30 text-ok shadow-[0_0_16px_-4px_rgba(52,211,153,.4)]'
-                        : 'bg-gradient-to-br from-[#22d3ee]/10 to-[#080e1c] border border-[#22d3ee]/25 text-[#a5f3fc] shadow-[0_0_20px_-6px_rgba(34,211,238,.25)] hover:border-[#22d3ee]/40 hover:shadow-[0_0_28px_-6px_rgba(34,211,238,.4)]'
-                      }`}
-                      style={{ transitionTimingFunction: 'var(--ease-out)', textShadow: '0 0 14px rgba(34,211,238,.4)' }}
-                    >
-                      {isCopied ? (
-                        <><i className="fa-solid fa-check mr-1" />OK</>
-                      ) : (
-                        <><i className="fa-regular fa-copy mr-1 text-[9px] opacity-60" />{code}</>
-                      )}
-                    </button>
+              <div key={h.timestamp} className="hist-item rounded-r-[3px] p-2.5 bg-[var(--t-surface2)] border border-l-2 border-[var(--t-line)]">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 shrink-0 rounded-[3px] bg-[var(--t-surface)] border border-[var(--t-line)] grid place-items-center">
+                    <i className={`fa-solid ${h.bundle ? 'fa-layer-group' : h.count > 1 ? 'fa-images' : 'fa-film'} text-[11px] text-[var(--t-accent-2)]`} />
                   </div>
 
-                  {/* Expire progress bar */}
-                  <div className="mt-3 h-[3px] rounded-full bg-white/[.04] overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-[450ms]"
-                      style={{
-                        width: `${100 - pct}%`,
-                        background: pct > 80 ? 'linear-gradient(90deg, #fb7185, #fbbf24)' : 'linear-gradient(90deg, #22d3ee, #3b82f6)',
-                        boxShadow: pct > 80 ? '0 0 8px rgba(251,113,133,.4)' : '0 0 8px rgba(34,211,238,.3)',
-                        transitionTimingFunction: 'var(--ease-out)',
-                      }}
-                    />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-[11px] truncate max-w-[170px]">{h.files?.[0] || code}</p>
+                    <div className="flex items-center gap-2 text-[9px] font-mono text-[var(--t-muted)] mt-0.5 tnum">
+                      <span>{timeAgo(h.timestamp)}</span>
+                      {h.totalSize > 0 && <span>· {fmtSize(h.totalSize)}</span>}
+                      <span className={urgent ? 'text-[var(--t-bad)] font-bold' : 'text-[var(--t-ok)]'}>
+                        · SISA {remaining}m
+                      </span>
+                    </div>
                   </div>
+
+                  <button
+                    onClick={() => copyCode(code, h.timestamp)}
+                    className={`shrink-0 px-2 py-1.5 rounded-[3px] text-[10px] font-mono font-bold border transition-all duration-[140ms] active:scale-95 ${isCopied
+                      ? 'bg-[var(--t-ok)] border-[var(--t-ok)] text-white'
+                      : 'code-chip code-text hover:border-[var(--t-ink)]'}`}
+                  >
+                    {isCopied ? <>TERCOPY</> : <><i className="fa-regular fa-copy mr-1 opacity-50" />{code}</>}
+                  </button>
+                </div>
+
+                {/* Expire bar */}
+                <div className="expire-bar mt-2">
+                  <div style={{ width: `${100 - pct}%` }} className={urgent ? 'is-timeout' : ''} />
                 </div>
               </div>
             )
           })}
 
-          {/* Expired uploads */}
+          {/* Expired */}
           {expired.length > 0 && (
             <>
-              <div className="flex items-center gap-2 px-1 pt-2">
-                <span className="text-[9px] font-extrabold tracking-[.15em] uppercase text-[#7e90ad]/40">Kadaluarsa</span>
-                <div className="flex-1 h-px bg-white/[.04]" />
+              <div className="flex items-center gap-2 px-0.5 pt-2">
+                <span className="field-label">Kadaluarsa</span>
+                <div className="flex-1 h-px bg-[var(--t-line)]" />
               </div>
               {expired.map(h => {
                 const code = h.bundle || h.code
                 return (
-                  <div key={h.timestamp} className="rounded-[14px] border border-white/[.04] p-3 bg-white/[.01] opacity-50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 shrink-0 rounded-[10px] bg-white/[.03] border border-white/[.06] grid place-items-center">
-                        <i className="fa-solid fa-clock text-[#7e90ad]/40 text-[10px]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-[11px] truncate text-[#7e90ad]/60">{h.files?.[0] || code}</p>
-                        <p className="text-[8px] text-[#7e90ad]/40 font-mono">{timeAgo(h.timestamp)}{h.count > 1 ? ` · ${h.count} file` : ''}</p>
-                      </div>
-                      <span className="px-2 py-1 rounded-lg bg-bad/8 border border-bad/15 text-bad/50 text-[8px] font-extrabold tracking-wider">EXPIRED</span>
+                  <div key={h.timestamp} className="rounded-[3px] border border-[var(--t-line)] p-2 bg-[var(--t-surface2)] opacity-60 flex items-center gap-2.5">
+                    <div className="w-7 h-7 shrink-0 rounded-[3px] bg-[var(--t-surface)] border border-[var(--t-line)] grid place-items-center">
+                      <i className="fa-solid fa-clock text-[var(--t-muted)] text-[9px]" />
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-[11px] truncate text-[var(--t-muted)]">{h.files?.[0] || code}</p>
+                      <p className="text-[8px] text-[var(--t-muted)] font-mono tnum">{timeAgo(h.timestamp)}{h.count > 1 ? ` · ${h.count} file` : ''}</p>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded-[2px] border border-[var(--t-bad)]/30 text-[var(--t-bad)] font-mono text-[8px] font-bold tracking-wider">EXPIRED</span>
                   </div>
                 )
               })}
@@ -192,13 +145,14 @@ export default function HistorySection() {
           )}
 
           {/* Clear all */}
-          <button
-            onClick={() => { clearHistory(); setHistory([]) }}
-            className="w-full mt-1 py-2.5 rounded-[12px] text-[10px] font-bold tracking-wider text-[#7e90ad]/50 border border-white/[.04] bg-white/[.01] hover:text-bad/70 hover:border-bad/20 hover:bg-bad/[.04] transition-all duration-[250ms] active:scale-[.98]"
-            style={{ transitionTimingFunction: 'var(--ease-out)' }}
-          >
-            <i className="fa-solid fa-trash-can mr-1.5" />BERSIHKAN RIWAYAT
-          </button>
+          {history.length > 0 && (
+            <button
+              onClick={() => { clearHistory(); setHistory([]); toast('Riwayat dibersihkan', 'info') }}
+              className="w-full mt-1 py-2 rounded-[3px] text-[10px] font-mono font-bold tracking-wider text-[var(--t-muted)] border border-dashed border-[var(--t-line)] hover:text-[var(--t-bad)] hover:border-[var(--t-bad)]/40 transition-all duration-[140ms] active:scale-[.98]"
+            >
+              <i className="fa-solid fa-trash-can mr-1.5" />BERSIHKAN RIWAYAT
+            </button>
+          )}
         </div>
       )}
     </div>

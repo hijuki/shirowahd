@@ -1,8 +1,8 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'SHIROWAHD',
-  description: 'Upload media ke grup WhatsApp via bot — cepat, aman, tanpa ribet',
+  title: 'SHIROWAHD — Pengiriman Media WhatsApp',
+  description: 'Upload video & foto HD, dapatkan kode klaim tiket, kirim ke grup WhatsApp.',
 }
 
 export default function RootLayout({ children }) {
@@ -12,7 +12,7 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap"
           rel="stylesheet"
         />
         <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />

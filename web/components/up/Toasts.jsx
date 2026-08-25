@@ -8,22 +8,31 @@ export function useToasts() {
   const add = useCallback((msg, type = 'info') => {
     const id = ++toastId
     setToasts(t => [...t, { id, msg, type }])
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000)
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500)
   }, [])
   return { toasts, add }
 }
 
-const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' }
-const colors = { success: 'text-ok border-ok/30', error: 'text-bad border-bad/30', info: 'text-[#22d3ee] border-[#22d3ee]/30' }
+const icons = { success: 'fa-check', error: 'fa-xmark', info: 'fa-info' }
+const typeStyles = {
+  success: 'border-l-[var(--t-ok)] text-[var(--t-ink)]',
+  error: 'border-l-[var(--t-bad)] text-[var(--t-bad)]',
+  info: 'border-l-[var(--t-accent)] text-[var(--t-ink)]',
+}
 
 export default function Toasts({ toasts }) {
   if (!toasts.length) return null
   return (
-    <div className="fixed top-4 right-4 z-[999] flex flex-col gap-2 max-w-[320px]">
+    <div className="fixed top-3 right-3 z-[999] flex flex-col gap-1.5 max-w-[300px] pointer-events-none">
       {toasts.map(t => (
-        <div key={t.id} className={`toast-card rounded-[14px] px-4 py-3 flex items-center gap-3 anim-pop border-l-[3px] ${colors[t.type] || colors.info}`}>
-          <i className={`fa-solid ${icons[t.type] || icons.info} text-sm shrink-0`} />
-          <span className="text-[12px] font-semibold text-[#e8f1ff]/90 leading-relaxed">{t.msg}</span>
+        <div
+          key={t.id}
+          className={`pointer-events-auto toast-card card px-3 py-2 flex items-center gap-2 anim-pop border-l-4 text-[12px] ${typeStyles[t.type] || typeStyles.info}`}
+        >
+          <span className="w-4 h-4 rounded-full border border-current grid place-items-center text-[9px] shrink-0 font-mono font-bold">
+            <i className={`fa-solid ${icons[t.type] || icons.info}`} />
+          </span>
+          <span className="font-medium leading-snug flex-1">{t.msg}</span>
         </div>
       ))}
     </div>
