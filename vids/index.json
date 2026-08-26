@@ -25,19 +25,6 @@
     "ip": "2a04:3543:1000:2310:8879:57ff:fefd:2413",
     "totalSize": 3129
   },
-  "ZY": {
-    "bundle": true,
-    "files": [
-      {
-        "name": "big.jpg",
-        "file": "ZY_0.vid",
-        "size": 3129
-      }
-    ],
-    "ts": 1787756953109,
-    "ip": "2a04:3543:1000:2310:8879:57ff:fefd:2413",
-    "totalSize": 3129
-  },
   "YP": {
     "bundle": true,
     "files": [
@@ -129,16 +116,16 @@
     "ip": "2a04:3543:1000:2310:8879:57ff:fefd:2413",
     "totalSize": 3129
   },
-  "DE": {
+  "5T": {
     "bundle": true,
     "files": [
       {
         "name": "big.jpg",
-        "file": "DE_0.vid",
+        "file": "5T_0.vid",
         "size": 3129
       }
     ],
-    "ts": 1787758522692,
+    "ts": 1787758825780,
     "ip": "2a04:3543:1000:2310:8879:57ff:fefd:2413",
     "totalSize": 3129
   }
