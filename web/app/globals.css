@@ -6,7 +6,7 @@
   --color-line: rgba(59, 130, 246, 0.18);
   --color-line2: rgba(34, 211, 238, 0.35);
   --color-ink: #e8f1ff;
-  --color-muted: #7e90ad;
+  --color-muted: #93a5c4;
   --color-accent: #22d3ee;
   --color-accent2: #3b82f6;
   --color-cyan: #22d3ee;
@@ -50,7 +50,7 @@ body {
   --t-border: rgba(255,255,255,.07);
   --t-border2: rgba(255,255,255,.04);
   --t-ink: #e8f1ff;
-  --t-muted: #7e90ad;
+  --t-muted: #93a5c4;
   --t-nav: rgba(4,7,15,.8);
   --t-overlay: rgba(0,0,0,.7);
   --t-aurora-blue: rgba(59,130,246,.18);
@@ -66,7 +66,7 @@ body {
   --t-border: rgba(59,130,246,.12);
   --t-border2: rgba(59,130,246,.08);
   --t-ink: #0f172a;
-  --t-muted: #475569;
+  --t-muted: #5b6b85;
   --t-nav: rgba(255,255,255,.85);
   --t-overlay: rgba(0,0,0,.4);
   --t-aurora-blue: rgba(59,130,246,.08);

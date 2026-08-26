@@ -97,7 +97,7 @@ export default function UploaderPage() {
         <SkeletonPage />
       ) : (
         <div className="relative z-10 min-h-dvh flex flex-col items-center px-4 pb-20 pt-2">
-          <div className="w-full max-w-[440px]">
+          <div className="w-full max-w-[440px] sm:max-w-[560px]">
             <Navbar settings={settings} onFaq={() => setFaqOpen(true)} onAbout={() => setAboutOpen(true)} />
 
             {/* Hero */}
