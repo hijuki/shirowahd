@@ -107,14 +107,14 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           {/* halo lembut, konsentris sama badge bulat */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[130px] h-[130px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(52,211,153,.28) 0%, rgba(52,211,153,.08) 45%, transparent 70%)' }} />
 
-          <div className={`relative w-[76px] h-[76px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] floaty ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)', background: 'radial-gradient(circle at 38% 30%, #6ee7b7, #10b981 52%, #059669 100%)', boxShadow: '0 14px 42px -8px rgba(16,185,129,.6), inset 0 3px 4px rgba(255,255,255,.5), inset 0 -7px 14px rgba(0,0,0,.32), 0 0 0 1px rgba(255,255,255,.18)' }}>
+          <div className={`relative w-[76px] h-[76px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] floaty ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)', background: 'radial-gradient(circle at 35% 28%, #7ff0b0 0%, #21c46b 36%, #0e9c54 70%, #0a7a42 100%)', boxShadow: '0 14px 42px -8px rgba(16,185,129,.6), inset 0 -14px 24px rgba(0,60,25,.6), inset 0 10px 18px rgba(200,255,220,.4), inset 0 0 0 1.5px rgba(255,255,255,.14)' }}>
             {/* crisp rim ring */}
             <span className="absolute -inset-[5px] rounded-full pointer-events-none" style={{ border: '1.5px solid rgba(110,231,183,.45)' }} />
-            {/* glossy top sheen */}
-            <span className="absolute top-[6px] left-1/2 -translate-x-1/2 w-[54px] h-[26px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(ellipse, rgba(255,255,255,.55), transparent 72%)' }} />
             {/* specular hotspot */}
-            <span className="absolute top-[12px] left-[20px] w-[12px] h-[12px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(255,255,255,.95), transparent 70%)' }} />
-            <i className="fa-solid fa-check text-white text-[34px] relative" style={{ WebkitTextStroke: '1px rgba(255,255,255,.4)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.35))' }} />
+            <span className="absolute top-[13px] left-[18px] w-[22px] h-[16px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,.95), transparent 70%)', filter: 'blur(1px)' }} />
+            {/* bounce light bawah-kanan */}
+            <span className="absolute bottom-[14px] right-[16px] w-[18px] h-[12px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(120,255,180,.5), transparent 70%)', filter: 'blur(3px)' }} />
+            <i className="fa-solid fa-check text-white text-[34px] relative" style={{ WebkitTextStroke: '1px rgba(255,255,255,.4)', filter: 'drop-shadow(0 2px 3px rgba(0,50,20,.5))' }} />
           </div>
 
           {/* Sparkle particles — tx/ty precomputed (rad) biar kompatibel semua browser */}
