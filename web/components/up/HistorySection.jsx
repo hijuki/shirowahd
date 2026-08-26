@@ -56,7 +56,7 @@ export default function HistorySection() {
         className="w-full flex items-center justify-between px-1 mb-3 group"
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-[#22d3ee]/15 to-[#3b82f6]/10 border border-[#22d3ee]/20 grid place-items-center shadow-[0_0_16px_-4px_rgba(34,211,238,.25)]">
+          <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-[#22d3ee]/15 to-[#3b82f6]/10 border border-[#22d3ee]/20 grid place-items-center">
             <i className="fa-solid fa-clock-rotate-left text-[#22d3ee] text-[11px]" />
           </div>
           <span className="font-[family-name:var(--font-display)] font-bold text-[14px] tracking-tight">Riwayat</span>
@@ -70,7 +70,7 @@ export default function HistorySection() {
               {active.length} AKTIF
             </span>
           )}
-          <i className={`fa-solid fa-chevron-down text-[10px] text-[#7e90ad] transition-transform duration-[250ms] ${open ? 'rotate-180' : ''}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
+          <i className={`fa-solid fa-chevron-down text-[10px] text-[var(--t-muted)] transition-transform duration-[250ms] ${open ? 'rotate-180' : ''}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
         </div>
       </button>
 
@@ -106,7 +106,7 @@ export default function HistorySection() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-[9px] text-[#7e90ad]">
+                      <div className="flex items-center gap-3 text-[10px] text-[var(--t-muted)]">
                         <span className="flex items-center gap-1">
                           <i className="fa-regular fa-clock text-[7px] opacity-60" />
                           {timeAgo(h.timestamp)}
@@ -127,7 +127,7 @@ export default function HistorySection() {
                     {/* Copy code button */}
                     <button
                       onClick={() => copyCode(code, h.timestamp)}
-                      className={`shrink-0 px-3 py-2 rounded-[12px] text-[11px] font-mono font-bold transition-all duration-[250ms] active:scale-95 ${isCopied
+                      className={`shrink-0 px-3 py-2 rounded-[12px] text-[12px] font-mono font-bold transition-all duration-[250ms] active:scale-95 ${isCopied
                         ? 'bg-ok/15 border border-ok/30 text-ok shadow-[0_0_16px_-4px_rgba(52,211,153,.4)]'
                         : 'bg-gradient-to-br from-[#22d3ee]/10 to-[#080e1c] border border-[#22d3ee]/25 text-[#a5f3fc] shadow-[0_0_20px_-6px_rgba(34,211,238,.25)] hover:border-[#22d3ee]/40 hover:shadow-[0_0_28px_-6px_rgba(34,211,238,.4)]'
                       }`}
@@ -162,7 +162,7 @@ export default function HistorySection() {
           {expired.length > 0 && (
             <>
               <div className="flex items-center gap-2 px-1 pt-2">
-                <span className="text-[9px] font-extrabold tracking-[.15em] uppercase text-[#7e90ad]/40">Kadaluarsa</span>
+                <span className="text-[9px] font-extrabold tracking-[.15em] uppercase text-[var(--t-muted)]/60">Kadaluarsa</span>
                 <div className="flex-1 h-px bg-white/[.04]" />
               </div>
               {expired.map(h => {
@@ -171,11 +171,11 @@ export default function HistorySection() {
                   <div key={h.timestamp} className="rounded-[14px] border border-white/[.04] p-3 bg-white/[.01] opacity-50">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 shrink-0 rounded-[10px] bg-white/[.03] border border-white/[.06] grid place-items-center">
-                        <i className="fa-solid fa-clock text-[#7e90ad]/40 text-[10px]" />
+                        <i className="fa-solid fa-clock text-[var(--t-muted)]/50 text-[10px]" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-[11px] truncate text-[#7e90ad]/60">{h.files?.[0] || code}</p>
-                        <p className="text-[8px] text-[#7e90ad]/40 font-mono">{timeAgo(h.timestamp)}{h.count > 1 ? ` · ${h.count} file` : ''}</p>
+                        <p className="font-semibold text-[11px] truncate text-[var(--t-muted)]/70">{h.files?.[0] || code}</p>
+                        <p className="text-[9px] text-[var(--t-muted)]/50 font-mono">{timeAgo(h.timestamp)}{h.count > 1 ? ` · ${h.count} file` : ''}</p>
                       </div>
                       <span className="px-2 py-1 rounded-lg bg-bad/8 border border-bad/15 text-bad/50 text-[8px] font-extrabold tracking-wider">EXPIRED</span>
                     </div>

@@ -11,12 +11,12 @@ import { loadSettings } from '@/lib/up-api'
 function AnimeSparkles() {
   const sparkles = Array.from({ length: 8 }, (_, i) => ({
     id: i,
-    left: `${10 + Math.random() * 80}%`,
-    top: `${5 + Math.random() * 90}%`,
+    left: `${8 + Math.random() * 84}%`,
+    top: `${4 + Math.random() * 88}%`,
     delay: `${Math.random() * 4}s`,
-    size: 4 + Math.random() * 6,
-    color: ['#22d3ee', '#3b82f6', '#34d399', '#67e8f9'][i % 4],
-    dur: `${2 + Math.random() * 3}s`,
+    size: 4 + Math.random() * 7,
+    color: ['#22d3ee', '#3b82f6', '#34d399', '#67e8f9', '#a78bfa'][i % 5],
+    dur: `${2.5 + Math.random() * 3}s`,
   }))
   return (
     <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden">
@@ -85,8 +85,8 @@ export default function UploaderPage() {
       <AnimeSparkles />
 
       {/* Decorative orbs */}
-      <div className="fixed top-[15%] left-[8%] w-[200px] h-[200px] rounded-full bg-[#22d3ee]/[.04] blur-[80px] pointer-events-none z-0 orb-float" />
-      <div className="fixed bottom-[20%] right-[5%] w-[180px] h-[180px] rounded-full bg-[#3b82f6]/[.05] blur-[70px] pointer-events-none z-0 orb-float-2" />
+      <div className="fixed top-[15%] left-[8%] w-[220px] h-[220px] rounded-full bg-[#22d3ee]/[.05] blur-[80px] pointer-events-none z-0 orb-float" />
+      <div className="fixed bottom-[20%] right-[5%] w-[190px] h-[190px] rounded-full bg-[#a78bfa]/[.05] blur-[75px] pointer-events-none z-0 orb-float-2" />
 
       <Toasts toasts={toasts} />
       {showWelcome && <IntroModal onDone={() => setShowWelcome(false)} settings={settings} />}
@@ -102,7 +102,7 @@ export default function UploaderPage() {
 
             {/* Hero */}
             <header className="text-center mb-8 anim-entrance perspective-container" style={{ animationDelay: '60ms' }}>
-              {/* Logo with anime energy ring */}
+              {/* Logo — conic ring + halo + energy ring */}
               <div className="relative inline-block mb-5">
                 <div className="absolute -inset-3 rounded-[26px] border-ring-spin pointer-events-none" />
                 <div className="absolute -inset-5 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
@@ -122,12 +122,12 @@ export default function UploaderPage() {
               <h1 className="font-[family-name:var(--font-display)] font-bold text-[28px] leading-tight tracking-tight">
                 {heroTitle}{' '}<span className="anime-text">{heroHighlight}</span>
               </h1>
-              <p className="text-[var(--t-muted)] text-[12px] mt-2.5 max-w-[300px] mx-auto leading-relaxed whitespace-pre-line">
+              <p className="text-[var(--t-muted)] text-[13px] mt-2.5 max-w-[300px] mx-auto leading-relaxed whitespace-pre-line">
                 {heroDesc}
               </p>
 
               {/* Inline dev credit */}
-              <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] text-[9px] tracking-wider text-[var(--t-muted)]">
+              <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] text-[10px] tracking-wider text-[var(--t-muted)]">
                 <span className="w-[18px] h-[18px] rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white shrink-0">H</span>
                 <span className="font-semibold">SWHDHLZ</span>
                 <span className="opacity-40">BY</span>
@@ -135,7 +135,7 @@ export default function UploaderPage() {
               </div>
             </header>
 
-            {/* 3-step guide — 3D glass cards with speed lines */}
+            {/* 3-step guide — glass cards + speed lines */}
             <div className="grid grid-cols-3 gap-2 mb-6 anim-entrance perspective-container" style={{ animationDelay: '120ms' }}>
               {[
                 { n: 1, t: 'Upload', sub: 'Pilih file', i: 'fa-cloud-arrow-up', c: '#22d3ee' },
@@ -144,7 +144,7 @@ export default function UploaderPage() {
               ].map((s, i) => (
                 <div key={s.n} className="relative rounded-[18px] border border-[var(--t-border)] overflow-hidden group step-3d" style={{ animationDelay: `${120 + i * 80}ms` }}>
                   <div className="absolute inset-0 bg-gradient-to-b from-white/[.02] to-transparent" />
-                  <div className="absolute top-0 left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent to-transparent" style={{ '--tw-gradient-via': `${s.c}40`, backgroundImage: `linear-gradient(to right, transparent, ${s.c}40, transparent)` }} />
+                  <div className="absolute top-0 left-[15%] right-[15%] h-px" style={{ background: `linear-gradient(to right, transparent, ${s.c}40, transparent)` }} />
                   {/* Speed lines on hover */}
                   <div className="speed-lines opacity-0 group-hover:opacity-100 transition-opacity duration-[250ms]" />
                   <div className="relative flex flex-col items-center py-4 px-2 text-center">

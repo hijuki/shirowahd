@@ -90,7 +90,7 @@ export { ModalShell }
 /* ─── Close button ─── */
 function CloseBtn({ onClick }) {
   return (
-    <button onClick={onClick} className="w-8 h-8 rounded-full bg-white/[.04] border border-white/[.08] grid place-items-center text-[#7e90ad] hover:text-white hover:bg-white/[.1] hover:rotate-90 hover:border-white/20 transition-all duration-[250ms]" style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+    <button onClick={onClick} className="w-8 h-8 rounded-full bg-white/[.04] border border-white/[.08] grid place-items-center text-[var(--t-muted)] hover:text-white hover:bg-white/[.1] hover:rotate-90 hover:border-white/20 transition-all duration-[250ms]" style={{ transitionTimingFunction: 'var(--ease-out)' }}>
       <i className="fa-solid fa-xmark text-xs" />
     </button>
   )
@@ -117,7 +117,7 @@ export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], po
           </span>
           <span className="min-w-0 flex-1 text-left">
             <span className="block font-bold text-[12px] truncate">{it.t}</span>
-            <span className="block text-[#7e90ad] text-[9px]">{it.s}</span>
+            <span className="block text-[var(--t-muted)] text-[10px]">{it.s}</span>
           </span>
           <i className="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-30 group-hover:opacity-80 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-[200ms]" style={{ color: it.c }} />
         </a>

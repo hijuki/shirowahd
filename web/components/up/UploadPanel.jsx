@@ -102,8 +102,8 @@ export default function UploadPanel({ settings, toast }) {
         </div>
 
         {/* Main upload card */}
-        <div className="card card-3d overflow-visible">
-          <div className="absolute -inset-6 -z-10 rounded-[32px] bg-gradient-to-b from-[#22d3ee]/[.04] via-transparent to-[#3b82f6]/[.03] blur-xl pointer-events-none" />
+        <div className="card card-3d">
+          <div className="absolute -inset-6 -z-10 rounded-[32px] bg-gradient-to-b from-[#22d3ee]/[.05] via-transparent to-[#3b82f6]/[.04] blur-xl pointer-events-none" />
           <div className="p-5">
             {/* Format badges + server info */}
             <div className="flex items-center justify-between mb-4">
@@ -115,7 +115,7 @@ export default function UploadPanel({ settings, toast }) {
                   </span>
                 ))}
               </div>
-              <span className="text-[8px] font-mono font-bold tracking-wider text-[#7e90ad]/60 uppercase">
+              <span className="text-[9px] font-mono font-bold tracking-wider text-[var(--t-muted)]/70 uppercase">
                 {settings?.maxFileSizeMB > 0 ? `≤${settings.maxFileSizeMB}MB` : '∞'}
               </span>
             </div>
@@ -139,7 +139,7 @@ export default function UploadPanel({ settings, toast }) {
               <p className="font-[family-name:var(--font-display)] font-bold text-[15px] tracking-tight">
                 {tab === 'video' ? 'Drop video di sini' : 'Drop foto di sini'}
               </p>
-              <p className="text-[#7e90ad] text-[11px] mt-1.5">
+              <p className="text-[var(--t-muted)] text-[12px] mt-1.5">
                 atau <span className="text-[#22d3ee] font-semibold underline underline-offset-4 decoration-[#22d3ee]/40">pilih file</span>
               </p>
 
@@ -149,7 +149,7 @@ export default function UploadPanel({ settings, toast }) {
             {files.length > 0 && (
               <div className="mt-4 stagger">
                 <div className="flex items-center justify-between px-0.5 mb-2">
-                  <span className="text-[#7e90ad] text-[10px] font-bold">
+                  <span className="text-[var(--t-muted)] text-[10px] font-bold">
                     {files.length} file · {fmtSize(files.reduce((s, f) => s + f.size, 0))}
                   </span>
                   <button onClick={clearAll} disabled={uploading} className="text-bad/60 text-[10px] font-bold hover:text-bad transition-all duration-[150ms] disabled:opacity-30">
@@ -186,7 +186,7 @@ export default function UploadPanel({ settings, toast }) {
                           </span>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-[11px] truncate">{f.name}</p>
-                            <span className="text-[#7e90ad] text-[9px] font-mono">{fmtSize(f.size)}</span>
+                            <span className="text-[var(--t-muted)] text-[9px] font-mono">{fmtSize(f.size)}</span>
                           </div>
                           <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded-[5px]" style={{ color: TAG_COLORS[ext.toLowerCase()], background: `${TAG_COLORS[ext.toLowerCase()]}12` }}>{ext}</span>
                           {!uploading && (
@@ -212,8 +212,8 @@ export default function UploadPanel({ settings, toast }) {
                       <i className="fa-solid fa-cloud-arrow-up text-[#22d3ee] text-[10px] animate-bounce" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-bold text-[#e8f1ff]">Mengupload…</p>
-                      <p className="text-[8px] font-mono text-[#7e90ad]">
+                      <p className="text-[11px] font-bold text-[var(--t-ink)]">Mengupload…</p>
+                      <p className="text-[9px] font-mono text-[var(--t-muted)]">
                         {fmtSize(progress.loaded)} / {fmtSize(progress.total)}
                       </p>
                     </div>
@@ -243,7 +243,7 @@ export default function UploadPanel({ settings, toast }) {
 
                 {/* ETA */}
                 {progress.speed > 0 && progress.pct < 100 && (
-                  <p className="text-[8px] text-[#7e90ad]/60 font-mono mt-1.5 text-right">
+                  <p className="text-[9px] text-[var(--t-muted)]/70 font-mono mt-1.5 text-right">
                     ≈ {Math.ceil((progress.total - progress.loaded) / progress.speed)}s tersisa
                   </p>
                 )}
