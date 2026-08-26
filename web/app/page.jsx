@@ -106,14 +106,30 @@ export default function UploaderPage() {
               {/* Logo — conic ring + halo */}
               <div className="relative inline-block mb-5 [perspective:700px]">
                 <div className="absolute -inset-5 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
+                <svg className="logo-orbit-ring" viewBox="0 0 104 104" fill="none" aria-hidden>
+                  <defs>
+                    <linearGradient id="orbA" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#22d3ee" stopOpacity=".9" />
+                      <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                    </linearGradient>
+                    <linearGradient id="orbB" x1="1" y1="1" x2="0" y2="0">
+                      <stop offset="0%" stopColor="#34d399" stopOpacity=".8" />
+                      <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="52" cy="52" r="50" stroke="rgba(34,211,238,.09)" strokeWidth="1" />
+                  <g className="ring-spin">
+                    <circle cx="52" cy="52" r="50" stroke="url(#orbA)" strokeWidth="2" strokeLinecap="round" strokeDasharray="92 222" />
+                  </g>
+                  <g className="ring-spin-rev">
+                    <circle cx="52" cy="52" r="43" stroke="url(#orbB)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="54 216" />
+                  </g>
+                </svg>
                 {logoUrl ? (
-                  <div className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden logo-3d anime-glow bg-[#080e1c]">
-                    <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
-                  </div>
+                  <img src={logoUrl} alt="Logo" className="relative w-[76px] h-[76px] object-contain logo-clean floaty" />
                 ) : (
-                  <div className="relative w-[76px] h-[76px] rounded-[24px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center logo-3d anime-glow">
-                    <span className="absolute inset-[2px] rounded-[22px] bg-[#080e1c]/80 backdrop-blur-sm" />
-                    <i className="fa-brands fa-whatsapp text-white text-[34px] relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
+                  <div className="relative w-[76px] h-[76px] rounded-full bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_12px_40px_-8px_rgba(34,211,238,.55)] floaty">
+                    <i className="fa-brands fa-whatsapp text-white text-[34px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
                   </div>
                 )}
               </div>

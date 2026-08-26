@@ -1095,6 +1095,31 @@ body {
   box-shadow: 0 0 22px -8px rgba(34,211,238,.45), inset 0 1px 0 rgba(255,255,255,.08);
 }
 
+/* ===== v3.7 — Logo bersih tanpa tile + orbit ring SVG ===== */
+/* Logo user: TANPA background kotak — glow ngikutin bentuk gambar (drop-shadow filter) */
+.logo-clean {
+  filter: drop-shadow(0 6px 16px rgba(34,211,238,.30)) drop-shadow(0 0 36px rgba(59,130,246,.22));
+}
+@keyframes ringSpinCW { to { transform: rotate(360deg); } }
+@keyframes ringSpinCCW { to { transform: rotate(-360deg); } }
+.logo-orbit-ring {
+  position: absolute;
+  inset: -13px;
+  width: calc(100% + 26px);
+  height: calc(100% + 26px);
+  pointer-events: none;
+}
+.logo-orbit-ring .ring-spin,
+.logo-orbit-ring .ring-spin-rev {
+  transform-origin: 52px 52px;
+}
+.logo-orbit-ring .ring-spin {
+  animation: ringSpinCW 11s linear infinite;
+}
+.logo-orbit-ring .ring-spin-rev {
+  animation: ringSpinCCW 17s linear infinite;
+}
+
 /* ===== v3.6 — Popup burst rings (center-presisi, scale+opacity doank) ===== */
 @keyframes burstRingOut {
   0%   { transform: scale(.25); opacity: .9; }
