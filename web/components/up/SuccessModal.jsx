@@ -202,12 +202,12 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       <div className={`grid grid-cols-3 gap-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={() => copy(codes[0].code)}
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3 rounded-[13px] bg-white/[.04] border border-white/[.09] text-[10px] font-semibold text-[var(--t-fg)] hover:bg-white/[.07] hover:border-white/[.16] active:scale-[.95] transition-all duration-[180ms]">
-          <i className={`fa-solid ${copied ? 'fa-circle-check text-[#34d399]' : 'fa-copy text-[#22d3ee]'} text-[16px]`} />
+          <i className={`fa-solid ${copied ? 'fa-circle-check' : 'fa-copy'} text-[#34d399] text-[16px]`} />
           <span>{copied ? 'Tersalin' : 'Salin'}</span>
         </button>
         <button onClick={() => shareCode(codes[0].code)}
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3 rounded-[13px] bg-white/[.04] border border-white/[.09] text-[10px] font-semibold text-[var(--t-fg)] hover:bg-white/[.07] hover:border-white/[.16] active:scale-[.95] transition-all duration-[180ms]">
-          <i className="fa-solid fa-share-nodes text-[#3b82f6] text-[16px]" /> <span>Bagikan</span>
+          <i className="fa-solid fa-share-nodes text-[#34d399] text-[16px]" /> <span>Bagikan</span>
         </button>
         <a href={`https://wa.me/?text=${encodeURIComponent('.claim ' + codes[0].code)}`} target="_blank" rel="noreferrer"
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3 rounded-[13px] bg-white/[.04] border border-white/[.09] text-[10px] font-semibold text-[var(--t-fg)] hover:bg-white/[.07] hover:border-white/[.16] active:scale-[.95] transition-all duration-[180ms]">
