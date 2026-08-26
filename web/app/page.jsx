@@ -103,18 +103,17 @@ export default function UploaderPage() {
 
             {/* Hero */}
             <header className="text-center mb-8 anim-entrance perspective-container" style={{ animationDelay: '60ms' }}>
-              {/* Logo — conic ring + halo + energy ring */}
-              <div className="relative inline-block mb-5">
-                <div className="absolute -inset-3 rounded-[26px] border-ring-spin pointer-events-none" />
-                <div className="absolute -inset-5 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
-                <div className="energy-ring !inset-[-8px] !rounded-[28px]" />
+              {/* Logo — conic ring + halo */}
+              <div className="relative inline-block mb-5 [perspective:700px]">
+                <div className="absolute -inset-2.5 rounded-[26px] border-ring-spin pointer-events-none" />
+                <div className="absolute -inset-4 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
                 {logoUrl ? (
                   <div className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden logo-3d anime-glow bg-[#080e1c]">
                     <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
                   </div>
                 ) : (
                   <div className="relative w-[76px] h-[76px] rounded-[24px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center logo-3d anime-glow">
-                    <span className="absolute inset-[2px] rounded-[22px] bg-[#080e1c]/70 backdrop-blur-sm" />
+                    <span className="absolute inset-[2px] rounded-[22px] bg-[#080e1c]/80 backdrop-blur-sm" />
                     <i className="fa-brands fa-whatsapp text-white text-[34px] relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
                   </div>
                 )}

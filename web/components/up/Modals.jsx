@@ -21,10 +21,10 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
       <div className="absolute inset-0 bg-[#020408]/[.97]" onClick={close} />
 
       <div className="absolute inset-0 z-10 overflow-y-auto modal-scroll-hide" onClick={close}>
-        <div className="min-h-full flex items-center justify-center p-4 py-6">
+        <div className="min-h-full flex p-4 py-6">
           <div
             onClick={e => e.stopPropagation()}
-            className={`relative w-full max-w-[400px] transform-gpu will-change-transform ${closing ? 'modal-card-out' : 'modal-card-in'}`}
+            className={`m-auto relative w-full max-w-[400px] transform-gpu will-change-transform ${closing ? 'modal-card-out' : 'modal-card-in'}`}
           >
             {/* Card */}
             <div className="relative rounded-[22px] bg-[#0a1020] border border-white/[.08] shadow-[0_32px_80px_-12px_rgba(0,0,0,.9)] overflow-hidden">

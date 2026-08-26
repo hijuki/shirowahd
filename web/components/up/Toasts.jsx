@@ -23,7 +23,7 @@ const colors = { success: 'text-ok border-ok/30 bg-ok/[.08]', error: 'text-bad b
 export default function Toasts({ toasts }) {
   if (!toasts.length) return null
   return (
-    <div className="fixed top-4 right-4 z-[999] flex flex-col gap-2 max-w-[320px]">
+    <div className="fixed top-16 right-3 z-[999] flex flex-col gap-2 max-w-[300px]">
       {toasts.map(t => (
         <div key={t.id} className={`rounded-[14px] px-4 py-3 flex items-center gap-3 border-l-[3px] transition-all duration-[450ms] will-change-transform ${colors[t.type] || colors.info} ${t.leaving ? 'opacity-0 translate-x-4 scale-[.96]' : 'toast-in'}`}>
           <i className={`fa-solid ${icons[t.type] || icons.info} text-sm shrink-0`} />

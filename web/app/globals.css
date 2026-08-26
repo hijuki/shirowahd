@@ -605,17 +605,18 @@ body {
 
 /* ===== Confetti particles ===== */
 @keyframes confettiFall {
-  0%   { transform: translate(0, -20px) rotate(0deg) scale(0); opacity: 0; }
-  15%  { opacity: 1; transform: translate(0, 0) rotate(30deg) scale(1); }
-  100% { transform: translate(var(--drift), 85vh) rotate(540deg) scale(.3); opacity: 0; }
+  0%   { transform: translate3d(0, -20px, 0) rotate(0deg) scale(0); opacity: 0; }
+  15%  { opacity: 1; transform: translate3d(0, 0, 0) rotate(30deg) scale(1); }
+  100% { transform: translate3d(var(--drift), 85vh, 0) rotate(540deg) scale(.3); opacity: 0; }
 }
 .confetti-particle {
   position: absolute;
-  top: 20%;
+  top: -10px;
   left: var(--x);
   width: 6px; height: 6px;
   border-radius: 2px;
   background: var(--color);
+  opacity: 0;
   animation: confettiFall 2.8s var(--ease-out) both;
   animation-delay: var(--delay);
   pointer-events: none;
@@ -677,17 +678,11 @@ body {
   animation: shineSweep 3s ease-in-out infinite;
 }
 
-/* ── Check sparkle burst particles ── */
+/* ── Check sparkle burst particles — arah di-precompute via --tx/--ty (kompatibel browser lama, tanpa cos/sin) ── */
 @keyframes checkSparkleBurst {
-  0%   { transform: translate(0, 0) scale(0); opacity: 0; }
-  30%  { transform: translate(
-           calc(cos(var(--angle)) * var(--dist)),
-           calc(sin(var(--angle)) * var(--dist))
-         ) scale(1.5); opacity: 1; }
-  100% { transform: translate(
-           calc(cos(var(--angle)) * var(--dist) * 1.5),
-           calc(sin(var(--angle)) * var(--dist) * 1.5)
-         ) scale(0); opacity: 0; }
+  0%   { transform: translate3d(0, 0, 0) scale(0); opacity: 0; }
+  30%  { transform: translate3d(var(--tx), var(--ty), 0) scale(1.5); opacity: 1; }
+  100% { transform: translate3d(calc(var(--tx) * 1.5), calc(var(--ty) * 1.5), 0) scale(0); opacity: 0; }
 }
 .check-sparkle {
   background: var(--color, #34d399);
@@ -1033,7 +1028,6 @@ body {
 }
 .nav-sheen {
   position: absolute; top: 0; bottom: 0; width: 45%;
-  background: linear-gradient(105deg, transparent, rgba(255,255,255,[.05]), transparent);
   background: linear-gradient(105deg, transparent, rgba(255,255,255,.055), transparent);
   pointer-events: none;
   animation: navSheen 1.6s var(--ease-out) .55s both;

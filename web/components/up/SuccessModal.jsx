@@ -91,10 +91,10 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
 
       {/* Manga burst rings */}
       {phase >= 1 && (
-        <div className="absolute inset-0 pointer-events-none flex items-start justify-center pt-8">
-          <div className="manga-burst w-16 h-16" style={{ animationDelay: '0ms' }} />
-          <div className="manga-burst w-24 h-24 !border-[#3b82f6]/40" style={{ animationDelay: '150ms' }} />
-          <div className="manga-burst w-32 h-32 !border-[#34d399]/30" style={{ animationDelay: '300ms' }} />
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="manga-burst w-16 h-16 left-1/2 top-8 -ml-8" style={{ animationDelay: '0ms' }} />
+          <div className="manga-burst w-24 h-24 left-1/2 top-4 -ml-12 !border-[#3b82f6]/40" style={{ animationDelay: '150ms' }} />
+          <div className="manga-burst w-32 h-32 left-1/2 top-0 -ml-16 !border-[#34d399]/30" style={{ animationDelay: '300ms' }} />
         </div>
       )}
 
@@ -104,24 +104,26 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           <div className={`absolute -inset-6 rounded-full transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} />
           <div className={`absolute -inset-10 rounded-full transform-gpu transition-[transform,opacity] duration-[800ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} />
           <div className="absolute -inset-5 rounded-full bg-ok/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(52,211,153,.14) inset' }} />
-          {/* Anime energy ring */}
-          <div className="energy-ring !rounded-full" />
 
           <div className={`relative w-[56px] h-[56px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/30 to-ok/5 border-2 border-ok/40 anime-glow success-core-glow" />
             <i className="fa-solid fa-check text-ok text-[22px] relative drop-shadow-[0_0_16px_rgba(52,211,153,.9)]" />
           </div>
 
-          {/* Sparkle particles */}
-          {phase >= 1 && [...Array(8)].map((_, i) => (
-            <div key={i} className="absolute w-1 h-1 rounded-full check-sparkle" style={{
-              top: '50%', left: '50%',
-              '--angle': `${i * 45}deg`,
-              '--dist': `${28 + (i % 2) * 12}px`,
-              '--color': ['#34d399', '#22d3ee', '#fbbf24', '#3b82f6'][i % 4],
-              animationDelay: `${300 + i * 60}ms`,
-            }} />
-          ))}
+          {/* Sparkle particles — tx/ty precomputed (rad) biar kompatibel semua browser */}
+          {phase >= 1 && [...Array(8)].map((_, i) => {
+            const rad = (i * 45 * Math.PI) / 180
+            const dist = 28 + (i % 2) * 12
+            return (
+              <div key={i} className="absolute w-1 h-1 rounded-full check-sparkle" style={{
+                top: '50%', left: '50%',
+                '--tx': `${Math.cos(rad) * dist}px`,
+                '--ty': `${Math.sin(rad) * dist}px`,
+                '--color': ['#34d399', '#22d3ee', '#fbbf24', '#3b82f6'][i % 4],
+                animationDelay: `${300 + i * 60}ms`,
+              }} />
+            )
+          })}
         </div>
 
         <h2 className={`font-[family-name:var(--font-display)] font-bold text-[20px] tracking-tight transform-gpu transition-[transform,opacity] duration-[400ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
