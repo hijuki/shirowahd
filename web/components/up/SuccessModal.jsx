@@ -95,42 +95,42 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       </div>
 
       {/* Header */}
-      <div className="relative text-center mb-4">
-        <div className="relative inline-block mb-3">
+      <div className="relative text-center mb-5">
+        <div className="relative inline-block mb-4">
           {phase >= 1 && (
             <>
-              <span className="burst-ring" style={{ '--bs': '72px', animationDelay: '80ms', borderColor: 'rgba(52,211,153,.55)' }} />
-              <span className="burst-ring" style={{ '--bs': '104px', animationDelay: '240ms', borderColor: 'rgba(52,211,153,.4)' }} />
-              <span className="burst-ring" style={{ '--bs': '136px', animationDelay: '400ms', borderColor: 'rgba(52,211,153,.28)' }} />
+              <span className="burst-ring" style={{ '--bs': '86px', animationDelay: '80ms', borderColor: 'rgba(52,211,153,.55)' }} />
+              <span className="burst-ring" style={{ '--bs': '120px', animationDelay: '240ms', borderColor: 'rgba(52,211,153,.4)' }} />
+              <span className="burst-ring" style={{ '--bs': '154px', animationDelay: '400ms', borderColor: 'rgba(52,211,153,.28)' }} />
             </>
           )}
-          <div className="absolute -inset-5 rounded-full bg-ok/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(52,211,153,.14) inset' }} />
+          <div className="absolute -inset-6 rounded-full bg-ok/12 pointer-events-none" style={{ boxShadow: '0 0 70px 14px rgba(52,211,153,.16) inset' }} />
 
-          <div className={`relative w-[56px] h-[56px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/30 to-ok/5 border-2 border-ok/40 success-core-glow" />
-            <i className="fa-solid fa-check text-ok text-[22px] relative drop-shadow-[0_0_8px_rgba(52,211,153,.6)]" />
+          <div className={`relative w-[72px] h-[72px] mx-auto rounded-[24px] grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] floaty ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)', background: 'linear-gradient(135deg, #34d399, #10b981 55%, #0e9f6e)', boxShadow: '0 12px 40px -8px rgba(52,211,153,.55), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 8px rgba(0,0,0,.25)' }}>
+            <span className="absolute inset-[2px] rounded-[22px] bg-gradient-to-b from-white/30 to-transparent pointer-events-none" />
+            <i className="fa-solid fa-check text-white text-[32px] relative drop-shadow-[0_3px_8px_rgba(0,0,0,.35)]" />
           </div>
 
           {/* Sparkle particles — tx/ty precomputed (rad) biar kompatibel semua browser */}
           {phase >= 1 && [...Array(8)].map((_, i) => {
             const rad = (i * 45 * Math.PI) / 180
-            const dist = 28 + (i % 2) * 12
+            const dist = 34 + (i % 2) * 14
             return (
               <div key={i} className="absolute w-1 h-1 rounded-full check-sparkle" style={{
                 top: '50%', left: '50%',
                 '--tx': `${Math.cos(rad) * dist}px`,
                 '--ty': `${Math.sin(rad) * dist}px`,
-                '--color': ['#34d399', '#22d3ee', '#fbbf24', '#3b82f6'][i % 4],
+                '--color': ['#34d399', '#6ee7b7', '#10b981', '#a7f3d0'][i % 4],
                 animationDelay: `${300 + i * 60}ms`,
               }} />
             )
           })}
         </div>
 
-        <h2 className={`font-[family-name:var(--font-display)] font-bold text-[20px] tracking-tight text-[var(--t-fg)] transform-gpu transition-[transform,opacity] duration-[400ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        <h2 className={`font-[family-name:var(--font-display)] font-extrabold text-[24px] tracking-tight text-[var(--t-fg)] transform-gpu transition-[transform,opacity] duration-[400ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           Upload Berhasil!
         </h2>
-        <p className={`text-[var(--t-muted)] text-[10px] mt-1 transform-gpu transition-[transform,opacity] duration-[400ms] delay-75 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}>
+        <p className={`text-[var(--t-muted)] text-[11px] mt-1.5 transform-gpu transition-[transform,opacity] duration-[400ms] delay-75 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}>
           {result.bundle ? `${result.count} foto — 1 bundle` : 'File siap diklaim'}
         </p>
       </div>
@@ -139,16 +139,16 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       <div className={`space-y-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         {codes.map(({ code, name }) => (
           <div key={code} onClick={() => copy(code)}
-            className="claim-code-card group relative rounded-[16px] p-3.5 text-center cursor-pointer active:scale-[.97] overflow-hidden">
+            className="claim-code-card group relative rounded-[18px] p-4 text-center cursor-pointer active:scale-[.97] overflow-hidden">
             {/* Auto shine sweep */}
             <div className="code-shine" />
             {/* Speed lines on hover */}
             <div className="speed-lines opacity-0 group-hover:opacity-100 transition-opacity duration-[200ms]" />
 
-            {name && <p className="text-[var(--t-muted)] text-[8px] truncate mb-1 relative">{name}</p>}
-            <p className="text-[7px] font-extrabold tracking-[.22em] uppercase text-[var(--t-muted)]/45 mb-1.5 relative">Kode Klaim</p>
-            <p className="font-mono font-bold text-[21px] tracking-[.04em] code-text select-all relative">.claim {code}</p>
-            <p className={`text-[8px] font-bold mt-2 transition-colors duration-[150ms] relative inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${copied === code ? 'text-ok bg-ok/10' : 'text-[var(--t-muted)]/60 bg-white/[.03] group-hover:text-[#34d399]/80'}`}>
+            {name && <p className="text-[var(--t-muted)] text-[9px] truncate mb-1 relative">{name}</p>}
+            <p className="text-[8px] font-extrabold tracking-[.24em] uppercase text-[var(--t-muted)]/50 mb-2 relative">Kode Klaim</p>
+            <p className="font-mono font-bold text-[26px] tracking-[.04em] code-text select-all relative">.claim {code}</p>
+            <p className={`text-[9px] font-bold mt-3 transition-colors duration-[150ms] relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full ${copied === code ? 'text-ok bg-ok/12' : 'text-[var(--t-muted)]/70 bg-white/[.04] group-hover:text-[#34d399]/90'}`}>
               <i className={`fa-solid ${copied === code ? 'fa-circle-check' : 'fa-copy'}`} />
               {copied === code ? 'Tersalin!' : 'Tap untuk salin'}
             </p>
@@ -157,12 +157,12 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       </div>
 
       {/* Timer */}
-      <div className={`mb-4 transform-gpu transition-[transform,opacity] duration-[400ms] delay-150 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[var(--t-muted)] text-[9px] font-semibold flex items-center gap-1.5">
-            <i className="fa-solid fa-hourglass-half text-[8px]" /> Berlaku sampai
+      <div className={`mb-5 transform-gpu transition-[transform,opacity] duration-[400ms] delay-150 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[var(--t-muted)] text-[10px] font-semibold flex items-center gap-1.5">
+            <i className="fa-solid fa-hourglass-half text-[9px]" /> Berlaku sampai
           </span>
-          <span className={`font-mono font-bold text-[12px] tabular-nums ${urgent ? 'text-bad animate-pulse' : 'text-[#34d399]'}`}>
+          <span className={`font-mono font-bold text-[13px] tabular-nums ${urgent ? 'text-bad animate-pulse' : 'text-[#34d399]'}`}>
             {mins}:{secs}
           </span>
         </div>
