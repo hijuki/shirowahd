@@ -39,7 +39,6 @@ export default function Navbar({ settings, onFaq, onAbout }) {
           <div className="relative w-9 h-9 shrink-0 rounded-[12px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_4px_16px_-4px_rgba(37,211,102,.5)] group">
             <span className="absolute inset-[1px] rounded-[11px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
             <i className="fa-brands fa-whatsapp text-white text-[16px] relative drop-shadow-[0_2px_4px_rgba(0,0,0,.3)]" />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#22d3ee] border border-[#0a1020]" />
           </div>
         )}
         <div className="min-w-0 leading-tight">
@@ -47,7 +46,7 @@ export default function Navbar({ settings, onFaq, onAbout }) {
             <p className="font-[family-name:var(--font-display)] font-extrabold text-[14px] tracking-tight truncate grad-text">
               {settings?.siteName || 'SHIROWAHD'}
             </p>
-            <span className="px-1.5 py-[1px] rounded-[5px] text-[7px] font-black uppercase tracking-wider bg-[#22d3ee]/10 border border-[#22d3ee]/25 text-[#22d3ee]">v3.3</span>
+            <span className="px-1.5 py-[1px] rounded-[5px] text-[7px] font-black uppercase tracking-wider leading-none bg-[#22d3ee]/10 border border-[#22d3ee]/25 text-[#22d3ee] self-center">v3.5</span>
           </div>
           <p className="text-[var(--t-muted)] text-[8px] font-bold tracking-[.14em] uppercase truncate mt-0.5">
             {settings?.siteSubtitle || 'SWHDHLZ · BY HILLZ'}

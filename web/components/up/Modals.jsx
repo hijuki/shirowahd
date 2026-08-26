@@ -86,18 +86,20 @@ export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], po
     <div className={`grid gap-2 ${items.length === 1 ? '' : items.length <= 4 && items.length % 2 === 0 ? 'grid-cols-2' : ''}`}>
       {items.map((it, idx) => (
         <a key={it.t + it.href} href={it.href} target="_blank" rel="noreferrer"
-          className={`link-btn-premium flex items-center gap-2.5 rounded-[14px] px-3.5 py-3 border group ${it.feat ? 'col-span-full' : ''}`}
-          style={{ background: `${it.c}0a`, borderColor: `${it.c}20`, animationDelay: `${idx * 80}ms` }}>
-          <span className="w-9 h-9 shrink-0 rounded-[11px] grid place-items-center relative overflow-hidden" style={{ background: `${it.c}15`, border: `1px solid ${it.c}30` }}>
-            <i className={`${it.i} text-[14px]`} style={{ color: it.c }} />
+          className={`link-btn-premium flex items-center gap-3 rounded-[15px] px-3.5 py-3 group ${it.feat ? 'col-span-full' : ''}`}
+          style={{ background: `linear-gradient(120deg, ${it.c}14, ${it.c}06)`, border: `1px solid ${it.c}28`, boxShadow: `0 2px 14px -8px ${it.c}55, inset 0 1px 0 rgba(255,255,255,.04)`, animationDelay: `${idx * 80}ms` }}>
+          <span className="w-10 h-10 shrink-0 rounded-[12px] grid place-items-center relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${it.c}22, ${it.c}0d)`, border: `1px solid ${it.c}38`, boxShadow: `0 0 18px -8px ${it.c}66` }}>
+            <i className={`${it.i} text-[15px]`} style={{ color: it.c }} />
             {/* Icon inner shimmer */}
-            <span className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <span className="absolute inset-0 bg-gradient-to-br from-white/12 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </span>
           <span className="min-w-0 flex-1 text-left">
             <span className="block font-bold text-[12px] truncate">{it.t}</span>
             <span className="block text-[var(--t-muted)] text-[10px]">{it.s}</span>
           </span>
-          <i className="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-30 group-hover:opacity-80 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-[200ms]" style={{ color: it.c }} />
+          <span className="w-7 h-7 shrink-0 rounded-full grid place-items-center transition-transform duration-[200ms] group-hover:translate-x-0.5" style={{ background: `${it.c}14`, border: `1px solid ${it.c}30` }}>
+            <i className="fa-solid fa-arrow-right text-[9px]" style={{ color: it.c }} />
+          </span>
         </a>
       ))}
     </div>

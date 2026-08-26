@@ -177,22 +177,26 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       {/* Claim group buttons */}
       {linkBtns.length > 0 && (
         <div className={`mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-200 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-          <p className="text-[7px] font-extrabold tracking-[.15em] uppercase text-[var(--t-muted)]/40 mb-1.5 flex items-center gap-2">
-            <span className="flex-1 h-px bg-[var(--t-border)]" />Klaim file di grup<span className="flex-1 h-px bg-[var(--t-border)]" />
+          <p className="text-[8px] font-extrabold tracking-[.18em] uppercase text-[var(--t-muted)]/50 mb-2 flex items-center gap-2">
+            <span className="flex-1 h-px bg-gradient-to-r from-transparent to-[#34d399]/25" />
+            <i className="fa-solid fa-comments text-[#34d399]/70 text-[8px]" /> Klaim di Grup
+            <span className="flex-1 h-px bg-gradient-to-l from-transparent to-[#34d399]/25" />
           </p>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {linkBtns.map((btn, idx) => (
               <a key={btn.name + btn.link} href={btn.link} target="_blank" rel="noreferrer"
-                className="link-btn-premium flex items-center gap-2 px-3 py-2 rounded-[12px] bg-[#34d399]/[.05] border border-[#34d399]/15 group hover:bg-[#34d399]/[.12] hover:border-[#34d399]/25 transition-all duration-[200ms] active:scale-[.97]"
+                className="claim-btn group relative flex items-center gap-3 px-3.5 py-3 rounded-[15px] transition-all duration-[200ms] active:scale-[.97]"
                 style={{ animationDelay: `${idx * 60}ms` }}>
-                <span className="w-7 h-7 shrink-0 rounded-[9px] bg-[#34d399]/12 border border-[#34d399]/18 grid place-items-center">
-                  <i className="fa-solid fa-comments text-[#34d399] text-[10px]" />
+                <span className="claim-btn-icon w-10 h-10 shrink-0 rounded-[12px] grid place-items-center">
+                  <i className="fa-solid fa-comments text-[#34d399] text-[13px]" />
                 </span>
                 <span className="flex-1 min-w-0 text-left">
-                  <span className="block font-bold text-[11px] truncate">{btn.name || 'Grup Claim'}</span>
-                  <span className="block text-[var(--t-muted)] text-[7px]">Buka &amp; paste kode</span>
+                  <span className="block font-bold text-[12px] truncate">{btn.name || 'Grup Claim'}</span>
+                  <span className="block text-[var(--t-muted)] text-[9px]">Buka &amp; paste kode .claim</span>
                 </span>
-                <i className="fa-solid fa-arrow-up-right-from-square text-[7px] text-[#34d399]/30 group-hover:text-[#34d399]/70 transition-colors" />
+                <span className="w-7 h-7 shrink-0 rounded-full grid place-items-center bg-[#34d399]/12 border border-[#34d399]/20 transition-transform duration-[200ms] group-hover:translate-x-0.5">
+                  <i className="fa-solid fa-arrow-right text-[#34d399] text-[9px]" />
+                </span>
               </a>
             ))}
           </div>
@@ -202,17 +206,17 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       {/* Action buttons — 3 columns: Copy, Share, WhatsApp */}
       <div className={`grid grid-cols-3 gap-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={() => copy(codes[0].code)}
-          className="btn-3d py-2.5 rounded-[12px] bg-[var(--t-surface)] border border-[var(--t-border)] text-[10px] font-bold hover:border-[#22d3ee]/30 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
-          <i className={`fa-solid ${copied ? 'fa-check text-ok' : 'fa-copy text-[#22d3ee]'} text-[9px]`} />
+          className="action-chip btn-3d py-3 rounded-[13px] bg-white/[.04] border border-white/[.10] text-[11px] font-bold hover:border-[#22d3ee]/35 hover:bg-[#22d3ee]/[.07] active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
+          <i className={`fa-solid ${copied ? 'fa-check text-ok' : 'fa-copy text-[#22d3ee]'}`} />
           {copied ? 'OK!' : 'Salin'}
         </button>
         <button onClick={() => shareCode(codes[0].code)}
-          className="btn-3d py-2.5 rounded-[12px] bg-[#3b82f6]/[.06] border border-[#3b82f6]/18 text-[10px] font-bold text-[#93c5fd] hover:bg-[#3b82f6]/[.14] hover:border-[#3b82f6]/30 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
-          <i className="fa-solid fa-share-nodes text-[9px]" /> Share
+          className="action-chip btn-3d py-3 rounded-[13px] bg-[#3b82f6]/[.10] border border-[#3b82f6]/25 text-[11px] font-bold text-[#93c5fd] hover:bg-[#3b82f6]/[.18] hover:border-[#3b82f6]/40 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
+          <i className="fa-solid fa-share-nodes" /> Share
         </button>
         <a href={`https://wa.me/?text=${encodeURIComponent('.claim ' + codes[0].code)}`} target="_blank" rel="noreferrer"
-          className="btn-3d py-2.5 rounded-[12px] bg-[#25D366]/[.06] border border-[#25D366]/18 text-[10px] font-bold text-[#7ce8a8] hover:bg-[#25D366]/[.14] hover:border-[#25D366]/30 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
-          <i className="fa-brands fa-whatsapp text-[10px]" /> WA
+          className="action-chip btn-3d py-3 rounded-[13px] bg-[#25D366]/[.10] border border-[#25D366]/25 text-[11px] font-bold text-[#7ce8a8] hover:bg-[#25D366]/[.18] hover:border-[#25D366]/40 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
+          <i className="fa-brands fa-whatsapp text-[12px]" /> WA
         </a>
       </div>
 

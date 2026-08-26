@@ -105,8 +105,8 @@ export default function UploaderPage() {
             <header className="text-center mb-8 anim-entrance perspective-container" style={{ animationDelay: '60ms' }}>
               {/* Logo — conic ring + halo */}
               <div className="relative inline-block mb-5 [perspective:700px]">
-                <div className="absolute -inset-2.5 rounded-[26px] border-ring-spin pointer-events-none" />
-                <div className="absolute -inset-4 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
+                <div className="absolute -inset-3 rounded-[28px] border-ring-spin pointer-events-none" />
+                <div className="absolute -inset-5 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
                 {logoUrl ? (
                   <div className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden logo-3d anime-glow bg-[#080e1c]">
                     <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
@@ -130,7 +130,7 @@ export default function UploaderPage() {
               <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] text-[10px] tracking-wider text-[var(--t-muted)]">
                 <span className="w-[18px] h-[18px] rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white shrink-0">H</span>
                 <span className="font-semibold">SWHDHLZ</span>
-                <span className="opacity-40">BY</span>
+                <span className="opacity-60">BY</span>
                 <span className="anime-text font-extrabold">HILLZ</span>
               </div>
             </header>
@@ -139,7 +139,7 @@ export default function UploaderPage() {
             <div className="grid grid-cols-3 gap-2 mb-6 anim-entrance perspective-container" style={{ animationDelay: '120ms' }}>
               {[
                 { n: 1, t: 'Upload', sub: 'Pilih file', i: 'fa-cloud-arrow-up', c: '#22d3ee' },
-                { n: 2, t: 'Kode', sub: 'Dapat klaim', i: 'fa-key', c: '#3b82f6' },
+                { n: 2, t: 'Kode', sub: 'Dapatkan kode', i: 'fa-key', c: '#3b82f6' },
                 { n: 3, t: 'Claim', sub: 'Kirim di grup', i: 'fa-comments', c: '#34d399' },
               ].map((s, i) => (
                 <div key={s.n} className="relative rounded-[18px] border border-[var(--t-border)] overflow-hidden group step-3d" style={{ animationDelay: `${120 + i * 80}ms` }}>
@@ -147,8 +147,8 @@ export default function UploaderPage() {
                   <div className="absolute top-0 left-[15%] right-[15%] h-px" style={{ background: `linear-gradient(to right, transparent, ${s.c}40, transparent)` }} />
                   {/* Speed lines on hover */}
                   <div className="speed-lines opacity-0 group-hover:opacity-100 transition-opacity duration-[250ms]" />
-                  <div className="relative flex flex-col items-center py-4 px-2 text-center">
-                    <div className="w-10 h-10 rounded-[12px] grid place-items-center mb-2.5 transition-all duration-[250ms] group-hover:scale-110" style={{ background: `${s.c}12`, border: `1px solid ${s.c}25`, boxShadow: `0 0 20px -6px ${s.c}30` }}>
+                  <div className="relative flex flex-col items-center py-3.5 px-2 text-center">
+                    <div className="w-10 h-10 rounded-[12px] grid place-items-center mb-2 transition-all duration-[250ms] group-hover:scale-110" style={{ background: `${s.c}12`, border: `1px solid ${s.c}25`, boxShadow: `0 0 20px -6px ${s.c}30` }}>
                       <i className={`fa-solid ${s.i} text-[14px]`} style={{ color: s.c }} />
                     </div>
                     <span className="font-bold text-[11px] tracking-wide">{s.t}</span>

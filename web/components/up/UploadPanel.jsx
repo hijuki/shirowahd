@@ -104,13 +104,13 @@ export default function UploadPanel({ settings, toast }) {
   return (
     <>
       <div className="space-y-4">
-        {/* Tab selector — standalone card */}
-        <div className="flex gap-2">
+        {/* Tab selector — segmented pill */}
+        <div className="flex gap-1 p-1 rounded-[16px] bg-white/[.03] border border-white/[.06] relative">
           {[['video', 'fa-video', 'Video'], ['image', 'fa-image', 'Foto']].map(([t, icon, label]) => (
             <button key={t} onClick={() => { if (!uploading) { setTab(t); clearAll() } }}
-              className={`flex-1 py-3.5 rounded-[16px] font-bold text-[13px] tracking-wide border transition-all duration-[250ms] active:scale-[.97] ${tab === t
-                ? 'bg-gradient-to-r from-[#22d3ee]/15 to-[#3b82f6]/10 border-[#22d3ee]/30 text-[#e8f1ff] shadow-[0_0_24px_-8px_rgba(34,211,238,.35)]'
-                : 'bg-white/[.02] border-white/[.06] text-[#7e90ad] hover:bg-white/[.05] hover:border-white/[.10]'}`}
+              className={`flex-1 py-3 rounded-[12px] font-bold text-[13px] tracking-wide transition-all duration-[250ms] active:scale-[.97] ${tab === t
+                ? 'tab-pill-active text-[#e8f1ff]'
+                : 'text-[#7e90ad] hover:text-white/80 hover:bg-white/[.04]'}`}
               style={{ transitionTimingFunction: 'var(--ease-out)' }}
             >
               <i className={`fa-solid ${icon} mr-2 ${tab === t ? 'text-[#22d3ee]' : ''}`} />{label}
@@ -143,7 +143,7 @@ export default function UploadPanel({ settings, toast }) {
               onDrop={handleDrop}
               onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
               onDragLeave={() => setDrag(false)}
-              className={`drop-luxe drop-3d py-10 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
+              className={`drop-luxe drop-3d py-9 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
             >
               <input ref={fileRef} type="file" accept={accept} multiple className="hidden" onChange={e => addFiles(e.target.files)} />
               <div className="drop-halo">
