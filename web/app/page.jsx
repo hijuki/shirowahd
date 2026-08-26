@@ -13,10 +13,10 @@ function AnimeSparkles() {
     id: i,
     left: `${8 + Math.random() * 84}%`,
     top: `${4 + Math.random() * 88}%`,
-    delay: `${Math.random() * 4}s`,
-    size: 4 + Math.random() * 7,
+    delay: `${Math.random() * 7}s`,
+    size: 2.5 + Math.random() * 3.5,
     color: ['#22d3ee', '#3b82f6', '#34d399', '#67e8f9', '#a78bfa'][i % 5],
-    dur: `${2.5 + Math.random() * 3}s`,
+    dur: `${6 + Math.random() * 4}s`,
   }))
   return (
     <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden">

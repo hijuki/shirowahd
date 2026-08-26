@@ -52,6 +52,10 @@ export default function Navbar({ settings, onFaq, onAbout }) {
         <button onClick={onAbout} title="Tentang" className={`${btn} bg-white/[.04] border-white/[.08] text-[var(--t-muted)] hover:text-[#3b82f6] hover:border-[#3b82f6]/30 hover:bg-[#3b82f6]/[.08]`}>
           <i className="fa-solid fa-circle-info text-[13px]" />
         </button>
+        <a href="https://github.com/hijuki/shirowahd" target="_blank" rel="noopener noreferrer" title="GitHub"
+          className={`${btn} bg-white/[.04] border-white/[.08] text-[var(--t-muted)] hover:text-white hover:border-white/30 hover:bg-white/[.08]`}>
+          <i className="fa-brands fa-github text-[15px]" />
+        </a>
         <a href="/admin" title="Admin" className={`${btn} bg-white/[.04] border-white/[.08] text-[var(--t-muted)] hover:text-[#34d399] hover:border-[#34d399]/30 hover:bg-[#34d399]/[.08]`}>
           <i className="fa-solid fa-user-shield text-[12px]" />
         </a>

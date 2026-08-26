@@ -269,7 +269,7 @@ body {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit; padding: 2px;
-  background: linear-gradient(115deg, rgba(34,211,238,.7), rgba(59,130,246,.25) 25%, rgba(34,211,238,.08) 45%, rgba(59,130,246,.4) 70%, rgba(52,211,153,.55));
+  background: linear-gradient(115deg, rgba(34,211,238,.7), rgba(59,130,246,.25) 20%, rgba(52,211,153,.5) 40%, rgba(34,211,238,.15) 60%, rgba(59,130,246,.45) 80%, rgba(34,211,238,.7));
   background-size: 300% 100%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -289,7 +289,7 @@ body {
 .drop-luxe:hover::after,  .drop-luxe.dragging::after  { opacity: 1; }
 .drop-luxe.dragging { background: rgba(34,211,238,.07); transform: scale(1.008); }
 .drop-luxe.dragging::before {
-  background: linear-gradient(115deg, #22d3ee, #3b82f6 40%, #34d399);
+  background: linear-gradient(115deg, #22d3ee, #3b82f6 35%, #34d399 70%, #22d3ee);
   background-size: 300% 100%;
   animation-duration: 1.8s;
 }
@@ -631,10 +631,10 @@ body {
 
 /* ── Floating sparkle dots in backdrop ── */
 @keyframes sparklePulse {
-  0%   { transform: scale(0) translate(0, 0); opacity: 0; }
-  20%  { transform: scale(1); opacity: .8; }
-  80%  { opacity: .3; }
-  100% { transform: scale(0) translate(10px, -20px); opacity: 0; }
+  0%   { transform: translate3d(0,16px,0) scale(.4); opacity: 0; }
+  25%  { opacity: .8; }
+  70%  { opacity: .45; }
+  100% { transform: translate3d(0,-32px,0) scale(1); opacity: 0; }
 }
 .sparkle-dot {
   position: absolute;
@@ -839,18 +839,21 @@ body {
 
 /* Sparkle/star burst — floating sparkles */
 @keyframes animeSparkle {
-  0%   { transform: scale(0) rotate(0deg); opacity: 0; }
-  20%  { transform: scale(1) rotate(90deg); opacity: 1; }
-  80%  { transform: scale(.8) rotate(270deg); opacity: .6; }
-  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+  0%   { transform: translate3d(0,14px,0) scale(.4); opacity: 0; }
+  30%  { opacity: .55; }
+  65%  { opacity: .35; }
+  100% { transform: translate3d(0,-48px,0) scale(1); opacity: 0; }
 }
 .anime-sparkle {
   position: absolute;
-  width: 6px; height: 6px;
-  background: #fff;
-  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  animation: animeSparkle 2s var(--ease-out) infinite;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px 1px currentColor;
+  animation: animeSparkle 7s ease-in-out infinite;
   pointer-events: none;
+  opacity: 0;
+}
   filter: drop-shadow(0 0 4px currentColor);
 }
 
