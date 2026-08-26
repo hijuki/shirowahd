@@ -411,6 +411,18 @@ const server = http.createServer(async (req, res) => {
   }
 
 
+  // Root static assets (hero.jpg, logo.svg, icons) dari WEB_OUT
+  if (req.method === 'GET' && /^\/[\w.-]+\.(jpg|jpeg|png|gif|webp|svg|ico)$/.test(url.split('?')[0])) {
+    const rel = url.split('?')[0].replace(/\.\./g, '');
+    const file = join(WEB_OUT, rel);
+    if (existsSync(file) && file.startsWith(WEB_OUT)) {
+      const t = { '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.gif':'image/gif', '.webp':'image/webp', '.svg':'image/svg+xml', '.ico':'image/x-icon' };
+      res.writeHead(200, { 'Content-Type': t[extname(file)] || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400' });
+      res.end(readFileSync(file));
+      return;
+    }
+  }
+
   if (req.method === 'GET' && url === '/favicon.svg') {
     const fav = join(WEB_OUT, 'favicon.svg');
     if (existsSync(fav)) {
