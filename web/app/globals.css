@@ -1119,6 +1119,24 @@ body {
 .logo-orbit-ring .ring-spin-rev {
   animation: ringSpinCCW 17s linear infinite;
 }
+/* HD typographic mark — pengganti gambar logo */
+.hd-text {
+  background: linear-gradient(160deg, #ffffff 8%, #a5f3fc 45%, #22d3ee 78%, #3b82f6 100%);
+  background-size: 180% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 16px rgba(34,211,238,.35));
+  animation: hdFlow 3.2s ease-in-out infinite alternate;
+}
+@keyframes hdFlow {
+  from { background-position: 0% 50%; }
+  to   { background-position: 100% 50%; }
+}
+[data-theme="light"] .hd-text {
+  background-image: linear-gradient(160deg, #0e7490 8%, #0891b2 45%, #2563eb 100%);
+  filter: drop-shadow(0 4px 14px rgba(8,145,178,.30));
+}
 
 /* ===== v3.6 — Popup burst rings (center-presisi, scale+opacity doank) ===== */
 @keyframes burstRingOut {

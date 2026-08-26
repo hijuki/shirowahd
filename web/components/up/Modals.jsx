@@ -75,6 +75,18 @@ function CloseBtn({ onClick }) {
 }
 
 /* ─── Link buttons ─── */
+/* ═══════════════════════════════════════
+   HD typographic mark — logo bersih tanpa kotak
+   ═══════════════════════════════════════ */
+export function HdMark({ size = 76 }) {
+  return (
+    <div className="relative grid place-items-center floaty" style={{ width: size, height: size }}>
+      <span className="absolute inset-[-16%] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,211,238,.20), rgba(59,130,246,.08) 55%, transparent 72%)' }} />
+      <span className="hd-text font-[family-name:var(--font-display)] font-black italic leading-none select-none relative" style={{ fontSize: Math.round(size * .52), letterSpacing: '-0.03em' }}>HD</span>
+    </div>
+  )
+}
+
 export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], popupButtons = [], settings = {} }) {
   const items = []
   if (ownerWhatsapp && settings.showOwnerBtn !== false) items.push({ i: 'fa-brands fa-whatsapp', t: 'Chat Developer', s: 'Hubungi langsung', href: `https://wa.me/${String(ownerWhatsapp).replace(/[^0-9]/g, '')}`, c: '#25D366', feat: true })
@@ -83,7 +95,7 @@ export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], po
   if (settings.showPopupBtns !== false) popupButtons.filter(b => b.link).slice(0, 3).forEach(b => items.push({ i: 'fa-solid fa-link', t: b.name || 'Link', s: 'Buka link', href: b.link, c: '#3b82f6' }))
   if (!items.length) return null
   return (
-    <div className={`grid gap-2 ${items.length === 1 ? '' : items.length <= 4 && items.length % 2 === 0 ? 'grid-cols-2' : ''}`}>
+    <div className="grid grid-cols-2 gap-2">
       {items.map((it, idx) => (
         <a key={it.t + it.href} href={it.href} target="_blank" rel="noreferrer"
           className={`link-btn-premium flex items-center gap-3 rounded-[15px] px-3.5 py-3 group ${it.feat ? 'col-span-full' : ''}`}
@@ -152,11 +164,8 @@ export function IntroModal({ onDone, settings }) {
             </>
           )}
 
-          <div className="absolute -inset-5 rounded-full bg-[#25D366]/12 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.15) inset' }} />
-          <div className="relative w-[68px] h-[68px] rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
-            <span className="absolute inset-[1px] rounded-[21px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
-            <i className="fa-brands fa-whatsapp text-white text-[30px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
-          </div>
+          <div className="absolute -inset-5 rounded-full bg-[#25D366]/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.12) inset' }} />
+          <HdMark size={68} />
 
           {/* Sparkles around logo — tx/ty precomputed */}
           {phase >= 1 && [...Array(5)].map((_, i) => {
@@ -304,12 +313,9 @@ export function AboutModal({ onClose }) {
         <div className="relative rounded-[16px] p-4 overflow-hidden border border-white/[.06] text-center">
           <div className="absolute inset-0 bg-gradient-to-br from-[#22d3ee]/[.06] via-transparent to-[#3b82f6]/[.06]" />
           <div className="relative">
-            <div className="relative w-14 h-14 mx-auto mb-2.5">
+            <div className="relative w-16 h-16 mx-auto mb-2.5">
               <div className="absolute -inset-2 rounded-full bg-[#22d3ee]/12 blur-lg" />
-              <div className="relative w-full h-full rounded-[16px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_0_32px_-4px_rgba(34,211,238,.4)]">
-                <span className="absolute inset-[1px] rounded-[15px] bg-gradient-to-b from-white/20 to-transparent" />
-                <span className="font-[family-name:var(--font-display)] font-extrabold text-lg text-white relative">H</span>
-              </div>
+              <HdMark size={64} />
             </div>
             <p className="font-[family-name:var(--font-display)] font-extrabold text-[14px] tracking-widest grad-text">SWHDHLZ</p>
             <p className="text-[#7e90ad] text-[9px] tracking-wide mt-0.5">Developed by <span className="text-[#e8f1ff] font-semibold">HILLZ</span></p>

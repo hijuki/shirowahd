@@ -178,17 +178,17 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
             <i className="fa-solid fa-comments text-[#34d399]/70 text-[8px]" /> Klaim di Grup
             <span className="flex-1 h-px bg-gradient-to-l from-transparent to-[#34d399]/25" />
           </p>
-          <div className="space-y-2">
+          <div className={linkBtns.length > 1 ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
             {linkBtns.map((btn, idx) => (
               <a key={btn.name + btn.link} href={btn.link} target="_blank" rel="noreferrer"
-                className="claim-btn group relative flex items-center gap-3 px-3.5 py-3 rounded-[15px] transition-all duration-[200ms] active:scale-[.97]"
+                className="claim-btn group relative flex items-center gap-2 px-3 py-3 rounded-[15px] transition-all duration-[200ms] active:scale-[.97] min-w-0"
                 style={{ animationDelay: `${idx * 60}ms` }}>
-                <span className="claim-btn-icon w-10 h-10 shrink-0 rounded-[12px] grid place-items-center">
-                  <i className="fa-solid fa-comments text-[#34d399] text-[13px]" />
+                <span className="claim-btn-icon w-9 h-9 shrink-0 rounded-[11px] grid place-items-center">
+                  <i className="fa-solid fa-comments text-[#34d399] text-[12px]" />
                 </span>
                 <span className="flex-1 min-w-0 text-left">
-                  <span className="block font-bold text-[12px] truncate">{btn.name || 'Grup Claim'}</span>
-                  <span className="block text-[var(--t-muted)] text-[9px]">Buka &amp; paste kode .claim</span>
+                  <span className="block font-bold text-[11px] truncate">{btn.name || 'Grup Claim'}</span>
+                  <span className="block text-[var(--t-muted)] text-[8px] truncate">Buka &amp; paste kode .claim</span>
                 </span>
                 <span className="w-7 h-7 shrink-0 rounded-full grid place-items-center bg-[#34d399]/12 border border-[#34d399]/20 transition-transform duration-[200ms] group-hover:translate-x-0.5">
                   <i className="fa-solid fa-arrow-right text-[#34d399] text-[9px]" />

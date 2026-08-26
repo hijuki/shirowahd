@@ -4,7 +4,7 @@ import Navbar from '@/components/up/Navbar'
 import UploadPanel from '@/components/up/UploadPanel'
 import HistorySection from '@/components/up/HistorySection'
 import Toasts, { useToasts } from '@/components/up/Toasts'
-import { IntroModal, FaqModal, AboutModal } from '@/components/up/Modals'
+import { IntroModal, FaqModal, AboutModal, HdMark } from '@/components/up/Modals'
 import { loadSettings } from '@/lib/up-api'
 
 /* Floating anime sparkles */
@@ -74,7 +74,6 @@ export default function UploaderPage() {
   const heroTitle = settings?.heroTitle || 'Upload'
   const heroHighlight = settings?.heroSubtitle || 'Media HD'
   const heroDesc = settings?.heroDesc || 'Kirim video & foto ke grup WhatsApp\nlewat kode klaim — cepat & mudah'
-  const logoUrl = settings?.logoUrl || ''
   const footerText = settings?.footerText || ''
 
   return (
@@ -125,13 +124,7 @@ export default function UploaderPage() {
                     <circle cx="52" cy="52" r="43" stroke="url(#orbB)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="54 216" />
                   </g>
                 </svg>
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="relative w-[76px] h-[76px] object-contain logo-clean floaty" />
-                ) : (
-                  <div className="relative w-[76px] h-[76px] rounded-full bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_12px_40px_-8px_rgba(34,211,238,.55)] floaty">
-                    <i className="fa-brands fa-whatsapp text-white text-[34px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
-                  </div>
-                )}
+                <HdMark size={76} />
               </div>
 
               <h1 className="font-[family-name:var(--font-display)] font-bold text-[28px] leading-tight tracking-tight">
