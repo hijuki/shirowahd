@@ -1,186 +1,148 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
-import { ModalShell } from './Modals'
+import { useState, useEffect } from 'react'
+import { fmtSize } from '@/lib/up-api'
 
-/* Soft click/chime via Web Audio API */
-const playSound = (type) => {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const t = ctx.currentTime
-    const note = (freq, start, dur, vol = 0.12, wave = 'sine') => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = wave
-      osc.frequency.setValueAtTime(freq, t + start)
-      gain.gain.setValueAtTime(0, t + start)
-      gain.gain.linearRampToValueAtTime(vol, t + start + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.001, t + start + dur)
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.start(t + start); osc.stop(t + start + dur)
-    }
-    if (type === 'success') {
-      note(1047, 0, 0.35, 0.10)     // C6
-      note(1319, 0.08, 0.30, 0.10)  // E6
-      note(1568, 0.16, 0.45, 0.10)  // G6
-    } else if (type === 'copy') {
-      note(784, 0, 0.10, 0.10)
-      note(988, 0.06, 0.12, 0.08)
-    }
-  } catch {}
-}
+export default function SuccessModal({ result, settings, expireMinutes = 60, onClose }) {
+  const [copied, setCopied] = useState(false)
+  const [copiedIdx, setCopiedIdx] = useState(null)
+  const [timeLeft, setTimeLeft] = useState(expireMinutes * 60)
 
-export default function SuccessModal({ result, settings, expireMinutes, onClose }) {
-  const [copied, setCopied] = useState('')
-  const [left, setLeft] = useState(expireMinutes * 60000)
-  const [phase, setPhase] = useState(0)
-  const soundPlayed = useRef(false)
+  const CONFETTI = [
+    ...Array(18)].map((_, i) => ({
+      left: `${6 + ((i * 37) % 88)}%`,
+      delay: `${(i % 9) * 0.12}s`,
+      color: ['var(--t-accent)', 'var(--t-accent-2)', 'var(--t-ok)', 'var(--t-wa)'][i % 4],
+      scale: 0.7 + ((i * 13) % 10) / 15,
+    }))
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 150)
-    const t2 = setTimeout(() => {
-      setPhase(2)
-      if (!soundPlayed.current) { playSound('success'); soundPlayed.current = true }
-    }, 500)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+    const timer = setInterval(() => {
+      setTimeLeft(prev => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
   }, [])
-  useEffect(() => { const t = setInterval(() => setLeft(l => Math.max(0, l - 1000)), 1000); return () => clearInterval(t) }, [])
 
-  const codes = result.codes?.length ? result.codes : [{ code: result.code, name: '' }]
-  const copy = async (code) => {
-    try { await navigator.clipboard.writeText('.claim ' + code) } catch {
-      const ta = document.createElement('textarea'); ta.value = '.claim ' + code
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove()
-    }
-    playSound('copy')
-    setCopied(code); setTimeout(() => setCopied(''), 2000)
+  const copyText = async (text, idx = null) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      if (idx !== null) {
+        setCopiedIdx(idx)
+        setTimeout(() => setCopiedIdx(null), 1800)
+      } else {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1800)
+      }
+    } catch {}
   }
 
-  const shareCode = async (code) => {
-    const text = `.claim ${code}`
-    if (navigator.share) {
-      try { await navigator.share({ text }); return } catch {}
-    }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
-  }
-
-  const mins = String(Math.floor(left / 60000)).padStart(2, '0')
-  const secs = String(Math.floor(left / 1000) % 60).padStart(2, '0')
-  const pct = Math.max(0, (left / (expireMinutes * 60000)) * 100)
-  const urgent = left < 5 * 60000
-
-  const popupBtns = (settings?.showPopupBtns !== false && settings?.popupButtons?.filter(b => b.link)) || []
-  const claimGrps = (settings?.showClaimBtn !== false && settings?.claimGroups?.filter(g => g.link)) || []
-  const linkBtns = popupBtns.length ? popupBtns : claimGrps
+  const isMulti = result.bundle && Array.isArray(result.codes) && result.codes.length > 1
+  const minutes = Math.floor(timeLeft / 60)
+  const seconds = timeLeft % 60
+  const progressPct = (timeLeft / (expireMinutes * 60)) * 100
 
   return (
-    <ModalShell onClose={onClose}>
-      {/* ── Receipt ── */}
-      <div className={`transition-all duration-[400ms] ${phase >= 1 ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-blur">
+      {/* Confetti burst */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {CONFETTI.map((c, i) => (
+          <span key={i} className="confetti-piece" style={{ left: c.left, background: c.color, animationDelay: c.delay, transform: `scale(${c.scale})` }} />
+        ))}
+      </div>
+      <div className="w-full max-w-[420px] modal-sheet p-6 space-y-5 text-center relative overflow-hidden">
+        {/* Glow ambient */}
+        <div className="absolute -top-24 -left-24 w-48 h-48 rounded-full bg-[var(--t-accent)]/15 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-48 h-48 rounded-full bg-[var(--t-accent-2)]/15 blur-3xl pointer-events-none" />
 
-        {/* Receipt head */}
-        <div className="flex items-start justify-between pb-3">
-          <div>
-            <p className="field-label">BUKTI KIRIM · CLAIM TICKET</p>
-            <h2 className="text-[19px] font-black tracking-tight mt-1 leading-none">
-              Upload Berhasil<span className="text-[var(--t-accent)]">.</span>
-            </h2>
-            <p className="text-[11px] text-[var(--t-muted)] mt-1 font-mono">
-              {result.bundle ? `${result.count} foto — 1 bundle` : 'File siap diklaim'}
-            </p>
-          </div>
-          {/* Hanko stamp */}
-          <div className="stamp stamp-in shrink-0 !w-[54px] !h-[54px]">
-            <span className="text-[20px] leading-none">済</span>
+        {/* Hanko 3D Stamp */}
+        <div className="pt-2">
+          <div className="hanko-seal mx-auto anim-stamp">
+            <span className="text-[26px] leading-none">済</span>
+            <span className="font-mono text-[8px] tracking-[0.2em] font-extrabold uppercase mt-1">VERIFIED</span>
           </div>
         </div>
 
-        <div className="perf-x" />
-
-        {/* Code stubs */}
-        <div className={`py-3 space-y-2 transition-all duration-[350ms] delay-75 ${phase >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-          {codes.map(({ code, name }) => (
-            <button key={code} onClick={() => copy(code)}
-              className="code-chip w-full p-3 text-left cursor-pointer group hover:border-[var(--t-accent)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-[110ms]">
-              {name && <p className="field-label mb-1 truncate">{name}</p>}
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-mono font-bold text-[17px] tracking-[.02em] select-all">.claim {code}</p>
-                <span className={`shrink-0 font-mono text-[9px] font-bold tracking-widest border px-1.5 py-1 rounded-[2px] ${copied === code
-                  ? 'bg-[var(--t-ok)] border-[var(--t-ok)] text-white'
-                  : 'border-[var(--t-line-strong)] text-[var(--t-muted)] group-hover:text-[var(--t-accent)] group-hover:border-[var(--t-accent)]'}`}>
-                  {copied === code ? 'TERSALIN ✓' : 'SALIN'}
-                </span>
-              </div>
-            </button>
-          ))}
+        <div>
+          <h3 className="text-[20px] font-black tracking-tight text-[var(--t-ink)]">
+            Media Berhasil Diproses!
+          </h3>
+          <p className="text-[12px] text-[var(--t-muted)] mt-1 font-mono">
+            {result.count || 1} file siap diklaim ke grup WA
+          </p>
         </div>
 
-        {/* Validity strip */}
-        <div className="perf-dot my-1" />
-        <div className="py-3 space-y-2">
+        {/* Voucher Ticket Box */}
+        <div className="voucher-box p-4 space-y-3 text-left">
           <div className="flex items-center justify-between">
-            <span className="field-label">Berlaku Hingga</span>
-            <span className={`font-mono font-bold text-[13px] tnum ${urgent ? 'text-[var(--t-bad)]' : ''}`}>
-              {mins}:{secs}
+            <span className="field-label flex items-center gap-1.5">
+              <i className="fa-solid fa-ticket text-[var(--t-accent)]" />
+              {isMulti ? 'KODE KLAIM BUNDLE' : 'KODE KLAIM UTAMA'}
+            </span>
+            <span className="text-[9px] font-mono font-bold text-[var(--t-ok)] bg-[var(--t-ok)]/10 px-2 py-0.5 rounded-full">
+              READY TO CLAIM
             </span>
           </div>
-          <div className="expire-bar"><div style={{ width: pct + '%' }} className={urgent ? 'is-timeout' : ''} /></div>
 
-          {/* Meta row */}
-          <div className="flex items-center justify-between pt-1 font-mono text-[9px] text-[var(--t-muted)] tnum">
-            <span>NO. {String(result.code || '').slice(-6).toUpperCase()}</span>
-            <span>{expireMinutes} MENIT</span>
+          {/* Primary code display */}
+          <div className="flex items-center gap-2 bg-[var(--t-surface)] p-3 rounded-xl border border-[var(--t-line)]">
+            <div className="flex-1 font-mono text-[18px] font-black tracking-wider text-[var(--t-ink)] truncate">
+              {result.code}
+            </div>
+            <button
+              onClick={() => copyText(result.code)}
+              className="btn-accent px-3.5 py-2 text-[11px] font-mono tracking-wider shrink-0"
+            >
+              <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'} mr-1`} />
+              {copied ? 'TERSALIN' : 'SALIN'}
+            </button>
           </div>
-        </div>
 
-        <div className="perf-x" />
+          {/* Multi-file codes list if any */}
+          {isMulti && (
+            <div className="space-y-1.5 pt-2 border-t border-[var(--t-line)]">
+              <div className="text-[10px] font-mono font-bold text-[var(--t-muted)]">KODE PER FILE:</div>
+              <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
+                {result.codes.map((c, i) => (
+                  <div key={c} className="flex items-center justify-between bg-[var(--t-surface)] px-2.5 py-1.5 rounded-lg border border-[var(--t-line)] text-[11px] font-mono">
+                    <span className="truncate font-semibold text-[var(--t-ink)]">{c}</span>
+                    <button
+                      onClick={() => copyText(c, i)}
+                      className="text-[var(--t-accent)] hover:underline font-bold text-[10px] ml-2 shrink-0"
+                    >
+                      {copiedIdx === i ? '✓ SALIN' : 'SALIN'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {/* Claim group links */}
-        {linkBtns.length > 0 && (
-          <div className={`pt-3 transition-all duration-[350ms] delay-100 ${phase >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-            <p className="field-label mb-2">Klaim di grup</p>
-            <div className="space-y-1.5">
-              {linkBtns.map(btn => (
-                <a key={btn.name + btn.link} href={btn.link} target="_blank" rel="noreferrer"
-                  className="link-btn-premium flex items-center gap-2 px-2.5 py-2 rounded-[3px] border border-[var(--t-line)] bg-[var(--t-surface2)] group hover:border-[var(--t-ink)] active:scale-[.98] transition-all duration-[140ms]">
-                  <i className="fa-solid fa-comments text-[11px] text-[var(--t-wa)] shrink-0" />
-                  <span className="flex-1 min-w-0 text-left">
-                    <span className="block font-bold text-[11px] truncate">{btn.name || 'Grup Klaim'}</span>
-                    <span className="block font-mono text-[8px] text-[var(--t-muted)]">buka → paste kode</span>
-                  </span>
-                  <i className="fa-solid fa-arrow-up-right-from-square text-[8px] text-[var(--t-muted)]" />
-                </a>
-              ))}
+          {/* Expiration bar */}
+          <div className="space-y-1 pt-1">
+            <div className="flex items-center justify-between text-[10px] font-mono text-[var(--t-muted)] tnum">
+              <span>KADALUARSA DALAM:</span>
+              <span className="font-bold text-[var(--t-accent)]">{minutes}m {seconds < 10 ? `0${seconds}` : seconds}s</span>
+            </div>
+            <div className="progress-bar-wrap">
+              <div className="progress-bar-fluid" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
-        )}
-
-        {/* Actions */}
-        <div className={`grid grid-cols-3 gap-1.5 pt-3 transition-all duration-[350ms] delay-150 ${phase >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-          <button onClick={() => copy(codes[0].code)}
-            className="btn-outline py-2.5 rounded-[3px] text-[10px] font-mono font-bold flex items-center justify-center gap-1.5">
-            <i className={`fa-solid ${copied ? 'fa-check text-[var(--t-ok)]' : 'fa-copy'} text-[9px]`} />
-            {copied ? 'OK' : 'SALIN'}
-          </button>
-          <button onClick={() => shareCode(codes[0].code)}
-            className="btn-outline py-2.5 rounded-[3px] text-[10px] font-mono font-bold flex items-center justify-center gap-1.5">
-            <i className="fa-solid fa-share-nodes text-[9px]" /> SHARE
-          </button>
-          <a href={`https://wa.me/?text=${encodeURIComponent('.claim ' + codes[0].code)}`} target="_blank" rel="noreferrer"
-            className="btn-outline py-2.5 rounded-[3px] text-[10px] font-mono font-bold flex items-center justify-center gap-1.5 text-[var(--t-wa)] border-[var(--t-wa)]/40 hover:border-[var(--t-wa)] hover:bg-[var(--t-wa)]/5">
-            <i className="fa-brands fa-whatsapp text-[11px]" /> WA
-          </a>
         </div>
 
-        {/* Close */}
-        <button onClick={onClose}
-          className="btn-primary w-full py-3 rounded-[3px] font-mono text-[12px] mt-3 flex items-center justify-center gap-2">
-          SELESAI <i className="fa-solid fa-arrow-right text-[10px]" />
-        </button>
+        {/* WA Claim Instruction */}
+        <div className="bg-[var(--t-surface2)] p-3 rounded-xl border border-[var(--t-line)] text-[11px] text-[var(--t-muted)] flex items-start gap-2.5 text-left">
+          <i className="fa-brands fa-whatsapp text-[16px] text-[var(--t-wa)] shrink-0 mt-0.5" />
+          <p className="leading-snug">
+            Ketik kode <span className="font-mono font-bold text-[var(--t-ink)]">{result.code}</span> di grup WhatsApp tujuan untuk mengirim otomatis.
+          </p>
+        </div>
 
-        <p className="text-center font-mono text-[8px] text-[var(--t-muted)] mt-3 tracking-[.14em] uppercase">
-          simpan tiket ini — hilang sebelum kedaluwarsa = hangus
-        </p>
+        <button
+          onClick={onClose}
+          className="btn-outline w-full py-3 text-[12px] font-mono font-bold"
+        >
+          TUTUP & BUAT TIKET BARU
+        </button>
       </div>
-    </ModalShell>
+    </div>
   )
 }

@@ -14,22 +14,20 @@ export function useToasts() {
 }
 
 const icons = { success: 'fa-check', error: 'fa-xmark', info: 'fa-info' }
-const typeStyles = {
-  success: 'border-l-[var(--t-ok)] text-[var(--t-ink)]',
-  error: 'border-l-[var(--t-bad)] text-[var(--t-bad)]',
-  info: 'border-l-[var(--t-accent)] text-[var(--t-ink)]',
+const colors = {
+  success: 'var(--t-ok)',
+  error: 'var(--t-bad)',
+  info: 'var(--t-accent-2)',
 }
 
 export default function Toasts({ toasts }) {
   if (!toasts.length) return null
   return (
-    <div className="fixed top-3 right-3 z-[999] flex flex-col gap-1.5 max-w-[300px] pointer-events-none">
+    <div className="fixed top-3 right-3 z-[999] flex flex-col gap-2 max-w-[300px] pointer-events-none">
       {toasts.map(t => (
-        <div
-          key={t.id}
-          className={`pointer-events-auto toast-card card px-3 py-2 flex items-center gap-2 anim-pop border-l-4 text-[12px] ${typeStyles[t.type] || typeStyles.info}`}
-        >
-          <span className="w-4 h-4 rounded-full border border-current grid place-items-center text-[9px] shrink-0 font-mono font-bold">
+        <div key={t.id} className="pointer-events-auto toast-pro px-3.5 py-2.5 flex items-center gap-2.5 text-[12px]">
+          <span className="w-5 h-5 rounded-full grid place-items-center text-[9px] shrink-0 text-white shadow-sm"
+            style={{ background: colors[t.type] || colors.info }}>
             <i className={`fa-solid ${icons[t.type] || icons.info}`} />
           </span>
           <span className="font-medium leading-snug flex-1">{t.msg}</span>
