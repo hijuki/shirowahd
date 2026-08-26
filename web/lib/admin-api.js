@@ -38,3 +38,4 @@ export const broadcast = (jids, text, delay) => api('/api/bot/broadcast', { meth
 export const cancelBroadcast = () => api('/api/bot/broadcast/cancel', { method: 'POST' })
 export const sendMessage = (jid, text) => api('/api/bot/send', { method: 'POST', body: { jid, text } })
 export const execCommand = (command) => api('/api/bot/exec', { method: 'POST', body: { command } })
+export const backupToGithub = () => api('/api/backup', { method: 'POST' })
