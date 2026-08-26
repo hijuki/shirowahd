@@ -5,30 +5,30 @@
 
 /* ─── Tokens ─── */
 :root {
-  --t-bg: #f3f1ea;
+  --t-bg: #f6f6f4;
   --t-surface: #ffffff;
-  --t-surface2: #eae7dd;
-  --t-ink: #131311;
-  --t-muted: #6d6a5f;
-  --t-hard: #131311;
-  --t-line: #13131133;
-  --t-line-strong: #13131166;
-  --t-line-soft: #13131126;
-  --t-accent: #ffc700;      /* brutal yellow */
-  --t-accent-2: #4f46ff;    /* electric indigo */
-  --t-pop: #e93d82;         /* hot pink */
-  --t-ok: #22c55e;
+  --t-surface2: #efefec;
+  --t-ink: #111111;
+  --t-muted: #66655e;
+  --t-hard: #111111;
+  --t-line: #11111133;
+  --t-line-strong: #11111166;
+  --t-line-soft: #11111126;
+  --t-accent: #ffe600;      /* lego yellow */
+  --t-accent-2: #c8102e;    /* brick red */
+  --t-pop: #c8102e;         /* brick red */
+  --t-ok: #16a34a;
   --t-warn: #f59e0b;
-  --t-bad: #ef4444;
+  --t-bad: #dc2626;
   --t-wa: #25d366;
-  --t-nav: rgba(243, 241, 234, 0.85);
+  --t-nav: rgba(246, 246, 244, 0.88);
 
   /* Hard offset shadows (no blur = neo-brutal) */
   --sh-xs: 2px 2px 0 var(--t-hard);
   --sh-sm: 3px 3px 0 var(--t-hard);
   --sh-md: 4px 4px 0 var(--t-hard);
   --sh-lg: 6px 6px 0 var(--t-hard);
-  --t-card-border: 2.5px solid var(--t-hard);
+  --t-card-border: 2px solid var(--t-hard);
 
   --ease-spring: cubic-bezier(.34,1.56,.64,1);
   --ease-smooth: cubic-bezier(.65,.05,.36,1);
@@ -310,7 +310,7 @@ body {
 }
 
 /* ── Scroll reveal ── */
-.reveal { opacity: 0; transform: translateY(22px); transition: opacity .5s var(--ease-smooth), transform .55s var(--ease-spring); }
+.reveal { transition: opacity .45s var(--ease-smooth), transform .45s var(--ease-spring); }
 .reveal.in-view { opacity: 1; transform: translateY(0); }
 
 /* ── Generic anims ── */
@@ -389,3 +389,6 @@ body {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* Reveal hanya sembunyi kalau JS aktif & belum ke-view */
+.anim-ready .reveal:not(.in-view) { opacity: 0; transform: translateY(14px); }

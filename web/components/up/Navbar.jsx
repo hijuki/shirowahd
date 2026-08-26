@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Logo from './Logo'
 
 export default function Navbar({ settings, onFaq, onAbout }) {
-  const [theme, setTheme] = useState('dark')
+  const [theme, setTheme] = useState('light')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -19,26 +20,14 @@ export default function Navbar({ settings, onFaq, onAbout }) {
   }
 
   return (
-    <nav className="sticky top-3 z-40">
-      <div
-        className="flex items-center justify-between gap-2 px-3 py-2.5"
-        style={{ background: 'var(--t-nav)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', border: 'var(--t-card-border)', borderRadius: 16, boxShadow: 'var(--sh-md)' }}
-      >
+    <nav className="sticky top-0 z-40 -mx-4 px-4" style={{ background: 'var(--t-surface)', borderBottom: '2px solid var(--t-hard)' }}>
+      <div className="flex items-center justify-between gap-2 py-2.5 max-w-[480px] mx-auto">
         {/* Brand */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 shrink-0 grid place-items-center anim-float" style={{ border: '2.5px solid var(--t-hard)', borderRadius: 12, background: 'var(--t-accent)', boxShadow: 'var(--sh-xs)' }}>
-            {/* Logo bolt mark */}
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
-              <path d="M13 2 L5 13.5 H10.5 L9.5 22 L19 9.5 H12.8 Z" fill="#131311" stroke="#131311" strokeWidth="1.4" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <div className="leading-none min-w-0">
-            <div className="font-display text-[15px] text-[var(--t-ink)] truncate">
-              SHIRO<span style={{ color: 'var(--t-pop)' }}>WAHD</span>
-            </div>
-            <div className="font-mono text-[8px] font-bold text-[var(--t-muted)] tracking-[0.22em] uppercase mt-1">
-              HD Media Gateway
-            </div>
+        <div className="flex items-center gap-2 min-w-0">
+          <Logo size={22} />
+          <div className="font-display text-[16px] leading-none truncate">
+            <span style={{ color: 'var(--t-accent-2)', WebkitTextStroke: '.5px var(--t-hard)', paintOrder: 'stroke' }}>SHIRO</span>
+            <span style={{ color: 'var(--t-ink)' }}>WAHD</span>
           </div>
         </div>
 
@@ -49,15 +38,15 @@ export default function Navbar({ settings, onFaq, onAbout }) {
             { fn: onAbout, icon: 'fa-circle-info', label: 'Tentang' },
           ].map(b => (
             <button key={b.label} onClick={b.fn} aria-label={b.label}
-              className="w-9 h-9 grid place-items-center text-[var(--t-muted)] hover:text-[#131311] hover:bg-[var(--t-accent)] hover:-translate-y-0.5 hover:shadow-[2px_2px_0_var(--t-hard)] active:translate-y-0 active:shadow-none transition-all duration-150"
-              style={{ border: '2px solid var(--t-hard)', borderRadius: 11, background: 'var(--t-surface)' }}>
-              <i className={`fa-solid ${b.icon} text-[14px]`} />
+              className="w-8 h-8 grid place-items-center hover:bg-[var(--t-accent)] hover:-translate-y-0.5 hover:shadow-[2px_2px_0_var(--t-hard)] active:translate-y-0 active:shadow-none transition-all duration-150"
+              style={{ border: '2px solid var(--t-hard)', borderRadius: 9, background: 'var(--t-surface)' }}>
+              <i className={`fa-solid ${b.icon} text-[13px]`} />
             </button>
           ))}
           <button onClick={toggleTheme} aria-label="Ganti tema"
-            className="w-9 h-9 grid place-items-center hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150"
-            style={{ border: '2px solid var(--t-hard)', borderRadius: 11, background: theme === 'light' ? 'var(--t-pop)' : 'var(--t-surface)', color: theme === 'light' ? '#fff' : 'var(--t-muted)', boxShadow: 'var(--sh-xs)' }}>
-            <i key={theme} className={`fa-solid ${theme === 'light' ? 'fa-moon' : 'fa-sun'} text-[14px] anim-pop-spring`} />
+            className="w-8 h-8 grid place-items-center hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150"
+            style={{ border: '2px solid var(--t-hard)', borderRadius: 9, background: 'var(--t-accent)', boxShadow: '2px 2px 0 var(--t-hard)' }}>
+            <i key={theme} className={`fa-solid ${theme === 'light' ? 'fa-moon' : 'fa-sun'} text-[13px]`} style={{ color: '#111111' }} />
           </button>
         </div>
       </div>

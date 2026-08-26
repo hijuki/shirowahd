@@ -52,7 +52,7 @@ export default function SuccessModal({ result, settings, expireMinutes = 60, onC
         {/* Hanko stamp */}
         <div className="pt-1">
           <div className="hanko-seal mx-auto anim-stamp">
-            <span className="text-[26px] leading-none">済</span>
+            <i className="fa-solid fa-check text-[24px]"></i>
             <span className="font-mono text-[7px] tracking-[0.2em] font-extrabold uppercase mt-1">VERIFIED</span>
           </div>
         </div>

@@ -8,8 +8,8 @@ const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 const VIDEO_ACCEPT = VIDEO_EXTS.map(e => `.${e}`).join(',')
 const IMAGE_ACCEPT = IMAGE_EXTS.map(e => `.${e}`).join(',')
 const TAG_COLORS = {
-  mp4: '#4f46ff', mkv: '#e93d82', avi: '#f59e0b', mov: '#22c55e',
-  jpg: '#ef4444', jpeg: '#ef4444', png: '#22c55e', gif: '#f59e0b', webp: '#4f46ff',
+  mp4: '#c8102e', mkv: '#111111', avi: '#f59e0b', mov: '#16a34a',
+  jpg: '#c8102e', jpeg: '#c8102e', png: '#16a34a', gif: '#f59e0b', webp: '#111111',
 }
 
 export default function UploadPanel({ settings, onToast: toast }) {
@@ -75,7 +75,7 @@ export default function UploadPanel({ settings, onToast: toast }) {
   if (settings?.maintenance) {
     return (
       <div className="card p-8 text-center space-y-3 anim-pop-spring">
-        <div className="w-14 h-14 mx-auto grid place-items-center anim-float" style={{ border: '2.5px solid var(--t-hard)', borderRadius: 14, background: 'var(--t-warn)', color: '#131311', boxShadow: 'var(--sh-sm)' }}>
+        <div className="w-14 h-14 mx-auto grid place-items-center anim-float" style={{ border: '2px solid var(--t-hard)', borderRadius: 14, background: 'var(--t-warn)', color: '#111111', boxShadow: 'var(--sh-sm)' }}>
           <i className="fa-solid fa-screwdriver-wrench text-xl" />
         </div>
         <h2 className="font-display text-base">SEDANG MAINTENANCE</h2>
@@ -105,12 +105,12 @@ export default function UploadPanel({ settings, onToast: toast }) {
               <div className="flex flex-wrap gap-1">
                 {exts.map(ext => (
                   <span key={ext} className="px-1.5 py-0.5 text-[9px] font-mono font-bold tracking-wide"
-                    style={{ color: '#131311', background: TAG_COLORS[ext.toLowerCase()], border: '2px solid var(--t-hard)', borderRadius: 6, boxShadow: '1.5px 1.5px 0 var(--t-hard)' }}>
+                    style={{ color: '#111111', background: TAG_COLORS[ext.toLowerCase()], border: '2px solid var(--t-hard)', borderRadius: 6, boxShadow: '1.5px 1.5px 0 var(--t-hard)' }}>
                     {ext}
                   </span>
                 ))}
               </div>
-              <span className="text-[10px] font-mono font-bold text-[#131311] tracking-wider px-2 py-0.5 tnum"
+              <span className="text-[10px] font-mono font-bold text-[#111111] tracking-wider px-2 py-0.5 tnum"
                 style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 99 }}>
                 MAX {settings?.maxFileSizeMB > 0 ? `${settings.maxFileSizeMB} MB` : '∞'}
               </span>
@@ -132,7 +132,7 @@ export default function UploadPanel({ settings, onToast: toast }) {
               {drag && <div className="scan-line" />}
 
               <div className={`w-16 h-16 mx-auto grid place-items-center mb-3 transition-all duration-300 group-hover:-rotate-6 group-hover:scale-110 anim-float ${drag ? '!animate-none scale-125 rotate-6' : ''}`}
-                style={{ background: isImg ? 'var(--t-pop)' : 'var(--t-accent)', color: '#131311', border: '2.5px solid var(--t-hard)', borderRadius: 18, boxShadow: 'var(--sh-md)' }}>
+                style={{ background: isImg ? 'var(--t-pop)' : 'var(--t-accent)', color: '#111111', border: '2px solid var(--t-hard)', borderRadius: 18, boxShadow: 'var(--sh-md)' }}>
                 <i className={`fa-solid ${isImg ? 'fa-images' : 'fa-cloud-arrow-up'} text-[26px]`} />
               </div>
 
@@ -166,13 +166,13 @@ export default function UploadPanel({ settings, onToast: toast }) {
                       const key = f.name + f.size
                       return (
                         <div key={key} className="relative aspect-square overflow-hidden group transition-all duration-200 hover:-translate-y-0.5"
-                          style={{ border: '2.5px solid var(--t-hard)', borderRadius: 12, boxShadow: 'var(--sh-xs)' }}>
+                          style={{ border: '2px solid var(--t-hard)', borderRadius: 12, boxShadow: 'var(--sh-xs)' }}>
                           {thumbs[key] && <img src={thumbs[key]} alt="" className="w-full h-full object-cover" />}
                           <p className="absolute bottom-1 left-1.5 right-1.5 text-[8px] text-white font-mono font-bold truncate opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200">{f.name}</p>
                           {!uploading && (
                             <button onClick={(e) => { e.stopPropagation(); removeFile(f) }}
                               className="absolute top-1.5 right-1.5 w-5 h-5 text-[9px] grid place-items-center opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-200 hover:bg-[var(--t-bad)]"
-                              style={{ background: '#131311', color: '#fff', borderRadius: 999, border: '2px solid var(--t-hard)' }}>
+                              style={{ background: '#111111', color: '#fff', borderRadius: 999, border: '2px solid var(--t-hard)' }}>
                               <i className="fa-solid fa-xmark" />
                             </button>
                           )}
@@ -187,7 +187,7 @@ export default function UploadPanel({ settings, onToast: toast }) {
                       return (
                         <div key={f.name + f.size} className="flex items-center gap-2.5 py-2.5 px-3 group hist-item"
                           style={{ background: 'var(--t-surface2)', border: '2px solid var(--t-hard)', borderRadius: 12 }}>
-                          <span className="w-9 h-9 shrink-0 grid place-items-center" style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 10, color: '#131311' }}>
+                          <span className="w-9 h-9 shrink-0 grid place-items-center" style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 10, color: '#111111' }}>
                             <i className="fa-solid fa-film text-[13px]" />
                           </span>
                           <div className="flex-1 min-w-0">
@@ -195,7 +195,7 @@ export default function UploadPanel({ settings, onToast: toast }) {
                             <span className="text-[var(--t-muted)] text-[10px] font-mono tnum">{fmtSize(f.size)}</span>
                           </div>
                           <span className="text-[9px] font-mono font-extrabold px-2 py-1"
-                            style={{ color: '#131311', background: TAG_COLORS[ext.toLowerCase()], border: '2px solid var(--t-hard)', borderRadius: 7 }}>{ext}</span>
+                            style={{ color: '#111111', background: TAG_COLORS[ext.toLowerCase()], border: '2px solid var(--t-hard)', borderRadius: 7 }}>{ext}</span>
                           {!uploading && (
                             <button onClick={() => removeFile(f)}
                               className="w-6 h-6 shrink-0 text-[10px] grid place-items-center opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 transition-all duration-200 hover:bg-[var(--t-bad)] hover:text-white"
@@ -213,10 +213,10 @@ export default function UploadPanel({ settings, onToast: toast }) {
 
             {/* Progress */}
             {uploading && (
-              <div className="anim-slide-up space-y-2.5 p-3.5" style={{ background: 'var(--t-surface2)', border: '2.5px solid var(--t-hard)', borderRadius: 14, boxShadow: 'var(--sh-sm)' }}>
+              <div className="anim-slide-up space-y-2.5 p-3.5" style={{ background: 'var(--t-surface2)', border: '2px solid var(--t-hard)', borderRadius: 14, boxShadow: 'var(--sh-sm)' }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 grid place-items-center animate-pulse" style={{ background: 'var(--t-accent)', border: '2.5px solid var(--t-hard)', borderRadius: 10, color: '#131311' }}>
+                    <span className="w-9 h-9 grid place-items-center animate-pulse" style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 10, color: '#111111' }}>
                       <i className="fa-solid fa-arrow-up text-[13px]" />
                     </span>
                     <div>
@@ -254,7 +254,7 @@ export default function UploadPanel({ settings, onToast: toast }) {
             )}
             {uploading && (
               <button onClick={cancelUpload} className="w-full py-3 font-mono font-bold text-[12px] text-white transition-all duration-150 active:translate-y-0.5"
-                style={{ background: 'var(--t-bad)', border: '2.5px solid var(--t-hard)', borderRadius: 12, boxShadow: 'var(--sh-xs)' }}>
+                style={{ background: 'var(--t-bad)', border: '2px solid var(--t-hard)', borderRadius: 12, boxShadow: 'var(--sh-xs)' }}>
                 <i className="fa-solid fa-circle-stop mr-1.5" />BATALKAN UPLOAD
               </button>
             )}

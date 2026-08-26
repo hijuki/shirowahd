@@ -62,7 +62,7 @@ export default function HistorySection({ onToast: toast }) {
       <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between group">
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 grid place-items-center"
-            style={{ background: 'var(--t-accent)', border: '2.5px solid var(--t-hard)', borderRadius: 11, boxShadow: 'var(--sh-xs)', color: '#131311' }}>
+            style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 11, boxShadow: 'var(--sh-xs)', color: '#111111' }}>
             <i className="fa-solid fa-clock-rotate-left text-[13px]" />
           </span>
           <div className="text-left">
@@ -143,7 +143,7 @@ export default function HistorySection({ onToast: toast }) {
                       className={`shrink-0 px-2.5 py-1.5 text-[10px] font-mono font-bold transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${isCopied ? '' : 'hover:-translate-y-0.5'}`}
                       style={isCopied
                         ? { background: 'var(--t-ok)', color: '#fff', border: '2px solid var(--t-hard)', borderRadius: 9 }
-                        : { background: 'var(--t-accent)', color: '#131311', border: '2px solid var(--t-hard)', borderRadius: 9, boxShadow: 'var(--sh-xs)' }}>
+                        : { background: 'var(--t-accent)', color: '#111111', border: '2px solid var(--t-hard)', borderRadius: 9, boxShadow: 'var(--sh-xs)' }}>
                       {isCopied ? <><i className="fa-solid fa-check mr-1" />OK</> : <><i className="fa-regular fa-copy mr-1" />{code}</>}
                     </button>
                   )}

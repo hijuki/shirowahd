@@ -25,7 +25,7 @@ export default function Toasts({ toasts }) {
           className="pointer-events-auto toast-pro px-3 py-2.5 flex items-center gap-2.5 text-[12px]"
           style={{ borderColor: t.type === 'error' ? 'var(--t-bad)' : undefined }}>
           <span className="w-6 h-6 shrink-0 grid place-items-center text-[10px] text-white anim-pop-spring"
-            style={{ background: colors[t.type] || colors.info, border: '2px solid var(--t-hard)', borderRadius: 8, color: t.type === 'info' ? '#131311' : '#fff' }}>
+            style={{ background: colors[t.type] || colors.info, border: '2px solid var(--t-hard)', borderRadius: 8, color: t.type === 'info' ? '#111111' : '#fff' }}>
             <i className={`fa-solid ${icons[t.type] || icons.info}`} />
           </span>
           <span className="font-extrabold leading-snug flex-1">{t.msg}</span>

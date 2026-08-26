@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
+import Logo from '@/components/up/Logo'
 import Navbar from '@/components/up/Navbar'
 import UploadPanel from '@/components/up/UploadPanel'
 import HistorySection from '@/components/up/HistorySection'
@@ -60,7 +61,8 @@ export default function UploaderPage() {
   useEffect(reload, [reload])
 
   useEffect(() => {
-    if (settings && settings.showWelcome !== false) setShowWelcome(true)
+    const skip = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('nowelcome')
+    if (settings && settings.showWelcome !== false && !skip) setShowWelcome(true)
   }, [settings])
 
   const heroTitle = settings?.heroTitle || 'SHIRO'
@@ -79,7 +81,7 @@ export default function UploaderPage() {
       {!settings ? (
         <SkeletonPage />
       ) : (
-        <div ref={revealRef} className="relative z-10 min-h-dvh flex flex-col items-center px-4 pb-16 pt-4">
+        <div ref={revealRef} className="anim-ready relative z-10 min-h-dvh flex flex-col items-center px-4 pb-16 pt-4">
           <div className="w-full max-w-[480px] space-y-5">
 
             {/* Navbar */}
@@ -91,7 +93,7 @@ export default function UploaderPage() {
                 <div className="w-7 h-7 grid place-items-center shrink-0" style={{ border: '2px solid var(--t-hard)', borderRadius: 9, background: 'var(--t-surface)', boxShadow: 'var(--sh-xs)' }}>
                   <i className="fa-solid fa-bullhorn text-[11px]" />
                 </div>
-                <p className="leading-snug font-bold flex-1 pt-1" style={{ color: '#131311' }}>{settings.announcement}</p>
+                <p className="leading-snug font-bold flex-1 pt-1" style={{ color: '#111111' }}>{settings.announcement}</p>
               </div>
             )}
 
@@ -105,19 +107,19 @@ export default function UploaderPage() {
 
               <div className="relative">
                 <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-3 wobble"
-                  style={{ border: '2px solid var(--t-hard)', borderRadius: 99, background: 'var(--t-ok)', boxShadow: 'var(--sh-xs)' }}>
+                  style={{ border: '2px solid var(--t-hard)', borderRadius: 99, background: 'var(--t-accent)', boxShadow: 'var(--sh-xs)' }}>
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-70" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#111111]" />
                   </span>
-                  <span className="font-mono text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#fff' }}>
+                  <span className="font-mono text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#111111' }}>
                     Online Gateway
                   </span>
                 </div>
 
                 <h1 className="font-display text-[40px] leading-[0.95] text-[var(--t-ink)]">
                   {heroTitle}<br />
-                  <span className="inline-block px-2 -rotate-1" style={{ background: 'var(--t-accent)', border: '2.5px solid var(--t-hard)', borderRadius: 12, boxShadow: '4px 4px 0 var(--t-hard)', color: '#131311' }}>
+                  <span className="inline-block px-2 -rotate-1" style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 12, boxShadow: '4px 4px 0 var(--t-hard)', color: '#111111' }}>
                     {heroHighlight}
                   </span>
                 </h1>
@@ -130,9 +132,9 @@ export default function UploaderPage() {
               {/* Spec strip */}
               <div className="grid grid-cols-3 gap-2 mt-4 relative">
                 {[
-                  { l: 'Kualitas', v: 'ORIGINAL', c: 'var(--t-pop)', tc: '#fff' },
+                  { l: 'Kualitas', v: 'ORIGINAL', c: 'var(--t-accent-2)', tc: '#fff' },
                   { l: 'Berlaku', v: `${settings?.expireMinutes || 60} MENIT`, c: 'var(--t-surface)', tc: 'var(--t-ink)' },
-                  { l: 'Engine', v: 'V2.4 CORE', c: 'var(--t-accent-2)', tc: '#fff' },
+                  { l: 'Engine', v: 'V2.4 CORE', c: 'var(--t-accent)', tc: '#111111' },
                 ].map(s => (
                   <div key={s.l} className="p-2 text-center" style={{ border: '2px solid var(--t-hard)', borderRadius: 11, background: s.c, color: s.tc, boxShadow: 'var(--sh-xs)' }}>
                     <div className="font-mono text-[8px] font-bold uppercase tracking-wider opacity-80">{s.l}</div>
@@ -143,7 +145,7 @@ export default function UploaderPage() {
             </header>
 
             {/* MARQUEE */}
-            <div className="marquee reveal py-2 -mx-1" style={{ borderTop: '2.5px solid var(--t-hard)', borderBottom: '2.5px solid var(--t-hard)', background: 'var(--t-surface)' }}>
+            <div className="marquee reveal py-2 -mx-1" style={{ borderTop: '2px solid var(--t-hard)', borderBottom: '2px solid var(--t-hard)', background: 'var(--t-surface)' }}>
               <div className="marquee-track">
                 {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((m, i) => (
                   <span key={i} className={`font-display text-[12px] tracking-wide ${m === '★' ? '' : ''}`} style={{ color: m === '★' ? 'var(--t-pop)' : 'var(--t-ink)' }}>{m}</span>
@@ -154,8 +156,8 @@ export default function UploaderPage() {
             {/* STEPS */}
             <div className="grid grid-cols-3 gap-2.5 reveal">
               {[
-                { no: '01', title: 'UPLOAD', sub: 'Pilih media', icon: 'fa-cloud-arrow-up', bg: 'var(--t-accent)', tc: '#131311' },
-                { no: '02', title: 'TIKET', sub: 'Dapat kode', icon: 'fa-ticket', bg: 'var(--t-pop)', tc: '#fff' },
+                { no: '01', title: 'UPLOAD', sub: 'Pilih media', icon: 'fa-cloud-arrow-up', bg: 'var(--t-accent)', tc: '#111111' },
+                { no: '02', title: 'TIKET', sub: 'Dapat kode', icon: 'fa-ticket', bg: 'var(--t-surface)', tc: 'var(--t-ink)' },
                 { no: '03', title: 'KLAIM', sub: 'Di grup WA', icon: 'fa-paper-plane', bg: 'var(--t-accent-2)', tc: '#fff' },
               ].map((s, i) => (
                 <div key={s.no} className="card hover-lift p-3 text-center anim-pop-spring" style={{ animationDelay: `${i * 90}ms` }}>
@@ -179,9 +181,7 @@ export default function UploaderPage() {
               <div className="perforated-line" />
               <div className="flex items-center justify-center gap-2">
                 <div className="w-6 h-6 grid place-items-center" style={{ border: '2px solid var(--t-hard)', borderRadius: 8, background: 'var(--t-accent)', boxShadow: 'var(--sh-xs)' }}>
-                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none">
-                    <path d="M13 2 L5 13.5 H10.5 L9.5 22 L19 9.5 H12.8 Z" fill="#131311" stroke="#131311" strokeWidth="1.4" strokeLinejoin="round" />
-                  </svg>
+                  <Logo size={13} />
                 </div>
                 <span className="font-display text-[11px] text-[var(--t-ink)]">SHIROWAHD</span>
                 <span className="font-mono text-[9px] text-[var(--t-muted)]">• DEV HILLZ •</span>

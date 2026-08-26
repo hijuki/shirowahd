@@ -1,4 +1,5 @@
 'use client'
+import Logo from './Logo'
 import { useState, useEffect, useRef } from 'react'
 
 /* ═══════════════════════════════════════════════
@@ -41,7 +42,7 @@ function CloseBtn({ onClick }) {
   return (
     <button onClick={onClick} aria-label="Tutup"
       className="w-9 h-9 grid place-items-center text-[var(--t-muted)] hover:text-white hover:bg-[var(--t-bad)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-150"
-      style={{ border: '2.5px solid var(--t-hard)', borderRadius: 11, background: 'var(--t-surface)', boxShadow: 'var(--sh-xs)' }}>
+      style={{ border: '2px solid var(--t-hard)', borderRadius: 11, background: 'var(--t-surface)', boxShadow: 'var(--sh-xs)' }}>
       <i className="fa-solid fa-xmark text-sm" />
     </button>
   )
@@ -53,14 +54,14 @@ export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], po
   if (ownerWhatsapp && settings.showOwnerBtn !== false) items.push({ i: 'fa-brands fa-whatsapp', t: 'Chat Developer', s: 'Hubungi langsung', href: `https://wa.me/${String(ownerWhatsapp).replace(/[^0-9]/g, '')}`, feat: true, bg: 'var(--t-wa)', tc: '#fff' })
   if (settings.showChannelsBtn !== false) channels.slice(0, 2).forEach(ch => items.push({ i: 'fa-solid fa-tower-broadcast', t: ch.name || 'Saluran', s: 'Saluran resmi', href: ch.link, bg: 'var(--t-accent-2)', tc: '#fff' }))
   if (settings.showClaimBtn !== false) claimGroups.slice(0, 2).forEach(g => items.push({ i: 'fa-solid fa-comments', t: g.name || 'Grup Claim', s: 'Klaim file di sini', href: g.link, bg: 'var(--t-ok)', tc: '#fff' }))
-  if (settings.showPopupBtns !== false) popupButtons.filter(b => b.link).slice(0, 3).forEach(b => items.push({ i: 'fa-solid fa-link', t: b.name || 'Link', s: 'Buka link', href: b.link, bg: 'var(--t-accent)', tc: '#131311' }))
+  if (settings.showPopupBtns !== false) popupButtons.filter(b => b.link).slice(0, 3).forEach(b => items.push({ i: 'fa-solid fa-link', t: b.name || 'Link', s: 'Buka link', href: b.link, bg: 'var(--t-accent)', tc: '#111111' }))
   if (!items.length) return null
   return (
-    <div className={`grid gap-2.5 ${items.length === 1 ? '' : items.length <= 4 && items.length % 2 === 0 ? 'grid-cols-2' : ''}`}>
+    <div className="grid gap-2.5">
       {items.map(it => (
         <a key={it.t + it.href} href={it.href} target="_blank" rel="noreferrer"
           className={`flex items-center gap-2.5 px-3 py-2.5 hist-item group active:translate-x-0.5 active:translate-y-0.5 active:!shadow-none ${it.feat ? 'col-span-full' : ''}`}
-          style={{ background: 'var(--t-surface)', border: '2.5px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
+          style={{ background: 'var(--t-surface)', border: '2px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
           <span className="w-9 h-9 shrink-0 grid place-items-center" style={{ background: it.bg, color: it.tc, border: '2px solid var(--t-hard)', borderRadius: 10 }}>
             <i className={`${it.i} text-[14px]`} />
           </span>
@@ -87,7 +88,7 @@ export function IntroModal({ onDone, settings }) {
   }, [])
 
   const steps = [
-    { n: '01', i: 'fa-cloud-arrow-up', t: 'Upload file', d: 'Pilih video atau foto dari galeri kamu.', bg: 'var(--t-accent)', tc: '#131311' },
+    { n: '01', i: 'fa-cloud-arrow-up', t: 'Upload file', d: 'Pilih video atau foto dari galeri kamu.', bg: 'var(--t-accent)', tc: '#111111' },
     { n: '02', i: 'fa-ticket', t: 'Dapat kode unik', d: 'Kode seperti .claim A1B2C3 langsung tersedia.', bg: 'var(--t-pop)', tc: '#fff' },
     { n: '03', i: 'fa-paper-plane', t: 'Kirim di grup', d: 'Paste kode di grup WhatsApp — bot kirim filenya.', bg: 'var(--t-accent-2)', tc: '#fff' },
   ]
@@ -101,15 +102,15 @@ export function IntroModal({ onDone, settings }) {
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mb-2 wobble"
               style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 99, boxShadow: 'var(--sh-xs)' }}>
               <i className="fa-solid fa-star text-[8px]" />
-              <span className="font-mono text-[9px] font-bold tracking-wider" style={{ color: '#131311' }}>SELAMAT DATANG</span>
+              <span className="font-mono text-[9px] font-bold tracking-wider" style={{ color: '#111111' }}>SELAMAT DATANG</span>
             </div>
             <h2 className="font-display text-[24px] leading-none">
               {(settings?.siteName || 'SHIROWAHD').toUpperCase()}<span style={{ color: 'var(--t-pop)' }}>.</span>
             </h2>
             <p className="font-mono text-[11px] font-bold text-[var(--t-muted)] mt-1.5">Upload media HD ke grup WhatsApp</p>
           </div>
-          <div className="stamp shrink-0 anim-stamp">
-            <span className="text-[18px] leading-none">受</span>
+          <div className="shrink-0 w-11 h-11 grid place-items-center anim-stamp" style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 12, boxShadow: 'var(--sh-xs)' }}>
+            <Logo size={20} />
           </div>
         </div>
 
@@ -118,13 +119,13 @@ export function IntroModal({ onDone, settings }) {
           {steps.map((s, idx) => (
             <div key={s.n}
               className={`flex items-center gap-3 p-3 transition-all duration-300 ${phase >= 2 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
-              style={{ transitionDelay: `${idx * 90}ms`, transitionTimingFunction: 'var(--ease-spring)', background: 'var(--t-surface2)', border: '2.5px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
+              style={{ transitionDelay: `${idx * 90}ms`, transitionTimingFunction: 'var(--ease-spring)', background: 'var(--t-surface2)', border: '2px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
               <span className="w-10 h-10 shrink-0 grid place-items-center anim-float" style={{ animationDelay: `${idx * 200}ms`, background: s.bg, color: s.tc, border: '2px solid var(--t-hard)', borderRadius: 11, boxShadow: 'var(--sh-xs)' }}>
                 <i className={`fa-solid ${s.i} text-[15px]`} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] font-bold px-1.5" style={{ background: '#131311', color: 'var(--t-accent)', borderRadius: 5 }}>{s.n}</span>
+                  <span className="font-mono text-[11px] font-bold px-1.5" style={{ background: '#111111', color: 'var(--t-accent)', borderRadius: 5 }}>{s.n}</span>
                   <p className="font-extrabold text-[12.5px]">{s.t}</p>
                 </div>
                 <p className="text-[var(--t-muted)] text-[10.5px] leading-snug mt-0.5 font-medium">{s.d}</p>
@@ -182,17 +183,17 @@ export function FaqModal({ onClose }) {
       <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-0.5 modal-scroll-hide">
         {faqs.map((f, i) => (
           <div key={f.q} className="overflow-hidden transition-all duration-200"
-            style={{ background: open === i ? 'var(--t-accent)' : 'var(--t-surface2)', border: '2.5px solid var(--t-hard)', borderRadius: 13, boxShadow: open === i ? 'var(--sh-sm)' : 'none' }}>
+            style={{ background: open === i ? 'var(--t-accent)' : 'var(--t-surface2)', border: '2px solid var(--t-hard)', borderRadius: 13, boxShadow: open === i ? 'var(--sh-sm)' : 'none' }}>
             <button onClick={() => setOpen(open === i ? -1 : i)} className="w-full flex items-center gap-3 px-3.5 py-3 text-left group">
               <span className="w-7 h-7 shrink-0 grid place-items-center text-[10px] font-mono font-bold"
-                style={{ background: open === i ? '#131311' : 'var(--t-surface)', color: open === i ? 'var(--t-accent)' : 'var(--t-muted)', border: '2px solid var(--t-hard)', borderRadius: 8 }}>
+                style={{ background: open === i ? '#111111' : 'var(--t-surface)', color: open === i ? 'var(--t-accent)' : 'var(--t-muted)', border: '2px solid var(--t-hard)', borderRadius: 8 }}>
                 {i + 1}
               </span>
               <span className="font-extrabold text-[12.5px] flex-1">{f.q}</span>
               <i className={`fa-solid fa-chevron-down text-[11px] transition-transform duration-200 ${open === i ? 'rotate-180' : ''}`} />
             </button>
             <div className={`grid transition-all duration-250 ${open === i ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`} style={{ transitionTimingFunction: 'var(--ease-smooth)' }}>
-              <div className="overflow-hidden"><p className="px-3.5 pb-3.5 pl-[54px] text-[#131311] text-[11px] leading-relaxed font-semibold">{f.a}</p></div>
+              <div className="overflow-hidden"><p className="px-3.5 pb-3.5 pl-[54px] text-[#111111] text-[11px] leading-relaxed font-semibold">{f.a}</p></div>
             </div>
           </div>
         ))}
@@ -221,14 +222,12 @@ export function AboutModal({ onClose }) {
 
       <div className="space-y-4">
         {/* Brand card */}
-        <div className="p-5 text-center" style={{ background: 'var(--t-accent)', border: '2.5px solid var(--t-hard)', borderRadius: 16, boxShadow: 'var(--sh-md)' }}>
-          <div className="w-16 h-16 mx-auto mb-3 grid place-items-center anim-float" style={{ background: '#131311', border: '2.5px solid #131311', outline: '2.5px solid #131311', borderRadius: 18, boxShadow: '3px 3px 0 rgba(19,19,17,.35)' }}>
-            <svg viewBox="0 0 24 24" width="30" height="30" fill="none">
-              <path d="M13 2 L5 13.5 H10.5 L9.5 22 L19 9.5 H12.8 Z" fill="#ffc700" stroke="#ffc700" strokeWidth="1.4" strokeLinejoin="round" />
-            </svg>
+        <div className="p-5 text-center" style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 16, boxShadow: 'var(--sh-md)' }}>
+          <div className="w-16 h-16 mx-auto mb-3 grid place-items-center anim-float" style={{ background: '#111111', border: '2px solid #111111', outline: '2px solid #111111', borderRadius: 18, boxShadow: '3px 3px 0 rgba(19,19,17,.35)' }}>
+            <Logo size={30} fg="#ffe600" />
           </div>
-          <p className="font-display text-[17px]" style={{ color: '#131311' }}>SHIROWAHD</p>
-          <p className="font-mono text-[10px] font-bold tracking-wider mt-1" style={{ color: '#131311' }}>DEVELOPED BY HILLZ</p>
+          <p className="font-display text-[17px]" style={{ color: '#111111' }}>SHIROWAHD</p>
+          <p className="font-mono text-[10px] font-bold tracking-wider mt-1" style={{ color: '#111111' }}>DEVELOPED BY HILLZ</p>
         </div>
 
         <p className="text-[var(--t-muted)] text-[12px] leading-relaxed text-center px-2 font-medium">
@@ -244,8 +243,8 @@ export function AboutModal({ onClose }) {
         </div>
 
         <div className="grid grid-cols-3 gap-2.5">
-          {[{ i: 'fa-bolt', t: 'CEPAT', bg: 'var(--t-accent)', tc: '#131311' }, { i: 'fa-lock', t: 'AMAN', bg: 'var(--t-ok)', tc: '#fff' }, { i: 'fa-hand-pointer', t: 'MUDAH', bg: 'var(--t-pop)', tc: '#fff' }].map(f => (
-            <div key={f.t} className="flex flex-col items-center gap-2 py-3 hover-lift" style={{ background: f.bg, border: '2.5px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
+          {[{ i: 'fa-bolt', t: 'CEPAT', bg: 'var(--t-accent)', tc: '#111111' }, { i: 'fa-lock', t: 'AMAN', bg: 'var(--t-ok)', tc: '#fff' }, { i: 'fa-hand-pointer', t: 'MUDAH', bg: 'var(--t-pop)', tc: '#fff' }].map(f => (
+            <div key={f.t} className="flex flex-col items-center gap-2 py-3 hover-lift" style={{ background: f.bg, border: '2px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
               <i className={`fa-solid ${f.i} text-[15px]`} style={{ color: f.tc }} />
               <span className="font-display text-[9px]" style={{ color: f.tc }}>{f.t}</span>
             </div>
