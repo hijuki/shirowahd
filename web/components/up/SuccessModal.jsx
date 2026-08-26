@@ -139,19 +139,18 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       <div className={`space-y-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         {codes.map(({ code, name }) => (
           <div key={code} onClick={() => copy(code)}
-            className="relative rounded-[14px] bg-[var(--t-surface)] border border-[#22d3ee]/15 p-3 text-center cursor-pointer group hover:border-[#22d3ee]/35 transition-all duration-[200ms] active:scale-[.97] overflow-hidden">
-            <div className="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-[#22d3ee]/30 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#22d3ee]/[.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[200ms]" />
+            className="claim-code-card group relative rounded-[16px] p-3.5 text-center cursor-pointer active:scale-[.97] overflow-hidden">
             {/* Auto shine sweep */}
             <div className="code-shine" />
             {/* Speed lines on hover */}
             <div className="speed-lines opacity-0 group-hover:opacity-100 transition-opacity duration-[200ms]" />
 
             {name && <p className="text-[var(--t-muted)] text-[8px] truncate mb-1 relative">{name}</p>}
-            <p className="font-mono font-bold text-[19px] tracking-[.04em] code-text select-all relative">.claim {code}</p>
-            <p className={`text-[8px] font-bold mt-1.5 transition-colors duration-[150ms] relative ${copied === code ? 'text-ok' : 'text-[var(--t-muted)]/50 group-hover:text-[#22d3ee]/70'}`}>
-              <i className={`fa-solid ${copied === code ? 'fa-check' : 'fa-copy'} mr-1`} />
-              {copied === code ? 'Tersalin!' : 'Tap untuk salin kode'}
+            <p className="text-[7px] font-extrabold tracking-[.22em] uppercase text-[var(--t-muted)]/45 mb-1.5 relative">Kode Klaim</p>
+            <p className="font-mono font-bold text-[21px] tracking-[.04em] code-text select-all relative">.claim {code}</p>
+            <p className={`text-[8px] font-bold mt-2 transition-colors duration-[150ms] relative inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${copied === code ? 'text-ok bg-ok/10' : 'text-[var(--t-muted)]/60 bg-white/[.03] group-hover:text-[#22d3ee]/80'}`}>
+              <i className={`fa-solid ${copied === code ? 'fa-circle-check' : 'fa-copy'}`} />
+              {copied === code ? 'Tersalin!' : 'Tap untuk salin'}
             </p>
           </div>
         ))}
@@ -202,17 +201,17 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       {/* Action buttons — 3 columns: Copy, Share, WhatsApp */}
       <div className={`grid grid-cols-3 gap-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={() => copy(codes[0].code)}
-          className="action-chip btn-3d py-3 rounded-[13px] bg-white/[.04] border border-white/[.10] text-[11px] font-bold hover:border-[#22d3ee]/35 hover:bg-[#22d3ee]/[.07] active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
-          <i className={`fa-solid ${copied ? 'fa-check text-ok' : 'fa-copy text-[#22d3ee]'}`} />
-          {copied ? 'OK!' : 'Salin'}
+          className="action-chip btn-3d group flex-col gap-1 py-2.5 rounded-[14px] bg-white/[.04] border border-white/[.10] text-[10px] font-bold hover:border-[#22d3ee]/40 hover:bg-[#22d3ee]/[.08] active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center">
+          <i className={`fa-solid ${copied ? 'fa-circle-check text-ok' : 'fa-copy text-[#22d3ee]'} text-[15px]`} />
+          <span>{copied ? 'Tersalin' : 'Salin'}</span>
         </button>
         <button onClick={() => shareCode(codes[0].code)}
-          className="action-chip btn-3d py-3 rounded-[13px] bg-[#3b82f6]/[.10] border border-[#3b82f6]/25 text-[11px] font-bold text-[#93c5fd] hover:bg-[#3b82f6]/[.18] hover:border-[#3b82f6]/40 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
-          <i className="fa-solid fa-share-nodes" /> Share
+          className="action-chip btn-3d group flex-col gap-1 py-2.5 rounded-[14px] bg-[#3b82f6]/[.10] border border-[#3b82f6]/25 text-[10px] font-bold text-[#93c5fd] hover:bg-[#3b82f6]/[.20] hover:border-[#3b82f6]/45 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center">
+          <i className="fa-solid fa-share-nodes text-[15px]" /> <span>Share</span>
         </button>
         <a href={`https://wa.me/?text=${encodeURIComponent('.claim ' + codes[0].code)}`} target="_blank" rel="noreferrer"
-          className="action-chip btn-3d py-3 rounded-[13px] bg-[#25D366]/[.10] border border-[#25D366]/25 text-[11px] font-bold text-[#7ce8a8] hover:bg-[#25D366]/[.18] hover:border-[#25D366]/40 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
-          <i className="fa-brands fa-whatsapp text-[12px]" /> WA
+          className="action-chip btn-3d group flex-col gap-1 py-2.5 rounded-[14px] bg-[#25D366]/[.10] border border-[#25D366]/25 text-[10px] font-bold text-[#7ce8a8] hover:bg-[#25D366]/[.20] hover:border-[#25D366]/45 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center">
+          <i className="fa-brands fa-whatsapp text-[15px]" /> <span>WhatsApp</span>
         </a>
       </div>
 

@@ -1053,6 +1053,31 @@ body {
     inset 0 0 18px rgba(52,211,153,.25);
 }
 
+/* ===== v3.8h — Claim code card (SuccessModal, premium) ===== */
+.claim-code-card {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(34,211,238,.07), rgba(15,23,42,.4)) padding-box,
+    linear-gradient(120deg, rgba(34,211,238,.55), rgba(59,130,246,.25) 40%, rgba(52,211,153,.5) 75%, rgba(34,211,238,.55)) border-box;
+  background-size: 100% 100%, 260% 100%;
+  box-shadow: 0 8px 30px -12px rgba(34,211,238,.4), inset 0 1px 0 rgba(255,255,255,.06);
+  animation: claimCardFlow 8s linear infinite;
+  transition: box-shadow 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+.claim-code-card:hover {
+  box-shadow: 0 14px 40px -12px rgba(34,211,238,.6), inset 0 1px 0 rgba(255,255,255,.1);
+}
+@keyframes claimCardFlow {
+  0%   { background-position: 0% 50%, 0% 50%; }
+  100% { background-position: 0% 50%, 260% 50%; }
+}
+[data-theme="light"] .claim-code-card {
+  background:
+    linear-gradient(180deg, rgba(224,242,254,.7), rgba(255,255,255,.85)) padding-box,
+    linear-gradient(120deg, rgba(8,145,178,.5), rgba(37,99,235,.25) 40%, rgba(16,185,129,.45) 75%, rgba(8,145,178,.5)) border-box;
+  background-size: 100% 100%, 260% 100%;
+}
+
 /* ===== v3.5 — Claim buttons (SuccessModal) — double-bg border, tanpa mask ===== */
 .claim-btn {
   position: relative;
