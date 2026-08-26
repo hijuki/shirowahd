@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { HdMark } from '@/components/up/Modals'
 
 export default function Navbar({ settings, onFaq, onAbout }) {
   const btn = 'relative w-9 h-9 rounded-[12px] grid place-items-center border transition-all duration-[200ms] active:scale-90 group overflow-hidden'
