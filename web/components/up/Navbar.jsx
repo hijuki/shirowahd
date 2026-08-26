@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { HdMark } from '@/components/up/Modals'
 
 export default function Navbar({ settings, onFaq, onAbout }) {
   const btn = 'relative w-9 h-9 rounded-[12px] grid place-items-center border transition-all duration-[200ms] active:scale-90 group overflow-hidden'
+  const logoUrl = settings?.logoUrl || ''
 
   const [theme, setTheme] = useState('dark')
   useEffect(() => {
@@ -13,14 +13,17 @@ export default function Navbar({ settings, onFaq, onAbout }) {
   }, [])
 
   const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark'
+    const next = theme === 'light' ? 'dark' : 'light'
+    // transisi halus: kelas sementara, dibuang habis animasi
+    document.documentElement.classList.add('theme-anim')
+    setTimeout(() => document.documentElement.classList.remove('theme-anim'), 600)
     setTheme(next)
     localStorage.setItem('sw_theme', next)
     document.documentElement.setAttribute('data-theme', next)
   }
 
   return (
-    <nav className="nav-pill sticky top-3 z-40 relative rounded-[20px] px-3.5 py-2.5 flex items-center justify-between mb-6 anim-slide-down shadow-[0_12px_36px_-8px_rgba(0,0,0,.25),0_0_24px_-6px_rgba(34,211,238,.12)] overflow-hidden">
+    <nav className="sticky top-3 z-40 relative rounded-[20px] px-3.5 py-2.5 flex items-center justify-between mb-6 anim-slide-down bg-[#0a1020]/80 backdrop-blur-xl border border-white/[.08] shadow-[0_12px_36px_-8px_rgba(0,0,0,.6),0_0_24px_-6px_rgba(34,211,238,.12)] overflow-hidden">
       {/* Top subtle glow line */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#22d3ee]/40 to-transparent pointer-events-none" />
       {/* One-shot light sweep */}
@@ -30,13 +33,23 @@ export default function Navbar({ settings, onFaq, onAbout }) {
 
       {/* Brand */}
       <div className="flex items-center gap-2.5 min-w-0 relative z-10">
-        <HdMark size={36} />
+        {logoUrl ? (
+          <div className="relative w-9 h-9 shrink-0 rounded-[12px] overflow-hidden bg-[#080e1c] border border-white/[.08] shadow-[0_4px_16px_-4px_rgba(34,211,238,.3)] group">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-0.5" />
+            <span className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        ) : (
+          <div className="relative w-9 h-9 shrink-0 rounded-[12px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_4px_16px_-4px_rgba(37,211,102,.5)] group">
+            <span className="absolute inset-[1px] rounded-[11px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+            <i className="fa-brands fa-whatsapp text-white text-[16px] relative drop-shadow-[0_2px_4px_rgba(0,0,0,.3)]" />
+          </div>
+        )}
         <div className="min-w-0 leading-tight">
           <div className="flex items-center gap-1.5">
             <p className="font-[family-name:var(--font-display)] font-extrabold text-[14px] tracking-tight truncate grad-text">
               {settings?.siteName || 'SHIROWAHD'}
             </p>
-            <span className="px-1.5 py-[1px] rounded-[5px] text-[7px] font-black uppercase tracking-wider leading-none bg-[#22d3ee]/10 border border-[#22d3ee]/25 text-[#22d3ee] self-center">v3.7</span>
+            <span className="px-1.5 py-[1px] rounded-[5px] text-[7px] font-black uppercase tracking-wider leading-none bg-[#22d3ee]/10 border border-[#22d3ee]/25 text-[#22d3ee] self-center">v3.8</span>
           </div>
           <p className="text-[var(--t-muted)] text-[8px] font-bold tracking-[.14em] uppercase truncate mt-0.5">
             {settings?.siteSubtitle || 'SWHDHLZ · BY HILLZ'}

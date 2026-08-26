@@ -1119,23 +1119,74 @@ body {
 .logo-orbit-ring .ring-spin-rev {
   animation: ringSpinCCW 17s linear infinite;
 }
-/* HD typographic mark — pengganti gambar logo */
-.hd-text {
-  background: linear-gradient(160deg, #ffffff 8%, #a5f3fc 45%, #22d3ee 78%, #3b82f6 100%);
-  background-size: 180% auto;
+/* ===== v3.8 — Hero logo "HD" 3D ekstrusi (face gradient + depth layers) ===== */
+.hd3d-wrap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 94px;
+  min-height: 86px;
+  transform: rotateX(12deg) rotateY(-10deg);
+  transform-style: preserve-3d;
+  animation: hd3dFloat 5s ease-in-out infinite alternate;
+}
+.hd3d-face,
+.hd3d-depth {
+  grid-area: 1 / 1;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: 60px;
+  line-height: 1;
+  letter-spacing: -.04em;
+  user-select: none;
+  pointer-events: none;
+}
+.hd3d-depth {
+  color: #0b3a4e;
+  transform: translate(4px, 5px);
+  text-shadow:
+    1px 1px 0 #0b3a4e,
+    2px 2px 0 #0a3345,
+    3px 3px 0 #092c3c,
+    4px 4px 0 #072431,
+    10px 14px 22px rgba(34,211,238,.22);
+}
+.hd3d-face {
+  background: linear-gradient(165deg, #ffffff 0%, #bae6fd 30%, #38bdf8 58%, #2563eb 88%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 4px 16px rgba(34,211,238,.35));
-  animation: hdFlow 3.2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 16px rgba(56,189,248,.45));
 }
-@keyframes hdFlow {
-  from { background-position: 0% 50%; }
-  to   { background-position: 100% 50%; }
+@keyframes hd3dFloat {
+  from { transform: rotateX(12deg) rotateY(-10deg) translateY(0); }
+  to   { transform: rotateX(8deg) rotateY(-4deg) translateY(-5px); }
 }
-[data-theme="light"] .hd-text {
-  background-image: linear-gradient(160deg, #0e7490 8%, #0891b2 45%, #2563eb 100%);
-  filter: drop-shadow(0 4px 14px rgba(8,145,178,.30));
+[data-theme="light"] .hd3d-face {
+  background-image: linear-gradient(165deg, #0e7490 0%, #0891b2 40%, #2563eb 90%);
+  filter: drop-shadow(0 0 10px rgba(8,145,178,.25));
+}
+[data-theme="light"] .hd3d-depth {
+  color: #155e75;
+  text-shadow:
+    1px 1px 0 #155e75,
+    2px 2px 0 #14566a,
+    3px 3px 0 #124c5e,
+    4px 4px 0 #0f4252,
+    10px 14px 20px rgba(37,99,235,.16);
+}
+
+/* ===== Transisi tema halus (kelas sementara pas toggle) ===== */
+html.theme-anim, html.theme-anim *,
+html.theme-anim *::before, html.theme-anim *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow, outline-color !important;
+  transition-duration: .45s !important;
+  transition-timing-function: cubic-bezier(.22,1,.36,1) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.theme-anim, html.theme-anim * { transition-duration: 0s !important; }
+  .hd3d-wrap { animation: none; }
 }
 
 /* ===== v3.6 — Popup burst rings (center-presisi, scale+opacity doank) ===== */

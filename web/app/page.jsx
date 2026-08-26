@@ -4,7 +4,7 @@ import Navbar from '@/components/up/Navbar'
 import UploadPanel from '@/components/up/UploadPanel'
 import HistorySection from '@/components/up/HistorySection'
 import Toasts, { useToasts } from '@/components/up/Toasts'
-import { IntroModal, FaqModal, AboutModal, HdMark } from '@/components/up/Modals'
+import { IntroModal, FaqModal, AboutModal } from '@/components/up/Modals'
 import { loadSettings } from '@/lib/up-api'
 
 /* Floating anime sparkles */
@@ -124,7 +124,10 @@ export default function UploaderPage() {
                     <circle cx="52" cy="52" r="43" stroke="url(#orbB)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="54 216" />
                   </g>
                 </svg>
-                <HdMark size={76} />
+                <div className="hd3d-wrap" aria-hidden>
+                  <span className="hd3d-depth">HD</span>
+                  <span className="hd3d-face">HD</span>
+                </div>
               </div>
 
               <h1 className="font-[family-name:var(--font-display)] font-bold text-[28px] leading-tight tracking-tight">

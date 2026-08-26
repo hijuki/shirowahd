@@ -78,15 +78,6 @@ function CloseBtn({ onClick }) {
 /* ═══════════════════════════════════════
    HD typographic mark — logo bersih tanpa kotak
    ═══════════════════════════════════════ */
-export function HdMark({ size = 76 }) {
-  return (
-    <div className="relative grid place-items-center floaty" style={{ width: size, height: size }}>
-      <span className="absolute inset-[-16%] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,211,238,.20), rgba(59,130,246,.08) 55%, transparent 72%)' }} />
-      <span className="hd-text font-[family-name:var(--font-display)] font-black italic leading-none select-none relative" style={{ fontSize: Math.round(size * .52), letterSpacing: '-0.03em' }}>HD</span>
-    </div>
-  )
-}
-
 export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], popupButtons = [], settings = {} }) {
   const items = []
   if (ownerWhatsapp && settings.showOwnerBtn !== false) items.push({ i: 'fa-brands fa-whatsapp', t: 'Chat Developer', s: 'Hubungi langsung', href: `https://wa.me/${String(ownerWhatsapp).replace(/[^0-9]/g, '')}`, c: '#25D366', feat: true })
@@ -165,7 +156,10 @@ export function IntroModal({ onDone, settings }) {
           )}
 
           <div className="absolute -inset-5 rounded-full bg-[#25D366]/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.12) inset' }} />
-          <HdMark size={68} />
+          <div className="relative w-[68px] h-[68px] rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
+            <span className="absolute inset-[1px] rounded-[21px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+            <i className="fa-brands fa-whatsapp text-white text-[30px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
+          </div>
 
           {/* Sparkles around logo — tx/ty precomputed */}
           {phase >= 1 && [...Array(5)].map((_, i) => {
@@ -235,10 +229,10 @@ export function IntroModal({ onDone, settings }) {
 
         {/* Premium CTA button */}
         <button onClick={onDone}
-          className="relative overflow-hidden w-full py-3.5 rounded-[14px] bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white font-bold text-[13px] shadow-[0_4px_24px_-4px_rgba(34,211,238,.5)] hover:shadow-[0_8px_32px_-4px_rgba(34,211,238,.65)] hover:brightness-110 active:scale-[.97] transition-all duration-[200ms] group">
+          className="relative overflow-hidden w-full py-4 rounded-[16px] bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#3b82f6] text-white font-extrabold text-[14px] tracking-wide shadow-[0_10px_30px_-6px_rgba(34,211,238,.55),inset_0_1px_0_rgba(255,255,255,.28)] hover:shadow-[0_14px_42px_-6px_rgba(34,211,238,.75),inset_0_1px_0_rgba(255,255,255,.32)] hover:brightness-110 active:scale-[.96] transition-all duration-[200ms] group">
           <span className="absolute inset-0 btn-shine-sweep pointer-events-none" />
           <span className="relative flex items-center justify-center gap-2">
-            <i className="fa-solid fa-rocket text-[11px] group-hover:-translate-y-0.5 transition-transform duration-200" />
+            <i className="fa-solid fa-rocket text-[12px] group-hover:-translate-y-0.5 group-hover:scale-110 transition-transform duration-200" />
             Mulai Upload
             <i className="fa-solid fa-arrow-right text-[11px] group-hover:translate-x-1 transition-transform duration-200" />
           </span>
@@ -313,9 +307,12 @@ export function AboutModal({ onClose }) {
         <div className="relative rounded-[16px] p-4 overflow-hidden border border-white/[.06] text-center">
           <div className="absolute inset-0 bg-gradient-to-br from-[#22d3ee]/[.06] via-transparent to-[#3b82f6]/[.06]" />
           <div className="relative">
-            <div className="relative w-16 h-16 mx-auto mb-2.5">
+            <div className="relative w-14 h-14 mx-auto mb-2.5">
               <div className="absolute -inset-2 rounded-full bg-[#22d3ee]/12 blur-lg" />
-              <HdMark size={64} />
+              <div className="relative w-full h-full rounded-[16px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_0_32px_-4px_rgba(34,211,238,.4)]">
+                <span className="absolute inset-[1px] rounded-[15px] bg-gradient-to-b from-white/20 to-transparent" />
+                <span className="font-[family-name:var(--font-display)] font-extrabold text-lg text-white relative">H</span>
+              </div>
             </div>
             <p className="font-[family-name:var(--font-display)] font-extrabold text-[14px] tracking-widest grad-text">SWHDHLZ</p>
             <p className="text-[#7e90ad] text-[9px] tracking-wide mt-0.5">Developed by <span className="text-[#e8f1ff] font-semibold">HILLZ</span></p>
