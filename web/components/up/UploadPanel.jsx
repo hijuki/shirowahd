@@ -8,11 +8,11 @@ const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 const VIDEO_ACCEPT = VIDEO_EXTS.map(e => `.${e}`).join(',')
 const IMAGE_ACCEPT = IMAGE_EXTS.map(e => `.${e}`).join(',')
 const TAG_COLORS = {
-  mp4: '#c8102e', mkv: '#111111', avi: '#f59e0b', mov: '#16a34a',
-  jpg: '#c8102e', jpeg: '#c8102e', png: '#16a34a', gif: '#f59e0b', webp: '#111111',
+  mp4: '#3b82f6', mkv: '#22d3ee', avi: '#fbbf24', mov: '#34d399',
+  jpg: '#fb7185', jpeg: '#fb7185', png: '#34d399', gif: '#fbbf24', webp: '#22d3ee',
 }
 
-export default function UploadPanel({ settings, onToast: toast }) {
+export default function UploadPanel({ settings, toast }) {
   const [tab, setTab] = useState('video')
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -74,89 +74,86 @@ export default function UploadPanel({ settings, onToast: toast }) {
 
   if (settings?.maintenance) {
     return (
-      <div className="card p-8 text-center space-y-3 anim-pop-spring">
-        <div className="w-14 h-14 mx-auto grid place-items-center anim-float" style={{ border: '2px solid var(--t-hard)', borderRadius: 14, background: 'var(--t-warn)', color: '#111111', boxShadow: 'var(--sh-sm)' }}>
-          <i className="fa-solid fa-screwdriver-wrench text-xl" />
+      <div className="card p-8 text-center">
+        <div className="w-16 h-16 mx-auto rounded-[20px] bg-[#fbbf24]/10 border border-[#fbbf24]/30 grid place-items-center mb-4">
+          <i className="fa-solid fa-screwdriver-wrench text-[#fbbf24] text-2xl" />
         </div>
-        <h2 className="font-display text-base">SEDANG MAINTENANCE</h2>
-        <p className="text-[var(--t-muted)] text-[12px] font-medium">Server dalam pemeliharaan. Coba lagi nanti ya.</p>
+        <h2 className="font-[family-name:var(--font-display)] font-bold text-lg">Sedang Maintenance</h2>
+        <p className="text-[#7e90ad] text-sm mt-2">Server dalam pemeliharaan. Coba lagi nanti ya.</p>
       </div>
     )
   }
 
   return (
     <>
-      <div className="space-y-3">
-        {/* Segmented Tab Switch */}
-        <div className="pill-switch w-full">
+      <div className="space-y-4">
+        {/* Tab selector — standalone card */}
+        <div className="flex gap-2">
           {[['video', 'fa-video', 'Video'], ['image', 'fa-image', 'Foto']].map(([t, icon, label]) => (
             <button key={t} onClick={() => { if (!uploading) { setTab(t); clearAll() } }}
-              className={`pill-switch-btn flex-1 ${tab === t ? 'active' : ''}`}>
-              <i className={`fa-solid ${icon}`} />{label}
+              className={`flex-1 py-3.5 rounded-[16px] font-bold text-[13px] tracking-wide border transition-all duration-[250ms] active:scale-[.97] ${tab === t
+                ? 'bg-gradient-to-r from-[#22d3ee]/15 to-[#3b82f6]/10 border-[#22d3ee]/30 text-[#e8f1ff] shadow-[0_0_24px_-8px_rgba(34,211,238,.35)]'
+                : 'bg-white/[.02] border-white/[.06] text-[#7e90ad] hover:bg-white/[.05] hover:border-white/[.10]'}`}
+              style={{ transitionTimingFunction: 'var(--ease-out)' }}
+            >
+              <i className={`fa-solid ${icon} mr-2 ${tab === t ? 'text-[#22d3ee]' : ''}`} />{label}
             </button>
           ))}
         </div>
 
-        {/* Upload card */}
-        <div className="card card-3d-hover">
-          <div className="p-4 space-y-3">
-            {/* Format badges + limit */}
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-1">
+        {/* Main upload card */}
+        <div className="card card-3d overflow-visible">
+          <div className="absolute -inset-6 -z-10 rounded-[32px] bg-gradient-to-b from-[#22d3ee]/[.04] via-transparent to-[#3b82f6]/[.03] blur-xl pointer-events-none" />
+          <div className="p-5">
+            {/* Format badges + server info */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap gap-1.5">
                 {exts.map(ext => (
-                  <span key={ext} className="px-1.5 py-0.5 text-[9px] font-mono font-bold tracking-wide"
-                    style={{ color: '#111111', background: TAG_COLORS[ext.toLowerCase()], border: '2px solid var(--t-hard)', borderRadius: 6, boxShadow: '1.5px 1.5px 0 var(--t-hard)' }}>
+                  <span key={ext} className="px-2 py-0.5 rounded-[6px] text-[8px] font-extrabold tracking-[.12em] border"
+                    style={{ color: TAG_COLORS[ext.toLowerCase()], borderColor: `${TAG_COLORS[ext.toLowerCase()]}30`, background: `${TAG_COLORS[ext.toLowerCase()]}08` }}>
                     {ext}
                   </span>
                 ))}
               </div>
-              <span className="text-[10px] font-mono font-bold text-[#111111] tracking-wider px-2 py-0.5 tnum"
-                style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 99 }}>
-                MAX {settings?.maxFileSizeMB > 0 ? `${settings.maxFileSizeMB} MB` : '∞'}
+              <span className="text-[8px] font-mono font-bold tracking-wider text-[#7e90ad]/60 uppercase">
+                {settings?.maxFileSizeMB > 0 ? `≤${settings.maxFileSizeMB}MB` : '∞'}
               </span>
             </div>
 
-            {/* Drop Zone */}
+            {/* Drop zone */}
             <div
               onClick={() => { if (!uploading) fileRef.current?.click() }}
               onDrop={handleDrop}
               onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
               onDragLeave={() => setDrag(false)}
-              className={`drop-zone-pro py-10 px-4 text-center cursor-pointer group ${drag ? 'dragging' : ''}`}
+              className={`drop-luxe drop-3d py-10 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
             >
               <input ref={fileRef} type="file" accept={accept} multiple className="hidden" onChange={e => addFiles(e.target.files)} />
-
-              <span className="reticle-tl" /><span className="reticle-tr" />
-              <span className="reticle-bl" /><span className="reticle-br" />
-
-              {drag && <div className="scan-line" />}
-
-              <div className={`w-16 h-16 mx-auto grid place-items-center mb-3 transition-all duration-300 group-hover:-rotate-6 group-hover:scale-110 anim-float ${drag ? '!animate-none scale-125 rotate-6' : ''}`}
-                style={{ background: isImg ? 'var(--t-pop)' : 'var(--t-accent)', color: '#111111', border: '2px solid var(--t-hard)', borderRadius: 18, boxShadow: 'var(--sh-md)' }}>
-                <i className={`fa-solid ${isImg ? 'fa-images' : 'fa-cloud-arrow-up'} text-[26px]`} />
+              <div className="drop-halo">
+                <div className={`w-16 h-16 mx-auto rounded-[18px] grid place-items-center mb-4 transition-all duration-[250ms] floaty ${isImg
+                  ? 'bg-[#34d399]/12 border border-[#34d399]/25 shadow-[0_0_36px_-8px_rgba(52,211,153,.4)]'
+                  : 'bg-[#22d3ee]/12 border border-[#3b82f6]/30 shadow-[0_0_36px_-8px_rgba(59,130,246,.4)]'}`}>
+                  <i className={`fa-solid ${isImg ? 'fa-images text-[#34d399]' : 'fa-cloud-arrow-up text-[#67e8f9]'} text-[22px]`} />
+                </div>
               </div>
+              <p className="font-[family-name:var(--font-display)] font-bold text-[15px] tracking-tight">
+                {tab === 'video' ? 'Drop video di sini' : 'Drop foto di sini'}
+              </p>
+              <p className="text-[#7e90ad] text-[11px] mt-1.5">
+                atau <span className="text-[#22d3ee] font-semibold underline underline-offset-4 decoration-[#22d3ee]/40">pilih file</span>
+              </p>
 
-              <p className="font-display text-[15px] text-[var(--t-ink)] transition-transform duration-200 group-hover:scale-[1.03]">
-                {drag ? 'LEPAS DI SINI!' : tab === 'video' ? 'TARIK VIDEO KAMU' : 'TARIK FOTO KAMU'}
-              </p>
-              <p className="text-[var(--t-muted)] text-[11px] mt-1.5 font-mono font-bold">
-                atau <span className="underline underline-offset-4 decoration-[3px]" style={{ textDecorationColor: 'var(--t-pop)' }}>browse file</span>
-              </p>
             </div>
 
             {/* File list */}
             {files.length > 0 && (
-              <div className="stagger-in">
+              <div className="mt-4 stagger">
                 <div className="flex items-center justify-between px-0.5 mb-2">
-                  <span className="field-label tnum">
-                    {files.length} FILE · {fmtSize(files.reduce((s, f) => s + f.size, 0))}
+                  <span className="text-[#7e90ad] text-[10px] font-bold">
+                    {files.length} file · {fmtSize(files.reduce((s, f) => s + f.size, 0))}
                   </span>
-                  <button onClick={clearAll} disabled={uploading}
-                    className="text-[10px] font-mono font-bold px-2 py-1 transition-transform active:scale-95 disabled:opacity-30 hover:text-white"
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--t-bad)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                    style={{ color: 'var(--t-bad)', border: '2px solid var(--t-bad)', borderRadius: 8 }}>
-                    <i className="fa-solid fa-trash-can mr-1" />HAPUS
+                  <button onClick={clearAll} disabled={uploading} className="text-bad/60 text-[10px] font-bold hover:text-bad transition-all duration-[150ms] disabled:opacity-30">
+                    <i className="fa-solid fa-trash-can mr-1" />Hapus
                   </button>
                 </div>
 
@@ -165,14 +162,12 @@ export default function UploadPanel({ settings, onToast: toast }) {
                     {files.map(f => {
                       const key = f.name + f.size
                       return (
-                        <div key={key} className="relative aspect-square overflow-hidden group transition-all duration-200 hover:-translate-y-0.5"
-                          style={{ border: '2px solid var(--t-hard)', borderRadius: 12, boxShadow: 'var(--sh-xs)' }}>
+                        <div key={key} className="relative aspect-square rounded-[12px] overflow-hidden border border-white/[.07] group hover:border-[#3b82f6]/30 transition-all duration-[150ms]">
                           {thumbs[key] && <img src={thumbs[key]} alt="" className="w-full h-full object-cover" />}
-                          <p className="absolute bottom-1 left-1.5 right-1.5 text-[8px] text-white font-mono font-bold truncate opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200">{f.name}</p>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[150ms]" />
+                          <p className="absolute bottom-1 left-1.5 right-1.5 text-[7px] text-white font-bold truncate opacity-0 group-hover:opacity-100 transition-opacity duration-[150ms]">{f.name}</p>
                           {!uploading && (
-                            <button onClick={(e) => { e.stopPropagation(); removeFile(f) }}
-                              className="absolute top-1.5 right-1.5 w-5 h-5 text-[9px] grid place-items-center opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-200 hover:bg-[var(--t-bad)]"
-                              style={{ background: '#111111', color: '#fff', borderRadius: 999, border: '2px solid var(--t-hard)' }}>
+                            <button onClick={(e) => { e.stopPropagation(); removeFile(f) }} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-bad/90 text-white text-[8px] grid place-items-center opacity-0 group-hover:opacity-100 transition-all duration-[150ms]">
                               <i className="fa-solid fa-xmark" />
                             </button>
                           )}
@@ -185,21 +180,17 @@ export default function UploadPanel({ settings, onToast: toast }) {
                     {files.map(f => {
                       const ext = f.name.split('.').pop().toUpperCase()
                       return (
-                        <div key={f.name + f.size} className="flex items-center gap-2.5 py-2.5 px-3 group hist-item"
-                          style={{ background: 'var(--t-surface2)', border: '2px solid var(--t-hard)', borderRadius: 12 }}>
-                          <span className="w-9 h-9 shrink-0 grid place-items-center" style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 10, color: '#111111' }}>
-                            <i className="fa-solid fa-film text-[13px]" />
+                        <div key={f.name + f.size} className="flex items-center gap-2.5 py-2.5 px-3 rounded-[14px] bg-white/[.02] border border-white/[.05] group hover:border-white/[.10] transition-all duration-[150ms]">
+                          <span className="w-8 h-8 shrink-0 rounded-[10px] bg-[#3b82f6]/10 border border-[#3b82f6]/15 grid place-items-center">
+                            <i className="fa-solid fa-film text-[#67e8f9] text-[11px]" />
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-[12px] truncate">{f.name}</p>
-                            <span className="text-[var(--t-muted)] text-[10px] font-mono tnum">{fmtSize(f.size)}</span>
+                            <p className="font-semibold text-[11px] truncate">{f.name}</p>
+                            <span className="text-[#7e90ad] text-[9px] font-mono">{fmtSize(f.size)}</span>
                           </div>
-                          <span className="text-[9px] font-mono font-extrabold px-2 py-1"
-                            style={{ color: '#111111', background: TAG_COLORS[ext.toLowerCase()], border: '2px solid var(--t-hard)', borderRadius: 7 }}>{ext}</span>
+                          <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded-[5px]" style={{ color: TAG_COLORS[ext.toLowerCase()], background: `${TAG_COLORS[ext.toLowerCase()]}12` }}>{ext}</span>
                           {!uploading && (
-                            <button onClick={() => removeFile(f)}
-                              className="w-6 h-6 shrink-0 text-[10px] grid place-items-center opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 transition-all duration-200 hover:bg-[var(--t-bad)] hover:text-white"
-                              style={{ color: 'var(--t-muted)', border: '2px solid var(--t-hard)', borderRadius: 999 }}>
+                            <button onClick={() => removeFile(f)} className="w-6 h-6 shrink-0 rounded-full bg-bad/10 text-bad text-[9px] grid place-items-center opacity-0 group-hover:opacity-100 transition-all duration-[150ms]">
                               <i className="fa-solid fa-xmark" />
                             </button>
                           )}
@@ -213,50 +204,65 @@ export default function UploadPanel({ settings, onToast: toast }) {
 
             {/* Progress */}
             {uploading && (
-              <div className="anim-slide-up space-y-2.5 p-3.5" style={{ background: 'var(--t-surface2)', border: '2px solid var(--t-hard)', borderRadius: 14, boxShadow: 'var(--sh-sm)' }}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 grid place-items-center animate-pulse" style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 10, color: '#111111' }}>
-                      <i className="fa-solid fa-arrow-up text-[13px]" />
-                    </span>
+              <div className="mt-4 anim-fade">
+                {/* Stats row */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-[8px] bg-[#22d3ee]/10 border border-[#22d3ee]/20 grid place-items-center">
+                      <i className="fa-solid fa-cloud-arrow-up text-[#22d3ee] text-[10px] animate-bounce" />
+                    </div>
                     <div>
-                      <p className="text-[12px] font-extrabold">MENGIRIM KE SERVER…</p>
-                      <p className="text-[9px] font-mono text-[var(--t-muted)] tnum">
+                      <p className="text-[11px] font-bold text-[#e8f1ff]">Mengupload…</p>
+                      <p className="text-[8px] font-mono text-[#7e90ad]">
                         {fmtSize(progress.loaded)} / {fmtSize(progress.total)}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-display text-[20px] tnum leading-none">{progress.pct}<span className="text-[12px]">%</span></p>
-                    <p className="text-[9px] font-mono font-semibold text-[var(--t-muted)] tnum mt-0.5">
+                    <p className="text-[16px] font-[family-name:var(--font-display)] font-extrabold grad-text tabular-nums">{progress.pct}%</p>
+                    <p className="text-[9px] font-mono font-bold text-[#67e8f9]">
                       {progress.speed > 0 ? `${(progress.speed * 8 / 1000000).toFixed(1)} Mbps` : '—'}
                     </p>
                   </div>
                 </div>
 
-                <div className="progress-bar-wrap">
-                  <div className="progress-bar-fluid" style={{ width: Math.max(progress.pct, 2) + '%' }} />
+                {/* Progress bar */}
+                <div className="relative h-[6px] rounded-full bg-white/[.06] overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full transition-all duration-[250ms]"
+                    style={{
+                      width: progress.pct + '%',
+                      background: 'linear-gradient(90deg, #22d3ee, #3b82f6, #34d399)',
+                      boxShadow: '0 0 16px rgba(34,211,238,.5), 0 0 4px rgba(34,211,238,.8)',
+                      transitionTimingFunction: 'var(--ease-out)',
+                    }}
+                  />
+                  {/* Shimmer overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[.15] to-transparent" style={{ animation: 'shimmer 1.2s linear infinite' }} />
                 </div>
 
+                {/* ETA */}
                 {progress.speed > 0 && progress.pct < 100 && (
-                  <p className="text-[9px] text-[var(--t-muted)] font-mono text-right tnum">
+                  <p className="text-[8px] text-[#7e90ad]/60 font-mono mt-1.5 text-right">
                     ≈ {Math.ceil((progress.total - progress.loaded) / progress.speed)}s tersisa
                   </p>
                 )}
               </div>
             )}
 
-            {/* Upload / Cancel */}
-            {files.length > 0 && !uploading && (
-              <button onClick={doUpload} className="btn-primary w-full py-4 text-[14px]">
-                <i className="fa-solid fa-rocket" />UPLOAD {files.length} {tab === 'video' ? 'VIDEO' : 'FOTO'}
-              </button>
-            )}
-            {uploading && (
-              <button onClick={cancelUpload} className="w-full py-3 font-mono font-bold text-[12px] text-white transition-all duration-150 active:translate-y-0.5"
-                style={{ background: 'var(--t-bad)', border: '2px solid var(--t-hard)', borderRadius: 12, boxShadow: 'var(--sh-xs)' }}>
-                <i className="fa-solid fa-circle-stop mr-1.5" />BATALKAN UPLOAD
-              </button>
+            {/* Upload / Cancel button */}
+            {files.length > 0 && (
+              <div className="mt-4">
+                {uploading ? (
+                  <button onClick={cancelUpload} className="w-full py-3.5 rounded-[14px] font-bold text-sm text-bad bg-bad/8 border border-bad/25 hover:bg-bad/15 btn-3d active:scale-[.97] transition-all duration-[150ms]">
+                    <i className="fa-solid fa-circle-stop mr-2" />Batalkan
+                  </button>
+                ) : (
+                  <button onClick={doUpload} className="btn-primary btn-3d w-full py-3.5 rounded-[14px] font-bold text-sm">
+                    <i className="fa-solid fa-cloud-arrow-up mr-2" />Upload {files.length} {tab === 'video' ? 'Video' : 'Foto'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

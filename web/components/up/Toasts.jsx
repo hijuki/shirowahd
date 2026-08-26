@@ -8,27 +8,22 @@ export function useToasts() {
   const add = useCallback((msg, type = 'info') => {
     const id = ++toastId
     setToasts(t => [...t, { id, msg, type }])
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500)
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000)
   }, [])
   return { toasts, add }
 }
 
-const icons = { success: 'fa-check', error: 'fa-xmark', info: 'fa-info' }
-const colors = { success: 'var(--t-ok)', error: 'var(--t-bad)', info: 'var(--t-accent)' }
+const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' }
+const colors = { success: 'text-ok border-ok/30', error: 'text-bad border-bad/30', info: 'text-[#22d3ee] border-[#22d3ee]/30' }
 
 export default function Toasts({ toasts }) {
   if (!toasts.length) return null
   return (
-    <div className="fixed top-3 right-3 z-[999] flex flex-col gap-2 max-w-[300px] pointer-events-none">
+    <div className="fixed top-4 right-4 z-[999] flex flex-col gap-2 max-w-[320px]">
       {toasts.map(t => (
-        <div key={t.id}
-          className="pointer-events-auto toast-pro px-3 py-2.5 flex items-center gap-2.5 text-[12px]"
-          style={{ borderColor: t.type === 'error' ? 'var(--t-bad)' : undefined }}>
-          <span className="w-6 h-6 shrink-0 grid place-items-center text-[10px] text-white anim-pop-spring"
-            style={{ background: colors[t.type] || colors.info, border: '2px solid var(--t-hard)', borderRadius: 8, color: t.type === 'info' ? '#111111' : '#fff' }}>
-            <i className={`fa-solid ${icons[t.type] || icons.info}`} />
-          </span>
-          <span className="font-extrabold leading-snug flex-1">{t.msg}</span>
+        <div key={t.id} className={`toast-card rounded-[14px] px-4 py-3 flex items-center gap-3 anim-pop border-l-[3px] ${colors[t.type] || colors.info}`}>
+          <i className={`fa-solid ${icons[t.type] || icons.info} text-sm shrink-0`} />
+          <span className="text-[12px] font-semibold text-[#e8f1ff]/90 leading-relaxed">{t.msg}</span>
         </div>
       ))}
     </div>
