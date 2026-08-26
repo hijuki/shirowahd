@@ -1,0 +1,222 @@
+'use client'
+import { useEffect, useState, useCallback } from 'react'
+import Navbar from '@/components/up/Navbar'
+import UploadPanel from '@/components/up/UploadPanel'
+import HistorySection from '@/components/up/HistorySection'
+import Toasts, { useToasts } from '@/components/up/Toasts'
+import { IntroModal, FaqModal, AboutModal } from '@/components/up/Modals'
+import { loadSettings } from '@/lib/up-api'
+
+/* Floating anime sparkles */
+function AnimeSparkles() {
+  const sparkles = Array.from({ length: 8 }, (_, i) => ({
+    id: i,
+    left: `${8 + Math.random() * 84}%`,
+    top: `${4 + Math.random() * 88}%`,
+    delay: `${Math.random() * 7}s`,
+    size: 2.5 + Math.random() * 3.5,
+    color: ['#22d3ee', '#3b82f6', '#34d399', '#67e8f9', '#a78bfa'][i % 5],
+    dur: `${6 + Math.random() * 4}s`,
+  }))
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden">
+      {sparkles.map(s => (
+        <div key={s.id} className="anime-sparkle" style={{
+          left: s.left, top: s.top,
+          width: s.size, height: s.size,
+          color: s.color,
+          animationDelay: s.delay,
+          animationDuration: s.dur,
+        }} />
+      ))}
+    </div>
+  )
+}
+
+/* Skeleton placeholder */
+function SkeletonPage() {
+  return (
+    <div className="w-full max-w-[440px] mx-auto px-4 pt-16 space-y-6">
+      {/* Navbar skeleton */}
+      <div className="skeleton h-[52px] rounded-[18px]" />
+      {/* Hero skeleton */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="skeleton w-[76px] h-[76px] rounded-[24px]" />
+        <div className="skeleton skeleton-text w-[180px] h-[28px]" />
+        <div className="skeleton skeleton-text w-[240px] h-[12px]" />
+        <div className="skeleton skeleton-text w-[200px] h-[12px]" />
+      </div>
+      {/* Step cards skeleton */}
+      <div className="grid grid-cols-3 gap-2">
+        {[0,1,2].map(i => <div key={i} className="skeleton h-[90px] rounded-[18px]" />)}
+      </div>
+      {/* Upload card skeleton */}
+      <div className="skeleton h-[280px] rounded-[20px]" />
+    </div>
+  )
+}
+
+export default function UploaderPage() {
+  const [settings, setSettings] = useState(null)
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [faqOpen, setFaqOpen] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
+  const { toasts, add: toast } = useToasts()
+
+  const reload = useCallback(() => {
+    loadSettings().then(setSettings).catch(e => toast('Gagal memuat pengaturan: ' + e.message, 'error'))
+  }, [])
+  useEffect(reload, [reload])
+  useEffect(() => {
+    if (settings && settings.showWelcome !== false) setShowWelcome(true)
+  }, [settings])
+
+  const heroTitle = settings?.heroTitle || 'Upload'
+  const heroHighlight = settings?.heroSubtitle || 'Media HD'
+  const heroDesc = settings?.heroDesc || 'Kirim video & foto ke grup WhatsApp\nlewat kode klaim — cepat & mudah'
+  const logoUrl = settings?.logoUrl || ''
+  const footerText = settings?.footerText || ''
+
+  return (
+    <>
+      <div className="bg-aurora" />
+      <div className="bg-aurora-2" />
+      <div className="bg-grid" />
+      <div className="bg-noise" />
+      <AnimeSparkles />
+
+      {/* Decorative orbs */}
+      <div className="fixed top-[15%] left-[8%] w-[220px] h-[220px] rounded-full bg-[#22d3ee]/[.05] blur-[80px] pointer-events-none z-0 orb-float" />
+      <div className="fixed bottom-[20%] right-[5%] w-[190px] h-[190px] rounded-full bg-[#a78bfa]/[.05] blur-[75px] pointer-events-none z-0 orb-float-2" />
+
+      <Toasts toasts={toasts} />
+      {showWelcome && <IntroModal onDone={() => setShowWelcome(false)} settings={settings} />}
+      {faqOpen && <FaqModal onClose={() => setFaqOpen(false)} />}
+      {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
+
+      {!settings ? (
+        <SkeletonPage />
+      ) : (
+        <div className="relative z-10 min-h-dvh flex flex-col items-center px-4 pb-20 pt-2">
+          <div className="w-full max-w-[440px] sm:max-w-[560px]">
+            <Navbar settings={settings} onFaq={() => setFaqOpen(true)} onAbout={() => setAboutOpen(true)} />
+
+            {/* Hero */}
+            <header className="text-center mb-8 anim-entrance perspective-container" style={{ animationDelay: '60ms' }}>
+              {/* Logo — conic ring + halo */}
+              <div className="relative inline-block mb-5 [perspective:700px]">
+                <div className="absolute -inset-2.5 rounded-[26px] border-ring-spin pointer-events-none" />
+                <div className="absolute -inset-4 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
+                {logoUrl ? (
+                  <div className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden logo-3d anime-glow bg-[#080e1c]">
+                    <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+                  </div>
+                ) : (
+                  <div className="relative w-[76px] h-[76px] rounded-[24px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center logo-3d anime-glow">
+                    <span className="absolute inset-[2px] rounded-[22px] bg-[#080e1c]/80 backdrop-blur-sm" />
+                    <i className="fa-brands fa-whatsapp text-white text-[34px] relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
+                  </div>
+                )}
+              </div>
+
+              <h1 className="font-[family-name:var(--font-display)] font-bold text-[28px] leading-tight tracking-tight">
+                {heroTitle}{' '}<span className="anime-text">{heroHighlight}</span>
+              </h1>
+              <p className="text-[var(--t-muted)] text-[13px] mt-2.5 max-w-[300px] mx-auto leading-relaxed whitespace-pre-line">
+                {heroDesc}
+              </p>
+
+              {/* Inline dev credit */}
+              <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] text-[10px] tracking-wider text-[var(--t-muted)]">
+                <span className="w-[18px] h-[18px] rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white shrink-0">H</span>
+                <span className="font-semibold">SWHDHLZ</span>
+                <span className="opacity-40">BY</span>
+                <span className="anime-text font-extrabold">HILLZ</span>
+              </div>
+            </header>
+
+            {/* 3-step guide — glass cards + speed lines */}
+            <div className="grid grid-cols-3 gap-2 mb-6 anim-entrance perspective-container" style={{ animationDelay: '120ms' }}>
+              {[
+                { n: 1, t: 'Upload', sub: 'Pilih file', i: 'fa-cloud-arrow-up', c: '#22d3ee' },
+                { n: 2, t: 'Kode', sub: 'Dapat klaim', i: 'fa-key', c: '#3b82f6' },
+                { n: 3, t: 'Claim', sub: 'Kirim di grup', i: 'fa-comments', c: '#34d399' },
+              ].map((s, i) => (
+                <div key={s.n} className="relative rounded-[18px] border border-[var(--t-border)] overflow-hidden group step-3d" style={{ animationDelay: `${120 + i * 80}ms` }}>
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/[.02] to-transparent" />
+                  <div className="absolute top-0 left-[15%] right-[15%] h-px" style={{ background: `linear-gradient(to right, transparent, ${s.c}40, transparent)` }} />
+                  {/* Speed lines on hover */}
+                  <div className="speed-lines opacity-0 group-hover:opacity-100 transition-opacity duration-[250ms]" />
+                  <div className="relative flex flex-col items-center py-4 px-2 text-center">
+                    <div className="w-10 h-10 rounded-[12px] grid place-items-center mb-2.5 transition-all duration-[250ms] group-hover:scale-110" style={{ background: `${s.c}12`, border: `1px solid ${s.c}25`, boxShadow: `0 0 20px -6px ${s.c}30` }}>
+                      <i className={`fa-solid ${s.i} text-[14px]`} style={{ color: s.c }} />
+                    </div>
+                    <span className="font-bold text-[11px] tracking-wide">{s.t}</span>
+                    <span className="text-[var(--t-muted)] text-[9px] mt-0.5">{s.sub}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Status chips */}
+            <div className="flex items-center justify-between mb-5 px-0.5 anim-entrance" style={{ animationDelay: '180ms' }}>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-[9px] font-extrabold tracking-wider bg-ok/[.08] border border-ok/20 text-ok">
+                  <span className="w-[5px] h-[5px] rounded-full bg-ok" style={{ animation: 'pulseDot 1.7s infinite' }} />
+                  ONLINE
+                </span>
+                {settings?.maxFileSizeMB > 0 && (
+                  <span className="px-2.5 py-1.5 rounded-[10px] text-[9px] font-extrabold tracking-wider bg-[#3b82f6]/8 border border-[#3b82f6]/20 text-[#93c5fd]">
+                    MAX {settings.maxFileSizeMB}MB
+                  </span>
+                )}
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-[9px] font-extrabold tracking-wider bg-[#22d3ee]/8 border border-[#22d3ee]/20 text-[#67e8f9]">
+                <i className="fa-regular fa-clock text-[8px] opacity-60" />
+                {settings?.expireMinutes || 60}m
+              </span>
+            </div>
+
+            {/* Announcement */}
+            {settings?.announcement && (
+              <div className="rounded-[16px] px-4 py-3 mb-5 anim-entrance border border-[#fbbf24]/20 bg-[#fbbf24]/[.04]" style={{ animationDelay: '195ms' }}>
+                <div className="flex items-start gap-2.5">
+                  <i className="fa-solid fa-bullhorn text-[#fbbf24] text-xs mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[9px] font-extrabold text-[#fbbf24]/70 mb-0.5 tracking-wider uppercase">Pengumuman</p>
+                    <p className="text-[11px] font-medium leading-relaxed text-[var(--t-ink)]/80 whitespace-pre-line">{settings.announcement}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Banner */}
+            {settings?.bannerText && !settings?.announcement && (
+              <div className="rounded-[16px] px-4 py-3 mb-5 anim-entrance border border-[#3b82f6]/20 bg-[#3b82f6]/[.05]" style={{ animationDelay: '200ms' }}>
+                <div className="flex items-start gap-2.5">
+                  <i className="fa-solid fa-bullhorn text-[#22d3ee] text-xs mt-0.5 shrink-0" />
+                  <span className="text-[11px] font-medium leading-relaxed text-[var(--t-ink)]/80">{settings.bannerText}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="anim-entrance" style={{ animationDelay: '220ms' }}>
+              <UploadPanel settings={settings} toast={toast} />
+            </div>
+
+            <div className="anim-entrance" style={{ animationDelay: '340ms' }}>
+              <HistorySection />
+            </div>
+
+            <footer className="mt-10 text-center anim-fade" style={{ animationDelay: '500ms' }}>
+              <div className="divider-glow mb-3" />
+              <p className="text-[var(--t-muted)]/35 text-[9px] font-medium tracking-[.18em] uppercase">
+                {footerText || `${settings?.siteName || 'SHIROWAHD'} · SWHDHLZ BY HILLZ`}
+              </p>
+            </footer>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
