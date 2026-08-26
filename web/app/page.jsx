@@ -124,10 +124,37 @@ export default function UploaderPage() {
                     <circle cx="52" cy="52" r="43" stroke="url(#orbB)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="54 216" />
                   </g>
                 </svg>
-                <div className="hd3d-wrap" aria-hidden>
-                  <span className="hd3d-depth">HD</span>
-                  <span className="hd3d-face">HD</span>
-                </div>
+                <svg className="hd-logo" viewBox="0 0 120 120" width="92" height="92" aria-hidden>
+                  <defs>
+                    <linearGradient id="hdPlate" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="55%" stopColor="#2563eb" />
+                      <stop offset="100%" stopColor="#1e3a8a" />
+                    </linearGradient>
+                    <linearGradient id="hdFace" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ffffff" />
+                      <stop offset="45%" stopColor="#e0f2fe" />
+                      <stop offset="100%" stopColor="#7dd3fc" />
+                    </linearGradient>
+                    <linearGradient id="hdGloss" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ffffff" stopOpacity=".55" />
+                      <stop offset="55%" stopColor="#ffffff" stopOpacity="0" />
+                    </linearGradient>
+                    <filter id="hdSoft" x="-30%" y="-30%" width="160%" height="160%">
+                      <feDropShadow dx="0" dy="6" stdDeviation="7" floodColor="#0ea5e9" floodOpacity=".45" />
+                    </filter>
+                  </defs>
+                  {/* plate 3D */}
+                  <g filter="url(#hdSoft)">
+                    <rect x="14" y="20" width="92" height="92" rx="26" fill="#0b2f6b" />
+                    <rect x="14" y="14" width="92" height="92" rx="26" fill="url(#hdPlate)" />
+                    <rect x="14" y="14" width="92" height="46" rx="26" fill="url(#hdGloss)" />
+                    <rect x="15.5" y="15.5" width="89" height="89" rx="24.5" fill="none" stroke="#ffffff" strokeOpacity=".35" strokeWidth="1.5" />
+                  </g>
+                  {/* HD letters — depth + face */}
+                  <text x="60" y="75" textAnchor="middle" dominantBaseline="middle" fontFamily="var(--font-display), system-ui" fontWeight="900" fontStyle="italic" fontSize="46" letterSpacing="-2" fill="#0a2a5e" transform="translate(2.5,3)">HD</text>
+                  <text x="60" y="72" textAnchor="middle" dominantBaseline="middle" fontFamily="var(--font-display), system-ui" fontWeight="900" fontStyle="italic" fontSize="46" letterSpacing="-2" fill="url(#hdFace)">HD</text>
+                </svg>
               </div>
 
               <h1 className="font-[family-name:var(--font-display)] font-bold text-[28px] leading-tight tracking-tight">
