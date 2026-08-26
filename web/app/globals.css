@@ -854,9 +854,6 @@ body {
   pointer-events: none;
   opacity: 0;
 }
-  filter: drop-shadow(0 0 4px currentColor);
-}
-
 /* Speed lines — horizontal zoom */
 @keyframes speedLine {
   0%   { transform: translateX(-100%) scaleX(0); opacity: 0; }
