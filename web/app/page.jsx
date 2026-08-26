@@ -114,19 +114,19 @@ export default function UploaderPage() {
             <header className="text-center mb-8 anim-entrance perspective-container" style={{ animationDelay: '60ms' }}>
               {/* Logo — typographic HD + orbit ring */}
               <div className="relative inline-block mb-5 [perspective:700px]">
-                <div className="absolute -inset-6 rounded-full bg-gradient-to-b from-[#22d3ee]/12 to-[#3b82f6]/8 blur-2xl pointer-events-none" />
+                <div className="absolute -inset-6 rounded-full bg-gradient-to-b from-slate-200/12 to-slate-400/8 blur-2xl pointer-events-none" />
                 <svg className="logo-orbit-ring" viewBox="0 0 104 104" fill="none" aria-hidden>
                   <defs>
                     <linearGradient id="orbA" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#22d3ee" stopOpacity=".9" />
-                      <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                      <stop offset="0%" stopColor="#e2e8f0" stopOpacity=".85" />
+                      <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0" />
                     </linearGradient>
                     <linearGradient id="orbB" x1="1" y1="1" x2="0" y2="0">
-                      <stop offset="0%" stopColor="#34d399" stopOpacity=".8" />
-                      <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+                      <stop offset="0%" stopColor="#94a3b8" stopOpacity=".7" />
+                      <stop offset="100%" stopColor="#94a3b8" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <circle cx="52" cy="52" r="50" stroke="rgba(34,211,238,.09)" strokeWidth="1" />
+                  <circle cx="52" cy="52" r="50" stroke="rgba(226,232,240,.08)" strokeWidth="1" />
                   <g className="ring-spin">
                     <circle cx="52" cy="52" r="50" stroke="url(#orbA)" strokeWidth="2" strokeLinecap="round" strokeDasharray="92 222" />
                   </g>
