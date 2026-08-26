@@ -5,23 +5,26 @@ import { useState, useEffect, useRef } from 'react'
    MODAL SHELL — Premium overlay with particles
    ═══════════════════════════════════════════════ */
 function ModalShell({ onClose, children, accent = 'cyan' }) {
-  const [vis, setVis] = useState(false)
-  const ref = useRef(null)
-  useEffect(() => { requestAnimationFrame(() => requestAnimationFrame(() => setVis(true))) }, [])
-  const close = onClose ? () => { setVis(false); setTimeout(onClose, 460) } : null
+  // Entrance via CSS keyframes (GPU, overshoot bezier); exit via .modal-card-out lalu unmount
+  const [closing, setClosing] = useState(false)
+  const closingRef = useRef(false)
+  const close = onClose ? () => {
+    if (closingRef.current) return
+    closingRef.current = true
+    setClosing(true)
+    setTimeout(onClose, 360)
+  } : null
   const ac = accent === 'green' ? '#34d399' : '#22d3ee'
 
   return (
-    <div className={`fixed inset-0 z-[80] transition-opacity duration-[480ms] ${vis ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+    <div className={`fixed inset-0 z-[80] ${closing ? 'overlay-out' : 'overlay-in'}`}>
       <div className="absolute inset-0 bg-[#020408]/[.97]" onClick={close} />
 
       <div className="absolute inset-0 z-10 overflow-y-auto modal-scroll-hide" onClick={close}>
         <div className="min-h-full flex items-center justify-center p-4 py-6">
           <div
-            ref={ref}
             onClick={e => e.stopPropagation()}
-            className={`relative w-full max-w-[400px] transform-gpu transition-[transform,opacity] duration-[520ms] will-change-transform ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.93] translate-y-7 opacity-0'}`}
-            style={{ transitionTimingFunction: 'var(--ease-out)' }}
+            className={`relative w-full max-w-[400px] transform-gpu will-change-transform ${closing ? 'modal-card-out' : 'modal-card-in'}`}
           >
             {/* Card */}
             <div className="relative rounded-[22px] bg-[#0a1020] border border-white/[.08] shadow-[0_32px_80px_-12px_rgba(0,0,0,.9)] overflow-hidden">

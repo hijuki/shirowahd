@@ -80,6 +80,7 @@ export default function UploaderPage() {
   return (
     <>
       <div className="bg-aurora" />
+      <div className="bg-aurora-2" />
       <div className="bg-grid" />
       <div className="bg-noise" />
       <AnimeSparkles />

@@ -999,3 +999,82 @@ body {
   .card-3d:hover { transform: translateY(-3px); }
   .drop-3d:hover { transform: none; }
 }
+
+/* ═══════════════════════════════════════════
+   v3.4 UPGRADE — deeper atmosphere + smoother popup
+   ═══════════════════════════════════════════ */
+
+/* Extra aurora layer — magenta/violet drift, GPU-only */
+.bg-aurora-2 {
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none; overflow: hidden;
+}
+.bg-aurora-2::before {
+  content: '';
+  position: absolute; inset: -30%;
+  background:
+    radial-gradient(ellipse 35% 28% at 85% 80%, rgba(167,139,250,.12), transparent 65%),
+    radial-gradient(ellipse 30% 25% at 10% 30%, rgba(34,211,238,.08), transparent 60%),
+    radial-gradient(ellipse 40% 32% at 50% 95%, rgba(59,130,246,.09), transparent 65%);
+  filter: blur(70px);
+  transform: translateZ(0);
+  animation: auroraDrift2 55s ease-in-out infinite alternate;
+}
+@keyframes auroraDrift2 {
+  0%   { transform: translate3d(-4%, 2%, 0) rotate(2deg) scale(1); }
+  100% { transform: translate3d(4%, -3%, 0) rotate(-2deg) scale(1.06); }
+}
+
+/* Nav light sweep — sekali tiap buka halaman */
+@keyframes navSheen {
+  0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+  15%  { opacity: .8; }
+  100% { transform: translateX(240%) skewX(-18deg); opacity: 0; }
+}
+.nav-sheen {
+  position: absolute; top: 0; bottom: 0; width: 45%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,[.05]), transparent);
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.055), transparent);
+  pointer-events: none;
+  animation: navSheen 1.6s var(--ease-out) .55s both;
+}
+
+/* Popup entrance/exit — murni GPU keyframes */
+@keyframes modalCardIn {
+  0%   { transform: scale3d(.9,.9,1) translate3d(0,34px,0); opacity: 0; }
+  100% { transform: scale3d(1,1,1) translate3d(0,0,0); opacity: 1; }
+}
+@keyframes modalCardOut {
+  0%   { transform: scale3d(1,1,1) translate3d(0,0,0); opacity: 1; }
+  100% { transform: scale3d(.94,.94,1) translate3d(0,20px,0); opacity: 0; }
+}
+.modal-card-in  { animation: modalCardIn 520ms cubic-bezier(.22,1.15,.32,1) both; will-change: transform, opacity; }
+.modal-card-out { animation: modalCardOut 380ms ease-in both; }
+
+/* Backdrop fade untuk popup */
+@keyframes overlayIn  { from { opacity: 0; } to { opacity: 1; } }
+.overlay-in  { animation: overlayIn 420ms ease-out both; }
+.overlay-out { animation: overlayOut 380ms ease-in both; }
+@keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* Shine sweep untuk kartu kode claim */
+@keyframes cardShine {
+  0%   { transform: translateX(-140%) skewX(-16deg); opacity: 0; }
+  20%  { opacity: .7; }
+  100% { transform: translateX(260%) skewX(-16deg); opacity: 0; }
+}
+.code-shine {
+  position: absolute; top: -20%; bottom: -20%; left: 0; width: 42%;
+  background: linear-gradient(105deg, transparent, rgba(103,232,249,.13), transparent);
+  pointer-events: none;
+  animation: cardShine 2.6s var(--ease-out) infinite;
+  animation-delay: 1s;
+}
+
+/* Halo statis di belakang ikon sukses — glow lebih tebal tapi tanpa animasi paint */
+.success-core-glow {
+  box-shadow:
+    0 0 30px -4px rgba(52,211,153,.65),
+    0 0 70px 6px rgba(52,211,153,.22),
+    inset 0 0 18px rgba(52,211,153,.25);
+}

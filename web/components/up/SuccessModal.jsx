@@ -108,7 +108,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           <div className="energy-ring !rounded-full" />
 
           <div className={`relative w-[56px] h-[56px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/30 to-ok/5 border-2 border-ok/40 shadow-[0_0_30px_-4px_rgba(52,211,153,.6)] anime-glow" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/30 to-ok/5 border-2 border-ok/40 anime-glow success-core-glow" />
             <i className="fa-solid fa-check text-ok text-[22px] relative drop-shadow-[0_0_16px_rgba(52,211,153,.9)]" />
           </div>
 
@@ -139,6 +139,8 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
             className="relative rounded-[14px] bg-[var(--t-surface)] border border-[#22d3ee]/15 p-3 text-center cursor-pointer group hover:border-[#22d3ee]/35 transition-all duration-[200ms] active:scale-[.97] overflow-hidden card-3d">
             <div className="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-[#22d3ee]/30 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-b from-[#22d3ee]/[.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[200ms]" />
+            {/* Auto shine sweep */}
+            <div className="code-shine" />
             {/* Speed lines on hover */}
             <div className="speed-lines opacity-0 group-hover:opacity-100 transition-opacity duration-[200ms]" />
 
