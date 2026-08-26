@@ -23,7 +23,7 @@ export default function Navbar({ settings, onFaq, onAbout }) {
   }
 
   return (
-    <nav className="sticky top-3 z-40 relative rounded-[20px] px-3.5 py-2.5 flex items-center justify-between mb-6 anim-slide-down bg-[#0a1020]/80 backdrop-blur-xl border border-white/[.08] shadow-[0_12px_36px_-8px_rgba(0,0,0,.6),0_0_24px_-6px_rgba(34,211,238,.12)] overflow-hidden">
+    <nav className="nav-pill sticky top-3 z-40 relative rounded-[18px] px-4 py-3 flex items-center justify-between mb-6 anim-slide-down overflow-hidden">
       {/* Top subtle glow line */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#22d3ee]/40 to-transparent pointer-events-none" />
       {/* One-shot light sweep */}
@@ -58,7 +58,7 @@ export default function Navbar({ settings, onFaq, onAbout }) {
       </div>
 
       {/* Quick actions with hover shine */}
-      <div className="flex items-center gap-1.5 relative z-10">
+      <div className="flex items-center gap-2 relative z-10">
         {/* Theme toggle */}
         <button onClick={toggleTheme} title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
           className={`${btn} bg-white/[.03] border-white/[.07] text-[var(--t-muted)] hover:text-[#fbbf24] hover:border-[#fbbf24]/30 hover:bg-[#fbbf24]/[.08]`}>
