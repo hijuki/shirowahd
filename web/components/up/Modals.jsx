@@ -2,29 +2,29 @@
 import { useState, useEffect, useRef } from 'react'
 
 /* ═══════════════════════════════════════════════
-   MODAL SHELL — Pro glass sheet with spring entrance
+   MODAL SHELL — Brutal sheet, spring entrance
    ═══════════════════════════════════════════════ */
 function ModalShell({ onClose, children }) {
   const [vis, setVis] = useState(false)
   const ref = useRef(null)
   useEffect(() => { requestAnimationFrame(() => setVis(true)) }, [])
-  const close = onClose ? () => { setVis(false); setTimeout(onClose, 250) } : null
+  const close = onClose ? () => { setVis(false); setTimeout(onClose, 220) } : null
 
   return (
-    <div className={`fixed inset-0 z-[80] transition-all duration-[250ms] ${vis ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ transitionTimingFunction: 'var(--ease-smooth)' }}>
-      <div className="absolute inset-0 modal-backdrop-blur" style={{ animation: 'none' }} onClick={close} />
+    <div className={`fixed inset-0 z-[80] transition-all duration-200 ${vis ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ transitionTimingFunction: 'var(--ease-smooth)' }}>
+      <div className="absolute inset-0 modal-backdrop-blur" onClick={close} />
 
       <div className="absolute inset-0 z-10 overflow-y-auto modal-scroll-hide" onClick={close}>
         <div className="min-h-full flex items-center justify-center p-4 py-6">
           <div
             ref={ref}
             onClick={e => e.stopPropagation()}
-            className={`relative w-full max-w-[420px] transition-all duration-[350ms] ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.92] translate-y-6 opacity-0'}`}
+            className={`relative w-full max-w-[420px] transition-all duration-300 ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.9] translate-y-8 opacity-0'}`}
             style={{ transitionTimingFunction: 'var(--ease-spring)' }}
           >
-            <div className="modal-sheet overflow-hidden" style={{ animation: 'none' }}>
+            <div className="modal-sheet overflow-hidden">
               {/* Accent top bar */}
-              <div className="h-[3px] bg-gradient-to-r from-[var(--t-accent)] to-[var(--t-accent-2)]" />
+              <div className="h-[6px]" style={{ background: 'repeating-linear-gradient(-45deg, var(--t-accent) 0 12px, var(--t-hard) 12px 14px, var(--t-pop) 14px 26px, var(--t-hard) 26px 28px)' }} />
               <div className="p-6">{children}</div>
             </div>
           </div>
@@ -40,8 +40,9 @@ export { ModalShell }
 function CloseBtn({ onClick }) {
   return (
     <button onClick={onClick} aria-label="Tutup"
-      className="w-8 h-8 rounded-xl border border-[var(--t-line)] bg-[var(--t-surface2)] grid place-items-center text-[var(--t-muted)] hover:text-[var(--t-bad)] hover:border-[var(--t-bad)] hover:bg-[var(--t-bad)]/10 hover:rotate-90 active:scale-75 transition-all duration-200">
-      <i className="fa-solid fa-xmark text-xs" />
+      className="w-9 h-9 grid place-items-center text-[var(--t-muted)] hover:text-white hover:bg-[var(--t-bad)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-150"
+      style={{ border: '2.5px solid var(--t-hard)', borderRadius: 11, background: 'var(--t-surface)', boxShadow: 'var(--sh-xs)' }}>
+      <i className="fa-solid fa-xmark text-sm" />
     </button>
   )
 }
@@ -49,24 +50,25 @@ function CloseBtn({ onClick }) {
 /* ─── Link buttons ─── */
 export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], popupButtons = [], settings = {} }) {
   const items = []
-  if (ownerWhatsapp && settings.showOwnerBtn !== false) items.push({ i: 'fa-brands fa-whatsapp', t: 'Chat Developer', s: 'Hubungi langsung', href: `https://wa.me/${String(ownerWhatsapp).replace(/[^0-9]/g, '')}`, feat: true, color: 'var(--t-wa)' })
-  if (settings.showChannelsBtn !== false) channels.slice(0, 2).forEach(ch => items.push({ i: 'fa-solid fa-tower-broadcast', t: ch.name || 'Saluran', s: 'Saluran resmi', href: ch.link, color: 'var(--t-accent-2)' }))
-  if (settings.showClaimBtn !== false) claimGroups.slice(0, 2).forEach(g => items.push({ i: 'fa-solid fa-comments', t: g.name || 'Grup Claim', s: 'Klaim file di sini', href: g.link, color: 'var(--t-ok)' }))
-  if (settings.showPopupBtns !== false) popupButtons.filter(b => b.link).slice(0, 3).forEach(b => items.push({ i: 'fa-solid fa-link', t: b.name || 'Link', s: 'Buka link', href: b.link, color: 'var(--t-muted)' }))
+  if (ownerWhatsapp && settings.showOwnerBtn !== false) items.push({ i: 'fa-brands fa-whatsapp', t: 'Chat Developer', s: 'Hubungi langsung', href: `https://wa.me/${String(ownerWhatsapp).replace(/[^0-9]/g, '')}`, feat: true, bg: 'var(--t-wa)', tc: '#fff' })
+  if (settings.showChannelsBtn !== false) channels.slice(0, 2).forEach(ch => items.push({ i: 'fa-solid fa-tower-broadcast', t: ch.name || 'Saluran', s: 'Saluran resmi', href: ch.link, bg: 'var(--t-accent-2)', tc: '#fff' }))
+  if (settings.showClaimBtn !== false) claimGroups.slice(0, 2).forEach(g => items.push({ i: 'fa-solid fa-comments', t: g.name || 'Grup Claim', s: 'Klaim file di sini', href: g.link, bg: 'var(--t-ok)', tc: '#fff' }))
+  if (settings.showPopupBtns !== false) popupButtons.filter(b => b.link).slice(0, 3).forEach(b => items.push({ i: 'fa-solid fa-link', t: b.name || 'Link', s: 'Buka link', href: b.link, bg: 'var(--t-accent)', tc: '#131311' }))
   if (!items.length) return null
   return (
-    <div className={`grid gap-2 ${items.length === 1 ? '' : items.length <= 4 && items.length % 2 === 0 ? 'grid-cols-2' : ''}`}>
+    <div className={`grid gap-2.5 ${items.length === 1 ? '' : items.length <= 4 && items.length % 2 === 0 ? 'grid-cols-2' : ''}`}>
       {items.map(it => (
         <a key={it.t + it.href} href={it.href} target="_blank" rel="noreferrer"
-          className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 border border-[var(--t-line)] bg-[var(--t-surface2)] group hover:border-[var(--t-line-strong)] hover:-translate-y-0.5 hover:shadow-sm active:scale-[.98] transition-all duration-200 ${it.feat ? 'col-span-full' : ''}`}>
-          <span className="w-9 h-9 shrink-0 rounded-xl grid place-items-center shadow-sm" style={{ background: `color-mix(in srgb, ${it.color} 12%, var(--t-surface))`, color: it.color }}>
+          className={`flex items-center gap-2.5 px-3 py-2.5 hist-item group active:translate-x-0.5 active:translate-y-0.5 active:!shadow-none ${it.feat ? 'col-span-full' : ''}`}
+          style={{ background: 'var(--t-surface)', border: '2.5px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
+          <span className="w-9 h-9 shrink-0 grid place-items-center" style={{ background: it.bg, color: it.tc, border: '2px solid var(--t-hard)', borderRadius: 10 }}>
             <i className={`${it.i} text-[14px]`} />
           </span>
           <span className="min-w-0 flex-1 text-left">
-            <span className="block font-bold text-[12px] truncate">{it.t}</span>
-            <span className="block font-mono text-[9px] text-[var(--t-muted)]">{it.s}</span>
+            <span className="block font-extrabold text-[12px] truncate">{it.t}</span>
+            <span className="block font-mono text-[9px] font-bold text-[var(--t-muted)]">{it.s}</span>
           </span>
-          <i className="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-20 group-hover:opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200" />
+          <i className="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-30 group-hover:opacity-100 transition-opacity" />
         </a>
       ))}
     </div>
@@ -74,20 +76,20 @@ export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], po
 }
 
 /* ═══════════════════════════════════════
-   WELCOME / INTRO — Spring animated
+   WELCOME / INTRO
    ═══════════════════════════════════════ */
 export function IntroModal({ onDone, settings }) {
   const [phase, setPhase] = useState(0)
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 150)
-    const t2 = setTimeout(() => setPhase(2), 400)
+    const t1 = setTimeout(() => setPhase(1), 120)
+    const t2 = setTimeout(() => setPhase(2), 350)
     return () => [t1, t2].forEach(clearTimeout)
   }, [])
 
   const steps = [
-    { n: '01', i: 'fa-cloud-arrow-up', t: 'Upload file', d: 'Pilih video atau foto dari galeri kamu.', color: 'var(--t-accent)' },
-    { n: '02', i: 'fa-ticket', t: 'Dapat kode unik', d: 'Kode seperti .claim A1B2C3 langsung tersedia.', color: 'var(--t-accent-2)' },
-    { n: '03', i: 'fa-paper-plane', t: 'Kirim di grup', d: 'Paste kode di grup WhatsApp — bot kirim filenya.', color: 'var(--t-ok)' },
+    { n: '01', i: 'fa-cloud-arrow-up', t: 'Upload file', d: 'Pilih video atau foto dari galeri kamu.', bg: 'var(--t-accent)', tc: '#131311' },
+    { n: '02', i: 'fa-ticket', t: 'Dapat kode unik', d: 'Kode seperti .claim A1B2C3 langsung tersedia.', bg: 'var(--t-pop)', tc: '#fff' },
+    { n: '03', i: 'fa-paper-plane', t: 'Kirim di grup', d: 'Paste kode di grup WhatsApp — bot kirim filenya.', bg: 'var(--t-accent-2)', tc: '#fff' },
   ]
 
   return (
@@ -96,35 +98,36 @@ export function IntroModal({ onDone, settings }) {
         {/* Head */}
         <div className="flex items-start justify-between pb-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[var(--t-accent)]/10 text-[var(--t-accent)] mb-2">
-              <i className="fa-solid fa-sparkles text-[8px]" />
-              <span className="font-mono text-[9px] font-bold tracking-wider">SELAMAT DATANG</span>
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mb-2 wobble"
+              style={{ background: 'var(--t-accent)', border: '2px solid var(--t-hard)', borderRadius: 99, boxShadow: 'var(--sh-xs)' }}>
+              <i className="fa-solid fa-star text-[8px]" />
+              <span className="font-mono text-[9px] font-bold tracking-wider" style={{ color: '#131311' }}>SELAMAT DATANG</span>
             </div>
-            <h2 className="text-[24px] font-black tracking-tight leading-none">
-              {settings?.siteName || 'SHIROWAHD'}<span className="text-[var(--t-accent)]">.</span>
+            <h2 className="font-display text-[24px] leading-none">
+              {(settings?.siteName || 'SHIROWAHD').toUpperCase()}<span style={{ color: 'var(--t-pop)' }}>.</span>
             </h2>
-            <p className="font-mono text-[11px] text-[var(--t-muted)] mt-1.5">Upload media HD ke grup WhatsApp</p>
+            <p className="font-mono text-[11px] font-bold text-[var(--t-muted)] mt-1.5">Upload media HD ke grup WhatsApp</p>
           </div>
-          <div className="stamp shrink-0 anim-stamp" style={{ animationDelay: '400ms' }}>
+          <div className="stamp shrink-0 anim-stamp">
             <span className="text-[18px] leading-none">受</span>
           </div>
         </div>
 
         {/* Steps */}
-        <div className="space-y-2 mb-5">
+        <div className="space-y-2.5 mb-5">
           {steps.map((s, idx) => (
             <div key={s.n}
-              className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${phase >= 2 ? 'border-[var(--t-line)] bg-[var(--t-surface2)]/60 opacity-100 translate-x-0' : 'border-transparent opacity-0 translate-x-4'}`}
-              style={{ transitionDelay: `${idx * 100}ms`, transitionTimingFunction: 'var(--ease-spring)' }}>
-              <span className="w-9 h-9 shrink-0 rounded-xl grid place-items-center shadow-sm" style={{ background: `color-mix(in srgb, ${s.color} 12%, var(--t-surface))`, color: s.color }}>
-                <i className={`fa-solid ${s.i} text-[13px]`} />
+              className={`flex items-center gap-3 p-3 transition-all duration-300 ${phase >= 2 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
+              style={{ transitionDelay: `${idx * 90}ms`, transitionTimingFunction: 'var(--ease-spring)', background: 'var(--t-surface2)', border: '2.5px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
+              <span className="w-10 h-10 shrink-0 grid place-items-center anim-float" style={{ animationDelay: `${idx * 200}ms`, background: s.bg, color: s.tc, border: '2px solid var(--t-hard)', borderRadius: 11, boxShadow: 'var(--sh-xs)' }}>
+                <i className={`fa-solid ${s.i} text-[15px]`} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold text-[var(--t-accent)]">{s.n}</span>
-                  <p className="font-bold text-[12px]">{s.t}</p>
+                  <span className="font-mono text-[11px] font-bold px-1.5" style={{ background: '#131311', color: 'var(--t-accent)', borderRadius: 5 }}>{s.n}</span>
+                  <p className="font-extrabold text-[12.5px]">{s.t}</p>
                 </div>
-                <p className="text-[var(--t-muted)] text-[10px] leading-snug mt-0.5">{s.d}</p>
+                <p className="text-[var(--t-muted)] text-[10.5px] leading-snug mt-0.5 font-medium">{s.d}</p>
               </div>
             </div>
           ))}
@@ -133,7 +136,6 @@ export function IntroModal({ onDone, settings }) {
         {/* Contacts */}
         {(settings?.ownerWhatsapp || settings?.channels?.length || settings?.claimGroups?.length || settings?.popupButtons?.length) ? (
           <>
-            <div className="perforated-line mb-3" />
             <p className="field-label mb-2">TERHUBUNG</p>
             <div className="mb-4">
               <LinkButtons ownerWhatsapp={settings?.ownerWhatsapp} channels={settings?.channels} claimGroups={settings?.claimGroups} popupButtons={settings?.popupButtons} settings={settings} />
@@ -141,18 +143,18 @@ export function IntroModal({ onDone, settings }) {
           </>
         ) : null}
 
-        <button onClick={onDone} className="btn-primary w-full py-3.5 text-[13px] tracking-wide">
-          MULAI UPLOAD <i className="fa-solid fa-arrow-right text-[10px] ml-1" />
+        <button onClick={onDone} className="btn-primary w-full py-4 text-[14px]">
+          MULAI UPLOAD <i className="fa-solid fa-arrow-right text-[12px]" />
         </button>
 
-        <p className="text-center font-mono text-[9px] text-[var(--t-muted)] mt-4 tracking-wider">© {new Date().getFullYear()} SWHDHLZ · BY HILLZ</p>
+        <p className="text-center font-mono text-[9px] font-bold text-[var(--t-muted)] mt-4 tracking-widest">© {new Date().getFullYear()} SWHDHLZ · BY HILLZ</p>
       </div>
     </ModalShell>
   )
 }
 
 /* ═══════════════════════════════════════
-   FAQ — Accordion with smooth expand
+   FAQ — Accordion
    ═══════════════════════════════════════ */
 export function FaqModal({ onClose }) {
   const [open, setOpen] = useState(0)
@@ -167,28 +169,30 @@ export function FaqModal({ onClose }) {
     <ModalShell onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[var(--t-accent-2)]/10 text-[var(--t-accent-2)] mb-1.5">
-            <i className="fa-solid fa-circle-question text-[8px]" />
-            <span className="font-mono text-[9px] font-bold tracking-wider">BANTUAN</span>
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mb-1.5"
+            style={{ background: 'var(--t-pop)', border: '2px solid var(--t-hard)', borderRadius: 99, boxShadow: 'var(--sh-xs)' }}>
+            <i className="fa-solid fa-circle-question text-[8px] text-white" />
+            <span className="font-mono text-[9px] font-bold tracking-wider text-white">BANTUAN</span>
           </div>
-          <h2 className="text-[20px] font-black tracking-tight leading-none">Pertanyaan Umum</h2>
+          <h2 className="font-display text-[20px] leading-none">FAQ</h2>
         </div>
         <CloseBtn onClick={onClose} />
       </div>
 
-      <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-0.5 modal-scroll-hide">
+      <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-0.5 modal-scroll-hide">
         {faqs.map((f, i) => (
-          <div key={f.q} className={`rounded-xl border overflow-hidden transition-all duration-200 ${open === i ? 'bg-[var(--t-surface2)] border-[var(--t-line-strong)] shadow-sm' : 'bg-transparent border-[var(--t-line)] hover:border-[var(--t-line-strong)]'}`}>
+          <div key={f.q} className="overflow-hidden transition-all duration-200"
+            style={{ background: open === i ? 'var(--t-accent)' : 'var(--t-surface2)', border: '2.5px solid var(--t-hard)', borderRadius: 13, boxShadow: open === i ? 'var(--sh-sm)' : 'none' }}>
             <button onClick={() => setOpen(open === i ? -1 : i)} className="w-full flex items-center gap-3 px-3.5 py-3 text-left group">
-              <span className="w-7 h-7 shrink-0 rounded-lg grid place-items-center text-[10px] font-mono font-bold transition-all duration-200"
-                style={{ background: open === i ? 'color-mix(in srgb, var(--t-accent) 15%, transparent)' : 'var(--t-surface2)', color: open === i ? 'var(--t-accent)' : 'var(--t-muted)' }}>
-                {String(i + 1).padStart(2, '0')}
+              <span className="w-7 h-7 shrink-0 grid place-items-center text-[10px] font-mono font-bold"
+                style={{ background: open === i ? '#131311' : 'var(--t-surface)', color: open === i ? 'var(--t-accent)' : 'var(--t-muted)', border: '2px solid var(--t-hard)', borderRadius: 8 }}>
+                {i + 1}
               </span>
-              <span className="font-semibold text-[12px] flex-1">{f.q}</span>
-              <i className={`fa-solid fa-chevron-down text-[9px] text-[var(--t-muted)] transition-transform duration-200 ${open === i ? 'rotate-180' : ''}`} />
+              <span className="font-extrabold text-[12.5px] flex-1">{f.q}</span>
+              <i className={`fa-solid fa-chevron-down text-[11px] transition-transform duration-200 ${open === i ? 'rotate-180' : ''}`} />
             </button>
             <div className={`grid transition-all duration-250 ${open === i ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`} style={{ transitionTimingFunction: 'var(--ease-smooth)' }}>
-              <div className="overflow-hidden"><p className="px-3.5 pb-3.5 pl-[52px] text-[var(--t-muted)] text-[11px] leading-relaxed">{f.a}</p></div>
+              <div className="overflow-hidden"><p className="px-3.5 pb-3.5 pl-[54px] text-[#131311] text-[11px] leading-relaxed font-semibold">{f.a}</p></div>
             </div>
           </div>
         ))}
@@ -205,42 +209,45 @@ export function AboutModal({ onClose }) {
     <ModalShell onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[var(--t-ok)]/10 text-[var(--t-ok)] mb-1.5">
-            <i className="fa-solid fa-circle-info text-[8px]" />
-            <span className="font-mono text-[9px] font-bold tracking-wider">INFORMASI</span>
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mb-1.5"
+            style={{ background: 'var(--t-ok)', border: '2px solid var(--t-hard)', borderRadius: 99, boxShadow: 'var(--sh-xs)' }}>
+            <i className="fa-solid fa-circle-info text-[8px] text-white" />
+            <span className="font-mono text-[9px] font-bold tracking-wider text-white">INFORMASI</span>
           </div>
-          <h2 className="text-[20px] font-black tracking-tight leading-none">Tentang Shirowahd</h2>
+          <h2 className="font-display text-[20px] leading-none">TENTANG</h2>
         </div>
         <CloseBtn onClick={onClose} />
       </div>
 
       <div className="space-y-4">
         {/* Brand card */}
-        <div className="rounded-2xl border border-[var(--t-line)] bg-[var(--t-surface2)] p-5 text-center">
-          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-[var(--t-ink)] to-[var(--t-surface3)] text-white grid place-items-center shadow-lg">
-            <span className="font-black text-xl leading-none">H</span>
+        <div className="p-5 text-center" style={{ background: 'var(--t-accent)', border: '2.5px solid var(--t-hard)', borderRadius: 16, boxShadow: 'var(--sh-md)' }}>
+          <div className="w-16 h-16 mx-auto mb-3 grid place-items-center anim-float" style={{ background: '#131311', border: '2.5px solid #131311', outline: '2.5px solid #131311', borderRadius: 18, boxShadow: '3px 3px 0 rgba(19,19,17,.35)' }}>
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none">
+              <path d="M13 2 L5 13.5 H10.5 L9.5 22 L19 9.5 H12.8 Z" fill="#ffc700" stroke="#ffc700" strokeWidth="1.4" strokeLinejoin="round" />
+            </svg>
           </div>
-          <p className="font-black text-[16px] tracking-wider">SHIROWAHD</p>
-          <p className="font-mono text-[10px] tracking-wider text-[var(--t-muted)] mt-1">DEVELOPED BY <span className="text-[var(--t-accent)] font-bold">HILLZ</span></p>
+          <p className="font-display text-[17px]" style={{ color: '#131311' }}>SHIROWAHD</p>
+          <p className="font-mono text-[10px] font-bold tracking-wider mt-1" style={{ color: '#131311' }}>DEVELOPED BY HILLZ</p>
         </div>
 
-        <p className="text-[var(--t-muted)] text-[12px] leading-relaxed text-center px-2">
+        <p className="text-[var(--t-muted)] text-[12px] leading-relaxed text-center px-2 font-medium">
           Upload media ke grup WhatsApp via bot. Upload file, dapatkan kode unik, lalu kirim{' '}
-          <code className="font-mono text-[var(--t-accent)] bg-[var(--t-accent)]/8 border border-[var(--t-accent)]/20 px-1.5 py-0.5 rounded-md text-[10px] font-bold">.claim KODE</code> di grup.
+          <code className="font-mono font-bold px-1.5 py-0.5 text-[10px]" style={{ background: 'var(--t-surface2)', border: '2px solid var(--t-hard)', borderRadius: 6, color: 'var(--t-pop)' }}>.claim KODE</code> di grup.
         </p>
 
-        <div className="flex items-center gap-2.5 p-3 rounded-xl border border-dashed border-[var(--t-line-strong)] bg-[var(--t-surface2)]/40">
-          <i className="fa-solid fa-shield-halved text-[13px] text-[var(--t-ok)]" />
-          <p className="text-[var(--t-muted)] text-[11px] leading-snug">File tersimpan sementara — terhapus otomatis setelah expired.</p>
+        <div className="flex items-center gap-2.5 p-3" style={{ border: '2px dashed var(--t-hard)', borderRadius: 12, background: 'var(--t-surface2)' }}>
+          <span className="w-7 h-7 grid place-items-center shrink-0" style={{ background: 'var(--t-ok)', border: '2px solid var(--t-hard)', borderRadius: 8, color: '#fff' }}>
+            <i className="fa-solid fa-shield-halved text-[12px]" />
+          </span>
+          <p className="text-[var(--t-muted)] text-[11px] leading-snug font-medium">File tersimpan sementara — terhapus otomatis setelah expired.</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          {[{ i: 'fa-bolt', t: 'CEPAT', color: 'var(--t-warn)' }, { i: 'fa-lock', t: 'AMAN', color: 'var(--t-ok)' }, { i: 'fa-hand-pointer', t: 'MUDAH', color: 'var(--t-accent-2)' }].map(f => (
-            <div key={f.t} className="flex flex-col items-center gap-2 py-3 rounded-xl border border-[var(--t-line)] bg-[var(--t-surface2)] hover:-translate-y-1 hover:shadow-sm transition-all duration-200">
-              <div className="w-8 h-8 rounded-lg grid place-items-center" style={{ background: `color-mix(in srgb, ${f.color} 12%, transparent)`, color: f.color }}>
-                <i className={`fa-solid ${f.i} text-[13px]`} />
-              </div>
-              <span className="font-mono text-[9px] font-bold tracking-wider text-[var(--t-muted)]">{f.t}</span>
+        <div className="grid grid-cols-3 gap-2.5">
+          {[{ i: 'fa-bolt', t: 'CEPAT', bg: 'var(--t-accent)', tc: '#131311' }, { i: 'fa-lock', t: 'AMAN', bg: 'var(--t-ok)', tc: '#fff' }, { i: 'fa-hand-pointer', t: 'MUDAH', bg: 'var(--t-pop)', tc: '#fff' }].map(f => (
+            <div key={f.t} className="flex flex-col items-center gap-2 py-3 hover-lift" style={{ background: f.bg, border: '2.5px solid var(--t-hard)', borderRadius: 13, boxShadow: 'var(--sh-xs)' }}>
+              <i className={`fa-solid ${f.i} text-[15px]`} style={{ color: f.tc }} />
+              <span className="font-display text-[9px]" style={{ color: f.tc }}>{f.t}</span>
             </div>
           ))}
         </div>

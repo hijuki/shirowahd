@@ -2,21 +2,13 @@
 import { useEffect, useState } from 'react'
 
 export default function Navbar({ settings, onFaq, onAbout }) {
-  const [theme, setTheme] = useState('light')
-  const [scrolled, setScrolled] = useState(false)
+  const [theme, setTheme] = useState('dark')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('shd-theme') : null
-    if (saved) {
-      setTheme(saved)
-      document.documentElement.setAttribute('data-theme', saved)
-    }
-  }, [])
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    setMounted(true)
+    const cur = document.documentElement.getAttribute('data-theme')
+    if (cur) setTheme(cur)
   }, [])
 
   const toggleTheme = () => {
@@ -26,24 +18,25 @@ export default function Navbar({ settings, onFaq, onAbout }) {
     localStorage.setItem('shd-theme', next)
   }
 
-  useEffect(() => {
-    const cur = document.documentElement.getAttribute('data-theme')
-    if (cur) setTheme(cur)
-  }, [])
-
   return (
-    <nav className={`sticky top-3 z-40 transition-all duration-300 ${scrolled ? 'scale-[1.02]' : ''}`}>
-      <div className="card px-4 py-2.5 flex items-center justify-between shadow-md" style={{ background: 'var(--t-nav)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+    <nav className="sticky top-3 z-40">
+      <div
+        className="flex items-center justify-between gap-2 px-3 py-2.5"
+        style={{ background: 'var(--t-nav)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', border: 'var(--t-card-border)', borderRadius: 16, boxShadow: 'var(--sh-md)' }}
+      >
         {/* Brand */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[var(--t-accent)] flex items-center justify-center shadow-md brand-shine">
-            <i className="fa-solid fa-bolt text-white text-[13px]" />
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 shrink-0 grid place-items-center anim-float" style={{ border: '2.5px solid var(--t-hard)', borderRadius: 12, background: 'var(--t-accent)', boxShadow: 'var(--sh-xs)' }}>
+            {/* Logo bolt mark */}
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+              <path d="M13 2 L5 13.5 H10.5 L9.5 22 L19 9.5 H12.8 Z" fill="#131311" stroke="#131311" strokeWidth="1.4" strokeLinejoin="round" />
+            </svg>
           </div>
-          <div className="leading-none">
-            <div className="text-[14px] font-black tracking-tight text-[var(--t-ink)]">
-              SHIRO<span className="text-[var(--t-accent)]">WAHD</span>
+          <div className="leading-none min-w-0">
+            <div className="font-display text-[15px] text-[var(--t-ink)] truncate">
+              SHIRO<span style={{ color: 'var(--t-pop)' }}>WAHD</span>
             </div>
-            <div className="font-mono text-[8px] text-[var(--t-muted)] tracking-[0.18em] uppercase mt-0.5">
+            <div className="font-mono text-[8px] font-bold text-[var(--t-muted)] tracking-[0.22em] uppercase mt-1">
               HD Media Gateway
             </div>
           </div>
@@ -51,26 +44,20 @@ export default function Navbar({ settings, onFaq, onAbout }) {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={onFaq}
-            className="w-9 h-9 rounded-xl border border-[var(--t-line)] bg-[var(--t-surface)] text-[var(--t-muted)] hover:text-[var(--t-ink)] hover:border-[var(--t-ink)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center shadow-sm"
-            aria-label="FAQ"
-          >
-            <i className="fa-solid fa-circle-question text-[15px]" />
-          </button>
-          <button
-            onClick={onAbout}
-            className="w-9 h-9 rounded-xl border border-[var(--t-line)] bg-[var(--t-surface)] text-[var(--t-muted)] hover:text-[var(--t-ink)] hover:border-[var(--t-ink)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center shadow-sm"
-            aria-label="Tentang"
-          >
-            <i className="fa-solid fa-circle-info text-[15px]" />
-          </button>
-          <button
-            onClick={toggleTheme}
-            className="w-9 h-9 rounded-xl border border-[var(--t-line)] bg-[var(--t-surface)] text-[var(--t-muted)] hover:text-[var(--t-ink)] hover:border-[var(--t-ink)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center shadow-sm overflow-hidden"
-            aria-label="Ganti tema"
-          >
-            <i key={theme} className={`fa-solid ${theme === 'light' ? 'fa-moon' : 'fa-sun'} text-[15px] anim-pop-spring`} />
+          {[
+            { fn: onFaq, icon: 'fa-circle-question', label: 'FAQ' },
+            { fn: onAbout, icon: 'fa-circle-info', label: 'Tentang' },
+          ].map(b => (
+            <button key={b.label} onClick={b.fn} aria-label={b.label}
+              className="w-9 h-9 grid place-items-center text-[var(--t-muted)] hover:text-[#131311] hover:bg-[var(--t-accent)] hover:-translate-y-0.5 hover:shadow-[2px_2px_0_var(--t-hard)] active:translate-y-0 active:shadow-none transition-all duration-150"
+              style={{ border: '2px solid var(--t-hard)', borderRadius: 11, background: 'var(--t-surface)' }}>
+              <i className={`fa-solid ${b.icon} text-[14px]`} />
+            </button>
+          ))}
+          <button onClick={toggleTheme} aria-label="Ganti tema"
+            className="w-9 h-9 grid place-items-center hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150"
+            style={{ border: '2px solid var(--t-hard)', borderRadius: 11, background: theme === 'light' ? 'var(--t-pop)' : 'var(--t-surface)', color: theme === 'light' ? '#fff' : 'var(--t-muted)', boxShadow: 'var(--sh-xs)' }}>
+            <i key={theme} className={`fa-solid ${theme === 'light' ? 'fa-moon' : 'fa-sun'} text-[14px] anim-pop-spring`} />
           </button>
         </div>
       </div>

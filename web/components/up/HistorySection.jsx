@@ -57,27 +57,27 @@ export default function HistorySection({ onToast: toast }) {
   }
 
   return (
-    <div className="card card-3d-hover p-4">
+    <div className="card p-4">
       {/* Header */}
       <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between group">
         <div className="flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-xl grid place-items-center shadow-sm"
-            style={{ background: 'color-mix(in srgb, var(--t-accent-2) 12%, var(--t-surface))', color: 'var(--t-accent-2)' }}>
-            <i className="fa-solid fa-clock-rotate-left text-[12px]" />
+          <span className="w-9 h-9 grid place-items-center"
+            style={{ background: 'var(--t-accent)', border: '2.5px solid var(--t-hard)', borderRadius: 11, boxShadow: 'var(--sh-xs)', color: '#131311' }}>
+            <i className="fa-solid fa-clock-rotate-left text-[13px]" />
           </span>
           <div className="text-left">
-            <span className="font-black text-[13px] tracking-tight block leading-none">Riwayat Klaim</span>
-            <span className="font-mono text-[9px] text-[var(--t-muted)] tnum">{history.length} tiket tersimpan</span>
+            <span className="font-display text-[13px] block leading-none">RIWAYAT KLAIM</span>
+            <span className="font-mono text-[9px] font-bold text-[var(--t-muted)] tnum">{history.length} tiket tersimpan</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {active.length > 0 && (
-            <span className="px-2 py-0.5 rounded-full border font-mono text-[9px] font-bold tracking-wider tnum"
-              style={{ borderColor: 'color-mix(in srgb, var(--t-ok) 35%, transparent)', background: 'color-mix(in srgb, var(--t-ok) 10%, transparent)', color: 'var(--t-ok)' }}>
+            <span className="px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider tnum"
+              style={{ background: 'var(--t-ok)', color: '#fff', border: '2px solid var(--t-hard)', borderRadius: 99 }}>
               {active.length} AKTIF
             </span>
           )}
-          <i className={`fa-solid fa-chevron-down text-[10px] text-[var(--t-muted)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+          <i className={`fa-solid fa-chevron-down text-[11px] font-black transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </div>
       </button>
 
@@ -86,22 +86,23 @@ export default function HistorySection({ onToast: toast }) {
           {/* Filter pills */}
           {history.length > 0 && (
             <div className="pill-switch w-full">
-              {[['all', 'Semua', history.length], ['active', 'Aktif', active.length], ['expired', 'Kedaluwarsa', expired.length]].map(([k, label, n]) => (
+              {[['all', 'Semua', history.length], ['active', 'Aktif', active.length], ['expired', 'Habis', expired.length]].map(([k, label, n]) => (
                 <button key={k} onClick={() => setFilter(k)} className={`pill-switch-btn flex-1 tnum ${filter === k ? 'active' : ''}`}>
-                  {label} · {n}
+                  {label}·{n}
                 </button>
               ))}
             </div>
           )}
 
           {!history.length && (
-            <p className="text-center text-[11px] font-mono text-[var(--t-muted)] py-6 border border-dashed border-[var(--t-line-strong)] rounded-xl">
-              Belum ada riwayat klaim
+            <p className="text-center text-[11px] font-mono font-bold text-[var(--t-muted)] py-6"
+              style={{ border: '3px dashed var(--t-line-strong)', borderRadius: 12 }}>
+              BELUM ADA RIWAYAT
             </p>
           )}
 
           {/* List */}
-          <div className="stagger-in space-y-1.5">
+          <div className="stagger-in space-y-2">
             {shown.map(h => {
               const code = h.bundle || h.code
               const dead = isExpired(h)
@@ -113,23 +114,22 @@ export default function HistorySection({ onToast: toast }) {
 
               return (
                 <div key={h.timestamp}
-                  className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all duration-200 group ${dead
-                    ? 'bg-[var(--t-surface2)]/50 border-[var(--t-line)] opacity-60'
-                    : 'bg-[var(--t-surface2)]/60 border-[var(--t-line)] hover:border-[var(--t-line-strong)] hover:-translate-y-0.5 hover:shadow-sm'}`}>
+                  className={`flex items-center gap-2.5 p-2.5 hist-item ${dead ? 'opacity-55' : ''}`}
+                  style={{ background: 'var(--t-surface2)', border: '2px solid var(--t-hard)', borderRadius: 12 }}>
 
-                  <span className="w-9 h-9 shrink-0 rounded-xl bg-[var(--t-surface)] border border-[var(--t-line)] grid place-items-center shadow-sm">
-                    <i className={`fa-solid ${dead ? 'fa-clock text-[var(--t-muted)]' : h.bundle ? 'fa-layer-group' : h.count > 1 ? 'fa-images' : 'fa-film'} text-[12px]`}
-                      style={dead ? {} : { color: h.bundle || h.count > 1 ? 'var(--t-accent-2)' : 'var(--t-accent)' }} />
+                  <span className="w-9 h-9 shrink-0 grid place-items-center"
+                    style={{ background: dead ? 'var(--t-surface)' : h.bundle ? 'var(--t-accent-2)' : 'var(--t-pop)', border: '2px solid var(--t-hard)', borderRadius: 10, color: dead ? 'var(--t-muted)' : '#fff' }}>
+                    <i className={`fa-solid ${dead ? 'fa-clock' : h.bundle ? 'fa-layer-group' : h.count > 1 ? 'fa-images' : 'fa-film'} text-[12px]`} />
                   </span>
 
                   <div className="flex-1 min-w-0">
-                    <p className={`font-bold text-[11.5px] truncate ${dead ? 'text-[var(--t-muted)]' : ''}`}>{h.files?.[0] || code}</p>
-                    <div className="flex items-center gap-1.5 text-[9px] font-mono text-[var(--t-muted)] mt-0.5 tnum">
+                    <p className={`font-extrabold text-[11.5px] truncate ${dead ? 'text-[var(--t-muted)] line-through' : ''}`}>{h.files?.[0] || code}</p>
+                    <div className="flex items-center gap-1.5 text-[9px] font-mono text-[var(--t-muted)] mt-0.5 tnum font-bold">
                       <span>{timeAgo(h.timestamp)}</span>
                       {h.totalSize > 0 && <span>· {fmtSize(h.totalSize)}</span>}
                       {dead
-                        ? <span className="text-[var(--t-bad)] font-bold">· EXPIRED</span>
-                        : <span className={urgent ? 'text-[var(--t-bad)] font-bold' : 'text-[var(--t-ok)]'}>· sisa {remaining}m</span>}
+                        ? <span style={{ color: 'var(--t-bad)' }}>· EXPIRED</span>
+                        : <span className={urgent ? '' : ''} style={{ color: urgent ? 'var(--t-bad)' : 'var(--t-ok)' }}>· sisa {remaining}m</span>}
                     </div>
                     {!dead && (
                       <div className="expire-bar mt-1.5">
@@ -140,11 +140,11 @@ export default function HistorySection({ onToast: toast }) {
 
                   {!dead && (
                     <button onClick={() => copyCode(code, h.timestamp)}
-                      className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold border transition-all duration-200 active:scale-95 ${isCopied
-                        ? 'border-transparent text-white'
-                        : 'code-chip hover:border-[var(--t-ink)] hover:-translate-y-0.5'}`}
-                      style={isCopied ? { background: 'var(--t-ok)' } : {}}>
-                      {isCopied ? <><i className="fa-solid fa-check mr-1" />OK</> : <><i className="fa-regular fa-copy mr-1 opacity-50" />{code}</>}
+                      className={`shrink-0 px-2.5 py-1.5 text-[10px] font-mono font-bold transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${isCopied ? '' : 'hover:-translate-y-0.5'}`}
+                      style={isCopied
+                        ? { background: 'var(--t-ok)', color: '#fff', border: '2px solid var(--t-hard)', borderRadius: 9 }
+                        : { background: 'var(--t-accent)', color: '#131311', border: '2px solid var(--t-hard)', borderRadius: 9, boxShadow: 'var(--sh-xs)' }}>
+                      {isCopied ? <><i className="fa-solid fa-check mr-1" />OK</> : <><i className="fa-regular fa-copy mr-1" />{code}</>}
                     </button>
                   )}
                 </div>
@@ -155,9 +155,10 @@ export default function HistorySection({ onToast: toast }) {
           {/* Clear */}
           {history.length > 0 && (
             <button onClick={clearAll}
-              className="w-full py-2 rounded-xl text-[10px] font-mono font-bold tracking-wider text-[var(--t-muted)] border border-dashed border-[var(--t-line-strong)] hover:text-white hover:border-transparent transition-all duration-200 active:scale-[.98]"
+              className="w-full py-2 text-[10px] font-mono font-bold tracking-wider transition-all duration-150 hover:!text-white active:translate-y-0.5"
               onMouseEnter={e => e.currentTarget.style.background = 'var(--t-bad)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              style={{ color: 'var(--t-bad)', border: '2px dashed var(--t-bad)', borderRadius: 10 }}>
               <i className="fa-solid fa-trash-can mr-1.5" />BERSIHKAN RIWAYAT
             </button>
           )}
