@@ -417,11 +417,14 @@ body {
 }
 
 /* ===== Ambient accents (subtle loops, focal points only) ===== */
-@keyframes heroGlow {
-  from { box-shadow: 0 0 50px -12px rgba(34,211,238,.5); }
-  to   { box-shadow: 0 0 85px -8px rgba(59,130,246,.75); }
+/* Hero glow — sama: pulse opacity di ::after, bukan animasi box-shadow */
+.hero-glow { position: relative; box-shadow: 0 0 50px -12px rgba(34,211,238,.5); }
+.hero-glow::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  box-shadow: 0 0 85px -8px rgba(59,130,246,.75);
+  animation: heroGlowPulse 4.5s ease-in-out infinite alternate;
 }
-.hero-glow { animation: heroGlow 4.5s ease-in-out infinite alternate; }
+@keyframes heroGlowPulse { from { opacity: .2; } to { opacity: 1; } }
 
 @keyframes floaty {
   from { transform: translateY(0); }
@@ -577,14 +580,15 @@ body {
 
 /* ===== Success burst rings ===== */
 @keyframes ringBurst1 {
-  0%   { transform: scale(0); opacity: .8; border-width: 3px; }
-  80%  { transform: scale(1.8); opacity: 0; border-width: 1px; }
-  100% { transform: scale(2); opacity: 0; border-width: 0; }
+  /* ponytail: border-width dulu di-animate (repaint tiap frame); diganti border statis — scale sudah menipiskan visual, ceiling: balikin kalau mau persis */
+  0%   { transform: scale(0); opacity: .8; }
+  80%  { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(2); opacity: 0; }
 }
 @keyframes ringBurst2 {
-  0%   { transform: scale(0); opacity: .5; border-width: 2px; }
-  80%  { transform: scale(2.2); opacity: 0; border-width: 1px; }
-  100% { transform: scale(2.5); opacity: 0; border-width: 0; }
+  0%   { transform: scale(0); opacity: .5; }
+  80%  { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.5); opacity: 0; }
 }
 .success-ring-1 {
   border: 2px solid rgba(52,211,153,.4);
@@ -883,9 +887,9 @@ body {
 
 /* Manga burst ring — radial impact */
 @keyframes mangaBurst {
-  0%   { transform: scale(0); opacity: 1; border-width: 3px; }
+  0%   { transform: scale(0); opacity: 1; }
   60%  { opacity: .6; }
-  100% { transform: scale(2.5); opacity: 0; border-width: 1px; }
+  100% { transform: scale(2.5); opacity: 0; }
 }
 .manga-burst {
   position: absolute;
@@ -895,12 +899,14 @@ body {
   pointer-events: none;
 }
 
-/* Anime glow pulse */
-@keyframes animeGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(34,211,238,.2), 0 0 24px rgba(59,130,246,.1); }
-  50%      { box-shadow: 0 0 24px rgba(34,211,238,.4), 0 0 48px rgba(59,130,246,.2); }
+/* Anime glow pulse — glow max di-bake ke ::after, pulse via opacity (GPU) bukan box-shadow (paint) */
+.anime-glow { position: relative; box-shadow: 0 0 12px rgba(34,211,238,.2), 0 0 24px rgba(59,130,246,.1); }
+.anime-glow::after {
+  content: ''; position: absolute; inset: -12px; pointer-events: none;
+  box-shadow: 0 0 24px rgba(34,211,238,.35), 0 0 48px rgba(59,130,246,.18);
+  animation: glowPulse 3s ease-in-out infinite;
 }
-.anime-glow { animation: animeGlow 3s ease-in-out infinite; }
+@keyframes glowPulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 
 /* Anime text shimmer — gradient slide */
 @keyframes animeTextShimmer {

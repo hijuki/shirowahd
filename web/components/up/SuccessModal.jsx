@@ -101,13 +101,13 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       {/* Header */}
       <div className="relative text-center mb-4">
         <div className="relative inline-block mb-3">
-          <div className={`absolute -inset-6 rounded-full transition-all duration-[600ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} />
-          <div className={`absolute -inset-10 rounded-full transition-all duration-[800ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} />
+          <div className={`absolute -inset-6 rounded-full transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} />
+          <div className={`absolute -inset-10 rounded-full transform-gpu transition-[transform,opacity] duration-[800ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} />
           <div className="absolute -inset-5 rounded-full bg-ok/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(52,211,153,.14) inset' }} />
           {/* Anime energy ring */}
           <div className="energy-ring !rounded-full" />
 
-          <div className={`relative w-[56px] h-[56px] mx-auto rounded-full grid place-items-center transition-all duration-[600ms] ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+          <div className={`relative w-[56px] h-[56px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/30 to-ok/5 border-2 border-ok/40 shadow-[0_0_30px_-4px_rgba(52,211,153,.6)] anime-glow" />
             <i className="fa-solid fa-check text-ok text-[22px] relative drop-shadow-[0_0_16px_rgba(52,211,153,.9)]" />
           </div>
@@ -124,16 +124,16 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           ))}
         </div>
 
-        <h2 className={`font-[family-name:var(--font-display)] font-bold text-[20px] tracking-tight transition-all duration-[400ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        <h2 className={`font-[family-name:var(--font-display)] font-bold text-[20px] tracking-tight transform-gpu transition-[transform,opacity] duration-[400ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           <span className="anime-text">Upload Berhasil!</span>
         </h2>
-        <p className={`text-[var(--t-muted)] text-[10px] mt-1 transition-all duration-[400ms] delay-75 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}>
+        <p className={`text-[var(--t-muted)] text-[10px] mt-1 transform-gpu transition-[transform,opacity] duration-[400ms] delay-75 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}>
           {result.bundle ? `${result.count} foto — 1 bundle` : 'File siap diklaim'}
         </p>
       </div>
 
       {/* Code cards */}
-      <div className={`space-y-2 mb-3 transition-all duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+      <div className={`space-y-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         {codes.map(({ code, name }) => (
           <div key={code} onClick={() => copy(code)}
             className="relative rounded-[14px] bg-[var(--t-surface)] border border-[#22d3ee]/15 p-3 text-center cursor-pointer group hover:border-[#22d3ee]/35 transition-all duration-[200ms] active:scale-[.97] overflow-hidden card-3d">
@@ -153,7 +153,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       </div>
 
       {/* Timer */}
-      <div className={`mb-3 transition-all duration-[400ms] delay-150 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+      <div className={`mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-150 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <div className="flex items-center justify-between mb-1">
           <span className="text-[var(--t-muted)] text-[8px] font-bold flex items-center gap-1">
             <i className="fa-solid fa-hourglass-half text-[7px]" /> Kedaluwarsa
@@ -167,7 +167,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
 
       {/* Claim group buttons */}
       {linkBtns.length > 0 && (
-        <div className={`mb-3 transition-all duration-[400ms] delay-200 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        <div className={`mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-200 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           <p className="text-[7px] font-extrabold tracking-[.15em] uppercase text-[var(--t-muted)]/40 mb-1.5 flex items-center gap-2">
             <span className="flex-1 h-px bg-[var(--t-border)]" />Klaim file di grup<span className="flex-1 h-px bg-[var(--t-border)]" />
           </p>
@@ -191,7 +191,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       )}
 
       {/* Action buttons — 3 columns: Copy, Share, WhatsApp */}
-      <div className={`grid grid-cols-3 gap-2 mb-3 transition-all duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+      <div className={`grid grid-cols-3 gap-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={() => copy(codes[0].code)}
           className="btn-3d py-2.5 rounded-[12px] bg-[var(--t-surface)] border border-[var(--t-border)] text-[10px] font-bold hover:border-[#22d3ee]/30 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center gap-1.5">
           <i className={`fa-solid ${copied ? 'fa-check text-ok' : 'fa-copy text-[#22d3ee]'} text-[9px]`} />
@@ -208,7 +208,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       </div>
 
       {/* Close button */}
-      <div className={`transition-all duration-[400ms] delay-300 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+      <div className={`transform-gpu transition-[transform,opacity] duration-[400ms] delay-300 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={onClose}
           className="relative overflow-hidden w-full py-3 rounded-[14px] bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white font-bold text-[13px] btn-3d shadow-[0_4px_20px_-4px_rgba(34,211,238,.45)] hover:shadow-[0_6px_28px_-4px_rgba(34,211,238,.6)] hover:brightness-110 active:scale-[.97] transition-all duration-[200ms]">
           <span className="absolute inset-0 btn-shine-sweep pointer-events-none" />

@@ -20,7 +20,7 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
           <div
             ref={ref}
             onClick={e => e.stopPropagation()}
-            className={`relative w-full max-w-[400px] transition-all duration-[560ms] will-change-transform ${vis ? 'scale-100 translate-y-0 opacity-100 blur-0' : 'scale-[.93] translate-y-7 opacity-0 blur-sm'}`}
+            className={`relative w-full max-w-[400px] transform-gpu transition-[transform,opacity] duration-[520ms] will-change-transform ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.93] translate-y-7 opacity-0'}`}
             style={{ transitionTimingFunction: 'var(--ease-out)' }}
           >
             {/* Card */}
@@ -137,10 +137,10 @@ export function IntroModal({ onDone, settings }) {
       {/* ── Brand header ── */}
       <div className="text-center mb-5 relative">
         {/* Logo with burst effect */}
-        <div className={`relative inline-block mb-4 transition-all duration-[600ms] ${phase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        <div className={`relative inline-block mb-4 transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           {/* Burst rings */}
-          <div className={`absolute -inset-6 rounded-full transition-all duration-[800ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.3)' }} />
-          <div className={`absolute -inset-10 rounded-full transition-all duration-[1000ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.15)' }} />
+          <div className={`absolute -inset-6 rounded-full transform-gpu transition-[transform,opacity] duration-[800ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.3)' }} />
+          <div className={`absolute -inset-10 rounded-full transform-gpu transition-[transform,opacity] duration-[1000ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.15)' }} />
 
           <div className="absolute -inset-5 rounded-full bg-[#25D366]/12 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.15) inset' }} />
           <div className="absolute -inset-3 rounded-[24px] border-ring-spin pointer-events-none" />
@@ -162,7 +162,7 @@ export function IntroModal({ onDone, settings }) {
         </div>
 
         {/* Title */}
-        <div className={`transition-all duration-[500ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        <div className={`transform-gpu transition-[transform,opacity] duration-[500ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           <h2 className="font-[family-name:var(--font-display)] font-bold text-[22px] tracking-tight leading-none grad-text">
             {settings?.siteName || 'SHIROWAHD'}
           </h2>
@@ -170,7 +170,7 @@ export function IntroModal({ onDone, settings }) {
         </div>
 
         {/* Badge */}
-        <div className={`mt-3 transition-all duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-2 opacity-0 scale-95'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        <div className={`mt-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-2 opacity-0 scale-95'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           <span className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white/[.03] border border-white/[.06]">
             <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white">H</span>
             <span className="text-[9px] tracking-wider"><span className="text-[#7e90ad] font-semibold">SWHDHLZ</span> <span className="text-[#7e90ad]/40">BY</span> <span className="grad-text font-extrabold">HILLZ</span></span>
@@ -182,7 +182,7 @@ export function IntroModal({ onDone, settings }) {
       <div className="space-y-2 mb-5">
         {steps.map((s, idx) => (
           <div key={s.t}
-            className={`flex items-center gap-3 p-3 rounded-[14px] border transition-all duration-[500ms] ${phase >= 3 ? 'bg-white/[.03] border-white/[.07] translate-x-0 opacity-100' : 'bg-transparent border-transparent translate-x-6 opacity-0'}`}
+            className={`flex items-center gap-3 p-3 rounded-[14px] border transform-gpu transition-[transform,opacity] duration-[500ms] ${phase >= 3 ? 'bg-white/[.03] border-white/[.07] translate-x-0 opacity-100' : 'bg-transparent border-transparent translate-x-6 opacity-0'}`}
             style={{ transitionTimingFunction: 'var(--ease-out)', transitionDelay: `${idx * 120}ms` }}>
             <div className="w-10 h-10 shrink-0 rounded-[12px] grid place-items-center relative overflow-hidden group" style={{ background: `${s.c}12`, border: `1px solid ${s.c}28` }}>
               <i className={`fa-solid ${s.i} text-[14px] relative z-10`} style={{ color: s.c }} />
@@ -199,7 +199,7 @@ export function IntroModal({ onDone, settings }) {
       </div>
 
       {/* ── Contacts ── */}
-      <div className={`transition-all duration-[500ms] ${phase >= 4 ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+      <div className={`transform-gpu transition-[transform,opacity] duration-[500ms] ${phase >= 4 ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         {(settings?.ownerWhatsapp || settings?.channels?.length || settings?.claimGroups?.length || settings?.popupButtons?.length) ? (
           <>
             <p className="text-[8px] font-extrabold tracking-[.18em] uppercase text-[#7e90ad]/60 mb-2 flex items-center gap-2">
