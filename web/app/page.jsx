@@ -134,8 +134,14 @@ export default function UploaderPage() {
                     <circle cx="52" cy="52" r="43" stroke="url(#orbB)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="54 216" />
                   </g>
                 </svg>
-                <div className="hd-glyph-wrap" aria-hidden>
-                  <span className="hd-glyph">HD</span>
+                <div className="hero-orb" aria-hidden>
+                  <span className="hero-orb-aurora" />
+                  <span className="hero-orb-glass">
+                    <i className="fa-solid fa-photo-film hero-orb-icon" />
+                  </span>
+                  <span className="hero-orb-spark hero-orb-spark-1" />
+                  <span className="hero-orb-spark hero-orb-spark-2" />
+                  <span className="hero-orb-spark hero-orb-spark-3" />
                 </div>
               </div>
 
