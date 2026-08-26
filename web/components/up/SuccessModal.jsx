@@ -99,29 +99,32 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
         <div className="relative inline-block mb-4">
           {phase >= 1 && (
             <>
-              <span className="burst-ring" style={{ '--bs': '86px', animationDelay: '80ms', borderColor: 'rgba(52,211,153,.55)' }} />
-              <span className="burst-ring" style={{ '--bs': '120px', animationDelay: '240ms', borderColor: 'rgba(52,211,153,.4)' }} />
-              <span className="burst-ring" style={{ '--bs': '154px', animationDelay: '400ms', borderColor: 'rgba(52,211,153,.28)' }} />
+              <span className="burst-ring" style={{ '--bs': '92px', animationDelay: '80ms', borderColor: 'rgba(52,211,153,.6)' }} />
+              <span className="burst-ring" style={{ '--bs': '124px', animationDelay: '260ms', borderColor: 'rgba(52,211,153,.4)' }} />
+              <span className="burst-ring" style={{ '--bs': '158px', animationDelay: '440ms', borderColor: 'rgba(52,211,153,.24)' }} />
             </>
           )}
-          <div className="absolute -inset-6 rounded-full bg-ok/12 pointer-events-none" style={{ boxShadow: '0 0 70px 14px rgba(52,211,153,.16) inset' }} />
+          {/* halo lembut, konsentris sama badge bulat */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[130px] h-[130px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(52,211,153,.28) 0%, rgba(52,211,153,.08) 45%, transparent 70%)' }} />
 
-          <div className={`relative w-[72px] h-[72px] mx-auto rounded-[24px] grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] floaty ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)', background: 'linear-gradient(135deg, #34d399, #10b981 55%, #0e9f6e)', boxShadow: '0 12px 40px -8px rgba(52,211,153,.55), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 8px rgba(0,0,0,.25)' }}>
-            <span className="absolute inset-[2px] rounded-[22px] bg-gradient-to-b from-white/30 to-transparent pointer-events-none" />
-            <i className="fa-solid fa-check text-white text-[32px] relative drop-shadow-[0_3px_8px_rgba(0,0,0,.35)]" />
+          <div className={`relative w-[76px] h-[76px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] floaty ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)', background: 'radial-gradient(circle at 38% 30%, #6ee7b7, #10b981 52%, #059669 100%)', boxShadow: '0 14px 42px -8px rgba(16,185,129,.6), inset 0 3px 4px rgba(255,255,255,.5), inset 0 -6px 12px rgba(0,0,0,.28)' }}>
+            {/* glossy top sheen */}
+            <span className="absolute top-[6px] left-1/2 -translate-x-1/2 w-[54px] h-[26px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(ellipse, rgba(255,255,255,.55), transparent 72%)' }} />
+            <i className="fa-solid fa-check text-white text-[34px] relative" style={{ WebkitTextStroke: '1px rgba(255,255,255,.4)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.35))' }} />
           </div>
 
           {/* Sparkle particles — tx/ty precomputed (rad) biar kompatibel semua browser */}
-          {phase >= 1 && [...Array(8)].map((_, i) => {
-            const rad = (i * 45 * Math.PI) / 180
-            const dist = 34 + (i % 2) * 14
+          {phase >= 1 && [...Array(10)].map((_, i) => {
+            const rad = (i * 36 * Math.PI) / 180
+            const dist = 46 + (i % 3) * 10
+            const size = i % 2 ? 5 : 3
             return (
-              <div key={i} className="absolute w-1 h-1 rounded-full check-sparkle" style={{
-                top: '50%', left: '50%',
+              <div key={i} className="absolute rounded-full check-sparkle" style={{
+                top: '50%', left: '50%', width: size, height: size,
                 '--tx': `${Math.cos(rad) * dist}px`,
                 '--ty': `${Math.sin(rad) * dist}px`,
-                '--color': ['#34d399', '#6ee7b7', '#10b981', '#a7f3d0'][i % 4],
-                animationDelay: `${300 + i * 60}ms`,
+                '--color': ['#34d399', '#6ee7b7', '#a7f3d0', '#10b981'][i % 4],
+                animationDelay: `${300 + i * 55}ms`,
               }} />
             )
           })}
