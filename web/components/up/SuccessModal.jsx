@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { ModalShell } from './Modals'
 
 /* Sound effects — tiny inline base64 audio */
@@ -36,8 +37,10 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
   const [copied, setCopied] = useState('')
   const [left, setLeft] = useState(expireMinutes * 60000)
   const [phase, setPhase] = useState(0)
+  const [mounted, setMounted] = useState(false)
   const soundPlayed = useRef(false)
 
+  useEffect(() => setMounted(true), [])
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 350)
     const t2 = setTimeout(() => {
@@ -75,7 +78,9 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
   const claimGrps = (settings?.showClaimBtn !== false && settings?.claimGroups?.filter(g => g.link)) || []
   const linkBtns = popupBtns.length ? popupBtns : claimGrps
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <ModalShell onClose={onClose} accent="green">
       {/* Confetti rain */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[22px]">
@@ -106,7 +111,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           <div className="absolute -inset-5 rounded-full bg-ok/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(52,211,153,.14) inset' }} />
 
           <div className={`relative w-[56px] h-[56px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/30 to-ok/5 border-2 border-ok/40 anime-glow success-core-glow" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/30 to-ok/5 border-2 border-ok/40 success-core-glow" />
             <i className="fa-solid fa-check text-ok text-[22px] relative drop-shadow-[0_0_16px_rgba(52,211,153,.9)]" />
           </div>
 
@@ -221,6 +226,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           </span>
         </button>
       </div>
-    </ModalShell>
+    </ModalShell>,
+    document.body
   )
 }
