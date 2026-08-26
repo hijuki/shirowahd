@@ -202,18 +202,18 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       <div className={`grid grid-cols-3 gap-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={() => copy(codes[0].code)}
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(180deg, #2a3a4f, #1a2636 55%, #0f1826)', border: '1px solid rgba(255,255,255,.14)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.25), inset 0 -5px 10px rgba(0,0,0,.55), 0 10px 22px -6px rgba(0,0,0,.8)' }}>
+          style={{ background: 'linear-gradient(180deg, #37485f, #212f42 50%, #0b1220)', border: '1px solid rgba(255,255,255,.18)', boxShadow: 'inset 0 2.5px 0 rgba(255,255,255,.35), inset 0 -6px 12px rgba(0,0,0,.6), 0 12px 26px -6px rgba(0,0,0,.85)' }}>
           <i className={`fa-solid ${copied ? 'fa-circle-check' : 'fa-copy'} text-[#34d399] text-[17px] drop-shadow-[0_2px_6px_rgba(52,211,153,.5)]`} />
           <span>{copied ? 'Tersalin' : 'Salin'}</span>
         </button>
         <button onClick={() => shareCode(codes[0].code)}
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(180deg, #2a3a4f, #1a2636 55%, #0f1826)', border: '1px solid rgba(255,255,255,.14)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.25), inset 0 -5px 10px rgba(0,0,0,.55), 0 10px 22px -6px rgba(0,0,0,.8)' }}>
+          style={{ background: 'linear-gradient(180deg, #37485f, #212f42 50%, #0b1220)', border: '1px solid rgba(255,255,255,.18)', boxShadow: 'inset 0 2.5px 0 rgba(255,255,255,.35), inset 0 -6px 12px rgba(0,0,0,.6), 0 12px 26px -6px rgba(0,0,0,.85)' }}>
           <i className="fa-solid fa-share-nodes text-[#34d399] text-[17px] drop-shadow-[0_2px_6px_rgba(52,211,153,.5)]" /> <span>Bagikan</span>
         </button>
         <a href={`https://wa.me/?text=${encodeURIComponent('.claim ' + codes[0].code)}`} target="_blank" rel="noreferrer"
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-white active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(180deg, #34e07a, #1faf5c 55%, #0f7d3f)', border: '1px solid rgba(255,255,255,.3)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.4), inset 0 -5px 10px rgba(0,0,0,.35), 0 10px 24px -6px rgba(37,211,102,.65)' }}>
+          style={{ background: 'linear-gradient(180deg, #3bec83, #1faf5c 50%, #0c7139)', border: '1px solid rgba(255,255,255,.4)', boxShadow: 'inset 0 2.5px 0 rgba(255,255,255,.5), inset 0 -6px 12px rgba(0,0,0,.4), 0 12px 28px -6px rgba(37,211,102,.7)' }}>
           <i className="fa-brands fa-whatsapp text-white text-[17px] drop-shadow-[0_2px_6px_rgba(0,0,0,.4)]" /> <span>WhatsApp</span>
         </a>
       </div>
@@ -222,7 +222,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       <div className={`transform-gpu transition-[transform,opacity] duration-[400ms] delay-300 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={onClose}
           className="action-chip w-full py-3.5 rounded-[15px] text-[var(--t-fg)] font-bold text-[12px] active:scale-[.97] active:translate-y-px transition-all duration-[180ms] flex items-center justify-center gap-2"
-          style={{ background: 'linear-gradient(180deg, #24313f, #17212e 55%, #0d151f)', border: '1px solid rgba(255,255,255,.14)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.22), inset 0 -5px 10px rgba(0,0,0,.55), 0 10px 22px -6px rgba(0,0,0,.8)' }}>
+          style={{ background: 'linear-gradient(180deg, #303f52, #1d2938 50%, #0a1018)', border: '1px solid rgba(255,255,255,.18)', boxShadow: 'inset 0 2.5px 0 rgba(255,255,255,.32), inset 0 -6px 12px rgba(0,0,0,.6), 0 12px 26px -6px rgba(0,0,0,.85)' }}>
           Selesai <i className="fa-solid fa-check text-[10px] text-[#34d399]" />
         </button>
       </div>
