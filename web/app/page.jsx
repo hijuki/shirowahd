@@ -105,10 +105,6 @@ export default function UploaderPage() {
             <header className="text-center mb-8 anim-entrance perspective-container" style={{ animationDelay: '60ms' }}>
               {/* Logo — conic ring + halo */}
               <div className="relative inline-block mb-5 [perspective:700px]">
-                <div className="logo-orbit -inset-3 pointer-events-none" style={{ '--orb-r': '47px' }}>
-                  <span className="orbit-dot" />
-                  <span className="orbit-dot orbit-dot-b" />
-                </div>
                 <div className="absolute -inset-5 rounded-full bg-gradient-to-b from-[#22d3ee]/15 to-[#3b82f6]/10 blur-xl pointer-events-none" />
                 {logoUrl ? (
                   <div className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden logo-3d anime-glow bg-[#080e1c]">
