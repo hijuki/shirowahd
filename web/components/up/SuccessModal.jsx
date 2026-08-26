@@ -94,20 +94,16 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
         ))}
       </div>
 
-      {/* Manga burst rings */}
-      {phase >= 1 && (
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="manga-burst w-16 h-16 left-1/2 top-8 -ml-8" style={{ animationDelay: '0ms' }} />
-          <div className="manga-burst w-24 h-24 left-1/2 top-4 -ml-12 !border-[#3b82f6]/40" style={{ animationDelay: '150ms' }} />
-          <div className="manga-burst w-32 h-32 left-1/2 top-0 -ml-16 !border-[#34d399]/30" style={{ animationDelay: '300ms' }} />
-        </div>
-      )}
-
       {/* Header */}
       <div className="relative text-center mb-4">
         <div className="relative inline-block mb-3">
-          <div className={`absolute -inset-6 rounded-full transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} />
-          <div className={`absolute -inset-10 rounded-full transform-gpu transition-[transform,opacity] duration-[800ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} />
+          {phase >= 1 && (
+            <>
+              <span className="burst-ring" style={{ '--bs': '72px', animationDelay: '80ms', borderColor: 'rgba(34,211,238,.55)' }} />
+              <span className="burst-ring" style={{ '--bs': '104px', animationDelay: '240ms', borderColor: 'rgba(59,130,246,.45)' }} />
+              <span className="burst-ring" style={{ '--bs': '136px', animationDelay: '400ms', borderColor: 'rgba(52,211,153,.4)' }} />
+            </>
+          )}
           <div className="absolute -inset-5 rounded-full bg-ok/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(52,211,153,.14) inset' }} />
 
           <div className={`relative w-[56px] h-[56px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>

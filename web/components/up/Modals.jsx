@@ -144,26 +144,39 @@ export function IntroModal({ onDone, settings }) {
         {/* Logo with burst effect */}
         <div className={`relative inline-block mb-4 transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           {/* Burst rings */}
-          <div className={`absolute -inset-6 rounded-full transform-gpu transition-[transform,opacity] duration-[800ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.3)' }} />
-          <div className={`absolute -inset-10 rounded-full transform-gpu transition-[transform,opacity] duration-[1000ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.15)' }} />
+          {phase >= 1 && (
+            <>
+              <span className="burst-ring" style={{ '--bs': '86px', animationDelay: '80ms', borderColor: 'rgba(37,211,102,.5)' }} />
+              <span className="burst-ring" style={{ '--bs': '118px', animationDelay: '260ms', borderColor: 'rgba(34,211,238,.4)' }} />
+              <span className="burst-ring" style={{ '--bs': '150px', animationDelay: '440ms', borderColor: 'rgba(37,211,102,.3)' }} />
+            </>
+          )}
 
           <div className="absolute -inset-5 rounded-full bg-[#25D366]/12 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.15) inset' }} />
-          <div className="absolute -inset-3 rounded-[24px] border-ring-spin pointer-events-none" />
+          <div className="logo-orbit -inset-3 pointer-events-none" style={{ '--orb-r': '43px' }}>
+          <span className="orbit-track" />
+          <span className="orbit-dot" />
+          <span className="orbit-dot orbit-dot-b" />
+        </div>
           <div className="relative w-[68px] h-[68px] rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
             <span className="absolute inset-[1px] rounded-[21px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
             <i className="fa-brands fa-whatsapp text-white text-[30px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
           </div>
 
-          {/* Sparkles around logo */}
-          {phase >= 1 && [...Array(5)].map((_, i) => (
-            <div key={i} className="absolute w-1 h-1 rounded-full check-sparkle" style={{
-              top: '50%', left: '50%',
-              '--angle': `${i * 72}deg`,
-              '--dist': `${32 + (i % 2) * 10}px`,
-              '--color': ['#25D366', '#22d3ee', '#3b82f6', '#34d399', '#25D366'][i],
-              animationDelay: `${200 + i * 100}ms`,
-            }} />
-          ))}
+          {/* Sparkles around logo — tx/ty precomputed */}
+          {phase >= 1 && [...Array(5)].map((_, i) => {
+            const rad = (i * 72 * Math.PI) / 180
+            const dist = 32 + (i % 2) * 10
+            return (
+              <div key={i} className="absolute w-1 h-1 rounded-full check-sparkle" style={{
+                top: '50%', left: '50%',
+                '--tx': `${Math.cos(rad) * dist}px`,
+                '--ty': `${Math.sin(rad) * dist}px`,
+                '--color': ['#25D366', '#22d3ee', '#3b82f6', '#34d399', '#25D366'][i],
+                animationDelay: `${200 + i * 100}ms`,
+              }} />
+            )
+          })}
         </div>
 
         {/* Title */}
