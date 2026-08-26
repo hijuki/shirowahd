@@ -201,28 +201,28 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       {/* Action buttons — uniform ghost chips, ikon warna aksen aja */}
       <div className={`grid grid-cols-3 gap-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={() => copy(codes[0].code)}
-          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02))', border: '1px solid rgba(255,255,255,.1)', boxShadow: '0 4px 14px -6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08)' }}>
-          <i className={`fa-solid ${copied ? 'fa-circle-check' : 'fa-copy'} text-[#34d399] text-[17px] drop-shadow-[0_2px_6px_rgba(52,211,153,.4)]`} />
+          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
+          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.02) 55%, rgba(0,0,0,.15))', border: '1px solid rgba(255,255,255,.12)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.22), inset 0 -4px 8px rgba(0,0,0,.5), 0 8px 20px -6px rgba(0,0,0,.7)' }}>
+          <i className={`fa-solid ${copied ? 'fa-circle-check' : 'fa-copy'} text-[#34d399] text-[17px] drop-shadow-[0_2px_6px_rgba(52,211,153,.5)]`} />
           <span>{copied ? 'Tersalin' : 'Salin'}</span>
         </button>
         <button onClick={() => shareCode(codes[0].code)}
-          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02))', border: '1px solid rgba(255,255,255,.1)', boxShadow: '0 4px 14px -6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08)' }}>
-          <i className="fa-solid fa-share-nodes text-[#34d399] text-[17px] drop-shadow-[0_2px_6px_rgba(52,211,153,.4)]" /> <span>Bagikan</span>
+          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
+          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.02) 55%, rgba(0,0,0,.15))', border: '1px solid rgba(255,255,255,.12)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.22), inset 0 -4px 8px rgba(0,0,0,.5), 0 8px 20px -6px rgba(0,0,0,.7)' }}>
+          <i className="fa-solid fa-share-nodes text-[#34d399] text-[17px] drop-shadow-[0_2px_6px_rgba(52,211,153,.5)]" /> <span>Bagikan</span>
         </button>
         <a href={`https://wa.me/?text=${encodeURIComponent('.claim ' + codes[0].code)}`} target="_blank" rel="noreferrer"
-          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(160deg, rgba(37,211,102,.14), rgba(37,211,102,.04))', border: '1px solid rgba(37,211,102,.22)', boxShadow: '0 4px 14px -6px rgba(37,211,102,.4), inset 0 1px 0 rgba(255,255,255,.08)' }}>
-          <i className="fa-brands fa-whatsapp text-[#25D366] text-[17px] drop-shadow-[0_2px_6px_rgba(37,211,102,.5)]" /> <span>WhatsApp</span>
+          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
+          style={{ background: 'linear-gradient(180deg, rgba(37,211,102,.28), rgba(37,211,102,.1) 55%, rgba(6,60,30,.35))', border: '1px solid rgba(37,211,102,.35)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.28), inset 0 -4px 8px rgba(0,0,0,.4), 0 8px 22px -6px rgba(37,211,102,.55)' }}>
+          <i className="fa-brands fa-whatsapp text-white text-[17px] drop-shadow-[0_2px_6px_rgba(0,0,0,.4)]" /> <span>WhatsApp</span>
         </a>
       </div>
 
-      {/* Close button — sekunder ghost (aksi utama = klaim di grup di atas) */}
+      {/* Close button — sekunder, tetap punya depth (bukan flat) */}
       <div className={`transform-gpu transition-[transform,opacity] duration-[400ms] delay-300 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={onClose}
-          className="w-full py-3.5 rounded-[15px] text-[var(--t-muted)] font-bold text-[12px] hover:text-[var(--t-fg)] active:scale-[.97] transition-all duration-[180ms] flex items-center justify-center gap-2"
-          style={{ background: 'linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.015))', border: '1px solid rgba(255,255,255,.1)', boxShadow: '0 4px 14px -6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07)' }}>
+          className="action-chip w-full py-3.5 rounded-[15px] text-[var(--t-muted)] font-bold text-[12px] hover:text-[var(--t-fg)] active:scale-[.97] active:translate-y-px transition-all duration-[180ms] flex items-center justify-center gap-2"
+          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.015) 55%, rgba(0,0,0,.15))', border: '1px solid rgba(255,255,255,.12)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.18), inset 0 -4px 8px rgba(0,0,0,.5), 0 8px 20px -6px rgba(0,0,0,.7)' }}>
           Selesai <i className="fa-solid fa-check text-[10px]" />
         </button>
       </div>
