@@ -17,7 +17,7 @@
   --color-bad: #fb7185;
   --color-wa: #25D366;
   --font-sans: Inter, system-ui, sans-serif;
-  --font-display: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+  --font-display: "Sora", "Space Grotesk", system-ui, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", monospace;
 }
 
@@ -1119,30 +1119,45 @@ body {
 .logo-orbit-ring .ring-spin-rev {
   animation: ringSpinCCW 17s linear infinite;
 }
-/* ===== v3.8f — Hero portrait (foto custom, edge-fade nyatu ke bg) ===== */
+/* ===== v3.8g — Hero portrait ethereal (mist monokrom, nyatu tema foto) ===== */
 .hero-orb {
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 150px;
-  height: 150px;
-  animation: heroFloat 6s ease-in-out infinite;
+  width: 158px;
+  height: 158px;
+  animation: heroFloat 7s ease-in-out infinite;
 }
+/* halo perak lembut di belakang — senada figur putih ghostly */
 .hero-orb-aurora {
   position: absolute;
-  inset: 6px;
+  inset: -4px;
   border-radius: 9999px;
-  background: conic-gradient(from 0deg, #22d3ee, #3b82f6, #6366f1, #34d399, #22d3ee);
-  filter: blur(22px);
-  opacity: .5;
-  animation: heroSpin 9s linear infinite;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(226,232,240,.5) 0%, rgba(148,163,184,.22) 38%, transparent 68%),
+    conic-gradient(from 0deg, rgba(226,232,240,.35), rgba(148,163,184,.12), rgba(203,213,225,.4), rgba(100,116,139,.1), rgba(226,232,240,.35));
+  filter: blur(20px);
+  opacity: .7;
+  animation: heroSpin 16s linear infinite;
+  z-index: 0;
+}
+/* kabut tipis melayang */
+.hero-orb::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 60%, rgba(148,163,184,.28), transparent 70%);
+  filter: blur(16px);
+  opacity: .6;
+  animation: heroMist 9s ease-in-out infinite alternate;
   z-index: 0;
 }
 .hero-orb-glass {
   position: relative;
   z-index: 2;
-  width: 128px;
-  height: 128px;
+  width: 132px;
+  height: 132px;
   display: block;
   border-radius: 9999px;
   overflow: visible;
@@ -1155,46 +1170,54 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 9999px;
-  box-shadow: inset 0 2px 10px rgba(255,255,255,.14), 0 14px 40px -10px rgba(34,211,238,.4);
+  box-shadow: inset 0 2px 14px rgba(255,255,255,.16), 0 16px 46px -12px rgba(148,163,184,.45);
   pointer-events: none;
 }
 .hero-orb-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 20%;
+  object-position: center 18%;
   border-radius: 9999px;
-  /* edge fade: pinggir foto melebur ke background gelap */
-  -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 46%, rgba(0,0,0,.6) 66%, transparent 82%);
-  mask-image: radial-gradient(circle at 50% 42%, #000 46%, rgba(0,0,0,.6) 66%, transparent 82%);
-  filter: contrast(1.08) brightness(1.05);
+  -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 44%, rgba(0,0,0,.55) 64%, transparent 80%);
+  mask-image: radial-gradient(circle at 50% 42%, #000 44%, rgba(0,0,0,.55) 64%, transparent 80%);
+  filter: contrast(1.1) brightness(1.06) saturate(.92);
 }
+/* partikel debu perak melayang (bukan cyan) */
 .hero-orb-spark {
   position: absolute;
   z-index: 4;
   border-radius: 9999px;
-  background: radial-gradient(circle, #fff 0%, #7dd3fc 45%, transparent 70%);
+  background: radial-gradient(circle, #fff 0%, rgba(226,232,240,.7) 45%, transparent 72%);
   animation: heroSparkOrbit 5s linear infinite;
 }
-.hero-orb-spark-1 { width: 7px; height: 7px; --r: 74px; --deg: 0deg;   animation-duration: 8s; }
-.hero-orb-spark-2 { width: 4px; height: 4px; --r: 70px; --deg: 140deg; animation-duration: 11s; animation-direction: reverse; }
-.hero-orb-spark-3 { width: 5px; height: 5px; --r: 80px; --deg: 250deg; animation-duration: 9s; }
+.hero-orb-spark-1 { width: 6px; height: 6px; --r: 80px; --deg: 0deg;   animation-duration: 13s; }
+.hero-orb-spark-2 { width: 3px; height: 3px; --r: 74px; --deg: 140deg; animation-duration: 17s; animation-direction: reverse; }
+.hero-orb-spark-3 { width: 4px; height: 4px; --r: 86px; --deg: 250deg; animation-duration: 15s; }
 @keyframes heroFloat {
   0%,100% { transform: translateY(0); }
   50%     { transform: translateY(-7px); }
 }
 @keyframes heroSpin { to { transform: rotate(360deg); } }
+@keyframes heroMist {
+  from { transform: translateY(2px) scale(1); opacity: .45; }
+  to   { transform: translateY(-4px) scale(1.06); opacity: .7; }
+}
 @keyframes heroSparkOrbit {
   from { transform: rotate(var(--deg)) translateX(var(--r)) rotate(calc(-1 * var(--deg))); }
   to   { transform: rotate(calc(var(--deg) + 360deg)) translateX(var(--r)) rotate(calc(-1 * (var(--deg) + 360deg))); }
 }
-[data-theme="light"] .hero-orb-aurora { opacity: .4; }
+[data-theme="light"] .hero-orb-aurora {
+  opacity: .55;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(100,116,139,.4) 0%, rgba(148,163,184,.18) 40%, transparent 70%),
+    conic-gradient(from 0deg, rgba(148,163,184,.3), rgba(100,116,139,.1), rgba(203,213,225,.35), rgba(71,85,105,.08), rgba(148,163,184,.3));
+}
 [data-theme="light"] .hero-orb-img {
-  -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 44%, rgba(0,0,0,.5) 62%, transparent 78%);
-  mask-image: radial-gradient(circle at 50% 42%, #000 44%, rgba(0,0,0,.5) 62%, transparent 78%);
+  filter: contrast(1.08) brightness(1) saturate(.9);
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero-orb, .hero-orb-aurora, .hero-orb-spark { animation: none; }
+  .hero-orb, .hero-orb-aurora, .hero-orb::before, .hero-orb-spark { animation: none; }
 }
 
 /* ===== Floating owner chat button (WhatsApp) ===== */
