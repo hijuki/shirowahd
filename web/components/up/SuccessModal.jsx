@@ -39,11 +39,11 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
   const soundPlayed = useRef(false)
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 200)
+    const t1 = setTimeout(() => setPhase(1), 350)
     const t2 = setTimeout(() => {
       setPhase(2)
       if (!soundPlayed.current) { playSound('success'); soundPlayed.current = true }
-    }, 700)
+    }, 950)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [])
   useEffect(() => { const t = setInterval(() => setLeft(l => Math.max(0, l - 1000)), 1000); return () => clearInterval(t) }, [])

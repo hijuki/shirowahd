@@ -7,12 +7,12 @@ import { useState, useEffect, useRef } from 'react'
 function ModalShell({ onClose, children, accent = 'cyan' }) {
   const [vis, setVis] = useState(false)
   const ref = useRef(null)
-  useEffect(() => { requestAnimationFrame(() => setVis(true)) }, [])
-  const close = onClose ? () => { setVis(false); setTimeout(onClose, 320) } : null
+  useEffect(() => { requestAnimationFrame(() => requestAnimationFrame(() => setVis(true))) }, [])
+  const close = onClose ? () => { setVis(false); setTimeout(onClose, 460) } : null
   const ac = accent === 'green' ? '#34d399' : '#22d3ee'
 
   return (
-    <div className={`fixed inset-0 z-[80] transition-all duration-[320ms] ${vis ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+    <div className={`fixed inset-0 z-[80] transition-opacity duration-[480ms] ${vis ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
       <div className="absolute inset-0 bg-[#020408]/[.97]" onClick={close} />
 
       {/* Floating sparkle particles */}
@@ -39,7 +39,7 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
           <div
             ref={ref}
             onClick={e => e.stopPropagation()}
-            className={`relative w-full max-w-[400px] transition-all duration-[500ms] ${vis ? 'scale-100 translate-y-0 opacity-100' : 'scale-[.85] translate-y-12 opacity-0'}`}
+            className={`relative w-full max-w-[400px] transition-all duration-[560ms] will-change-transform ${vis ? 'scale-100 translate-y-0 opacity-100 blur-0' : 'scale-[.93] translate-y-7 opacity-0 blur-sm'}`}
             style={{ transitionTimingFunction: 'var(--ease-out)' }}
           >
             {/* Outer glow halo */}
