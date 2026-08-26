@@ -99,16 +99,16 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
         <div className="relative inline-block mb-3">
           {phase >= 1 && (
             <>
-              <span className="burst-ring" style={{ '--bs': '72px', animationDelay: '80ms', borderColor: 'rgba(34,211,238,.55)' }} />
-              <span className="burst-ring" style={{ '--bs': '104px', animationDelay: '240ms', borderColor: 'rgba(59,130,246,.45)' }} />
-              <span className="burst-ring" style={{ '--bs': '136px', animationDelay: '400ms', borderColor: 'rgba(52,211,153,.4)' }} />
+              <span className="burst-ring" style={{ '--bs': '72px', animationDelay: '80ms', borderColor: 'rgba(52,211,153,.55)' }} />
+              <span className="burst-ring" style={{ '--bs': '104px', animationDelay: '240ms', borderColor: 'rgba(52,211,153,.4)' }} />
+              <span className="burst-ring" style={{ '--bs': '136px', animationDelay: '400ms', borderColor: 'rgba(52,211,153,.28)' }} />
             </>
           )}
           <div className="absolute -inset-5 rounded-full bg-ok/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(52,211,153,.14) inset' }} />
 
           <div className={`relative w-[56px] h-[56px] mx-auto rounded-full grid place-items-center transform-gpu transition-[transform,opacity] duration-[600ms] ${phase >= 1 ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ok/30 to-ok/5 border-2 border-ok/40 success-core-glow" />
-            <i className="fa-solid fa-check text-ok text-[22px] relative drop-shadow-[0_0_16px_rgba(52,211,153,.9)]" />
+            <i className="fa-solid fa-check text-ok text-[22px] relative drop-shadow-[0_0_8px_rgba(52,211,153,.6)]" />
           </div>
 
           {/* Sparkle particles — tx/ty precomputed (rad) biar kompatibel semua browser */}
@@ -127,8 +127,8 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           })}
         </div>
 
-        <h2 className={`font-[family-name:var(--font-display)] font-bold text-[20px] tracking-tight transform-gpu transition-[transform,opacity] duration-[400ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-          <span className="anime-text">Upload Berhasil!</span>
+        <h2 className={`font-[family-name:var(--font-display)] font-bold text-[20px] tracking-tight text-[var(--t-fg)] transform-gpu transition-[transform,opacity] duration-[400ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+          Upload Berhasil!
         </h2>
         <p className={`text-[var(--t-muted)] text-[10px] mt-1 transform-gpu transition-[transform,opacity] duration-[400ms] delay-75 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}>
           {result.bundle ? `${result.count} foto — 1 bundle` : 'File siap diklaim'}
@@ -148,7 +148,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
             {name && <p className="text-[var(--t-muted)] text-[8px] truncate mb-1 relative">{name}</p>}
             <p className="text-[7px] font-extrabold tracking-[.22em] uppercase text-[var(--t-muted)]/45 mb-1.5 relative">Kode Klaim</p>
             <p className="font-mono font-bold text-[21px] tracking-[.04em] code-text select-all relative">.claim {code}</p>
-            <p className={`text-[8px] font-bold mt-2 transition-colors duration-[150ms] relative inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${copied === code ? 'text-ok bg-ok/10' : 'text-[var(--t-muted)]/60 bg-white/[.03] group-hover:text-[#22d3ee]/80'}`}>
+            <p className={`text-[8px] font-bold mt-2 transition-colors duration-[150ms] relative inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${copied === code ? 'text-ok bg-ok/10' : 'text-[var(--t-muted)]/60 bg-white/[.03] group-hover:text-[#34d399]/80'}`}>
               <i className={`fa-solid ${copied === code ? 'fa-circle-check' : 'fa-copy'}`} />
               {copied === code ? 'Tersalin!' : 'Tap untuk salin'}
             </p>
@@ -157,16 +157,16 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       </div>
 
       {/* Timer */}
-      <div className={`mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-150 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[var(--t-muted)] text-[8px] font-bold flex items-center gap-1">
-            <i className="fa-solid fa-hourglass-half text-[7px]" /> Kedaluwarsa
+      <div className={`mb-4 transform-gpu transition-[transform,opacity] duration-[400ms] delay-150 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[var(--t-muted)] text-[9px] font-semibold flex items-center gap-1.5">
+            <i className="fa-solid fa-hourglass-half text-[8px]" /> Berlaku sampai
           </span>
-          <span className={`font-mono font-bold text-[11px] tabular-nums ${urgent ? 'text-bad animate-pulse' : 'text-[#22d3ee]'}`}>
+          <span className={`font-mono font-bold text-[12px] tabular-nums ${urgent ? 'text-bad animate-pulse' : 'text-[#34d399]'}`}>
             {mins}:{secs}
           </span>
         </div>
-        <div className="expire-bar"><div style={{ width: pct + '%' }} className={urgent ? '!bg-gradient-to-r !from-bad !to-[#fbbf24]' : ''} /></div>
+        <div className="expire-bar"><div style={{ width: pct + '%' }} className={urgent ? '!bg-gradient-to-r !from-bad !to-[#fbbf24]' : '!bg-gradient-to-r !from-[#34d399] !to-[#10b981]'} /></div>
       </div>
 
       {/* Claim group buttons */}
@@ -198,31 +198,28 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
         </div>
       )}
 
-      {/* Action buttons — 3 columns: Copy, Share, WhatsApp */}
+      {/* Action buttons — uniform ghost chips, ikon warna aksen aja */}
       <div className={`grid grid-cols-3 gap-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={() => copy(codes[0].code)}
-          className="action-chip btn-3d group flex-col gap-1 py-2.5 rounded-[14px] bg-white/[.04] border border-white/[.10] text-[10px] font-bold hover:border-[#22d3ee]/40 hover:bg-[#22d3ee]/[.08] active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center">
-          <i className={`fa-solid ${copied ? 'fa-circle-check text-ok' : 'fa-copy text-[#22d3ee]'} text-[15px]`} />
+          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3 rounded-[13px] bg-white/[.04] border border-white/[.09] text-[10px] font-semibold text-[var(--t-fg)] hover:bg-white/[.07] hover:border-white/[.16] active:scale-[.95] transition-all duration-[180ms]">
+          <i className={`fa-solid ${copied ? 'fa-circle-check text-[#34d399]' : 'fa-copy text-[#22d3ee]'} text-[16px]`} />
           <span>{copied ? 'Tersalin' : 'Salin'}</span>
         </button>
         <button onClick={() => shareCode(codes[0].code)}
-          className="action-chip btn-3d group flex-col gap-1 py-2.5 rounded-[14px] bg-[#3b82f6]/[.10] border border-[#3b82f6]/25 text-[10px] font-bold text-[#93c5fd] hover:bg-[#3b82f6]/[.20] hover:border-[#3b82f6]/45 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center">
-          <i className="fa-solid fa-share-nodes text-[15px]" /> <span>Share</span>
+          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3 rounded-[13px] bg-white/[.04] border border-white/[.09] text-[10px] font-semibold text-[var(--t-fg)] hover:bg-white/[.07] hover:border-white/[.16] active:scale-[.95] transition-all duration-[180ms]">
+          <i className="fa-solid fa-share-nodes text-[#3b82f6] text-[16px]" /> <span>Bagikan</span>
         </button>
         <a href={`https://wa.me/?text=${encodeURIComponent('.claim ' + codes[0].code)}`} target="_blank" rel="noreferrer"
-          className="action-chip btn-3d group flex-col gap-1 py-2.5 rounded-[14px] bg-[#25D366]/[.10] border border-[#25D366]/25 text-[10px] font-bold text-[#7ce8a8] hover:bg-[#25D366]/[.20] hover:border-[#25D366]/45 active:scale-[.95] transition-all duration-[200ms] flex items-center justify-center">
-          <i className="fa-brands fa-whatsapp text-[15px]" /> <span>WhatsApp</span>
+          className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3 rounded-[13px] bg-white/[.04] border border-white/[.09] text-[10px] font-semibold text-[var(--t-fg)] hover:bg-white/[.07] hover:border-white/[.16] active:scale-[.95] transition-all duration-[180ms]">
+          <i className="fa-brands fa-whatsapp text-[#25D366] text-[16px]" /> <span>WhatsApp</span>
         </a>
       </div>
 
-      {/* Close button */}
+      {/* Close button — sekunder ghost (aksi utama = klaim di grup di atas) */}
       <div className={`transform-gpu transition-[transform,opacity] duration-[400ms] delay-300 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={onClose}
-          className="relative overflow-hidden w-full py-3 rounded-[14px] bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white font-bold text-[13px] btn-3d shadow-[0_4px_20px_-4px_rgba(34,211,238,.45)] hover:shadow-[0_6px_28px_-4px_rgba(34,211,238,.6)] hover:brightness-110 active:scale-[.97] transition-all duration-[200ms]">
-          <span className="absolute inset-0 btn-shine-sweep pointer-events-none" />
-          <span className="relative flex items-center justify-center gap-2">
-            Selesai <i className="fa-solid fa-arrow-right text-[11px]" />
-          </span>
+          className="w-full py-3 rounded-[14px] bg-white/[.04] border border-white/[.1] text-[var(--t-muted)] font-bold text-[12px] hover:bg-white/[.07] hover:text-[var(--t-fg)] active:scale-[.97] transition-all duration-[180ms] flex items-center justify-center gap-2">
+          Selesai <i className="fa-solid fa-check text-[10px]" />
         </button>
       </div>
     </ModalShell>,

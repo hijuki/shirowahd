@@ -352,8 +352,8 @@ body {
 }
 .code-text {
   font-family: var(--font-mono);
-  color: #a5f3fc;
-  text-shadow: 0 0 18px rgba(34,211,238,.5);
+  color: #6ee7b7;
+  text-shadow: 0 0 18px rgba(52,211,153,.5);
 }
 
 /* ===== Toast ===== */
@@ -1057,15 +1057,15 @@ body {
 .claim-code-card {
   border: 1.5px solid transparent;
   background:
-    linear-gradient(180deg, rgba(34,211,238,.07), rgba(15,23,42,.4)) padding-box,
-    linear-gradient(120deg, rgba(34,211,238,.55), rgba(59,130,246,.25) 40%, rgba(52,211,153,.5) 75%, rgba(34,211,238,.55)) border-box;
+    linear-gradient(180deg, rgba(52,211,153,.08), rgba(15,23,42,.4)) padding-box,
+    linear-gradient(120deg, rgba(52,211,153,.5), rgba(52,211,153,.15) 45%, rgba(34,211,238,.35) 78%, rgba(52,211,153,.5)) border-box;
   background-size: 100% 100%, 260% 100%;
-  box-shadow: 0 8px 30px -12px rgba(34,211,238,.4), inset 0 1px 0 rgba(255,255,255,.06);
+  box-shadow: 0 8px 30px -14px rgba(52,211,153,.4), inset 0 1px 0 rgba(255,255,255,.05);
   animation: claimCardFlow 8s linear infinite;
   transition: box-shadow 220ms var(--ease-out), transform 220ms var(--ease-out);
 }
 .claim-code-card:hover {
-  box-shadow: 0 14px 40px -12px rgba(34,211,238,.6), inset 0 1px 0 rgba(255,255,255,.1);
+  box-shadow: 0 14px 40px -14px rgba(52,211,153,.55), inset 0 1px 0 rgba(255,255,255,.09);
 }
 @keyframes claimCardFlow {
   0%   { background-position: 0% 50%, 0% 50%; }
@@ -1073,8 +1073,8 @@ body {
 }
 [data-theme="light"] .claim-code-card {
   background:
-    linear-gradient(180deg, rgba(224,242,254,.7), rgba(255,255,255,.85)) padding-box,
-    linear-gradient(120deg, rgba(8,145,178,.5), rgba(37,99,235,.25) 40%, rgba(16,185,129,.45) 75%, rgba(8,145,178,.5)) border-box;
+    linear-gradient(180deg, rgba(209,250,229,.7), rgba(255,255,255,.85)) padding-box,
+    linear-gradient(120deg, rgba(16,185,129,.5), rgba(16,185,129,.18) 45%, rgba(8,145,178,.3) 78%, rgba(16,185,129,.5)) border-box;
   background-size: 100% 100%, 260% 100%;
 }
 
@@ -1083,11 +1083,11 @@ body {
   position: relative;
   border: 1.5px solid transparent;
   background:
-    linear-gradient(120deg, rgba(52,211,153,.10), rgba(34,211,238,.05)) padding-box,
-    linear-gradient(115deg, #34d399, rgba(34,211,238,.4) 30%, rgba(52,211,153,.15) 55%, rgba(59,130,246,.45) 80%, #34d399) border-box;
+    linear-gradient(120deg, rgba(52,211,153,.12), rgba(52,211,153,.05)) padding-box,
+    linear-gradient(115deg, #34d399, rgba(52,211,153,.25) 35%, rgba(16,185,129,.4) 60%, rgba(52,211,153,.25) 80%, #34d399) border-box;
   background-size: 100% 100%, 300% 100%;
   animation: claimBorderFlow 7s linear infinite;
-  box-shadow: 0 2px 14px -6px rgba(52,211,153,.25), inset 0 1px 0 rgba(255,255,255,.04);
+  box-shadow: 0 2px 14px -6px rgba(52,211,153,.3), inset 0 1px 0 rgba(255,255,255,.04);
 }
 @keyframes claimBorderFlow {
   0%   { background-position: 0% 50%, 0% 50%; }

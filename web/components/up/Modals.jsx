@@ -42,12 +42,6 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
               <div className="absolute top-8 bottom-8 left-0 w-px bg-gradient-to-b from-transparent via-[#3b82f6]/15 to-transparent" />
               <div className="absolute top-8 bottom-8 right-0 w-px bg-gradient-to-b from-transparent via-[#22d3ee]/15 to-transparent" />
 
-              {/* Corner accent dots */}
-              <div className="absolute top-3 left-3 w-1 h-1 rounded-full bg-[#22d3ee]/30" />
-              <div className="absolute top-3 right-3 w-1 h-1 rounded-full bg-[#3b82f6]/30" />
-              <div className="absolute bottom-3 left-3 w-1 h-1 rounded-full bg-[#3b82f6]/20" />
-              <div className="absolute bottom-3 right-3 w-1 h-1 rounded-full bg-[#22d3ee]/20" />
-
               {/* Inner grid pattern */}
               <div className="absolute inset-0 opacity-[.025] pointer-events-none" style={{
                 backgroundImage: 'linear-gradient(rgba(255,255,255,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.15) 1px, transparent 1px)',
