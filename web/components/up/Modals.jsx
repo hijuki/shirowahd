@@ -24,7 +24,7 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
         <div className="min-h-full flex p-4 py-6">
           <div
             onClick={e => e.stopPropagation()}
-            className={`m-auto relative w-full max-w-[400px] transform-gpu will-change-transform ${closing ? 'modal-card-out' : 'modal-card-in'}`}
+            className={`m-auto relative w-full max-w-[440px] transform-gpu will-change-transform ${closing ? 'modal-card-out' : 'modal-card-in'}`}
           >
             {/* Card */}
             <div className="relative rounded-[22px] bg-[#0a1020] border border-white/[.08] shadow-[0_32px_80px_-12px_rgba(0,0,0,.9)] overflow-hidden">
