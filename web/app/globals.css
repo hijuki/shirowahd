@@ -1119,63 +1119,55 @@ body {
 .logo-orbit-ring .ring-spin-rev {
   animation: ringSpinCCW 17s linear infinite;
 }
-/* ===== v3.8d — Hero animated orb (aurora + glass + float) ===== */
+/* ===== v3.8f — Hero portrait (foto custom, edge-fade nyatu ke bg) ===== */
 .hero-orb {
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 96px;
-  height: 96px;
+  width: 150px;
+  height: 150px;
   animation: heroFloat 6s ease-in-out infinite;
 }
 .hero-orb-aurora {
   position: absolute;
-  inset: -6px;
+  inset: 6px;
   border-radius: 9999px;
   background: conic-gradient(from 0deg, #22d3ee, #3b82f6, #6366f1, #34d399, #22d3ee);
-  filter: blur(9px);
-  opacity: .8;
-  animation: heroSpin 7s linear infinite;
+  filter: blur(22px);
+  opacity: .5;
+  animation: heroSpin 9s linear infinite;
+  z-index: 0;
 }
 .hero-orb-glass {
   position: relative;
   z-index: 2;
-  width: 76px;
-  height: 76px;
-  border-radius: 24px;
-  display: grid;
-  place-items: center;
-  background: #000;
-  border: 1px solid rgba(255,255,255,.22);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 10px 30px -8px rgba(34,211,238,.5);
-  overflow: hidden;
+  width: 128px;
+  height: 128px;
+  display: block;
+  border-radius: 9999px;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.hero-orb-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow: inset 0 2px 10px rgba(255,255,255,.14), 0 14px 40px -10px rgba(34,211,238,.4);
+  pointer-events: none;
 }
 .hero-orb-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center top;
-}
-.hero-orb-glass::after {
-  content: "";
-  position: absolute;
-  top: -60%;
-  left: -30%;
-  width: 80%;
-  height: 160%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
-  transform: rotate(18deg);
-  animation: heroShine 4.5s ease-in-out infinite;
-}
-.hero-orb-icon {
-  position: relative;
-  z-index: 3;
-  font-size: 30px;
-  background: linear-gradient(135deg, #e0f2fe, #7dd3fc 40%, #38bdf8 70%, #3b82f6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 2px 6px rgba(34,211,238,.5));
+  object-position: center 20%;
+  border-radius: 9999px;
+  /* edge fade: pinggir foto melebur ke background gelap */
+  -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 46%, rgba(0,0,0,.6) 66%, transparent 82%);
+  mask-image: radial-gradient(circle at 50% 42%, #000 46%, rgba(0,0,0,.6) 66%, transparent 82%);
+  filter: contrast(1.08) brightness(1.05);
 }
 .hero-orb-spark {
   position: absolute;
@@ -1184,28 +1176,25 @@ body {
   background: radial-gradient(circle, #fff 0%, #7dd3fc 45%, transparent 70%);
   animation: heroSparkOrbit 5s linear infinite;
 }
-.hero-orb-spark-1 { width: 8px; height: 8px; --r: 58px; --deg: 0deg;   animation-duration: 6s; }
-.hero-orb-spark-2 { width: 5px; height: 5px; --r: 54px; --deg: 140deg; animation-duration: 8s; animation-direction: reverse; }
-.hero-orb-spark-3 { width: 6px; height: 6px; --r: 62px; --deg: 250deg; animation-duration: 7s; }
+.hero-orb-spark-1 { width: 7px; height: 7px; --r: 74px; --deg: 0deg;   animation-duration: 8s; }
+.hero-orb-spark-2 { width: 4px; height: 4px; --r: 70px; --deg: 140deg; animation-duration: 11s; animation-direction: reverse; }
+.hero-orb-spark-3 { width: 5px; height: 5px; --r: 80px; --deg: 250deg; animation-duration: 9s; }
 @keyframes heroFloat {
   0%,100% { transform: translateY(0); }
   50%     { transform: translateY(-7px); }
 }
 @keyframes heroSpin { to { transform: rotate(360deg); } }
-@keyframes heroShine {
-  0%,100% { transform: translateX(-40px) rotate(18deg); opacity: 0; }
-  45%,55% { opacity: 1; }
-  60%     { transform: translateX(140px) rotate(18deg); opacity: 0; }
-}
 @keyframes heroSparkOrbit {
   from { transform: rotate(var(--deg)) translateX(var(--r)) rotate(calc(-1 * var(--deg))); }
   to   { transform: rotate(calc(var(--deg) + 360deg)) translateX(var(--r)) rotate(calc(-1 * (var(--deg) + 360deg))); }
 }
-[data-theme="light"] .hero-orb-glass {
-  border-color: rgba(37,99,235,.25);
+[data-theme="light"] .hero-orb-aurora { opacity: .4; }
+[data-theme="light"] .hero-orb-img {
+  -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 44%, rgba(0,0,0,.5) 62%, transparent 78%);
+  mask-image: radial-gradient(circle at 50% 42%, #000 44%, rgba(0,0,0,.5) 62%, transparent 78%);
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero-orb, .hero-orb-aurora, .hero-orb-glass::after, .hero-orb-spark { animation: none; }
+  .hero-orb, .hero-orb-aurora, .hero-orb-spark { animation: none; }
 }
 
 /* ===== Floating owner chat button (WhatsApp) ===== */
