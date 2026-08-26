@@ -84,7 +84,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
     <ModalShell onClose={onClose} accent="green">
       {/* Confetti rain */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[22px]">
-        {[...Array(10)].map((_, i) => (
+        {[...Array(6)].map((_, i) => (
           <div key={i} className="confetti-particle" style={{
             '--x': `${5 + Math.random() * 90}%`,
             '--delay': `${i * 0.1}s`,
@@ -139,7 +139,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       <div className={`space-y-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         {codes.map(({ code, name }) => (
           <div key={code} onClick={() => copy(code)}
-            className="relative rounded-[14px] bg-[var(--t-surface)] border border-[#22d3ee]/15 p-3 text-center cursor-pointer group hover:border-[#22d3ee]/35 transition-all duration-[200ms] active:scale-[.97] overflow-hidden card-3d">
+            className="relative rounded-[14px] bg-[var(--t-surface)] border border-[#22d3ee]/15 p-3 text-center cursor-pointer group hover:border-[#22d3ee]/35 transition-all duration-[200ms] active:scale-[.97] overflow-hidden">
             <div className="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-[#22d3ee]/30 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-b from-[#22d3ee]/[.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[200ms]" />
             {/* Auto shine sweep */}

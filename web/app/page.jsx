@@ -106,7 +106,6 @@ export default function UploaderPage() {
               {/* Logo — conic ring + halo */}
               <div className="relative inline-block mb-5 [perspective:700px]">
                 <div className="logo-orbit -inset-3 pointer-events-none" style={{ '--orb-r': '47px' }}>
-                  <span className="orbit-track" />
                   <span className="orbit-dot" />
                   <span className="orbit-dot orbit-dot-b" />
                 </div>

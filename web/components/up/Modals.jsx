@@ -129,7 +129,7 @@ export function IntroModal({ onDone, settings }) {
     <ModalShell>
       {/* ── Confetti on welcome ── */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[22px]">
-        {[...Array(10)].map((_, i) => (
+        {[...Array(6)].map((_, i) => (
           <div key={i} className="confetti-particle" style={{
             '--x': `${8 + Math.random() * 84}%`,
             '--delay': `${0.2 + i * 0.15}s`,
@@ -154,10 +154,9 @@ export function IntroModal({ onDone, settings }) {
 
           <div className="absolute -inset-5 rounded-full bg-[#25D366]/12 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.15) inset' }} />
           <div className="logo-orbit -inset-3 pointer-events-none" style={{ '--orb-r': '43px' }}>
-          <span className="orbit-track" />
-          <span className="orbit-dot" />
-          <span className="orbit-dot orbit-dot-b" />
-        </div>
+            <span className="orbit-dot" />
+            <span className="orbit-dot orbit-dot-b" />
+          </div>
           <div className="relative w-[68px] h-[68px] rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
             <span className="absolute inset-[1px] rounded-[21px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
             <i className="fa-brands fa-whatsapp text-white text-[30px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
