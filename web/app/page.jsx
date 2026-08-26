@@ -137,7 +137,7 @@ export default function UploaderPage() {
                 <div className="hero-orb" aria-hidden>
                   <span className="hero-orb-aurora" />
                   <span className="hero-orb-glass">
-                    <i className="fa-solid fa-photo-film hero-orb-icon" />
+                    <img src="/hero.jpg" alt="" className="hero-orb-img" />
                   </span>
                   <span className="hero-orb-spark hero-orb-spark-1" />
                   <span className="hero-orb-spark hero-orb-spark-2" />
