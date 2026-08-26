@@ -79,7 +79,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
     <ModalShell onClose={onClose} accent="green">
       {/* Confetti rain */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[22px]">
-        {[...Array(18)].map((_, i) => (
+        {[...Array(10)].map((_, i) => (
           <div key={i} className="confetti-particle" style={{
             '--x': `${5 + Math.random() * 90}%`,
             '--delay': `${i * 0.1}s`,
@@ -103,7 +103,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
         <div className="relative inline-block mb-3">
           <div className={`absolute -inset-6 rounded-full transition-all duration-[600ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} />
           <div className={`absolute -inset-10 rounded-full transition-all duration-[800ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} />
-          <div className="absolute -inset-5 rounded-full bg-ok/10 blur-xl success-halo pointer-events-none" />
+          <div className="absolute -inset-5 rounded-full bg-ok/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(52,211,153,.14) inset' }} />
           {/* Anime energy ring */}
           <div className="energy-ring !rounded-full" />
 

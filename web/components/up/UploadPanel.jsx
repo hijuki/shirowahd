@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { uploadFiles, fmtSize, saveHistory } from '@/lib/up-api'
+import { uploadFiles, pollJobStatus, fmtSize, saveHistory } from '@/lib/up-api'
 import SuccessModal from './SuccessModal'
 
 const VIDEO_EXTS = ['mp4', 'mkv', 'avi', 'mov']
@@ -17,6 +17,7 @@ export default function UploadPanel({ settings, toast }) {
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState({ pct: 0, loaded: 0, total: 0, speed: 0 })
+  const [encode, setEncode] = useState(null) // { stage, pct }
   const [result, setResult] = useState(null)
   const fileRef = useRef(null)
   const [drag, setDrag] = useState(false)
@@ -62,12 +63,28 @@ export default function UploadPanel({ settings, toast }) {
     abortRef.current = new AbortController()
     try {
       const res = await uploadFiles(files, { field, onProgress: p => setProgress(p), signal: abortRef.current.signal })
-      saveHistory({ code: res.code, codes: res.codes, bundle: res.bundle, count: res.count, files: files.map(f => f.name), totalSize: files.reduce((s, f) => s + f.size, 0), timestamp: Date.now(), expireMinutes: settings?.expireMinutes || 60 })
-      setResult({ ...res, expireMinutes: settings?.expireMinutes || 60 })
-      toast('Upload berhasil!', 'success')
+      // Tahap 2: server encode di background — polling status sampai result
+      let final = res
+      if (res.pending && res.jobId) {
+        final = await new Promise((resolve, reject) => {
+          const t = setInterval(async () => {
+            try {
+              const s = await pollJobStatus(res.jobId)
+              if (s.error) { clearInterval(t); reject(new Error(s.error)); return }
+              if (s.stage || typeof s.pct === 'number') setEncode({ stage: s.stage || 'Memproses…', pct: s.pct || 0 })
+              if (s.result) { clearInterval(t); resolve(s.result) }
+            } catch (e) { clearInterval(t); reject(e) }
+          }, 1200)
+        })
+      }
+      setEncode(null)
+      saveHistory({ code: final.code, codes: final.codes, bundle: final.bundle, count: final.count, files: files.map(f => f.name), totalSize: files.reduce((s, f) => s + f.size, 0), timestamp: Date.now(), expireMinutes: settings?.expireMinutes || 60 })
+      setResult({ ...final, expireMinutes: settings?.expireMinutes || 60 })
+      if (final.warn) toast(final.warn, 'info')
+      else toast('Upload berhasil!', 'success')
       setFiles([]); setThumbs({})
     } catch (e) { if (e.message !== 'Upload dibatalkan') toast(e.message, 'error') }
-    finally { setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }) }
+    finally { setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }); setEncode(null) }
   }
 
   const cancelUpload = () => { abortRef.current?.abort(); setUploading(false); setProgress(0); toast('Upload dibatalkan', 'info') }
@@ -209,19 +226,19 @@ export default function UploadPanel({ settings, toast }) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-[8px] bg-[#22d3ee]/10 border border-[#22d3ee]/20 grid place-items-center">
-                      <i className="fa-solid fa-cloud-arrow-up text-[#22d3ee] text-[10px] animate-bounce" />
+                      <i className={`fa-solid ${encode ? 'fa-wand-magic-sparkles text-[#34d399]' : 'fa-cloud-arrow-up text-[#22d3ee] animate-bounce'} text-[10px]`} />
                     </div>
                     <div>
-                      <p className="text-[11px] font-bold text-[var(--t-ink)]">Mengupload…</p>
-                      <p className="text-[9px] font-mono text-[var(--t-muted)]">
-                        {fmtSize(progress.loaded)} / {fmtSize(progress.total)}
-                      </p>
+                      <p className="text-[11px] font-bold text-[var(--t-ink)]">{encode ? encode.stage : 'Mengupload…'}</p>
+                      {encode
+                        ? <p className="text-[9px] font-mono text-[var(--t-muted)]">Konversi ke MP4 H.264</p>
+                        : <p className="text-[9px] font-mono text-[var(--t-muted)]">{fmtSize(progress.loaded)} / {fmtSize(progress.total)}</p>}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[16px] font-[family-name:var(--font-display)] font-extrabold grad-text tabular-nums">{progress.pct}%</p>
+                    <p className="text-[16px] font-[family-name:var(--font-display)] font-extrabold grad-text tabular-nums">{encode ? encode.pct : progress.pct}%</p>
                     <p className="text-[9px] font-mono font-bold text-[#67e8f9]">
-                      {progress.speed > 0 ? `${(progress.speed * 8 / 1000000).toFixed(1)} Mbps` : '—'}
+                      {encode ? 'ffmpeg' : progress.speed > 0 ? `${(progress.speed * 8 / 1000000).toFixed(1)} Mbps` : '—'}
                     </p>
                   </div>
                 </div>
@@ -231,7 +248,7 @@ export default function UploadPanel({ settings, toast }) {
                   <div
                     className="absolute inset-y-0 left-0 rounded-full transition-all duration-[250ms]"
                     style={{
-                      width: progress.pct + '%',
+                      width: (encode ? encode.pct : progress.pct) + '%',
                       background: 'linear-gradient(90deg, #22d3ee, #3b82f6, #34d399)',
                       boxShadow: '0 0 16px rgba(34,211,238,.5), 0 0 4px rgba(34,211,238,.8)',
                       transitionTimingFunction: 'var(--ease-out)',
@@ -242,7 +259,7 @@ export default function UploadPanel({ settings, toast }) {
                 </div>
 
                 {/* ETA */}
-                {progress.speed > 0 && progress.pct < 100 && (
+                {!encode && progress.speed > 0 && progress.pct < 100 && (
                   <p className="text-[9px] text-[var(--t-muted)]/70 font-mono mt-1.5 text-right">
                     ≈ {Math.ceil((progress.total - progress.loaded) / progress.speed)}s tersisa
                   </p>

@@ -15,25 +15,6 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
     <div className={`fixed inset-0 z-[80] transition-opacity duration-[480ms] ${vis ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
       <div className="absolute inset-0 bg-[#020408]/[.97]" onClick={close} />
 
-      {/* Floating sparkle particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(12)].map((_, i) => (
-          <div key={i} className="sparkle-dot" style={{
-            left: `${8 + (i * 7.5) % 84}%`,
-            top: `${10 + (i * 13) % 75}%`,
-            animationDelay: `${i * 0.35}s`,
-            animationDuration: `${2.5 + (i % 3) * 0.8}s`,
-            '--sparkle-color': ['#22d3ee', '#3b82f6', '#34d399', '#22d3ee', '#3b82f6'][i % 5],
-          }} />
-        ))}
-      </div>
-
-      {/* Floating orbs in background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute w-[200px] h-[200px] rounded-full bg-[#22d3ee]/[.04] blur-[80px] orb-float" style={{ top: '10%', left: '15%' }} />
-        <div className="absolute w-[160px] h-[160px] rounded-full bg-[#3b82f6]/[.05] blur-[60px] orb-float-2" style={{ top: '60%', right: '10%' }} />
-      </div>
-
       <div className="absolute inset-0 z-10 overflow-y-auto modal-scroll-hide" onClick={close}>
         <div className="min-h-full flex items-center justify-center p-4 py-6">
           <div
@@ -42,12 +23,6 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
             className={`relative w-full max-w-[400px] transition-all duration-[560ms] will-change-transform ${vis ? 'scale-100 translate-y-0 opacity-100 blur-0' : 'scale-[.93] translate-y-7 opacity-0 blur-sm'}`}
             style={{ transitionTimingFunction: 'var(--ease-out)' }}
           >
-            {/* Outer glow halo */}
-            <div className="absolute -inset-16 rounded-[60px] pointer-events-none" style={{
-              background: `radial-gradient(ellipse at center, ${ac}12, transparent 70%)`,
-              filter: 'blur(50px)',
-            }} />
-
             {/* Card */}
             <div className="relative rounded-[22px] bg-[#0a1020] border border-white/[.08] shadow-[0_32px_80px_-12px_rgba(0,0,0,.9)] overflow-hidden">
               {/* Animated gradient border glow (top) */}
@@ -167,7 +142,7 @@ export function IntroModal({ onDone, settings }) {
           <div className={`absolute -inset-6 rounded-full transition-all duration-[800ms] ${phase >= 1 ? 'success-ring-1' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.3)' }} />
           <div className={`absolute -inset-10 rounded-full transition-all duration-[1000ms] ${phase >= 1 ? 'success-ring-2' : 'opacity-0 scale-0'}`} style={{ borderColor: 'rgba(37,211,102,.15)' }} />
 
-          <div className="absolute -inset-5 rounded-full bg-[#25D366]/12 blur-xl success-halo pointer-events-none" />
+          <div className="absolute -inset-5 rounded-full bg-[#25D366]/12 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.15) inset' }} />
           <div className="absolute -inset-3 rounded-[24px] border-ring-spin pointer-events-none" />
           <div className="relative w-[68px] h-[68px] rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
             <span className="absolute inset-[1px] rounded-[21px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />

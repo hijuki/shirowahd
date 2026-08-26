@@ -255,6 +255,15 @@ function parseUrl(url) {
 }
 
 // --- Video conversion: non-MP4 → MP4 H.264, keep 4K + original FPS ---
+// --- Stage-2 encode jobs (async upload progress) ---
+const jobs = new Map();
+function sweepJobs() { const now = Date.now(); for (const [k, j] of jobs) if (now - j.ts > 15 * 60000) jobs.delete(k); }
+function newJob(names) {
+  sweepJobs();
+  const id = crypto.randomBytes(8).toString('hex');
+  jobs.set(id, { id, names, stage: 'Menyiapkan…', pct: 0, error: null, result: null, ts: Date.now() });
+  return id;
+}
 const VIDEO_MP4_EXTS = ['.mp4', '.m4v'];
 const VIDEO_EXTS = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.3gp', '.flv', '.wmv', '.ts', '.m4v'];
 const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg'];
@@ -278,7 +287,12 @@ function detectNeedsReencode(filePath) {
   } catch { return false; }
 }
 
-function convertToMp4(buf, originalName) {
+const execP = (cmd, opts = {}) => new Promise((resolve, reject) => execCb(cmd, opts, (err, stdout, stderr) => err ? reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')) : resolve(stdout)));
+function probeDuration(f) {
+  try { return parseFloat(execSync('ffprobe -v error -show_entries format=duration -of csv=p=0 ' + JSON.stringify(f), { timeout: 10000, stdio: 'pipe' }).toString().trim()) || 0; } catch { return 0; }
+}
+
+async function convertToMp4Async(buf, originalName, onPct) {
   const id = crypto.randomBytes(8).toString('hex');
   const ext = extname(originalName || '').toLowerCase() || '.vid';
   const tmpIn = join(tmpdir(), 'upload_in_' + id + ext);
@@ -289,9 +303,9 @@ function convertToMp4(buf, originalName) {
     if (!forceReencode) {
       // Source is h264 — stream copy (no re-encode, keeps quality 100%)
       try {
-        execSync(
-          'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v copy -c:a aac -b:a 320k -movflags +faststart -y ' + JSON.stringify(tmpOut),
-          { timeout: 300000, stdio: 'pipe' }
+        await execP(
+          'ffmpeg -y -i ' + JSON.stringify(tmpIn) + ' -c:v copy -c:a aac -b:a 320k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
+          { timeout: 300000, maxBuffer: 10 * 1024 * 1024 }
         );
         if (existsSync(tmpOut) && readFileSync(tmpOut).length > 1000) {
           return { buf: readFileSync(tmpOut), name: originalName.replace(/\.[^.]+$/, '.mp4') };
@@ -323,10 +337,20 @@ function convertToMp4(buf, originalName) {
       }
     } catch {}
     // ponytail: crf 23 = good quality, lighter than 18. veryfast preset = much less CPU. Upgrade to crf 18 + fast if server has dedicated GPU/power.
-    execSync(
-      'ffmpeg -i ' + JSON.stringify(tmpIn) + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset veryfast -crf 23' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -y ' + JSON.stringify(tmpOut),
-      { timeout: 600000, stdio: 'pipe' }
-    );
+    const dur = probeDuration(tmpIn);
+    await new Promise((resolve, reject) => {
+      const p = execCb(
+        'ffmpeg -y -i ' + JSON.stringify(tmpIn) + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset veryfast -crf 23' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
+        { timeout: 600000, maxBuffer: 10 * 1024 * 1024 },
+        (err, stdout, stderr) => { if (err) reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')); else resolve(); }
+      );
+      if (p.stdout) p.stdout.on('data', d => {
+        const m = String(d).match(/out_time_ms=(\d+)/g);
+        if (!m || !(dur > 0) || !onPct) return;
+        const sec = m[m.length - 1].split('=')[1] / 1e6;
+        onPct(Math.max(1, Math.min(98, Math.round(sec / dur * 100))));
+      });
+    });
     return { buf: readFileSync(tmpOut), name: originalName.replace(/\.[^.]+$/, '.mp4') };
   } finally {
     try { unlinkSync(tmpIn); } catch {}
@@ -458,50 +482,65 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        // ponytail: auto-convert ALL video to MP4 H.264 on upload (keep 4K + FPS, no compress)
-        // includes .mp4 with HEVC codec — re-encode to H.264 for WA compatibility
-        files = files.map(f => {
-          if (isVideoFile(f.name)) {
-            try {
-              const converted = convertToMp4(f.buf, f.name);
-              return converted;
-            } catch (e) {
-              console.log('[upload] ffmpeg convert failed for ' + f.name + ': ' + e.message);
-              return f; // fallback: store as-is
+        // ponytail: async job flow — respond langsung, encode di background biar client bisa tunjukin progres tahap 2. Upgrade: antrian per-file kalau upload multi-video rame.
+        const jobId = newJob(files.map(f => f.name));
+        jsonRes(res, 200, { ok: true, pending: true, jobId });
+        const job = jobs.get(jobId);
+        (async () => {
+          try {
+            let convFail = 0;
+            for (let i = 0; i < files.length; i++) {
+              const f = files[i];
+              if (!isVideoFile(f.name)) continue;
+              job.stage = 'Encode video' + (files.length > 1 ? ' (' + (i + 1) + '/' + files.length + ')' : '') + '…';
+              job.pct = 0;
+              try {
+                files[i] = await convertToMp4Async(f.buf, f.name, p => { job.pct = p; });
+              } catch (e) {
+                convFail++;
+                console.log('[upload] ffmpeg convert failed for ' + f.name + ': ' + e.message);
+                // fallback: simpan apa adanya
+              }
             }
+            job.stage = 'Menyimpan…';
+            const warn = convFail ? convFail + ' video gagal di-encode, disimpan tanpa konversi' : null;
+            const allImages = files.every(f => IMAGE_EXTS.includes(extname(f.name || '').toLowerCase()));
+            if (allImages && files.length >= 1) {
+              const code = storeBundle(files, clientIP);
+              if (!code) throw new Error('Server penuh');
+              const totalSize = files.reduce((s, f) => s + f.buf.length, 0);
+              addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: files.map(f => f.name).join(', '), filesize: totalSize, code, bundle: true, count: files.length });
+              recordUpload(clientIP);
+              sendTelegram('upload', `📤 <b>Upload Bundle</b>\n${files.length} file | ${(totalSize/1048576).toFixed(1)} MB\nKode: <code>${code}</code>\nIP: ${clientIP}`);
+              job.result = { ok: true, code, bundle: true, count: files.length, ...(warn && { warn }) };
+            } else {
+              const codes = [];
+              for (const file of files) {
+                const code = storeVideo(file.buf, file.name, clientIP);
+                if (!code) throw new Error('Server penuh');
+                codes.push({ code, name: file.name });
+                addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: file.name, filesize: file.buf.length, code });
+              }
+              recordUpload(clientIP);
+              sendTelegram('upload', `📤 <b>Upload</b>\n${codes.map(c=>c.name).join(', ')}\nKode: <code>${codes[0].code}</code>\nIP: ${clientIP}`);
+              job.result = { ok: true, code: codes[0].code, codes, ...(warn && { warn }) };
+            }
+          } catch (e) {
+            job.error = e.message || 'Proses gagal';
           }
-          return f;
-        });
-
-        const allImages = files.every(f => {
-          const ext = (f.name || '').toLowerCase().replace(/^.*\./, '.');
-          return IMAGE_EXTS.includes('.' + ext.replace(/^\./, ''));
-        });
-
-        if (allImages && files.length >= 1) {
-          const code = storeBundle(files, clientIP);
-          if (!code) { jsonRes(res, 500, { ok: false, error: 'Server penuh' }); return; }
-          const totalSize = files.reduce((s, f) => s + f.buf.length, 0);
-          addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: files.map(f => f.name).join(', '), filesize: totalSize, code, bundle: true, count: files.length });
-          recordUpload(clientIP);
-          sendTelegram('upload', `📤 <b>Upload Bundle</b>\n${files.length} file | ${(totalSize/1048576).toFixed(1)} MB\nKode: <code>${code}</code>\nIP: ${clientIP}`);
-          jsonRes(res, 200, { ok: true, code, bundle: true, count: files.length });
-        } else {
-          const codes = [];
-          for (const file of files) {
-            const code = storeVideo(file.buf, file.name, clientIP);
-            if (!code) { jsonRes(res, 500, { ok: false, error: 'Server penuh' }); return; }
-            codes.push({ code, name: file.name });
-            addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: file.name, filesize: file.buf.length, code });
-          }
-          recordUpload(clientIP);
-          sendTelegram('upload', `📤 <b>Upload</b>\n${codes.map(c=>c.name).join(', ')}\nKode: <code>${codes[0].code}</code>\nIP: ${clientIP}`);
-          jsonRes(res, 200, { ok: true, code: codes[0].code, codes });
-        }
+        })();
       } catch (e) {
         jsonRes(res, 500, { ok: false, error: e.message });
       }
     });
+    return;
+  }
+
+  if (req.method === 'GET' && url === '/upload/status') {
+    const id = (req.url.split('id=')[1] || '').split('&')[0];
+    const job = id && jobs.get(id);
+    if (!job) { jsonRes(res, 404, { ok: false, error: 'Job tidak ditemukan' }); return; }
+    jsonRes(res, 200, { ok: true, stage: job.stage, pct: job.pct, error: job.error, result: job.result });
     return;
   }
 

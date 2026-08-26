@@ -33,6 +33,10 @@ export function uploadFiles(files, { onProgress, field, signal }) {
   })
 }
 
+export function pollJobStatus(jobId) {
+  return fetch('/upload/status?id=' + encodeURIComponent(jobId)).then(r => r.json())
+}
+
 export function getHistory() {
   try { return JSON.parse(localStorage.getItem(LS_HISTORY)) || [] } catch { return [] }
 }
