@@ -19,7 +19,7 @@
   <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/WhatsApp-Baileys%20Multi--Device-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="WhatsApp" /></a>
   <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/Web_Server-Native%20HTTP%20Zero--Dep-00599C?style=for-the-badge" alt="Web" /></a>
   <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/Tunnel-Cloudflare%20Edge-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare" /></a>
-  <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/Developer-HILLZ-blueviolet?style=for-the-badge" alt="Developer" /></a>
+  <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/Developer-SHIRO%20HLZ-blueviolet?style=for-the-badge" alt="Developer" /></a>
 </p>
 
 ---
@@ -308,5 +308,5 @@ shirowahd/
 ---
 
 <p align="center">
-  <sub>Developed with ❤️ by <a href="https://github.com/hijuki"><b>HILLZ (hijuki)</b></a> • SHIROWAHD Official Project</sub>
+  <sub>Developed with ❤️ by <a href="https://github.com/hijuki"><b>SHIRO HLZ</b></a> • SHIROWAHD Official Project</sub>
 </p>
