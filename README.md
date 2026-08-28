@@ -110,7 +110,7 @@ GIT_ADDRESS=https://github.com/hijuki/shirowahd
 USERNAME=hijuki
 BRANCH=main
 
-# [ CLOUDFLARE TUNNEL (OPTIONAL - DEFAULT: 0) ]
+# [ CLOUDFLARE TUNNEL (0 = OFF / Mati, 1 = ON / Aktif) ]
 ENABLE_TUNNEL=0
 CF_ACCOUNT=
 CF_EMAIL=
@@ -127,7 +127,7 @@ CF_TUNNEL_ID=
 | `GIT_ADDRESS`| Opsional | `https://github.com/hijuki/shirowahd` | URL git repository |
 | `USERNAME` | Opsional | `hijuki` | Username GitHub akun pemilik |
 | `BRANCH` | Opsional | `main` | Branch target git |
-| `ENABLE_TUNNEL` | Opsional | `0` | `1` = Aktifkan Cloudflare Tunnel otomatis |
+| `ENABLE_TUNNEL` | Opsional | `0` | Mode Tunnel: `0` = **OFF** (Mati/Nonaktif), `1` = **ON** (Aktif) |
 
 ---
 
@@ -231,7 +231,10 @@ nginx -t && systemctl reload nginx
 
 Jika ingin menjalankan web uploader tanpa port forwarding atau direct IP:
 
-1. Di file `.env`, isi:
+- `ENABLE_TUNNEL=0` : **OFF** (Cloudflare Tunnel nonaktif, menggunakan Nginx / IP Direct)
+- `ENABLE_TUNNEL=1` : **ON** (Cloudflare Tunnel aktif otomatis saat aplikasi start)
+
+1. Di file `.env`, aktifkan mode tunnel:
    ```env
    ENABLE_TUNNEL=1
    CF_ACCOUNT=your_account_id
