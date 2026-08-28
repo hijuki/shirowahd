@@ -1,104 +1,166 @@
-# SHIROWAHD
+<p align="center">
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/NodeJS-Dark.svg" width="65" height="65" alt="NodeJS" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/JavaScript.svg" width="65" height="65" alt="JS" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/HTML.svg" width="65" height="65" alt="HTML5" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/CSS.svg" width="65" height="65" alt="CSS3" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/Cloudflare-Dark.svg" width="65" height="65" alt="Cloudflare" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/Nginx.svg" width="65" height="65" alt="Nginx" />
+</p>
 
-WhatsApp bot + web file uploader + admin panel.
+<h1 align="center">✨ SHIROWAHD v3.3.0 ✨</h1>
 
-## Stack
+<p align="center">
+  <b>Advanced Multi-Device WhatsApp Bot & Ultra-Fast Cloud Web File Uploader with Interactive Admin Control Hub</b><br>
+  <sub>Engineered for High-Throughput Media Sharing, Automated Micro-Services, Cloudflare Edge Tunneling, and Multi-Plugin Architecture.</sub>
+</p>
 
-- **Runtime:** Node.js 22+
-- **WA Library:** Baileys
-- **Web:** Express-less HTTP server (native `http`)
-- **Domain:** Via Cloudflare proxy (A record) atau Cloudflare Tunnel
-
-## Features
-
-- Web uploader (drag & drop, progress bar, claim codes)
-- WhatsApp bot 100+ commands (AI, downloader, tools, games)
-- Admin panel (dashboard, file manager, branding, security)
-- Upload statistics & log viewer
-- Notification system (Telegram, Discord webhooks)
-- Auto git pull on startup
-- Auto patch Baileys (large file upload 80MB+)
+<p align="center">
+  <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/Node.js-22.x%20LTS-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" /></a>
+  <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/WhatsApp-Baileys%20Multi--Device-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="WhatsApp" /></a>
+  <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/Web_Server-Native%20HTTP%20Zero--Dep-00599C?style=for-the-badge" alt="Web" /></a>
+  <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/Edge-Cloudflare%20Tunnel-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare" /></a>
+  <a href="https://github.com/hijuki/shirowahd"><img src="https://img.shields.io/badge/License-Private%20Pro-blueviolet?style=for-the-badge" alt="License" /></a>
+</p>
 
 ---
 
-## Setup VPS Baru (Dari Nol)
+## 📑 Table of Contents
+- [🌟 Key Highlights](#-key-highlights)
+- [🧩 Architecture & Core Modules](#-architecture--core-modules)
+- [🌐 Web Cloud Uploader & Admin Panel](#-web-cloud-uploader--admin-panel)
+- [🤖 WhatsApp Bot Commands Matrix](#-whatsapp-bot-commands-matrix)
+- [🚀 Quick VPS Installation Guide](#-quick-vps-installation-guide)
+- [⚙️ Environment Configuration (`.env`)](#️-environment-configuration-env)
+- [🛡️ Production Deployment (PM2 & Nginx)](#️-production-deployment-pm2--nginx)
+- [👑 Credits & Maintainer](#-credits--maintainer)
 
-### 1. Install Node.js 22+
+---
 
-```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt install -y nodejs git screen
+## 🌟 Key Highlights
+
+- 📤 **High-Speed Drag & Drop Web Uploader**: Direct chunked streaming upload with real-time progress bars, custom secret claim codes, and auto-expire file timers.
+- ⚡ **Express-less Native HTTP Engine**: Zero extra framework overhead, native streaming file pipeline handling 500MB+ payload uploads seamlessly.
+- 💬 **WhatsApp Multi-Device Baileys Engine**: 100+ commands across AI intelligence, media downloaders (TikTok, IG, YT, Spotify), group security, and utilities.
+- 🔒 **Cloudflare Edge Tunnel & Nginx Reverse Proxy**: Automatic SSL provisioning, CDN caching, DDoS mitigation, and flexible direct/tunnel routing.
+- 🛠️ **Full Interactive Admin Hub**: Web-based dashboard for live telemetry, storage analytics, file explorer, IP security, and instant branding customization.
+- 🔄 **Self-Updating Pipeline**: Auto-pull GitHub changes on startup, automatic hot-reloading plugins, and dynamic Baileys buffer patching for large media payloads.
+
+---
+
+## 🧩 Architecture & Core Modules
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    SHIROWAHD ECOSYSTEM                      │
+├──────────────────────────────┬──────────────────────────────┤
+│      🤖 WHATSAPP ENGINE      │      🌐 WEB & CLOUD HUB      │
+│   (@whiskeysockets/baileys)  │     (Native Zero-Dep HTTP)   │
+├──────────────────────────────┼──────────────────────────────┤
+│ • Pairing Code / QR Auth     │ • Drag & Drop Uploader       │
+│ • 100+ Plugin Architecture   │ • Live Upload Telemetry      │
+│ • Anti-Spam / Group Guard    │ • Admin Control Dashboard    │
+│ • Large File Patch (80MB+)   │ • Custom Claim Code Vault    │
+└──────────────────────────────┴──────────────────────────────┘
+                               │
+               ┌───────────────┴───────────────┐
+               │    CLOUDFLARE / NGINX EDGE    │
+               │   (SSL • CDN • Webhooks)      │
+               └───────────────────────────────┘
 ```
 
-### 2. Clone Repo (Private)
+---
 
-Buat GitHub Personal Access Token (PAT):
-1. GitHub > Settings > Developer Settings > Personal Access Tokens > Tokens (classic)
-2. Generate new token, centang `repo` scope
-3. Copy token (contoh: `ghp_xxxxxxxxxxxx`)
+## 🌐 Web Cloud Uploader & Admin Panel
 
-Clone:
+| Feature | Description |
+| :--- | :--- |
+| **🚀 Chunked Upload** | Streamlined file delivery with real-time speed & ETA calculation. |
+| **🔐 Secret Claim Codes** | Protect sensitive files behind alphanumeric security pins. |
+| **📊 Admin Dashboard** | Live RAM, CPU, bandwidth metrics, and historical upload logs. |
+| **📁 File Explorer** | Preview images, stream videos, and purge expired uploads in 1 click. |
+| **🎨 Custom Branding** | Live dynamic banners, header video loop, and customizable themes. |
 
+---
+
+## 🤖 WhatsApp Bot Commands Matrix
+
+```text
+╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
+  ⚡ SHIROWAHD BOT PLUGINS ⚡
+╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+ ├ 🧠 AI & CHATBOT     : OpenAI GPT-4o, Claude, Gemini Pro, DALL-E 3
+ ├ 📥 DOWNLOADERS      : TikTok No-WM, Instagram Reels, YouTube MP3/MP4, Spotify
+ ├ 🎮 ENTERTAINMENT    : RPG Games, Trivia Quiz, Word Chain, Fun Menus
+ ├ 🛡️ GROUP SHIELD     : Anti-Link, Anti-Toxic, Welcome/Leave Cards, Hidetag
+ ├ 🛠️ UTILITIES        : Sticker Maker, OCR Reader, Remini Upscaler, QR Tools
+ └ ⚙️ OWNER CONTROL    : Broadcast, Plugin Reload, Self-Update, Terminal Exec
+```
+
+---
+
+## 🚀 Quick VPS Installation Guide
+
+### 1. Update OS & Install Node.js 22 LTS
+```bash
+apt update -y && apt upgrade -y
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install -y nodejs git screen ffmpeg imagemagick nginx
+```
+
+### 2. Clone Repository
 ```bash
 cd /root
-git clone https://TOKEN_LU@github.com/hijuki/shirowahd.git
+git clone https://github.com/hijuki/shirowahd.git
 cd shirowahd
-```
-
-Ganti `TOKEN_LU` dengan PAT lu.
-
-### 3. Install Dependencies
-
-```bash
 npm install
 ```
 
-### 4. Buat File `.env`
+---
+
+## ⚙️ Environment Configuration (`.env`)
+
+Create your `.env` file:
 
 ```bash
-nano .env
+cp .env.example .env 2>/dev/null || nano .env
 ```
 
-Isi:
-
 ```env
-# === WAJIB ===
+# ==============================================================================
+# ⚡ SHIROWAHD CORE ENVIRONMENT VARIABLES
+# ==============================================================================
+
+# [ REQUIRED CONFIGURATION ]
 DOMAIN=swhdhlz.my.id
-GIT_TOKEN=ghp_xxxxxxxxxxxx
+PORT=8080
+GIT_TOKEN=ghp_yourPersonalAccessTokenHere
 GIT_ADDRESS=https://github.com/hijuki/shirowahd
 USERNAME=hijuki
 BRANCH=main
 
-# === CLOUDFLARE TUNNEL (optional, default OFF) ===
+# [ CLOUDFLARE TUNNEL (OPTIONAL) ]
 ENABLE_TUNNEL=0
 CF_ACCOUNT=
 CF_EMAIL=
 CF_KEY=
 CF_TUNNEL_ID=
+
+# [ NOTIFICATION HOOKS (OPTIONAL) ]
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+DISCORD_WEBHOOK_URL=
 ```
 
-Minimal cuma butuh `DOMAIN` dan `GIT_TOKEN`. Sisanya optional.
+---
 
-### 5. Setup Nginx (Reverse Proxy)
+## 🛡️ Production Deployment (PM2 & Nginx)
 
-Install nginx:
-
+### 1. Setup Nginx Reverse Proxy
 ```bash
-apt install -y nginx
-```
-
-Buat config:
-
-```bash
-nano /etc/nginx/sites-available/shirowahd
-```
-
-Isi:
-
-```nginx
+cat <<'EOF' > /etc/nginx/sites-available/shirowahd
 server {
     listen 80;
-    server_name DOMAIN_LU;
+    server_name swhdhlz.my.id;
 
     client_max_body_size 500M;
 
@@ -111,252 +173,28 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-```
+EOF
 
-Ganti `DOMAIN_LU` dengan domain lu.
-
-Aktifin:
-
-```bash
 ln -sf /etc/nginx/sites-available/shirowahd /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 ```
 
-### 6. Setup Domain (Cloudflare)
-
-1. Buka Cloudflare dashboard > DNS
-2. Tambah A record:
-   - Name: `@` (atau subdomain lu)
-   - Content: IP VPS lu
-   - Proxy: ON (orange cloud)
-3. SSL/TLS > pilih **Flexible**
-
-### 7. Jalankan Bot
-
+### 2. Start Application with PM2
 ```bash
-cd /root/shirowahd
-node main.js
-```
-
-Atau pake `screen` biar jalan di background:
-
-```bash
-screen -S bot
-node main.js
-# Tekan Ctrl+A lalu D untuk detach
-```
-
-Buka lagi: `screen -r bot`
-
----
-
-## Ganti Domain
-
-1. Edit `.env`:
-   ```
-   DOMAIN=domainbaru.com
-   ```
-
-2. Update Cloudflare DNS:
-   - Tambah A record baru yang nunjuk ke IP VPS
-
-3. Update Nginx:
-   ```bash
-   nano /etc/nginx/sites-available/shirowahd
-   # Ganti server_name ke domain baru
-   nginx -t && systemctl reload nginx
-   ```
-
-4. Restart bot:
-   ```bash
-   node main.js
-   ```
-   `main.js` otomatis update `admin-settings.json` pake domain baru.
-
----
-
-## Update Code dari GitHub
-
-Otomatis: setiap `node main.js` dijalankan, dia auto `git pull` dari GitHub.
-
-Manual:
-
-```bash
-cd /root/shirowahd
-git pull origin main
-node main.js
-```
-
-**Penting:** `.env` ada di `.gitignore`, jadi ga ke-overwrite waktu pull. Tapi kalau lu pake `git reset --hard`, `.env` bakal kehapus — bikin ulang.
-
----
-
-## Clone Repo Private ke VPS Lain
-
-```bash
-# Cara 1: Token di URL (simple)
-git clone https://TOKEN@github.com/hijuki/shirowahd.git
-
-# Cara 2: Set token di git config (ga keliatan di history)
-git clone https://github.com/hijuki/shirowahd.git
-cd shirowahd
-git remote set-url origin https://TOKEN@github.com/hijuki/shirowahd.git
-```
-
-Cek token masih valid:
-```bash
-curl -s -H "Authorization: token TOKEN" https://api.github.com/user | grep login
+npm install -g pm2
+pm2 start index.js --name "shirowahd" --time
+pm2 save
+pm2 startup
 ```
 
 ---
 
-## Cloudflare Tunnel (Optional)
+## 👑 Credits & Maintainer
 
-Kalau mau pake tunnel instead of direct A record:
+- **Developer**: [@Hillz126](https://t.me/Hillz126)
+- **Repository**: [hijuki/shirowahd](https://github.com/hijuki/shirowahd)
+- **Powered by**: `@whiskeysockets/baileys` & Node.js Native HTTP
 
-1. Edit `.env`:
-   ```
-   ENABLE_TUNNEL=1
-   CF_ACCOUNT=account_id_lu
-   CF_EMAIL=email@lu.com
-   CF_KEY=api_key_lu
-   CF_TUNNEL_ID=tunnel_id_lu
-   ```
-
-2. `main.js` otomatis download `cloudflared` binary dan start tunnel.
-
-**Note:** Beberapa hosting (e.g. UpCloud trial) block port 7844 yang diperlukan tunnel. Kalau tunnel ga jalan, pake direct A record + Cloudflare proxy aja.
-
----
-
-## Env Variables
-
-| Variable | Wajib | Default | Keterangan |
-|----------|-------|---------|------------|
-| `DOMAIN` | Ya | `swhdhlz.my.id` | Domain web uploader |
-| `GIT_TOKEN` | Ya | - | GitHub PAT untuk auto pull |
-| `GIT_ADDRESS` | Tidak | `https://github.com/hijuki/shirowahd` | URL repo |
-| `USERNAME` | Tidak | - | GitHub username |
-| `BRANCH` | Tidak | `main` | Git branch |
-| `ENABLE_TUNNEL` | Tidak | `0` | `1` = aktifkan Cloudflare Tunnel |
-| `CF_ACCOUNT` | Tidak | - | Cloudflare account ID |
-| `CF_EMAIL` | Tidak | - | Cloudflare email |
-| `CF_KEY` | Tidak | - | Cloudflare API key |
-| `CF_TUNNEL_ID` | Tidak | - | Cloudflare tunnel ID |
-
----
-
-## Konfigurasi Bot (`config.js`)
-
-File ini **harus diedit** sebelum bot jalan. Buka `config.js` dan ubah:
-
-```js
-owner: {
-  name: "SHIROWAHD",
-  number: ["628xxxxxxxxx"],  // Nomor WA owner (format: 628xxx)
-},
-
-session: {
-  pairingNumber: "628xxxxxxxxx",  // Nomor WA bot yang mau di-pair
-  usePairingCode: true,            // true = pairing code, false = QR
-},
-
-bot: {
-  name: "SHIROWAHD",
-  version: "3.3",
-  developer: "HILLZ",
-},
-
-info: {
-  website: "https://domainlu.com",
-  grupwa: "https://chat.whatsapp.com/xxxx",
-},
-
-command: {
-  prefix: ".",  // Prefix command (. / ! / # dll)
-},
-
-sticker: {
-  packname: "SHIROWAHD",
-  author: "HILLZ",
-},
-```
-
-**Yang WAJIB diubah:**
-- `owner.number` — nomor WA owner (buat akses command owner)
-- `session.pairingNumber` — nomor WA yang bakal jadi bot
-
-**Optional:**
-- `bot.name`, `bot.developer` — branding
-- `info.website` — domain web uploader
-- `payment` / `donasi` — isi kalau mau fitur pembayaran
-- `saluran` — channel WhatsApp bot
-- `vercel.token` — kalau mau fitur `.deploy`
-
----
-
-## Pairing Number (`.pair-number`)
-
-File `.pair-number` berisi nomor WA bot (1 baris, format `628xxx`). Ini dipakai buat auto-pairing.
-
-Bikin/edit:
-
-```bash
-echo "628xxxxxxxxx" > .pair-number
-```
-
-Ganti `628xxxxxxxxx` dengan nomor WA yang mau dijadiin bot.
-
-Nomor ini **harus sama** dengan `session.pairingNumber` di `config.js`.
-
-Pas pertama kali run `node main.js`, bot bakal minta pairing code. Masukkan code-nya di WhatsApp:
-1. Buka WhatsApp di HP
-2. Settings > Linked Devices > Link a Device
-3. Pilih "Link with phone number instead"
-4. Masukkan pairing code yang muncul di terminal
-
----
-
-## Project Structure
-
-```
-main.js             Entry point (auto-kill, git pull, patches, boot)
-web-uploader.js     HTTP server, upload handling, admin API
-admin.html          Admin panel SPA
-upload-page.html    Public upload page
-index.js            WhatsApp bot core
-config.js           Bot configuration
-plugins/            Bot command plugins
-src/lib/            Shared libraries
-.env                Secrets (gitignored)
-```
-
----
-
-## Troubleshooting
-
-**Port 8080 udah kepake:**
-`main.js` otomatis kill proses lama. Kalau masih error, manual: `fuser -k 8080/tcp`
-
-**Git pull gagal:**
-Token expired. Bikin PAT baru di GitHub, update `.env` dan git remote:
-```bash
-git remote set-url origin https://TOKEN_BARU@github.com/hijuki/shirowahd.git
-```
-
-**Bot ga connect WhatsApp:**
-Hapus folder `session/` dan scan ulang QR:
-```bash
-rm -rf session/
-node main.js
-```
-
-**`.env` hilang setelah git pull:**
-Bikin ulang. `.env` di-gitignore jadi ga pernah ke-commit.
-
----
-
-## License
-
-Private project.
+<p align="center">
+  <sub>Built with ❤️ by <a href="https://github.com/hijuki"><b>hijuki</b></a> • SHIROWAHD Project</sub>
+</p>
