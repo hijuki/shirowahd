@@ -16,13 +16,18 @@
   ],
   "claimGroups": [
     {
-      "name": "PASTE KODE KE GRUP INI",
+      "name": "PENCET INI UNTUK CLAIM",
       "link": "https://chat.whatsapp.com/E597ARKxnLnLSpTVBx5G4C",
       "visible": true
     },
     {
       "name": "REHAN",
       "link": "https://chat.whatsapp.com/DerpXXN46tg1M4BgRxbvwA",
+      "visible": false
+    },
+    {
+      "name": "DIKZZZZ",
+      "link": "https://chat.whatsapp.com/HW5uCGMekopICvKMhrYXmf",
       "visible": false
     }
   ],
