@@ -1,6 +1,6 @@
 import * as botmodePlugin from "../group/botmode.js";
-import { getCasesByCategory } from "../../case/ourin.js";
-import { prepareWAMessageMedia, generateWAMessageFromContent } from "ourin";
+import { getCasesByCategory } from "../../case/hillz.js";
+import { prepareWAMessageMedia, generateWAMessageFromContent } from "hillz";
 import config from "../../config.js";
 import axios from "axios";
 import sharp from "sharp";
@@ -8,8 +8,8 @@ import {
   getCommandsByCategory,
   getCategories,
   getPlugin,
-} from "../../src/lib/ourin-plugins.js";
-import { getTimeGreeting } from "../../src/lib/ourin-formatter.js";
+} from "../../src/lib/hillz-plugins.js";
+import { getTimeGreeting } from "../../src/lib/hillz-formatter.js";
 import fs from "fs"
 
 function getUploaderUrl() {

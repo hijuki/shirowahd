@@ -1,5 +1,5 @@
 import config from '../../config.js'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'totag',
     alias: ['tagall2', 'mentionall'],

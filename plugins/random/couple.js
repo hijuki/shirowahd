@@ -1,6 +1,6 @@
 import config from '../../config.js'
 import { default as axios } from 'axios'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'ppcouple',
     alias: ['cp', 'ppcp'],

@@ -1,12 +1,12 @@
-import * as timeHelper from "../../src/lib/ourin-time.js";
-import { getDatabase } from "../../src/lib/ourin-database.js";
+import * as timeHelper from "../../src/lib/hillz-time.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
 import config from "../../config.js";
 import {
   getTodaySchedule,
   extractPrayerTimes,
   searchKota,
-} from "../../src/lib/ourin-sholat-api.js";
-import te from "../../src/lib/ourin-error.js";
+} from "../../src/lib/hillz-sholat-api.js";
+import te from "../../src/lib/hillz-error.js";
 
 const pluginConfig = {
   name: "autosholat",

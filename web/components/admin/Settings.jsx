@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSettings, saveSettings, backupToGithub, getBackupHistory, getTunnelStatus } from '@/lib/admin-api'
+import { getSettings, saveSettings, backupToGithub, getBackupHistory, getTunnelStatus, getGallery, uploadGalleryFile, deleteGalleryFile } from '@/lib/admin-api'
 
 const inputFields = [
   { key: 'siteName', label: 'Nama Situs', ph: 'ShiroWahd', icon: 'fa-globe' },
@@ -125,6 +125,69 @@ function LinkSection({ type, data, setData }) {
           {items.map((item, idx) => (
             <LinkCard key={idx} item={item} onChange={it => update(idx, it)} onRemove={() => remove(idx)} phName={type.phName} phLink={type.phLink} color={type.color} />
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+function BrandGallery({ data, set }) {
+  const [files, setFiles] = useState([])
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const load = () => getGallery().then(r => setFiles(r?.files || [])).catch(() => {})
+  useEffect(() => { load() }, [])
+
+  const onUpload = async (e) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    setBusy(true); setMsg('')
+    try { await uploadGalleryFile(f); await load(); setMsg('Terupload ✓') }
+    catch (err) { setMsg(err.message) }
+    setBusy(false)
+  }
+
+  const applyTo = (key, url) => { set(key, url); setMsg(`Dipakai sebagai ${key === 'logoUrl' ? 'Logo' : 'Foto Hero'} — jangan lupa Simpan`) }
+
+  return (
+    <div className="card p-5 space-y-3">
+      <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
+        <i className="fa-solid fa-images text-[#22d3ee]" /> Galeri Brand
+      </h3>
+      <p className="text-[11px] text-[#7e90ad]/70">Upload gambar sekali, lalu pakai sebagai Logo atau Foto Hero. Kalau logo dipakai dari sini, favicon web otomatis ikut.</p>
+      <label className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-[150ms] ${busy ? 'opacity-50 pointer-events-none' : 'hover:brightness-110'}`}
+        style={{ background: 'rgba(34,211,238,.08)', border: '1px solid rgba(34,211,238,.25)' }}>
+        <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'} text-[#22d3ee]`} />
+        {busy ? 'Mengupload…' : 'Upload Gambar'}
+        <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg,.gif,.ico" className="hidden" onChange={onUpload} />
+      </label>
+      {msg && <p className="text-[11px] text-[#34d399]">{msg}</p>}
+      {files.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {files.map(f => {
+            const isLogo = data.logoUrl === f.url, isHero = data.heroImageUrl === f.url
+            return (
+              <div key={f.name} className={`rounded-xl p-2.5 space-y-2 border transition-colors duration-[150ms] ${isLogo || isHero ? 'border-[#22d3ee]/40 bg-[#22d3ee]/[.04]' : 'border-white/[.07] bg-white/[.02]'}`}>
+                <div className="h-20 rounded-lg bg-[#0b1220] grid place-items-center overflow-hidden">
+                  <img src={f.url} alt={f.name} className="max-h-full max-w-full object-contain" />
+                </div>
+                <p className="text-[9px] font-mono text-[#7e90ad] truncate" title={f.name}>{f.name}</p>
+                <div className="flex flex-wrap gap-1">
+                  <button onClick={() => applyTo('logoUrl', f.url)} className={`text-[9px] font-bold px-2 py-1 rounded-md transition-colors duration-[150ms] ${isLogo ? 'bg-[#22d3ee]/25 text-[#22d3ee]' : 'bg-white/[.05] text-[#7e90ad] hover:text-white'}`}>
+                    {isLogo ? '✓ Logo' : 'Jadikan Logo'}
+                  </button>
+                  <button onClick={() => applyTo('heroImageUrl', f.url)} className={`text-[9px] font-bold px-2 py-1 rounded-md transition-colors duration-[150ms] ${isHero ? 'bg-[#38bdf8]/25 text-[#38bdf8]' : 'bg-white/[.05] text-[#7e90ad] hover:text-white'}`}>
+                    {isHero ? '✓ Hero' : 'Jadikan Hero'}
+                  </button>
+                  <button onClick={() => { if (confirm(`Hapus ${f.name}?`)) deleteGalleryFile(f.name).then(load) }} className="text-[9px] px-2 py-1 rounded-md bg-white/[.05] text-red-400/70 hover:text-red-400 transition-colors duration-[150ms]">
+                    <i className="fa-solid fa-trash" />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -284,12 +347,20 @@ export default function Settings({ toast }) {
               <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Kosong = ikon WhatsApp default</p>
             </div>
             <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">URL Foto Hero</label>
+              <input type="text" value={data.heroImageUrl ?? ''} onChange={e => set('heroImageUrl', e.target.value)} placeholder="/hero.jpg atau https://..."
+                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
+              <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Foto besar di hero halaman utama. Kosong = /hero.jpg</p>
+            </div>
+            <div>
               <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Footer Text</label>
               <input type="text" value={data.footerText ?? ''} onChange={e => set('footerText', e.target.value)} placeholder="SWHDHLZ · BY HILLZ"
                 className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
             </div>
           </div>
         </div>
+
+        <BrandGallery data={data} set={set} />
 
         {/* Pengumuman */}
         <div className="card p-5 space-y-3">

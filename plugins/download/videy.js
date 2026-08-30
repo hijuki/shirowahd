@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { videyScraper } from '../../src/scraper/videy.js'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 
 const pluginConfig = {
     name: 'videy',

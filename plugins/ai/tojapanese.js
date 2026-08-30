@@ -1,6 +1,6 @@
-import { uploadImage } from '../../src/lib/ourin-uploader.js'
-import { f } from '../../src/lib/ourin-http.js'
-import te from '../../src/lib/ourin-error.js'
+import { uploadImage } from '../../src/lib/hillz-uploader.js'
+import { f } from '../../src/lib/hillz-http.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'tojapanese',
     alias: ['japanese', 'japanesestyle'],

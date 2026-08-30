@@ -1,10 +1,10 @@
 import config, { getOwnerName } from "../../config.js";
-import { getDatabase } from "../../src/lib/ourin-database.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
 import {
   proto,
   generateWAMessageFromContent,
   prepareWAMessageMedia,
-} from "ourin";
+} from "hillz";
 const pluginConfig = {
   name: "owner",
   alias: ["creator", "dev", "developer"],

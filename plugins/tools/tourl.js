@@ -2,8 +2,8 @@ import FormData from "form-data";
 import fetch from "node-fetch";
 import mime from "mime-types";
 import { fileTypeFromBuffer } from "file-type";
-import { downloadMediaMessage, getContentType, generateWAMessageFromContent, proto, generateWAMessage } from "ourin";
-import te from "../../src/lib/ourin-error.js";
+import { downloadMediaMessage, getContentType, generateWAMessageFromContent, proto, generateWAMessage } from "hillz";
+import te from "../../src/lib/hillz-error.js";
 import uploadImage from "../../src/scraper/imgdrop.js";
 import config from "../../config.js";
 

@@ -1,5 +1,5 @@
 import config from "../../config.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 
 const pluginConfig = {
   name: "join",

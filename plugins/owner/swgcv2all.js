@@ -1,7 +1,7 @@
 import { fileTypeFromBuffer } from "file-type";
 import { config } from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
-import { generateWAMessage } from "ourin";
+import te from "../../src/lib/hillz-error.js";
+import { generateWAMessage } from "hillz";
 
 const botConfig = config;
 

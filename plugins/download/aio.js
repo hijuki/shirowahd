@@ -1,6 +1,6 @@
 import { aiodl } from "../../src/scraper/aio.js";
-import te from "../../src/lib/ourin-error.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+import te from "../../src/lib/hillz-error.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 
 const pluginConfig = {
   name: "aio",

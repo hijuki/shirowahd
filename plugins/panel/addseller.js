@@ -1,8 +1,8 @@
 import config from '../../config.js'
 import fs from 'fs'
 import path from 'path'
-import { isLid, lidToJid } from '../../src/lib/ourin-lid.js'
-import { getDatabase } from '../../src/lib/ourin-database.js'
+import { isLid, lidToJid } from '../../src/lib/hillz-lid.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
 const pluginConfig = {
     name: 'addseller',
     alias: ['addreseller', 'delseller', 'delreseller', 'listseller', 'listreseller'],

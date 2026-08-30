@@ -1,5 +1,5 @@
-import { getDatabase } from '../../src/lib/ourin-database.js'
-import { parseMention, delay } from '../../src/lib/ourin-utils.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
+import { parseMention, delay } from '../../src/lib/hillz-utils.js'
 const pluginConfig = {
   name: "tictactoe",
   alias: ["ttt", "xo"],

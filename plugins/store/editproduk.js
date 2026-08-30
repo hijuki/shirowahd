@@ -1,4 +1,4 @@
-import { getDatabase } from '../../src/lib/ourin-database.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
 import axios from 'axios'
 import FormData from 'form-data'
 

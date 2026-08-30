@@ -1,5 +1,5 @@
 import { UnlimitedAI } from "../../src/scraper/unlimitedai.js";
-import te from "../../src/lib/ourin-error.js";
+import te from "../../src/lib/hillz-error.js";
 
 const pluginConfig = {
   name: "waguri-ai",

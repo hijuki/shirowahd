@@ -1,8 +1,8 @@
 import FormData from "form-data";
 import fetch from "node-fetch";
 import mime from "mime-types";
-import { downloadMediaMessage, getContentType } from "ourin";
-import te from "../../src/lib/ourin-error.js";
+import { downloadMediaMessage, getContentType } from "hillz";
+import te from "../../src/lib/hillz-error.js";
 
 const pluginConfig = {
   name: "gura",

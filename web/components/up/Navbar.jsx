@@ -45,12 +45,9 @@ export default function Navbar({ settings, onFaq, onAbout }) {
           </div>
         )}
         <div className="min-w-0 leading-tight">
-          <div className="flex items-center gap-1.5">
-            <p className="font-[family-name:var(--font-display)] font-extrabold text-[14px] tracking-tight truncate grad-text">
-              {settings?.siteName || 'SHIROWAHD'}
-            </p>
-            <span className="px-1.5 py-[1px] rounded-[5px] text-[7px] font-black uppercase tracking-wider leading-none bg-[#22d3ee]/10 border border-[#22d3ee]/25 text-[#22d3ee] self-center">v3.8</span>
-          </div>
+          <p className="font-[family-name:var(--font-display)] font-extrabold text-[14px] tracking-tight truncate grad-text">
+            {settings?.siteName || 'SHIROWAHD'}
+          </p>
           <p className="text-[var(--t-muted)] text-[8px] font-bold tracking-[.14em] uppercase truncate mt-0.5">
             {settings?.siteSubtitle || 'SWHDHLZ · BY HILLZ'}
           </p>

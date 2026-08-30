@@ -1,14 +1,14 @@
 import fs from "fs";
 import path from "path";
-import { getDatabase } from "../../src/lib/ourin-database.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
 import { getGroupMode } from "../group/botmode.js";
-import te from "../../src/lib/ourin-error.js";
+import te from "../../src/lib/hillz-error.js";
 import config from "../../config.js";
 import {
   resolveAnyLidToJid,
   isLidConverted,
   getCachedJid,
-} from "../../src/lib/ourin-lid.js";
+} from "../../src/lib/hillz-lid.js";
 
 const pluginConfig = {
   name: "pushkontak",
@@ -46,7 +46,7 @@ if (!global.pushkontakSessions) global.pushkontakSessions = {};
 const SESSION_TIMEOUT = 300000;
 const SERIAL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
 
 let cachedThumb = null;
 let cachedDoc = null;

@@ -1,6 +1,6 @@
-import { getAllPlugins } from '../../src/lib/ourin-plugins.js'
+import { getAllPlugins } from '../../src/lib/hillz-plugins.js'
 import config from '../../config.js'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 
 const pluginConfig = {
     name: 'totalfitur',

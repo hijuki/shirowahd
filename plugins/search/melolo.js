@@ -1,6 +1,6 @@
 import config from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
-import ourinApi from "../../src/lib/ourin-apimanager.js";
+import te from "../../src/lib/hillz-error.js";
+import hillzApi from "../../src/lib/hillz-apimanager.js";
 
 const pluginConfig = {
   name: "melolo",
@@ -48,7 +48,7 @@ function normalizeResults(data) {
 }
 
 async function fetchMelolo(category) {
-  const data = await ourinApi.covenant.meloloCategory(category, {
+  const data = await hillzApi.covenant.meloloCategory(category, {
     timeout: 30000,
   });
 

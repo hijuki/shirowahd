@@ -2,7 +2,7 @@
  * Putus - End relationship
  */
 
-import { getDatabase } from '../../src/lib/ourin-database.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
 const pluginConfig = {
     name: 'putus',
     alias: ['breakup', 'cerai'],

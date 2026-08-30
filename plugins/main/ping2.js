@@ -2,9 +2,9 @@ import os from 'os'
 import { performance } from 'perf_hooks'
 import { execSync } from 'child_process'
 import config from '../../config.js'
-import { getDatabase } from '../../src/lib/ourin-database.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
 import { getStats, getTotalStorage } from '../../src/lib/vid-store.js'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 
 const pluginConfig = {
     name: 'ping2',

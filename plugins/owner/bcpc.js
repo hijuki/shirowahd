@@ -1,5 +1,5 @@
-import { getDatabase } from "../../src/lib/ourin-database.js";
-import { decodeAndNormalize } from "../../src/lib/ourin-lid.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
+import { decodeAndNormalize } from "../../src/lib/hillz-lid.js";
 import config from "../../config.js";
 
 const pluginConfig = {

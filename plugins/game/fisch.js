@@ -1,4 +1,4 @@
-import { getDatabase } from "../../src/lib/ourin-database.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
 import {
   getOrCreateFischUser,
   getRandomFish,
@@ -11,7 +11,7 @@ import {
   JACKPOT_POOLS,
   doJackpotPull,
   applyJackpotReward,
-} from "../../src/lib/ourin-fisch.js";
+} from "../../src/lib/hillz-fisch.js";
 import {
   islands,
   travelRequirements,
@@ -24,7 +24,7 @@ import {
   TOKEN_SHOP,
   GACHA_COST_COINS,
   GACHA_PITY_LIMIT,
-} from "../../src/lib/ourin-fisch-data.js";
+} from "../../src/lib/hillz-fisch-data.js";
 import config from "../../config.js";
 import path from "path";
 import fs from "fs";

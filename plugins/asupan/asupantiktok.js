@@ -1,6 +1,6 @@
 import config from "../../config.js";
-import { f } from "../../src/lib/ourin-http.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+import { f } from "../../src/lib/hillz-http.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 const pluginConfig = {
   name: "asupantiktok",
   alias: ["tiktokasupan", "ttasupan"],

@@ -1,6 +1,6 @@
-import { f } from '../../src/lib/ourin-http.js'
+import { f } from '../../src/lib/hillz-http.js'
 import config from '../../config.js'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'anime-gen',
     alias: ['animegen', 'aianimegen', 'genai-anime'],

@@ -1,6 +1,6 @@
 import sharp from "sharp";
-import { downloadMediaMessage, getContentType } from "ourin";
-import te from "../../src/lib/ourin-error.js";
+import { downloadMediaMessage, getContentType } from "hillz";
+import te from "../../src/lib/hillz-error.js";
 
 const pluginConfig = {
   name: "topixel",

@@ -1,7 +1,7 @@
 import axios from "axios";
 import config from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
-import ourinApi from "../../src/lib/ourin-apimanager.js";
+import te from "../../src/lib/hillz-error.js";
+import hillzApi from "../../src/lib/hillz-apimanager.js";
 const pluginConfig = {
   name: "bingimage",
   alias: ["imagesearch", "carigambar", "bingimg"],
@@ -31,7 +31,7 @@ async function handler(m, { sock }) {
     await m.react("🔍");
 
     const apikey = config.APIkey?.neoxr || "Milik-Bot-OurinMD";
-    const data = await ourinApi.apiFaa.get(
+    const data = await hillzApi.apiFaa.get(
       "/faa/google-image",
       {
         query,

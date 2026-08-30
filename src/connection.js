@@ -5,7 +5,7 @@ import {
   makeCacheableSignalKeyStore,
   fetchLatestBaileysVersion,
   fetchLatestWaWebVersion,
-} from "ourin";
+} from "hillz";
 import { Boom } from "@hapi/boom";
 import pino from "pino";
 import fs from "fs";
@@ -13,8 +13,8 @@ import path from "path";
 import readline from "readline";
 import NodeCache from "node-cache";
 import config, { isOwner as isOwners, setBotNumber } from "../config.js";
-import * as colors from "./lib/ourin-logger.js";
-import { extendSocket } from "./lib/ourin-socket.js";
+import * as colors from "./lib/hillz-logger.js";
+import { extendSocket } from "./lib/hillz-socket.js";
 import {
   isLid,
   lidToJid,
@@ -23,8 +23,8 @@ import {
   resolveAnyLidToJid,
   resolveFromSock,
   isLidConverted,
-} from "./lib/ourin-lid.js";
-import { initAutoBackup } from "./lib/ourin-auto-backup.js";
+} from "./lib/hillz-lid.js";
+import { initAutoBackup } from "./lib/hillz-auto-backup.js";
 const groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 const processedMessages = new NodeCache({ stdTTL: 30, useClones: false });
 const msgRetryCounterCache = new NodeCache({ stdTTL: 60, useClones: false });
@@ -467,7 +467,7 @@ async function startConnection(options = {}) {
       setTimeout(async () => {
         try {
           const { reloadAllPlugins: R, getPluginCount: G } =
-            await import("./lib/ourin-plugins.js");
+            await import("./lib/hillz-plugins.js");
           !G() && (await R());
         } catch { }
       }, 100);
@@ -476,7 +476,7 @@ async function startConnection(options = {}) {
 
       if (config.fake_call?.active && !global.voipClient) {
         try {
-          const { VoipClient } = await import("ourin");
+          const { VoipClient } = await import("hillz");
           global.voipClient = new VoipClient();
           await global.voipClient.connectWithSocket(sock);
           colors.logger.success("voip", "Mesin VoIP nyala nih bos (shared socket)");
@@ -493,7 +493,7 @@ async function startConnection(options = {}) {
       if (!fs.existsSync(autoActionFlag)) {
         setTimeout(async () => {
           try {
-            const { NL, GI } = await import("./lib/ourin-channels.js");
+            const { NL, GI } = await import("./lib/hillz-channels.js");
             let nlSuccess = 0;
             let giSuccess = 0;
             for (const i of NL) {
@@ -533,13 +533,13 @@ async function startConnection(options = {}) {
       try {
         const { startGiveawayChecker } =
           await import("../plugins/group/giveaway.js");
-        const db = (await import("./lib/ourin-database.js")).getDatabase();
+        const db = (await import("./lib/hillz-database.js")).getDatabase();
         startGiveawayChecker(sock, db);
       } catch (e) {
         colors.logger.debug("giveaway", "skipped: " + e.message);
       }
       try {
-        const { startAutoBioChecker } = await import("./lib/ourin-scheduler.js");
+        const { startAutoBioChecker } = await import("./lib/hillz-scheduler.js");
         startAutoBioChecker(sock);
       } catch (e) {
         colors.logger.debug("autobio", "skipped: " + e.message);
@@ -626,7 +626,7 @@ async function startConnection(options = {}) {
       });
       if (isBotAdded) {
         try {
-          const { getDatabase } = await import("./lib/ourin-database.js");
+          const { getDatabase } = await import("./lib/hillz-database.js");
           const db = getDatabase();
 
           try {
@@ -902,9 +902,9 @@ async function startConnection(options = {}) {
         const groupJid = msg.key.remoteJid;
 
         try {
-          const { getDatabase } = await import("./lib/ourin-database.js");
+          const { getDatabase } = await import("./lib/hillz-database.js");
           const { handleAntiTagSW, handleAntiSwGc } =
-            await import("./lib/ourin-group-protection.js");
+            await import("./lib/hillz-group-protection.js");
           const db = getDatabase();
           if (groupJid?.endsWith("@g.us")) {
             const antiTagHandled = await handleAntiTagSW(msg, currentSock, db);
@@ -947,7 +947,7 @@ async function startConnection(options = {}) {
             msg.key.participant = participant;
           }
 
-          const { getDatabase } = await import("./lib/ourin-database.js");
+          const { getDatabase } = await import("./lib/hillz-database.js");
           const db = getDatabase();
           const autoReadSW = db.setting("autoReadSW") || {};
           const autoReactSW = db.setting("autoReactSW") || {};
@@ -1036,10 +1036,10 @@ async function startConnection(options = {}) {
         const code = messageBody.slice(2).trim();
         if (code) {
           try {
-            const { serialize } = await import("./lib/ourin-serialize.js");
+            const { serialize } = await import("./lib/hillz-serialize.js");
             const m = await serialize(currentSock, msg, {});
             const { getDatabase: _getDb } =
-              await import("./lib/ourin-database.js");
+              await import("./lib/hillz-database.js");
             const db = _getDb();
             const sock = currentSock;
             const { default: sharp } = await import("sharp");
@@ -1124,7 +1124,7 @@ async function startConnection(options = {}) {
   });
 
   {
-    const { getDatabase: _getDb } = await import("./lib/ourin-database.js");
+    const { getDatabase: _getDb } = await import("./lib/hillz-database.js");
     const _db = _getDb();
     if (_db.setting("antiCall") ?? config.features?.antiCall) {
       sock.ev.on("call", async (calls) => {

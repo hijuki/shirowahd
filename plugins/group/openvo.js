@@ -1,4 +1,4 @@
-import { downloadContentFromMessage } from 'ourin'
+import { downloadContentFromMessage } from 'hillz'
 const pluginConfig = {
     name: 'rvo',
     alias: [],

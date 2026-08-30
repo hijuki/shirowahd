@@ -1,7 +1,7 @@
 import axios from 'axios'
 import config from '../../config.js'
-import { hasFullAccess, getUserRole, VALID_SERVERS } from '../../src/lib/ourin-roles-cpanel.js'
-import te from '../../src/lib/ourin-error.js'
+import { hasFullAccess, getUserRole, VALID_SERVERS } from '../../src/lib/hillz-roles-cpanel.js'
+import te from '../../src/lib/hillz-error.js'
 const allCommands = VALID_SERVERS.map(v => `delserver${v}`)
 const allAliases = VALID_SERVERS.map(v => `hapusserver${v}`)
 

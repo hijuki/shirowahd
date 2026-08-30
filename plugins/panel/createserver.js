@@ -1,13 +1,13 @@
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
-import { prepareWAMessageMedia, generateWAMessageFromContent, proto } from "ourin";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
+import { prepareWAMessageMedia, generateWAMessageFromContent, proto } from "hillz";
 import axios from 'axios'
 import crypto from 'crypto'
 import config from '../../config.js'
-import { isLid, lidToJid } from '../../src/lib/ourin-lid.js'
-import { checkPanelJeda, setPanelLastUsed } from '../../src/lib/ourin-panel-jeda.js'
-import { hasAccessToServer, getUserRole } from '../../src/lib/ourin-roles-cpanel.js'
+import { isLid, lidToJid } from '../../src/lib/hillz-lid.js'
+import { checkPanelJeda, setPanelLastUsed } from '../../src/lib/hillz-panel-jeda.js'
+import { hasAccessToServer, getUserRole } from '../../src/lib/hillz-roles-cpanel.js'
 import { isGcSeller } from './gcseller.js'
-import * as timeHelper from '../../src/lib/ourin-time.js'
+import * as timeHelper from '../../src/lib/hillz-time.js'
 const RAM_OPTIONS = [
   "1gb",
   "2gb",

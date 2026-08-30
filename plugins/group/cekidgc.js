@@ -1,8 +1,8 @@
 import sharp from "sharp";
 import config from "../../config.js";
 import axios from "axios";
-import { generateWAMessageFromContent, proto } from "ourin";
-import te from "../../src/lib/ourin-error.js";
+import { generateWAMessageFromContent, proto } from "hillz";
+import te from "../../src/lib/hillz-error.js";
 
 const pluginConfig = {
   name: "cekidgc",

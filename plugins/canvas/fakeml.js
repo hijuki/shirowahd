@@ -1,10 +1,10 @@
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
 import * as _canvas from '@napi-rs/canvas'
 import axios from "axios";
 
 
-import { uploadTo0x0 } from "../../src/lib/ourin-tmpfiles.js";
-import te from "../../src/lib/ourin-error.js";
+import { uploadTo0x0 } from "../../src/lib/hillz-tmpfiles.js";
+import te from "../../src/lib/hillz-error.js";
 const pluginConfig = {
   name: "fakeml",
   alias: ["mlbbfake", "mlcard", "mlfake"],

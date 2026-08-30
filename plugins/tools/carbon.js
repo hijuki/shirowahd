@@ -1,5 +1,5 @@
 import mql from "@microlink/mql"
-import te from "../../src/lib/ourin-error.js"
+import te from "../../src/lib/hillz-error.js"
 
 const pluginConfig = {
     name: "carbon",

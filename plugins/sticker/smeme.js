@@ -7,7 +7,7 @@ function getSharp() {
 }
 import path from "path";
 import { config } from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
+import te from "../../src/lib/hillz-error.js";
 const pluginConfig = {
   name: "smeme",
   alias: ["memesticker", "memes"],

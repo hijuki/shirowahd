@@ -1,20 +1,20 @@
-import { getCaseCount, getCasesByCategory } from "../../case/ourin.js";
+import { getCaseCount, getCasesByCategory } from "../../case/hillz.js";
 import {
   prepareWAMessageMedia,
   generateWAMessageFromContent,
   proto,
-} from "ourin";
+} from "hillz";
 import {  } from "@napi-rs/canvas";
 import _sharp from "sharp";
 import config from "../../config.js";
 import {
   formatUptime,
   getTimeGreeting,
-} from "../../src/lib/ourin-formatter.js";
+} from "../../src/lib/hillz-formatter.js";
 import {
   getCommandsByCategory,
   getCategories,
-} from "../../src/lib/ourin-plugins.js";
+} from "../../src/lib/hillz-plugins.js";
 import fs from "fs";
 import path from "path";
 
@@ -217,11 +217,11 @@ function getSortedCategories(m, botMode) {
   return { sorted: result, totalCmds, commandsByCategory };
 }
 async function formatTime(date) {
-  const timeHelper = await import("../../src/lib/ourin-time.js");
+  const timeHelper = await import("../../src/lib/hillz-time.js");
   return timeHelper.formatTime("HH:mm");
 }
 async function formatDateShort(date) {
-  const timeHelper = await import("../../src/lib/ourin-time.js");
+  const timeHelper = await import("../../src/lib/hillz-time.js");
   return timeHelper.formatFull("dddd, DD MMMM YYYY");
 }
 async function buildMenuText(
@@ -234,7 +234,7 @@ async function buildMenuText(
 ) {
   const prefix = botConfig.command?.prefix || ".";
   const user = db.getUser(m.sender);
-  const timeHelper = await import("../../src/lib/ourin-time.js");
+  const timeHelper = await import("../../src/lib/hillz-time.js");
   const timeStr = timeHelper.formatTime("HH:mm");
   const dateStr = timeHelper.formatFull("dddd, DD MMMM YYYY");
   const categories = getCategories();
@@ -1249,12 +1249,12 @@ I'm ${botName}, your intelligent assistant powered by ${config.bot?.developer}. 
         case7Text += `╰╯`;
 
 
-        const { getAssetBuffer } = await import("../../src/lib/ourin-asset-manager.js");
+        const { getAssetBuffer } = await import("../../src/lib/hillz-asset-manager.js");
         const imageBuffer = await getAssetBuffer("hillz2");
         const sharp = (await import("sharp")).default;
         const stickerBuf = await sharp(imageBuffer).resize(512, 512).webp().toBuffer();
 
-        const { prepareWAMessageMedia } = await import("ourin");
+        const { prepareWAMessageMedia } = await import("hillz");
         const uploadMedia = await prepareWAMessageMedia({ image: stickerBuf }, { upload: sock.waUploadToServer });
 
         const fakeQuotedSticker = {
@@ -1271,7 +1271,7 @@ I'm ${botName}, your intelligent assistant powered by ${config.bot?.developer}. 
           }
         };
 
-        const { generateWAMessageFromContent } = await import("ourin");
+        const { generateWAMessageFromContent } = await import("hillz");
         const menuMedia = await prepareWAMessageMedia({
           image: await getAssetBuffer("hillz")
         }, { upload: sock.waUploadToServer });
@@ -1424,14 +1424,14 @@ case7Text += `Contact Admin: wa.me/6282262421536\n\n`;
         }
         case7Text = case7Text.trimEnd();
 
-        const { getAssetBuffer } = await import("../../src/lib/ourin-asset-manager.js");
+        const { getAssetBuffer } = await import("../../src/lib/hillz-asset-manager.js");
         const imageBuffer = await getAssetBuffer("hillz");
         const favB = await getAssetBuffer("hillz2");
         const sharp = (await import("sharp")).default;
         const thumbBuf = await sharp(imageBuffer).resize(1280, 720).jpeg().toBuffer();
         const favBuf = await sharp(favB).resize(512, 512).jpeg().toBuffer();
 
-        const { prepareWAMessageMedia, generateWAMessageFromContent } = await import("ourin");
+        const { prepareWAMessageMedia, generateWAMessageFromContent } = await import("hillz");
         const uploadMedia = await prepareWAMessageMedia({ image: thumbBuf }, { upload: sock.waUploadToServer, mediaTypeOverride: "thumbnail-link" });
         const uploadFav = await prepareWAMessageMedia({ image: favBuf }, { upload: sock.waUploadToServer, mediaTypeOverride: "thumbnail-link" });
 

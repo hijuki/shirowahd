@@ -5,21 +5,21 @@ function getUploaderUrl() {
   try { return fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), "../../vids/uploader-url.txt"), "utf8").trim(); }
   catch { return "https://swhdhlz.my.id"; }
 }
-import { generateWAMessageFromContent, prepareWAMessageMedia } from "ourin";
+import { generateWAMessageFromContent, prepareWAMessageMedia } from "hillz";
 import _sharp from "sharp";
 import config from "../../config.js";
 import axios from "axios";
 import {
   getTimeGreeting,
-} from "../../src/lib/ourin-formatter.js";
+} from "../../src/lib/hillz-formatter.js";
 import {
   getCommandsByCategory,
   getCategories,
   getPluginCount,
   getPlugin,
   getPluginsByCategory,
-} from "../../src/lib/ourin-plugins.js";
-import { getCasesByCategory, getCaseCount } from "../../case/ourin.js";
+} from "../../src/lib/hillz-plugins.js";
+import { getCasesByCategory, getCaseCount } from "../../case/hillz.js";
 const pluginConfig = {
   name: "allmenu",
   alias: ["fullmenu", "am", "allcommand", "semua"],

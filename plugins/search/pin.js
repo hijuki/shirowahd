@@ -2,11 +2,11 @@ import {
   generateWAMessage,
   generateWAMessageFromContent,
   jidNormalizedUser,
-} from "ourin";
+} from "hillz";
 import axios from "axios";
 import crypto from "crypto";
-import te from "../../src/lib/ourin-error.js";
-import { f } from "../../src/lib/ourin-http.js";
+import te from "../../src/lib/hillz-error.js";
+import { f } from "../../src/lib/hillz-http.js";
 
 const pluginConfig = {
   name: "pin",

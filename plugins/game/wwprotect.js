@@ -1,5 +1,5 @@
 import { nightActionHandler } from './werewolf.js'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'wwprotect',
     alias: ['protect', 'guardian', 'wpr'],

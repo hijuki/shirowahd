@@ -1,4 +1,4 @@
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
 import config from "../../config.js"
 
 const pluginConfig = {

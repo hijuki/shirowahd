@@ -1,8 +1,8 @@
-import { getDatabase } from "../../src/lib/ourin-database.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
 import {
   findParticipantByNumber,
   getParticipantJid,
-} from "../../src/lib/ourin-lid.js";
+} from "../../src/lib/hillz-lid.js";
 import config from "../../config.js";
 const pluginConfig = {
   name: ["antibot", "botdetect"],

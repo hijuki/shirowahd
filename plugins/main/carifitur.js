@@ -1,9 +1,9 @@
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
-import { getCaseCommands } from "../../case/ourin.js";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
+import { getCaseCommands } from "../../case/hillz.js";
 import fs from "fs";
 import path from "path";
 import config from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
+import te from "../../src/lib/hillz-error.js";
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

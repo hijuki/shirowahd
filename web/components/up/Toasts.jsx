@@ -23,9 +23,9 @@ const colors = { success: 'text-ok border-ok/30 bg-ok/[.08]', error: 'text-bad b
 export default function Toasts({ toasts }) {
   if (!toasts.length) return null
   return (
-    <div className="fixed top-20 right-3 z-[999] flex flex-col gap-2 max-w-[300px]">
+    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] flex flex-col items-center gap-2 w-[calc(100%-32px)] max-w-[340px]">
       {toasts.map(t => (
-        <div key={t.id} className={`rounded-[14px] px-4 py-3 flex items-center gap-3 border-l-[3px] transition-all duration-[450ms] will-change-transform ${colors[t.type] || colors.info} ${t.leaving ? 'opacity-0 translate-x-4 scale-[.96]' : 'toast-in'}`}>
+        <div key={t.id} className={`rounded-[14px] px-4 py-3 flex items-center gap-3 border shadow-[0_12px_36px_-10px_rgba(0,0,0,.7)] backdrop-blur-xl w-full justify-center transition-all duration-[450ms] will-change-transform ${colors[t.type] || colors.info} ${t.leaving ? 'opacity-0 -translate-y-3 scale-[.96]' : 'toast-in'}`}>
           <i className={`fa-solid ${icons[t.type] || icons.info} text-sm shrink-0`} />
           <span className="text-[12px] font-semibold text-[#e8f1ff]/90 leading-relaxed">{t.msg}</span>
         </div>

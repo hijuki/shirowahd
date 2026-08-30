@@ -1,5 +1,5 @@
 import { cocofun } from 'btch-downloader'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'cocofundl',
     alias: ['cfdl', 'cocofun', 'cf'],

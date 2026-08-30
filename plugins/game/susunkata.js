@@ -1,4 +1,4 @@
-import { games } from '../../src/lib/ourin-games.js'
+import { games } from '../../src/lib/hillz-games.js'
 
 games.register('susunkata', {
     alias: ['susun', 'scramble'],

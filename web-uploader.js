@@ -1,5 +1,5 @@
 import http from 'http';
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { storeVideo, storeBundle, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL, cleanOrphans } from './src/lib/vid-store.js';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
@@ -26,6 +26,7 @@ try {
 
 const PORT = 80;
 const WEB_OUT = join(__dirname, 'web', 'out');
+const BRAND_DIR = join(__dirname, 'brand-assets');
 const SETTINGS_FILE = join(__dirname, 'admin-settings.json');
 const UPLOAD_LOG_FILE = join(__dirname, 'upload-log.json');
 
@@ -76,6 +77,7 @@ function loadSettings() {
     heroDesc: '',
     footerText: '',
     logoUrl: '',
+    heroImageUrl: '',
     showWelcome: true,
     showOwnerBtn: true,
     showChannelsBtn: true,
@@ -117,6 +119,7 @@ function saveSettings(data) {
     heroDesc: data.heroDesc ?? cur.heroDesc ?? '',
     footerText: data.footerText ?? cur.footerText ?? '',
     logoUrl: data.logoUrl ?? cur.logoUrl ?? '',
+    heroImageUrl: data.heroImageUrl ?? cur.heroImageUrl ?? '',
     showWelcome: data.showWelcome ?? cur.showWelcome ?? true,
     showOwnerBtn: data.showOwnerBtn ?? cur.showOwnerBtn ?? true,
     showChannelsBtn: data.showChannelsBtn ?? cur.showChannelsBtn ?? true,
@@ -437,8 +440,30 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && (url === '/' || url === '')) {
     try {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(readFileSync(join(WEB_OUT, 'index.html')));
+      // Inject og/twitter meta dinamis: judul & logo ikut settings admin, host ikut request.
+      let html = readFileSync(join(WEB_OUT, 'index.html'), 'utf8');
+      const host = req.headers.host || 'localhost';
+      const proto = (req.headers['x-forwarded-proto'] || 'http').split(',')[0];
+      const base = `${proto}://${host}`;
+      const name = settings.siteName || 'SHIROWAHD';
+      const desc = settings.siteSubtitle || 'Upload media HD ke grup WhatsApp';
+      const lu = settings.logoUrl || '';
+      const ogImg = (lu.startsWith('/brand/') && existsSync(join(BRAND_DIR, lu.slice(7).replace(/[^\w.-]/g, ''))))
+        ? `${base}${lu}` : `${base}/apple-touch-icon.png`;
+      const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+      const meta = [
+        `<meta property="og:title" content="${esc(name)}"/>`,
+        `<meta property="og:description" content="${esc(desc)}"/>`,
+        `<meta property="og:image" content="${ogImg}"/>`,
+        `<meta property="og:url" content="${base}/"/>`,
+        `<meta property="og:type" content="website"/>`,
+        `<meta name="twitter:card" content="summary"/>`,
+        `<meta name="twitter:title" content="${esc(name)}"/>`,
+        `<meta name="twitter:image" content="${ogImg}"/>`,
+      ].join('');
+      html = html.replace('</head>', meta + '</head>');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+      res.end(html);
     } catch { res.writeHead(500); res.end('Page not found'); }
     return;
   }
@@ -457,6 +482,21 @@ const server = http.createServer(async (req, res) => {
   }
 
 
+  // Auto-adapt favicon: kalau admin set logo dari gallery (raster), semua path favicon ikut logo itu.
+  // HARUS sebelum route static generik, karena file favicon lama masih ada di WEB_OUT.
+  if (req.method === 'GET' && ['/favicon.ico', '/favicon.svg', '/favicon-32.png', '/apple-touch-icon.png', '/logo.svg'].includes(url)) {
+    const lu = settings.logoUrl || '';
+    if (lu.startsWith('/brand/') && /\.(png|jpg|jpeg|webp|svg)$/i.test(lu)) {
+      const bf = join(BRAND_DIR, lu.slice(7).replace(/[^\w.-]/g, ''));
+      if (existsSync(bf)) {
+        const t = { '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.svg':'image/svg+xml' };
+        res.writeHead(200, { 'Content-Type': t[extname(bf).toLowerCase()] || 'image/png', 'Cache-Control': 'public, max-age=300' });
+        res.end(readFileSync(bf));
+        return;
+      }
+    }
+  }
+
   // Root static assets (hero.jpg, logo.svg, icons) dari WEB_OUT
   if (req.method === 'GET' && /^\/[\w.-]+\.(jpg|jpeg|png|gif|webp|svg|ico)$/.test(url.split('?')[0])) {
     const rel = url.split('?')[0].replace(/\.\./g, '');
@@ -471,9 +511,11 @@ const server = http.createServer(async (req, res) => {
 
   // /favicon.svg dan /favicon.ico — fallback ke logo.svg kalau file khusus tidak ada,
   // biar tidak 404 (browser & Telegram preview selalu minta path ini).
-  if (req.method === 'GET' && (url === '/favicon.svg' || url === '/favicon.ico')) {
+  if (req.method === 'GET' && (url === '/favicon.svg' || url === '/favicon.ico' || url === '/favicon-32.png' || url === '/apple-touch-icon.png')) {
     const candidates = url === '/favicon.ico'
       ? ['favicon.ico', 'favicon-32.png', 'logo.svg']
+      : url === '/favicon-32.png' ? ['favicon-32.png', 'logo.svg']
+      : url === '/apple-touch-icon.png' ? ['apple-touch-icon.png', 'logo.svg']
       : ['favicon.svg', 'logo.svg'];
     for (const name of candidates) {
       const fav = join(WEB_OUT, name);
@@ -505,6 +547,7 @@ const server = http.createServer(async (req, res) => {
       heroDesc: settings.heroDesc || '',
       footerText: settings.footerText || '',
       logoUrl: settings.logoUrl || '',
+      heroImageUrl: settings.heroImageUrl || '',
       showWelcome: settings.showWelcome !== false,
       showOwnerBtn: settings.showOwnerBtn !== false,
       showChannelsBtn: settings.showChannelsBtn !== false,
@@ -668,6 +711,62 @@ const server = http.createServer(async (req, res) => {
     } catch {
       jsonRes(res, 400, { ok: false, error: 'Bad request' });
     }
+    return;
+  }
+
+  // ── Brand gallery: upload logo/hero dari admin, disimpan di brand-assets/ (survive rebuild) ──
+  if (req.method === 'GET' && url.startsWith('/brand/')) {
+    const name = url.slice(7).replace(/[^\w.-]/g, '');
+    const file = join(BRAND_DIR, name);
+    if (name && existsSync(file)) {
+      const t = { '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.gif':'image/gif', '.webp':'image/webp', '.svg':'image/svg+xml', '.ico':'image/x-icon' };
+      res.writeHead(200, { 'Content-Type': t[extname(file).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'public, max-age=3600' });
+      res.end(readFileSync(file));
+    } else { res.writeHead(404); res.end('Not found'); }
+    return;
+  }
+
+  if (req.method === 'GET' && url === '/admin/api/gallery') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      if (!existsSync(BRAND_DIR)) mkdirSync(BRAND_DIR, { recursive: true });
+      const files = readdirSync(BRAND_DIR).map(f => {
+        const st = statSync(join(BRAND_DIR, f));
+        return { name: f, url: `/brand/${f}`, size: st.size, mtime: st.mtimeMs };
+      }).sort((a, b) => b.mtime - a.mtime);
+      jsonRes(res, 200, { ok: true, files });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  if (req.method === 'POST' && url === '/admin/api/gallery/upload') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const q = new URLSearchParams((req.url.split('?')[1] || ''));
+      const raw = (q.get('name') || 'file.png').replace(/[^\w.-]/g, '_');
+      const ext = extname(raw).toLowerCase();
+      if (!['.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif', '.ico'].includes(ext)) {
+        jsonRes(res, 400, { ok: false, error: 'Format tidak didukung (png/jpg/webp/svg/gif/ico)' }); return;
+      }
+      const body = await readBody(req);
+      if (!body.length) { jsonRes(res, 400, { ok: false, error: 'File kosong' }); return; }
+      if (body.length > 5 * 1024 * 1024) { jsonRes(res, 400, { ok: false, error: 'Maks 5MB' }); return; }
+      if (!existsSync(BRAND_DIR)) mkdirSync(BRAND_DIR, { recursive: true });
+      writeFileSync(join(BRAND_DIR, raw), body);
+      jsonRes(res, 200, { ok: true, url: `/brand/${raw}`, name: raw });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  if (req.method === 'POST' && url === '/admin/api/gallery/delete') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const body = await readBody(req);
+      const name = (JSON.parse(body.toString()).name || '').replace(/[^\w.-]/g, '');
+      const file = join(BRAND_DIR, name);
+      if (name && existsSync(file)) { unlinkSync(file); jsonRes(res, 200, { ok: true }); }
+      else jsonRes(res, 404, { ok: false, error: 'File tidak ada' });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
   }
 
@@ -873,8 +972,8 @@ const server = http.createServer(async (req, res) => {
       // Stage semua perubahan yang relevan. config.js ikut karena isinya sekarang
       // hanya referensi process.env (tanpa secret). File state runtime sudah
       // di-untrack lewat .gitignore.
-      run('git add -A config.js admin-settings.sanitized.json .gitignore .env.example main.js web-uploader.js install.sh migrate.sh README.md 2>/dev/null || true');
-      try { run('git add -A plugins/ src/ database/ web/ 2>/dev/null || true'); } catch {}
+      run('git add -A config.js admin-settings.sanitized.json .gitignore .env.example main.js web-uploader.js install.sh migrate.sh README.md package.json index.js rename-ourin.sh 2>/dev/null || true');
+      try { run('git add -A plugins/ src/ case/ database/ web/ 2>/dev/null || true'); } catch {}
 
       let status = '';
       try { status = run('git status --porcelain'); } catch {}

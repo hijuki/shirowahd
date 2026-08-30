@@ -1,4 +1,4 @@
-import { downloadMediaMessage, getContentType } from "ourin";
+import { downloadMediaMessage, getContentType } from "hillz";
 import { ImageUploadService } from "node-upload-images";
 import axios from "axios";
 

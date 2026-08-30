@@ -47,7 +47,7 @@ async function handler(m, { sock, db }) {
     db.setting("autobio_status", true);
     await m.react("✅");
     try {
-      const { startAutoBioChecker } = await import("../../src/lib/ourin-scheduler.js");
+      const { startAutoBioChecker } = await import("../../src/lib/hillz-scheduler.js");
       startAutoBioChecker(sock);
     } catch (e) { /* scheduler optional */ }
     return m.reply(`✅ *AUTO BIO DIAKTIFKAN*\n\nBio WhatsApp bot sekarang akan diperbarui secara otomatis setiap menit.`);
@@ -85,7 +85,7 @@ async function handler(m, { sock, db }) {
     
     // Restart scheduler
     try {
-      const { startAutoBioChecker } = await import("../../src/lib/ourin-scheduler.js");
+      const { startAutoBioChecker } = await import("../../src/lib/hillz-scheduler.js");
       startAutoBioChecker(sock);
     } catch (e) { /* scheduler optional */ }
 
@@ -97,7 +97,7 @@ async function handler(m, { sock, db }) {
   
   // Restart scheduler to apply new text immediately
   try {
-    const { startAutoBioChecker } = await import("../../src/lib/ourin-scheduler.js");
+    const { startAutoBioChecker } = await import("../../src/lib/hillz-scheduler.js");
     startAutoBioChecker(sock);
   } catch (e) { /* scheduler optional */ }
   

@@ -1,7 +1,7 @@
 import axios from "axios";
-import { getDatabase } from "../../src/lib/ourin-database.js";
-import te from "../../src/lib/ourin-error.js";
-import { prepareWAMessageMedia, generateWAMessageFromContent } from "ourin";
+import { getDatabase } from "../../src/lib/hillz-database.js";
+import te from "../../src/lib/hillz-error.js";
+import { prepareWAMessageMedia, generateWAMessageFromContent } from "hillz";
 
 const pluginConfig = {
   name: ["gachahusbu", "husbuaction", "tinggalinhusbu", "husbuku", "suamiku"],

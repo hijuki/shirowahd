@@ -1,7 +1,7 @@
 import axios from 'axios'
-import { getParticipantJid, resolveAnyLidToJid } from '../../src/lib/ourin-lid.js'
-import * as timeHelper from '../../src/lib/ourin-time.js'
-import te from '../../src/lib/ourin-error.js'
+import { getParticipantJid, resolveAnyLidToJid } from '../../src/lib/hillz-lid.js'
+import * as timeHelper from '../../src/lib/hillz-time.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'groupinfo',
     alias: ['infogroup', 'gcinfo', 'infogc', 'gc'],

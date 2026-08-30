@@ -1,4 +1,4 @@
-import { getDatabase } from "../../src/lib/ourin-database.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
 import {
   getOrCreateMCUser,
   getRandomOre,
@@ -16,7 +16,7 @@ import {
   getAvailableMobs,
   healPlayer,
   JACKPOT_POOLS,
-} from "../../src/lib/ourin-minecraft.js";
+} from "../../src/lib/hillz-minecraft.js";
 import {
   biomes,
   travelRequirements,
@@ -31,7 +31,7 @@ import {
   GACHA_PITY_LIMIT,
   SMELT_RECIPES,
   CRAFT_RECIPES,
-} from "../../src/lib/ourin-minecraft-data.js";
+} from "../../src/lib/hillz-minecraft-data.js";
 import config from "../../config.js";
 import path from "path";
 import fs from "fs";

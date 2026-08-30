@@ -1,26 +1,26 @@
-import { getDatabase } from "../../src/lib/ourin-database.js";
-import { fetchGroupsSafe } from "../../src/lib/ourin-jpm-helper.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
+import { fetchGroupsSafe } from "../../src/lib/hillz-jpm-helper.js";
 import {
   getAutoJpmConfig,
   setAutoJpmConfig,
   startAutoJpmScheduler,
   stopAutoJpmScheduler,
   getAutoJpmStorageDir,
-} from "../../src/lib/ourin-auto-jpm.js";
-import { getMimeType, getExtension } from "../../src/lib/ourin-utils.js";
-import * as timeHelper from "../../src/lib/ourin-time.js";
+} from "../../src/lib/hillz-auto-jpm.js";
+import { getMimeType, getExtension } from "../../src/lib/hillz-utils.js";
+import * as timeHelper from "../../src/lib/hillz-time.js";
 import {
   getBinaryNodeChild,
   prepareWAMessageMedia,
   generateWAMessageFromContent,
   proto,
-} from "ourin";
+} from "hillz";
 import config from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+import te from "../../src/lib/hillz-error.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 import path from "path";
 import fs from "fs";
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
 
 const pluginConfig = {
   name: "jpm",

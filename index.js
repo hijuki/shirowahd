@@ -9,22 +9,22 @@ import {
   groupSettingsHandler,
   handleAntiRemoveFromUpsert,
 } from "./src/handler.js";
-import { loadPlugins, pluginStore } from "./src/lib/ourin-plugins.js";
-import { initDatabase, getDatabase } from "./src/lib/ourin-database.js";
+import { loadPlugins, pluginStore } from "./src/lib/hillz-plugins.js";
+import { initDatabase, getDatabase } from "./src/lib/hillz-database.js";
 import {
   initScheduler,
   loadScheduledMessages,
   startGroupScheduleChecker,
   startSewaChecker,
-} from "./src/lib/ourin-scheduler.js";
-import { handleAntiTagSW } from "./src/lib/ourin-group-protection.js";
-import { initSholatScheduler } from "./src/lib/ourin-sholat-scheduler.js";
-import { initNotifScheduler } from "./src/lib/ourin-notif-scheduler.js";
-import { initAutoJpmScheduler } from "./src/lib/ourin-auto-jpm.js";
-import { startMemoryMonitor } from "./src/lib/ourin-memory-monitor.js";
-import { startTempCleaner } from "./src/lib/ourin-temp-cleaner.js";
-import { startDailyPruner } from "./src/lib/ourin-data-pruner.js";
-import { preloadAssets } from "./src/lib/ourin-asset-manager.js";
+} from "./src/lib/hillz-scheduler.js";
+import { handleAntiTagSW } from "./src/lib/hillz-group-protection.js";
+import { initSholatScheduler } from "./src/lib/hillz-sholat-scheduler.js";
+import { initNotifScheduler } from "./src/lib/hillz-notif-scheduler.js";
+import { initAutoJpmScheduler } from "./src/lib/hillz-auto-jpm.js";
+import { startMemoryMonitor } from "./src/lib/hillz-memory-monitor.js";
+import { startTempCleaner } from "./src/lib/hillz-temp-cleaner.js";
+import { startDailyPruner } from "./src/lib/hillz-data-pruner.js";
+import { preloadAssets } from "./src/lib/hillz-asset-manager.js";
 import {
   logger,
   c,
@@ -33,9 +33,9 @@ import {
   logConnection,
   logErrorBox,
   divider,
-} from "./src/lib/ourin-logger.js";
+} from "./src/lib/hillz-logger.js";
 
-await import("./src/lib/ourin-agent.js")
+await import("./src/lib/hillz-agent.js")
   .then((m) => m.initializeAgent())
   .catch(() => { });
 
@@ -111,7 +111,7 @@ function startDevWatcher(pluginsPath) {
         if (!fs.existsSync(fullPath)) {
           fileStatCache.delete(fullPath);
           const pluginName = path.basename(filename, ".js");
-          const { unloadPlugin } = await import("./src/lib/ourin-plugins.js");
+          const { unloadPlugin } = await import("./src/lib/hillz-plugins.js");
           const result = unloadPlugin(pluginName);
           if (result.success) logger.warn("plugin", `removed ${filename}`);
           return;
@@ -132,7 +132,7 @@ function startDevWatcher(pluginsPath) {
           });
 
           const { hotReloadPlugin } =
-            await import("./src/lib/ourin-plugins.js");
+            await import("./src/lib/hillz-plugins.js");
           const result = await hotReloadPlugin(fullPath);
           if (!result.success) {
             logger.error(
@@ -356,7 +356,7 @@ async function main() {
       if (update.connection === "open") {
         logConnection("connected", sock.user?.name || "Bot");
         try {
-          const { startBotApi } = await import("./src/lib/ourin-bot-api.js");
+          const { startBotApi } = await import("./src/lib/hillz-bot-api.js");
           startBotApi();
         } catch (e) {
           logger.warn("bot-api", `Failed to start bot API: ${e.message}`);
@@ -373,16 +373,16 @@ async function main() {
             await import("./plugins/religi/autosahur.js");
           initSahurCron(sock);
         } catch { }
-        // ponytail: startOrderPoller removed — function never existed. Re-add when ourin-order-poller.js is created.
+        // ponytail: startOrderPoller removed — function never existed. Re-add when hillz-order-poller.js is created.
         try {
           const { startOtpPoller: _startOtp } =
-            await import("./src/lib/ourin-otp-poller.js");
+            await import("./src/lib/hillz-otp-poller.js");
           _startOtp(sock);
         } catch { }
 
         try {
           const { getAllJadibotSessions, restartJadibotSession } =
-            await import("./src/lib/ourin-jadibot-manager.js");
+            await import("./src/lib/hillz-jadibot-manager.js");
           const sessions = getAllJadibotSessions();
           if (sessions.length > 0) {
             logger.info("JADIBOT", `Restoring ${sessions.length} session(s)`);

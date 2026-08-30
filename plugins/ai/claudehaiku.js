@@ -1,6 +1,6 @@
 import { ClaudeHaiku } from "../../src/scraper/claudehaiku.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
-import te from "../../src/lib/ourin-error.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
+import te from "../../src/lib/hillz-error.js";
 
 const pluginConfig = {
   name: "claudehaiku",

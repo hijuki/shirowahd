@@ -4,15 +4,15 @@ import {
   isLid,
   isLidConverted,
   lidToJid,
-} from "../../src/lib/ourin-lid.js";
+} from "../../src/lib/hillz-lid.js";
 import moment from "moment-timezone";
 import config from "../../config.js";
-import { getDatabase } from "../../src/lib/ourin-database.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
-import { createGoodbyeCard } from "../../src/lib/ourin-welcome-card.js";
-import te from "../../src/lib/ourin-error.js";
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
-import { prepareWAMessageMedia, generateWAMessageFromContent } from "ourin";
+import { getDatabase } from "../../src/lib/hillz-database.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
+import { createGoodbyeCard } from "../../src/lib/hillz-welcome-card.js";
+import te from "../../src/lib/hillz-error.js";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
+import { prepareWAMessageMedia, generateWAMessageFromContent } from "hillz";
 function resolvePlaceholders(
   template,
   username,

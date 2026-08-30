@@ -1,9 +1,9 @@
 import fs from "fs";
 import path from "path";
 import { mconverter } from "../../src/scraper/mconverter.js";
-import { downloadContentFromMessage } from "ourin";
+import { downloadContentFromMessage } from "hillz";
 import config from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
+import te from "../../src/lib/hillz-error.js";
 const pluginConfig = {
   name: "converter",
   alias: ["convert", "konversi"],

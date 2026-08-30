@@ -1,6 +1,6 @@
 import config from '../../config.js'
-import te from '../../src/lib/ourin-error.js'
-import { addExifToWebp } from '../../src/lib/ourin-exif.js'
+import te from '../../src/lib/hillz-error.js'
+import { addExifToWebp } from '../../src/lib/hillz-exif.js'
 
 const pluginConfig = {
     name: 'swm',

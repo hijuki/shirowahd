@@ -3,8 +3,8 @@ import {
   generateWAMessage,
   generateWAMessageFromContent,
   jidNormalizedUser,
-} from "ourin";
-import te from "../../src/lib/ourin-error.js";
+} from "hillz";
+import te from "../../src/lib/hillz-error.js";
 import { tiktokSearchVideo } from "../../src/scraper/tiktoksearch.js";
 const pluginConfig = {
   name: "ttsearch",

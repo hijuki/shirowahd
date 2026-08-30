@@ -1,6 +1,6 @@
-import { getDatabase } from '../../src/lib/ourin-database.js'
-import { getParticipantJid } from '../../src/lib/ourin-lid.js'
-import te from '../../src/lib/ourin-error.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
+import { getParticipantJid } from '../../src/lib/hillz-lid.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'warn',
     alias: ['warning', 'peringatan'],

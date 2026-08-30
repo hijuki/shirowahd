@@ -1,5 +1,5 @@
-import * as timeHelper from '../../src/lib/ourin-time.js'
-import te from '../../src/lib/ourin-error.js'
+import * as timeHelper from '../../src/lib/hillz-time.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
   name: "getpaste",
   alias: ["pastebin", "getpb"],

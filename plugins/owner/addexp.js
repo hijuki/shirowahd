@@ -1,5 +1,5 @@
-import { getDatabase } from '../../src/lib/ourin-database.js'
-import * as levelHelper from '../../src/lib/ourin-level.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
+import * as levelHelper from '../../src/lib/hillz-level.js'
 const pluginConfig = {
     name: 'addexp',
     alias: ['tambahexp', 'giveexp', 'addxp'],

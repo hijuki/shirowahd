@@ -1,5 +1,5 @@
-import te from "../../src/lib/ourin-error.js";
-import ourinApi from "../../src/lib/ourin-apimanager.js";
+import te from "../../src/lib/hillz-error.js";
+import hillzApi from "../../src/lib/hillz-apimanager.js";
 const pluginConfig = {
   name: "tts",
   alias: ["say"],
@@ -23,7 +23,7 @@ async function handler(m, { sock }) {
 
   async function textToSpeech2(text) {
     try {
-      const response = await ourinApi.nexray.geminiTts(text);
+      const response = await hillzApi.nexray.geminiTts(text);
       return response;
     } catch (error) {
       return error;

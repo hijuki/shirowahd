@@ -1,7 +1,7 @@
-import te from "../../src/lib/ourin-error.js";
+import te from "../../src/lib/hillz-error.js";
 import config from "../../config.js";
 import axios from "axios";
-import { uploadImage } from "../../src/lib/ourin-uploader.js";
+import { uploadImage } from "../../src/lib/hillz-uploader.js";
 
 const pluginConfig = {
   name: "starboy",

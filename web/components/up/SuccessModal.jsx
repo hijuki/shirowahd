@@ -144,9 +144,10 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
 
       {/* Code cards */}
       <div className={`space-y-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-        {codes.map(({ code, name }) => (
+        {codes.map(({ code, name }, ci) => (
           <div key={code} onClick={() => copy(code)}
-            className="claim-code-card group relative rounded-[18px] p-4 text-center cursor-pointer active:scale-[.97] overflow-hidden">
+            className={`claim-code-card group relative rounded-[18px] p-4 text-center cursor-pointer active:scale-[.97] overflow-hidden anim-entrance ${copied === code ? 'ring-2 ring-[#34d399]/60 ring-offset-2 ring-offset-[#0a1020]' : ''}`}
+            style={{ animationDelay: `${ci * 90}ms` }}>
             {/* Auto shine sweep */}
             <div className="code-shine" />
             {/* Speed lines on hover */}
@@ -209,19 +210,19 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       <div className={`grid grid-cols-3 gap-2 mb-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-[250ms] ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={() => copy(codes[0].code)}
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(180deg, #37485f, #212f42 50%, #0b1220)', border: '1px solid rgba(255,255,255,.18)', boxShadow: 'inset 0 2.5px 0 rgba(255,255,255,.35), inset 0 -6px 12px rgba(0,0,0,.6), 0 12px 26px -6px rgba(0,0,0,.85)' }}>
-          <i className={`fa-solid ${copied ? 'fa-circle-check' : 'fa-copy'} text-[#34d399] text-[17px] drop-shadow-[0_2px_6px_rgba(52,211,153,.5)]`} />
+          style={{ background: 'rgba(52,211,153,.07)', border: '1px solid rgba(52,211,153,.22)', boxShadow: '0 6px 20px -8px rgba(52,211,153,.25), inset 0 1px 0 rgba(255,255,255,.06)' }}>
+          <i className={`fa-solid ${copied ? 'fa-circle-check' : 'fa-copy'} text-[#34d399] text-[17px]`} />
           <span>{copied ? 'Tersalin' : 'Salin'}</span>
         </button>
         <button onClick={() => shareCode(codes[0].code)}
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-[var(--t-fg)] active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(180deg, #37485f, #212f42 50%, #0b1220)', border: '1px solid rgba(255,255,255,.18)', boxShadow: 'inset 0 2.5px 0 rgba(255,255,255,.35), inset 0 -6px 12px rgba(0,0,0,.6), 0 12px 26px -6px rgba(0,0,0,.85)' }}>
-          <i className="fa-solid fa-share-nodes text-[#34d399] text-[17px] drop-shadow-[0_2px_6px_rgba(52,211,153,.5)]" /> <span>Bagikan</span>
+          style={{ background: 'rgba(34,211,238,.06)', border: '1px solid rgba(34,211,238,.22)', boxShadow: '0 6px 20px -8px rgba(34,211,238,.25), inset 0 1px 0 rgba(255,255,255,.06)' }}>
+          <i className="fa-solid fa-share-nodes text-[#22d3ee] text-[17px]" /> <span>Bagikan</span>
         </button>
         <a href={`https://wa.me/?text=${encodeURIComponent('.claim ' + codes[0].code)}`} target="_blank" rel="noreferrer"
           className="action-chip group flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-[14px] text-[10px] font-semibold text-white active:scale-[.95] active:translate-y-px transition-all duration-[180ms]"
-          style={{ background: 'linear-gradient(180deg, #3bec83, #1faf5c 50%, #0c7139)', border: '1px solid rgba(255,255,255,.4)', boxShadow: 'inset 0 2.5px 0 rgba(255,255,255,.5), inset 0 -6px 12px rgba(0,0,0,.4), 0 12px 28px -6px rgba(37,211,102,.7)' }}>
-          <i className="fa-brands fa-whatsapp text-white text-[17px] drop-shadow-[0_2px_6px_rgba(0,0,0,.4)]" /> <span>WhatsApp</span>
+          style={{ background: 'linear-gradient(135deg, #25D366, #128C4A)', border: '1px solid rgba(255,255,255,.22)', boxShadow: '0 10px 26px -8px rgba(37,211,102,.55), inset 0 1px 0 rgba(255,255,255,.25)' }}>
+          <i className="fa-brands fa-whatsapp text-white text-[17px]" /> <span>WhatsApp</span>
         </a>
       </div>
 
@@ -229,7 +230,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
       <div className={`transform-gpu transition-[transform,opacity] duration-[400ms] delay-300 ${phase >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
         <button onClick={onClose}
           className="action-chip w-full py-3.5 rounded-[15px] text-[var(--t-fg)] font-bold text-[12px] active:scale-[.97] active:translate-y-px transition-all duration-[180ms] flex items-center justify-center gap-2"
-          style={{ background: 'linear-gradient(180deg, #303f52, #1d2938 50%, #0a1018)', border: '1px solid rgba(255,255,255,.18)', boxShadow: 'inset 0 2.5px 0 rgba(255,255,255,.32), inset 0 -6px 12px rgba(0,0,0,.6), 0 12px 26px -6px rgba(0,0,0,.85)' }}>
+          style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.06)' }}>
           Selesai <i className="fa-solid fa-check text-[10px] text-[#34d399]" />
         </button>
       </div>

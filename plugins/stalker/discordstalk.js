@@ -1,7 +1,7 @@
 import axios from 'axios'
 import config from '../../config.js'
-import * as timeHelper from '../../src/lib/ourin-time.js'
-import te from '../../src/lib/ourin-error.js'
+import * as timeHelper from '../../src/lib/hillz-time.js'
+import te from '../../src/lib/hillz-error.js'
 const NEOXR_APIKEY = config.APIkey?.neoxr || "Milik-Bot-OurinMD";
 
 const pluginConfig = {

@@ -1,5 +1,5 @@
-import te from '../../src/lib/ourin-error.js'
-import { updateAssetUrl } from '../../src/lib/ourin-uploader.js'
+import te from '../../src/lib/hillz-error.js'
+import { updateAssetUrl } from '../../src/lib/hillz-uploader.js'
 const pluginConfig = {
     name: 'ganti-pp-kosong.jpg',
     alias: ['gantippkosong', 'setppkosong'],

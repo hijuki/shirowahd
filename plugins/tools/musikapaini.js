@@ -1,10 +1,10 @@
 import axios from "axios";
 import FormData from "form-data";
 import config from "../../config.js";
-import { downloadMediaMessage } from "ourin";
-import te from "../../src/lib/ourin-error.js";
-import ourinApi from "../../src/lib/ourin-apimanager.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+import { downloadMediaMessage } from "hillz";
+import te from "../../src/lib/hillz-error.js";
+import hillzApi from "../../src/lib/hillz-apimanager.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 
 const pluginConfig = {
   name: "musikapaini",
@@ -87,7 +87,7 @@ async function handler(m, { sock }) {
 
     await m.reply("🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ...*\n\n> Mencari info lagu...");
 
-    const data = await ourinApi.neoxr.whatMusic(
+    const data = await hillzApi.neoxr.whatMusic(
       {
         url: audioUrl,
         apikey: config.APIkey?.neoxr || "Milik-Bot-OurinMD",

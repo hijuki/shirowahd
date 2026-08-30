@@ -1,5 +1,5 @@
-import { getParticipantJid } from '../../src/lib/ourin-lid.js'
-import te from '../../src/lib/ourin-error.js'
+import { getParticipantJid } from '../../src/lib/hillz-lid.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'promote',
     alias: ['jadiadmin', 'admin'],

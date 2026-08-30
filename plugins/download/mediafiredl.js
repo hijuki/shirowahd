@@ -1,4 +1,4 @@
-import te from "../../src/lib/ourin-error.js";
+import te from "../../src/lib/hillz-error.js";
 import mediafire from "../../src/scraper/mediafire.js";
 
 const pluginConfig = {

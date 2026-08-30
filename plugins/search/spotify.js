@@ -1,5 +1,5 @@
 import axios from "axios";
-import { generateWAMessageFromContent } from "ourin";
+import { generateWAMessageFromContent } from "hillz";
 import sharp from "sharp";
 
 const pluginConfig = {

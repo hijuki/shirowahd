@@ -1,9 +1,9 @@
 import * as _canvas from "@napi-rs/canvas";
-import * as timeHelper from "../../src/lib/ourin-time.js";
-import te from "../../src/lib/ourin-error.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+import * as timeHelper from "../../src/lib/hillz-time.js";
+import te from "../../src/lib/hillz-error.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 import config from "../../config.js";
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
 const pluginConfig = {
   name: "nulis",
   alias: ["tulis", "write"],

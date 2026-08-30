@@ -1,6 +1,6 @@
-import { getDatabase } from '../../src/lib/ourin-database.js'
-import { hasAccessToServer, VALID_SERVERS } from '../../src/lib/ourin-roles-cpanel.js'
-import * as timeHelper from '../../src/lib/ourin-time.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
+import { hasAccessToServer, VALID_SERVERS } from '../../src/lib/hillz-roles-cpanel.js'
+import * as timeHelper from '../../src/lib/hillz-time.js'
 const DEFAULT_JEDA = 5 * 60 * 1000;
 
 const pluginConfig = {

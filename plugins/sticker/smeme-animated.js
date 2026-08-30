@@ -1,8 +1,8 @@
 import axios from 'axios';
 import config from '../../config.js';
-import te from '../../src/lib/ourin-error.js';
-import { uploadImage } from '../../src/lib/ourin-uploader.js';
-import { downloadMediaMessage, getContentType } from 'ourin';
+import te from '../../src/lib/hillz-error.js';
+import { uploadImage } from '../../src/lib/hillz-uploader.js';
+import { downloadMediaMessage, getContentType } from 'hillz';
 
 const pluginConfig = {
   name: 'smeme-animated',

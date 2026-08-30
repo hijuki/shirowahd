@@ -19,8 +19,8 @@ if (!process.env.__SHIROWAHD_ENV_LOADED) {
   }
   process.env.__SHIROWAHD_ENV_LOADED = "1";
 }
-import { getDatabase } from "./src/lib/ourin-database.js";
-import * as ownerPremiumDb from "./src/lib/ourin-premium-db.js";
+import { getDatabase } from "./src/lib/hillz-database.js";
+import * as ownerPremiumDb from "./src/lib/hillz-premium-db.js";
 
 //  utamakan baca object config sampai bawah
 const config = {

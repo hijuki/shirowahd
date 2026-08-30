@@ -1,7 +1,7 @@
 import axios from "axios";
 import config from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
-import { getDatabase } from "../../src/lib/ourin-database.js";
+import te from "../../src/lib/hillz-error.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
 
 const NEOXR_APIKEY = config.APIkey?.neoxr || "Milik-Bot-OurinMD";
 

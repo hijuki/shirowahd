@@ -1,27 +1,27 @@
 import config from "../config.js";
 import { isSelf } from "../config.js";
-import { generateWAMessageFromContent, prepareWAMessageMedia } from "ourin";
-import { serialize, getCachedThumb } from "./lib/ourin-serialize.js";
-import { saluranCtx } from "./lib/ourin-context.js";
+import { generateWAMessageFromContent, prepareWAMessageMedia } from "hillz";
+import { serialize, getCachedThumb } from "./lib/hillz-serialize.js";
+import { saluranCtx } from "./lib/hillz-context.js";
 import {
   getPlugin,
   getPluginCount,
   getAllPlugins,
   pluginStore,
   getAllCommandNames,
-} from "./lib/ourin-plugins.js";
+} from "./lib/hillz-plugins.js";
 import {
   findSimilarCommands,
   formatSuggestionMessage,
-} from "./lib/ourin-similarity.js";
-import { getDatabase } from "./lib/ourin-database.js";
+} from "./lib/hillz-similarity.js";
+import { getDatabase } from "./lib/hillz-database.js";
 import {
   formatUptime,
   createWaitMessage,
   createErrorMessage,
-} from "./lib/ourin-formatter.js";
+} from "./lib/hillz-formatter.js";
 import { getUptime } from "./connection.js";
-import { logger, logMessage, c } from "./lib/ourin-logger.js";
+import { logger, logMessage, c } from "./lib/hillz-logger.js";
 import {
   isLid,
   isLidConverted,
@@ -31,14 +31,14 @@ import {
   cacheParticipantLids,
   savePersistentCache,
   getLidCacheSize,
-} from "./lib/ourin-lid.js";
-import { hasActiveSession, getSession } from "./lib/ourin-game-data.js";
+} from "./lib/hillz-lid.js";
+import { hasActiveSession, getSession } from "./lib/hillz-game-data.js";
 import {
   levenshtein,
   formatAfkDuration,
   checkPermission,
   checkMode,
-} from "./lib/ourin-middleware.js";
+} from "./lib/hillz-middleware.js";
 import {
   handleAntilink,
   handleAntiJudol,
@@ -51,27 +51,27 @@ import {
   handleAntilinkAll,
   handleAntiHidetag,
   handleAntiSwGc,
-} from "./lib/ourin-group-protection.js";
+} from "./lib/hillz-group-protection.js";
 import {
   debounceMessage,
   getCachedUser,
   getCachedGroup,
   getCachedSetting,
-} from "./lib/ourin-performance.js";
+} from "./lib/hillz-performance.js";
 import {
   isJadibotOwner,
   isJadibotPremium,
   loadJadibotDb,
-} from "./lib/ourin-jadibot-database.js";
-import { getActiveJadibots } from "./lib/ourin-jadibot-manager.js";
-import { handleCommand as handleCaseCommand } from "../case/ourin.js";
+} from "./lib/hillz-jadibot-database.js";
+import { getActiveJadibots } from "./lib/hillz-jadibot-manager.js";
+import { handleCommand as handleCaseCommand } from "../case/hillz.js";
 import { RateLimiterMemory } from "rate-limiter-flexible";
-import { games as ourinGames } from "./lib/ourin-games.js";
+import { games as hillzGames } from "./lib/hillz-games.js";
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
 import axios from "axios";
-import * as timeHelper from "./lib/ourin-time.js";
+import * as timeHelper from "./lib/hillz-time.js";
 import sharp from "sharp";
 const safe = (fn) => {
   try {
@@ -123,7 +123,7 @@ try {
   FormData = (await import("form-data")).default || (await import("form-data"));
 } catch { }
 try {
-  levelHelper = await import("./lib/ourin-level.js");
+  levelHelper = await import("./lib/hillz-level.js");
 } catch { }
 try {
   handleBuyerDone = (await import("../plugins/store/done.js")).handleBuyerDone;
@@ -226,18 +226,18 @@ try {
   sulapPlugin = await import("../plugins/fun/sulap.js");
 } catch { }
 try {
-  handleAutoAI = (await import("./lib/ourin-auto-ai.js")).handleAutoAI;
+  handleAutoAI = (await import("./lib/hillz-auto-ai.js")).handleAutoAI;
 } catch { }
 try {
-  handleAutoDownload = (await import("./lib/ourin-auto-download.js"))
+  handleAutoDownload = (await import("./lib/hillz-auto-download.js"))
     .handleAutoDownload;
 } catch { }
 try {
-  checkStickerCommand = (await import("./lib/ourin-sticker-command.js"))
+  checkStickerCommand = (await import("./lib/hillz-sticker-command.js"))
     .checkStickerCommand;
 } catch { }
 try {
-  handleStickerReply = (await import("./lib/ourin-sticker-reply.js"))
+  handleStickerReply = (await import("./lib/hillz-sticker-reply.js"))
     .handleStickerReply;
 } catch { }
 try {
@@ -1007,7 +1007,7 @@ async function messageHandler(msg, sock, options = {}) {
                 const commandArgs = words.slice(1).join(" ");
                 m.body = `${prefix}${bestMatch}${commandArgs ? " " + commandArgs : ""}`;
                 const { parseCommand } =
-                  await import("./lib/ourin-serialize.js");
+                  await import("./lib/hillz-serialize.js");
                 const parsed = parseCommand(m.body, prefix);
                 m.isCommand = parsed.isCommand;
                 m.command = parsed.command;
@@ -1085,9 +1085,9 @@ async function messageHandler(msg, sock, options = {}) {
           const { default: path } = await import('path')
           const { default: os } = await import('os')
           const { promisify } = await import('util')
-          const { generateWAMessage, getBuffer, generateWAMessageFromContent, proto, generateMessageID } = await import('ourin')
+          const { generateWAMessage, getBuffer, generateWAMessageFromContent, proto, generateMessageID } = await import('hillz')
           const { exec: childExec } = await import('child_process')
-          const { VERSION, Button, ButtonV2, Carousel, AIRich, } = await import('./lib/ourin-builder.js')
+          const { VERSION, Button, ButtonV2, Carousel, AIRich, } = await import('./lib/hillz-builder.js')
           const exec = promisify(childExec)
           
           ${code}
@@ -1145,7 +1145,7 @@ async function messageHandler(msg, sock, options = {}) {
           const { default: fs } = await import('fs')
           const { default: path } = await import('path')
           const { default: os } = await import('os')
-          const { generateWAMessage, getBuffer, generateWAMessageFromContent, proto, generateMessageID } = await import('ourin')
+          const { generateWAMessage, getBuffer, generateWAMessageFromContent, proto, generateMessageID } = await import('hillz')
 
           const result = await ${expr}
           if (result === undefined) return 'undefined'
@@ -1382,7 +1382,7 @@ async function messageHandler(msg, sock, options = {}) {
           if (stickerCmd) {
             const prefix = m.prefix || config.command?.prefix || ".";
             m.body = `${prefix}${stickerCmd}`;
-            const { parseCommand } = await import("./lib/ourin-serialize.js");
+            const { parseCommand } = await import("./lib/hillz-serialize.js");
             const parsed = parseCommand(m.body, prefix);
             m.isCommand = parsed.isCommand;
             m.command = parsed.command;

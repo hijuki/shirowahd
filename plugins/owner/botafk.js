@@ -1,5 +1,5 @@
 import moment from 'moment-timezone'
-import { getDatabase } from '../../src/lib/ourin-database.js'
+import { getDatabase } from '../../src/lib/hillz-database.js'
 const pluginConfig = {
     name: 'botafk',
     alias: ['afkbot', 'afkmode'],

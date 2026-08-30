@@ -2,8 +2,8 @@ import axios from "axios";
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
-import te from "../../src/lib/ourin-error.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+import te from "../../src/lib/hillz-error.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 const pluginConfig = {
   name: "ttselon",
   alias: ["elontts", "ttselonmusk"],

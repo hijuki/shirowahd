@@ -2,9 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import config from '../../config.js';
-import { getDatabase } from '../../src/lib/ourin-database.js';
-import te from '../../src/lib/ourin-error.js';
-import { generateWAMessageFromContent, generateWAMessage, jidNormalizedUser } from 'ourin';
+import { getDatabase } from '../../src/lib/hillz-database.js';
+import te from '../../src/lib/hillz-error.js';
+import { generateWAMessageFromContent, generateWAMessage, jidNormalizedUser } from 'hillz';
 
 const pluginConfig = {
     name: 'srt',

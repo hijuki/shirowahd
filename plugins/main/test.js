@@ -1,5 +1,5 @@
 import config from "../../config.js";
-import { generateWAMessageFromContent } from "ourin";
+import { generateWAMessageFromContent } from "hillz";
 
 const pluginConfig = {
   name: "test",

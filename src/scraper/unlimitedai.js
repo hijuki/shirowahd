@@ -35,7 +35,7 @@ function buildCookie(deviceId, chatId, cookies = {}) {
 }
 
 const CHARACTERS = {
-  "ourin-ai": {
+  "hillz-ai": {
     name: "SHIROWAHD",
     prompt: `Kamu adalah SHIROWAHD, asisten WhatsApp bot yang ramah, cerdas, dan responsif. Kamu menjawab dalam bahasa Indonesia dengan gaya santai tapi tetap informatif. Kamu ahli dalam teknologi, programming, dan hal-hal umum. Jawab dengan singkat, jelas, dan natural. Gunakan emoji secukupnya untuk membuat percakapan lebih hidup.`,
   },
@@ -57,10 +57,10 @@ const CHARACTERS = {
   },
 };
 
-async function UnlimitedAI(prompt, character = "ourin-ai") {
+async function UnlimitedAI(prompt, character = "hillz-ai") {
   const chatId = crypto.randomUUID();
   const deviceId = crypto.randomUUID();
-  const char = CHARACTERS[character] || CHARACTERS["ourin-ai"];
+  const char = CHARACTERS[character] || CHARACTERS["hillz-ai"];
 
   const systemPrompt = `${char.prompt}\n\nPertanyaan user: ${prompt}`;
 

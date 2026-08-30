@@ -1,5 +1,5 @@
 import { Client } from 'ssh2'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'installtemanebula',
     alias: ['installthemanebula', 'temanebula', 'nebulatheme'],

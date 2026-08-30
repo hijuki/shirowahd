@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { uploadImage } from '../../src/lib/ourin-uploader.js'
-import te from '../../src/lib/ourin-error.js'
+import { uploadImage } from '../../src/lib/hillz-uploader.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'tofigure',
     alias: ['figure', 'figurestyle'],

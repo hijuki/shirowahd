@@ -44,3 +44,18 @@ export const getBackupHistory = () => api('/api/backup/history')
 export const restartBot = () => api('/api/bot/restart', { method: 'POST' })
 export const getLogs = (type = 'out', lines = 200) => api(`/api/logs?type=${type}&lines=${lines}`)
 export const getTunnelStatus = () => api('/api/tunnel')
+
+// ── Brand gallery ──
+export const getGallery = () => api('/api/gallery')
+export const deleteGalleryFile = (name) => api('/api/gallery/delete', { method: 'POST', body: { name } })
+export async function uploadGalleryFile(file) {
+  const token = getToken()
+  const res = await fetch(`${BASE}/api/gallery/upload?name=${encodeURIComponent(file.name)}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/octet-stream' },
+    body: file,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+  return data
+}

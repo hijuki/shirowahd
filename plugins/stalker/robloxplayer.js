@@ -1,6 +1,6 @@
 import axios from 'axios'
 import config from '../../config.js'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 const NEOXR_APIKEY = config.APIkey?.neoxr || 'Milik-Bot-OurinMD'
 
 const pluginConfig = {

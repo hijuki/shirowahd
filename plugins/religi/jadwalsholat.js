@@ -5,9 +5,9 @@ import {
   searchKota,
   getTodaySchedule,
   extractPrayerTimes,
-} from "../../src/lib/ourin-sholat-api.js";
-import te from "../../src/lib/ourin-error.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+} from "../../src/lib/hillz-sholat-api.js";
+import te from "../../src/lib/hillz-error.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 const pluginConfig = {
   name: "jadwalsholat",
   alias: ["sholat", "prayertime", "jadwalsolat", "waktusolat", "waktusholat"],

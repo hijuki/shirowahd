@@ -1,7 +1,7 @@
 import axios from "axios";
-import te from "../../src/lib/ourin-error.js";
-import { uploadImage } from "../../src/lib/ourin-uploader.js";
-import { downloadMediaMessage } from "ourin";
+import te from "../../src/lib/hillz-error.js";
+import { uploadImage } from "../../src/lib/hillz-uploader.js";
+import { downloadMediaMessage } from "hillz";
 
 const pluginConfig = {
     name: "profileig",

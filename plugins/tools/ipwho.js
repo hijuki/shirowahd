@@ -1,6 +1,6 @@
 import config from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
-import { sendToolsPreview } from "../../src/lib/ourin-context.js";
+import te from "../../src/lib/hillz-error.js";
+import { sendToolsPreview } from "../../src/lib/hillz-context.js";
 const pluginConfig = {
   name: "ipwho",
   alias: ["ip", "iplookup", "ipinfo"],

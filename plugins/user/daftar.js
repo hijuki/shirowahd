@@ -1,11 +1,11 @@
-import { getDatabase } from "../../src/lib/ourin-database.js";
-import { getAssetBuffer } from "../../src/lib/ourin-asset-manager.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
+import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
 import {
   getCachedJid,
   isLid,
   isLidConverted,
   lidToJid,
-} from "../../src/lib/ourin-lid.js";
+} from "../../src/lib/hillz-lid.js";
 import config from "../../config.js";
 
 const pluginConfig = {
@@ -60,7 +60,7 @@ function getRegistrationRewards() {
 }
 
 async function getRegistrationImage() {
-  const { getCachedThumb } = await import("../../src/lib/ourin-serialize.js");
+  const { getCachedThumb } = await import("../../src/lib/hillz-serialize.js");
   for (const key of REGISTRATION_IMAGE_CANDIDATES) {
     const buf = getAssetBuffer(key);
     if (buf) return buf;

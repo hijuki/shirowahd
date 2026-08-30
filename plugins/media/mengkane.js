@@ -1,5 +1,5 @@
 import config from '../../config.js'
-import te from '../../src/lib/ourin-error.js'
+import te from '../../src/lib/hillz-error.js'
 const sadCommands = ['mengkane']
 for (let i = 1; i <= 52; i++) {
     sadCommands.push(`mengkane${i}`)

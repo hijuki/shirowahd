@@ -1,8 +1,8 @@
-import { getDatabase } from "../../src/lib/ourin-database.js";
-import { fetchGroupsSafe } from "../../src/lib/ourin-jpm-helper.js";
-import { saluranCtx } from "../../src/lib/ourin-context.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
+import { fetchGroupsSafe } from "../../src/lib/hillz-jpm-helper.js";
+import { saluranCtx } from "../../src/lib/hillz-context.js";
 import config from "../../config.js";
-import te from "../../src/lib/ourin-error.js";
+import te from "../../src/lib/hillz-error.js";
 
 const pluginConfig = {
   name: "bcgc",

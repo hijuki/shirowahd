@@ -81,36 +81,33 @@ export default function UploaderPage() {
 
             {/* Hero */}
             <header className="text-center mb-8 anim-entrance perspective-container" style={{ animationDelay: '60ms' }}>
-              {/* Logo — typographic HD + orbit ring */}
-              <div className="relative inline-block mb-5 [perspective:700px]">
+              {/* Hero 3D — tilt mengikuti pointer, layer depth, tanpa orbit ring */}
+              <div className="relative inline-block mb-5 hero-3d-wrap">
                 <div className="absolute -inset-6 rounded-full bg-gradient-to-b from-slate-200/12 to-slate-400/8 blur-2xl pointer-events-none" />
-                <svg className="logo-orbit-ring" viewBox="0 0 104 104" fill="none" aria-hidden>
-                  <defs>
-                    <linearGradient id="orbA" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#e2e8f0" stopOpacity=".85" />
-                      <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0" />
-                    </linearGradient>
-                    <linearGradient id="orbB" x1="1" y1="1" x2="0" y2="0">
-                      <stop offset="0%" stopColor="#94a3b8" stopOpacity=".7" />
-                      <stop offset="100%" stopColor="#94a3b8" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <circle cx="52" cy="52" r="50" stroke="rgba(226,232,240,.08)" strokeWidth="1" />
-                  <g className="ring-spin">
-                    <circle cx="52" cy="52" r="50" stroke="url(#orbA)" strokeWidth="2" strokeLinecap="round" strokeDasharray="92 222" />
-                  </g>
-                  <g className="ring-spin-rev">
-                    <circle cx="52" cy="52" r="43" stroke="url(#orbB)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="54 216" />
-                  </g>
-                </svg>
-                <div className="hero-orb" aria-hidden>
+                <div className="hero-3d" aria-hidden
+                  onPointerMove={e => {
+                    const el = e.currentTarget, r = el.getBoundingClientRect()
+                    const x = (e.clientX - r.left) / r.width - 0.5
+                    const y = (e.clientY - r.top) / r.height - 0.5
+                    el.style.setProperty('--rx', `${(-y * 14).toFixed(2)}deg`)
+                    el.style.setProperty('--ry', `${(x * 14).toFixed(2)}deg`)
+                  }}
+                  onPointerLeave={e => {
+                    e.currentTarget.style.setProperty('--rx', '0deg')
+                    e.currentTarget.style.setProperty('--ry', '0deg')
+                  }}>
+                  <span className="hero-3d-shadow" />
                   <span className="hero-orb-aurora" />
-                  <span className="hero-orb-glass">
-                    <img src="/hero.jpg" alt="" className="hero-orb-img" />
+                  <span className="hero-3d-ring" />
+                  <span className="hero-3d-ring-2" />
+                  <span className="hero-mote hero-mote-1" />
+                  <span className="hero-mote hero-mote-2" />
+                  <span className="hero-mote hero-mote-3" />
+                  <span className="hero-mote hero-mote-4" />
+                  <span className="hero-3d-card">
+                    <img src={settings?.heroImageUrl || '/hero.jpg'} alt="" className="hero-orb-img" />
+                    <span className="hero-3d-shine" />
                   </span>
-                  <span className="hero-orb-spark hero-orb-spark-1" />
-                  <span className="hero-orb-spark hero-orb-spark-2" />
-                  <span className="hero-orb-spark hero-orb-spark-3" />
                 </div>
               </div>
 

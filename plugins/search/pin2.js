@@ -1,8 +1,8 @@
 import {
   generateWAMessageFromContent,
   prepareWAMessageMedia,
-} from "ourin";
-import { f } from "../../src/lib/ourin-http.js";
+} from "hillz";
+import { f } from "../../src/lib/hillz-http.js";
 
 const pluginConfig = {
   name: "pin2",

@@ -1,5 +1,5 @@
-import { stopAllJadibots, getActiveJadibots } from '../../src/lib/ourin-jadibot-manager.js'
-import te from '../../src/lib/ourin-error.js'
+import { stopAllJadibots, getActiveJadibots } from '../../src/lib/hillz-jadibot-manager.js'
+import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'stopalljadibot',
     alias: ['stopsemuajadibot', 'killalljadibots'],

@@ -10,9 +10,9 @@ import {
   isSurrender,
   isReplyToGame,
   getRandomReward,
-} from "../../src/lib/ourin-game-data.js";
-import { getDatabase } from "../../src/lib/ourin-database.js";
-import { addExpWithLevelCheck } from "../../src/lib/ourin-level.js";
+} from "../../src/lib/hillz-game-data.js";
+import { getDatabase } from "../../src/lib/hillz-database.js";
+import { addExpWithLevelCheck } from "../../src/lib/hillz-level.js";
 
 const pluginConfig = {
   name: "family100",
