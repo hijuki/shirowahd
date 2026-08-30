@@ -7,32 +7,6 @@ import Toasts, { useToasts } from '@/components/up/Toasts'
 import { IntroModal, FaqModal, AboutModal } from '@/components/up/Modals'
 import { loadSettings } from '@/lib/up-api'
 
-/* Floating anime sparkles */
-function AnimeSparkles() {
-  const sparkles = Array.from({ length: 8 }, (_, i) => ({
-    id: i,
-    left: `${8 + Math.random() * 84}%`,
-    top: `${4 + Math.random() * 88}%`,
-    delay: `${Math.random() * 7}s`,
-    size: 2.5 + Math.random() * 3.5,
-    color: ['#22d3ee', '#3b82f6', '#34d399', '#67e8f9', '#a78bfa'][i % 5],
-    dur: `${6 + Math.random() * 4}s`,
-  }))
-  return (
-    <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden">
-      {sparkles.map(s => (
-        <div key={s.id} className="anime-sparkle" style={{
-          left: s.left, top: s.top,
-          width: s.size, height: s.size,
-          color: s.color,
-          animationDelay: s.delay,
-          animationDuration: s.dur,
-        }} />
-      ))}
-    </div>
-  )
-}
-
 /* Skeleton placeholder */
 function SkeletonPage() {
   return (
@@ -82,11 +56,6 @@ export default function UploaderPage() {
       <div className="bg-aurora-2" />
       <div className="bg-grid" />
       <div className="bg-noise" />
-      <AnimeSparkles />
-
-      {/* Decorative orbs */}
-      <div className="fixed top-[15%] left-[8%] w-[220px] h-[220px] rounded-full bg-[#22d3ee]/[.05] blur-[80px] pointer-events-none z-0 orb-float" />
-      <div className="fixed bottom-[20%] right-[5%] w-[190px] h-[190px] rounded-full bg-[#a78bfa]/[.05] blur-[75px] pointer-events-none z-0 orb-float-2" />
 
       <Toasts toasts={toasts} />
       {showWelcome && <IntroModal onDone={() => setShowWelcome(false)} settings={settings} />}
@@ -154,7 +123,7 @@ export default function UploaderPage() {
 
               {/* Inline dev credit */}
               <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] text-[10px] tracking-wider text-[var(--t-muted)]">
-                <span className="w-[18px] h-[18px] rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white shrink-0">H</span>
+                <img src="/logo.svg" alt="" className="w-[18px] h-[18px] shrink-0" />
                 <span className="font-semibold">SWHDHLZ</span>
                 <span className="opacity-60">BY</span>
                 <span className="anime-text font-extrabold">HILLZ</span>

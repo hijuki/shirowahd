@@ -31,3 +31,5 @@ upload-log.json
 backup-history.json
 vids/
 .pair-number
+shirowahd-migrate.tar.gz
+session_voip/
