@@ -461,6 +461,8 @@ const server = http.createServer(async (req, res) => {
         `<meta name="twitter:title" content="${esc(name)}"/>`,
         `<meta name="twitter:image" content="${ogImg}"/>`,
       ].join('');
+      html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(name)}</title>`);
+      html = html.replace(/(<meta name="description" content=")[^"]*(")/, `$1${esc(desc)}$2`);
       html = html.replace('</head>', meta + '</head>');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
       res.end(html);
