@@ -146,33 +146,42 @@ await sleep(200);
 // 6. Web Uploader
 // ═══════════════════════════════════════
 step('Starting web uploader');
-const webUp = spawn('node', ['web-uploader.js'], {
-  stdio: ['ignore', 'pipe', 'pipe']
-});
-let webReady = false;
-webUp.stdout.on('data', d => {
-  if (!webReady && d.toString().includes('listening')) {
-    webReady = true;
-  }
-});
-webUp.stderr.on('data', d => {
-  const msg = d.toString().trim();
-  if (msg) console.log(c.err(`  [WEB] ${msg}`));
-});
-webUp.on('error', e => console.log(c.err(`  [WEB] ${e.message}`)));
+// Web uploader mendengarkan port 80. Kalau sudah ada yang memegang port itu
+// (mis. proses pm2 "web" terpisah, seperti di deploy produksi), jangan spawn
+// lagi — dulu selalu di-spawn sehingga tiap bot restart melempar
+// "EADDRINUSE: address already in use :::80" ke log.
+const WEB_PORT = 80;
+const portBusy = () => {
+  try {
+    execSync(`fuser ${WEB_PORT}/tcp 2>/dev/null`, { stdio: 'ignore' });
+    return true;
+  } catch { return false; }
+};
 
-// Wait for web uploader to bind port (max 5s)
-await new Promise(resolve => {
-  const check = setInterval(() => {
-    try {
-      execSync('fuser 8080/tcp 2>/dev/null', { stdio: 'ignore' });
-      clearInterval(check);
-      resolve();
-    } catch {}
-  }, 500);
-  setTimeout(() => { clearInterval(check); resolve(); }, 5000);
-});
-done('port 80');
+if (portBusy()) {
+  skip(`port ${WEB_PORT} sudah dipakai proses lain`);
+} else {
+  const webUp = spawn('node', ['web-uploader.js'], {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  webUp.stderr.on('data', d => {
+    const msg = d.toString().trim();
+    if (msg) console.log(c.err(`  [WEB] ${msg}`));
+  });
+  webUp.on('error', e => console.log(c.err(`  [WEB] ${e.message}`)));
+
+  // Tunggu sampai port benar-benar terpakai (maks 5 detik). Sebelumnya yang
+  // dicek port 8080 — bukan port yang dipakai web-uploader — jadi loop ini
+  // selalu habis waktu dan status "port 80" dilaporkan sukses walau gagal.
+  const bound = await new Promise(resolve => {
+    const check = setInterval(() => {
+      if (portBusy()) { clearInterval(check); resolve(true); }
+    }, 500);
+    setTimeout(() => { clearInterval(check); resolve(false); }, 5000);
+  });
+  if (bound) done(`port ${WEB_PORT}`);
+  else fail(`gagal bind port ${WEB_PORT}`);
+}
 
 await sleep(200);
 

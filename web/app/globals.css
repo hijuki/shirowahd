@@ -22,7 +22,8 @@
 }
 
 /* ===== Base ===== */
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   min-height: 100dvh;
   color: var(--t-ink);
@@ -57,6 +58,8 @@ h1, h2, h3 { letter-spacing: -0.02em; }
   --t-ink: #e8f1ff;
   --t-muted: #93a5c4;
   --t-nav: rgba(4,7,15,.8);
+  /* versi solid untuk HP (tanpa backdrop-filter) — lihat blok PERF */
+  --t-nav-solid: rgba(7,11,20,.95);
   --t-overlay: rgba(0,0,0,.7);
   --t-aurora-blue: rgba(59,130,246,.18);
   --t-aurora-cyan: rgba(34,211,238,.14);
@@ -73,6 +76,7 @@ h1, h2, h3 { letter-spacing: -0.02em; }
   --t-ink: #0f172a;
   --t-muted: #5b6b85;
   --t-nav: rgba(255,255,255,.85);
+  --t-nav-solid: rgba(255,255,255,.96);
   --t-overlay: rgba(0,0,0,.4);
   --t-aurora-blue: rgba(59,130,246,.08);
   --t-aurora-cyan: rgba(34,211,238,.06);
@@ -995,6 +999,48 @@ h1, h2, h3 { letter-spacing: -0.02em; }
   .code-shine, .btn-shine-sweep::after, .nav-sheen { display: none; }
   .grad-text, .code-text, .anim-entrance { animation: none !important; }
   .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+  /* ---- FIX LAG SCROLL DI HP ----
+     Penyebab: navbar `position: sticky` + `backdrop-filter` memaksa GPU
+     me-komposit ulang area blur di SETIAP frame scroll, dan yang di-blur
+     adalah 4 layer `fixed` di belakangnya (aurora, aurora-2, grid, noise).
+     Makin cepat scroll (mis. balik ke atas) makin banyak frame yang di-drop.
+     Solusi: di HP, navbar pakai warna solid semi-transparan — tampilan
+     hampir identik, tapi nol biaya blur per frame. */
+  .nav-pill {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--t-nav-solid, rgba(9,13,22,.92));
+  }
+
+  /* Layer atmosfer: cukup satu yang bergerak. Aurora kedua tetap tampil
+     (warnanya masih terasa) tapi diam, jadi tidak ada repaint terus-menerus. */
+  .bg-aurora-2::before { animation: none; }
+
+  /* Turunkan biaya blur latar: 60-70px blur di layer sebesar layar mahal
+     di GPU HP kelas menengah. */
+  .bg-aurora::before { filter: blur(42px); }
+  .bg-aurora-2::before { filter: blur(48px); }
+
+  /* Isolasi repaint: layer latar tidak perlu ikut dihitung ulang saat
+     konten di atasnya berubah. */
+  .bg-aurora, .bg-aurora-2, .bg-grid { contain: strict; }
+
+  /* Hero: ring + partikel adalah animasi transform tanpa henti di area besar.
+     Saat hero sudah lewat layar pun browser masih menganimasikannya. */
+  .hero-3d-ring, .hero-3d-ring-2 { animation-duration: 9s, 14s; }
+  .hero-mote { display: none; }
+}
+
+/* Lewatkan render section yang jauh di luar viewport. Ini yang paling terasa
+   saat scroll cepat balik ke atas: browser tidak perlu menghitung ulang
+   seluruh halaman sekaligus. contain-intrinsic-size mencegah scrollbar
+   melompat. Didukung Chrome/Edge/Safari 18+; browser lain mengabaikannya. */
+@media (max-width: 900px) {
+  .perf-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 480px;
+  }
 }
 
 /* ═══════════════════════════════════════════

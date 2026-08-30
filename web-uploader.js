@@ -99,6 +99,11 @@ function loadSettings() {
   };
 }
 
+// Pakai untuk field yang tidak boleh dikosongkan: '' / spasi dianggap "tidak dikirim".
+function nonEmpty(v) {
+  return (typeof v === 'string' && v.trim() === '') ? undefined : v;
+}
+
 function saveSettings(data) {
   const cur = loadSettings();
   const s = {
@@ -107,10 +112,14 @@ function saveSettings(data) {
     channels: data.channels ?? cur.channels ?? [],
     claimGroups: data.claimGroups ?? cur.claimGroups ?? (cur.claimGroup ? [cur.claimGroup] : []),
     popupButtons: data.popupButtons ?? cur.popupButtons ?? [],
-    adminPassword: data.adminPassword ?? cur.adminPassword ?? '@Hillz126',
+    // Field kritis: string kosong TIDAK boleh menimpa nilai lama. `??` hanya
+    // menyaring null/undefined, jadi payload berisi "" dulu bisa mengosongkan
+    // password admin (risiko terkunci) atau menghapus nama situs (judul & og
+    // jadi kosong). Field non-kritis seperti bannerText tetap boleh dikosongkan.
+    adminPassword: nonEmpty(data.adminPassword) ?? cur.adminPassword ?? '@Hillz126',
     maintenance: data.maintenance ?? cur.maintenance ?? false,
     ipBlacklist: data.ipBlacklist ?? cur.ipBlacklist ?? [],
-    siteName: data.siteName ?? cur.siteName ?? 'SHIROWAHD',
+    siteName: nonEmpty(data.siteName) ?? cur.siteName ?? 'SHIROWAHD',
     siteSubtitle: data.siteSubtitle ?? cur.siteSubtitle ?? 'Upload & claim video HD',
     expireMinutes: data.expireMinutes ?? cur.expireMinutes ?? 60,
     maxFileSizeMB: data.maxFileSizeMB ?? cur.maxFileSizeMB ?? 0,
@@ -331,13 +340,32 @@ function needsConvert(name) {
   return isVideoFile(name) && !VIDEO_MP4_EXTS.includes(ext);
 }
 
-// Detect if video codec is NOT h264 — needs re-encode for WA compatibility
+// Cek kompatibilitas WhatsApp. Sebelumnya hanya codec_name yang diperiksa, jadi
+// h264 varian "aneh" ikut di-stream-copy dan hasilnya sering GAGAL DIUNDUH atau
+// tampil hitam waktu penerima ambil dari Status/SW. Yang bikin gagal:
+//   - pix_fmt bukan yuv420p (10-bit / 4:2:2 / 4:4:4): decoder HP tidak sanggup
+//   - profile High 10 / High 4:4:4: sama, di luar baseline yang dijamin WA
+//   - tidak ada track audio: sebagian klien WA menolak/putus saat unduh
+// Semua kondisi itu sekarang memaksa re-encode ke H.264 8-bit yuv420p + AAC.
 function detectNeedsReencode(filePath) {
   try {
-    const codec = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim();
-    // h264/avc = compatible with all WA clients. Anything else (hevc/h265/vp9/av1) = re-encode
-    return codec !== 'h264';
+    const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,profile -of default=nw=1:nk=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim().split('\n').map(x => x.trim());
+    const [codec, profile, pixFmt] = [raw[0] || '', raw[1] || '', raw[2] || ''];
+    if (codec !== 'h264') return true;
+    if (pixFmt && pixFmt !== 'yuv420p') return true;
+    if (/10|4:4:4|4:2:2/.test(profile)) return true;
+    return false;
   } catch { return false; }
+}
+
+// Video tanpa audio kadang gagal diunduh penerima. Kalau tidak ada track audio,
+// jalur copy tetap dipakai tapi ditambahkan audio senyap — jauh lebih murah
+// daripada re-encode video, dan hasil unduhan jadi konsisten.
+function hasAudioStream(filePath) {
+  try {
+    const out = execSync('ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim();
+    return out.includes('audio');
+  } catch { return true; }
 }
 
 const execP = (cmd, opts = {}) => new Promise((resolve, reject) => execCb(cmd, opts, (err, stdout, stderr) => err ? reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')) : resolve(stdout)));
@@ -354,10 +382,16 @@ async function convertToMp4Async(buf, originalName, onPct) {
     writeFileSync(tmpIn, buf);
     const forceReencode = detectNeedsReencode(tmpIn);
     if (!forceReencode) {
-      // Source is h264 — stream copy (no re-encode, keeps quality 100%)
+      // Sumber sudah h264 8-bit yuv420p — stream copy, kualitas video 100% utuh.
+      // `+faststart` memindah moov atom ke depan; tanpa ini penerima harus
+      // mengunduh seluruh file sebelum bisa memutar, yang di WA sering
+      // terlihat sebagai unduhan gagal/menggantung.
+      const silentAudio = hasAudioStream(tmpIn)
+        ? ' -c:a aac -b:a 320k'
+        : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest -c:a aac -b:a 128k';
       try {
         await execP(
-          'ffmpeg -y -i ' + JSON.stringify(tmpIn) + ' -c:v copy -c:a aac -b:a 320k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
+          'ffmpeg -y -i ' + JSON.stringify(tmpIn) + silentAudio + ' -c:v copy -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
           { timeout: 300000, maxBuffer: 10 * 1024 * 1024 }
         );
         if (existsSync(tmpOut) && readFileSync(tmpOut).length > 1000) {
@@ -393,7 +427,7 @@ async function convertToMp4Async(buf, originalName, onPct) {
     const dur = probeDuration(tmpIn);
     await new Promise((resolve, reject) => {
       const p = execCb(
-        'ffmpeg -y -i ' + JSON.stringify(tmpIn) + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset veryfast -crf 23' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
+        'ffmpeg -y -i ' + JSON.stringify(tmpIn) + (hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest') + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset veryfast -crf 23' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
         { timeout: 600000, maxBuffer: 10 * 1024 * 1024 },
         (err, stdout, stderr) => { if (err) reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')); else resolve(); }
       );
@@ -933,7 +967,12 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && url === '/admin/api/settings') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
-    jsonRes(res, 200, loadSettings());
+    // Password admin tidak pernah dikirim ke browser — panel tidak punya field
+    // untuk itu (ganti password lewat /admin/api/change-password), jadi tidak
+    // ada gunanya mengeksposnya di respons JSON. Saat panel menyimpan kembali,
+    // field yang hilang otomatis memakai nilai lama di saveSettings().
+    const { adminPassword, ...safe } = loadSettings();
+    jsonRes(res, 200, safe);
     return;
   }
 

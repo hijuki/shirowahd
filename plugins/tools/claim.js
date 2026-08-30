@@ -214,6 +214,8 @@ export async function handler(m, { sock }) {
           image: f.buf,
           caption,
           mimetype: mime,
+          fileName: f.name || ("foto-" + (i + 1) + ".jpg"),
+          fileLength: f.buf.length,
           mentions: i === 0 ? [sender] : [],
         });
       }
@@ -228,13 +230,21 @@ export async function handler(m, { sock }) {
           image: v.buf,
           caption: "\ud83d\udcf7 " + sizeMB + " MB\n\n" + senderTag + " ini file kamu \u2705\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
           mimetype: mime,
+          fileName: v.name || "foto.jpg",
+          fileLength: v.buf.length,
           mentions: [sender],
         });
       } else {
+        // fileName + fileLength dikirim eksplisit: tanpa keduanya sebagian klien
+        // WhatsApp menampilkan media tanpa ukuran dan unduhan penerima lebih
+        // sering menggantung/gagal. jpegThumbnail kosong dibiarkan agar WA
+        // membuat thumbnail sendiri dari file (lebih andal daripada tanpa apa pun).
         await sock.sendMessage(target, {
           video: v.buf,
           caption: "\ud83c\udfac *Video HD siap!*\n\n" + senderTag + " ini video kamu \u2705\n\n_Agar SW kamu HD, share video ini langsung dari bot ke SW kamu._\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
           mimetype: "video/mp4",
+          fileName: (v.name || "video").replace(/\.[^.]+$/, "") + ".mp4",
+          fileLength: v.buf.length,
           mentions: [sender],
         });
       }

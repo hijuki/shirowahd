@@ -117,7 +117,7 @@ export function IntroModal({ onDone, settings }) {
 
   const steps = [
     { i: 'fa-cloud-arrow-up', t: 'Upload file', d: 'Pilih video atau foto dari galeri kamu.', c: '#22d3ee' },
-    { i: 'fa-key', t: 'Dapat kode unik', d: 'Kode seperti .claim A1B2C3 langsung tersedia.', c: '#38bdf8' },
+    { i: 'fa-key', t: 'Dapat kode unik', d: 'Kode 2 huruf, contoh: .claim A7', c: '#38bdf8' },
     { i: 'fa-paper-plane', t: 'Kirim di grup', d: 'Paste kode di grup WhatsApp — bot kirim filenya.', c: '#3b82f6' },
   ]
 
@@ -243,14 +243,24 @@ export function IntroModal({ onDone, settings }) {
 /* ═══════════════════════════════════════
    FAQ
    ═══════════════════════════════════════ */
-export function FaqModal({ onClose }) {
+export function FaqModal({ onClose, settings }) {
   const [open, setOpen] = useState(0)
+  // Masa berlaku kode dibaca dari pengaturan admin, bukan angka mati, supaya
+  // teks FAQ tidak pernah bertentangan dengan perilaku server.
+  const expMin = Number(settings?.expireMinutes) || 60
+  const expText = expMin >= 1440
+    ? (expMin / 1440 % 1 === 0 ? (expMin / 1440) + ' hari' : (expMin / 60).toFixed(0) + ' jam')
+    : expMin >= 60
+      ? (expMin / 60 % 1 === 0 ? (expMin / 60) + ' jam' : expMin + ' menit')
+      : expMin + ' menit'
   const faqs = [
     { q: 'Bagaimana cara upload?', a: 'Pilih tab Video atau Foto, drag & drop atau tap area upload, pilih file, lalu tekan tombol upload.', i: 'fa-cloud-arrow-up' },
-    { q: 'Format apa yang didukung?', a: 'Video: MP4, MKV, AVI, MOV (otomatis dikonversi ke MP4 H.264). Foto: JPG, PNG, GIF, WEBP.', i: 'fa-file-video' },
-    { q: 'Berapa lama kode berlaku?', a: 'Tergantung pengaturan server (default 60 menit). Timer countdown terlihat di popup sukses.', i: 'fa-hourglass-half' },
-    { q: 'Kenapa upload lambat?', a: 'File video dikonversi otomatis di server agar kompatibel WhatsApp. File besar butuh waktu lebih.', i: 'fa-gauge-high' },
-    { q: 'Apakah data saya aman?', a: 'File disimpan sementara dan terhapus otomatis setelah kedaluwarsa.', i: 'fa-shield-halved' },
+    { q: 'Format apa yang didukung?', a: 'Video: MP4, MOV, MKV, AVI, WEBM, M4V, 3GP, FLV, TS, WMV. Foto: JPG, PNG, GIF, WEBP, HEIC, AVIF, BMP, TIFF. Video H.264 dikirim apa adanya tanpa dikompres; format lain dikonversi dulu ke H.264 agar bisa diputar semua HP.', i: 'fa-file-video' },
+    { q: 'Berapa lama kode berlaku?', a: 'Sesuai pengaturan admin, saat ini ' + expText + '. Hitungan waktunya kelihatan di popup setelah upload berhasil.', i: 'fa-hourglass-half' },
+    { q: 'Kenapa upload lambat?', a: 'Yang paling ngaruh itu kecepatan internet kamu. Di server, video H.264 cuma dirapikan wadahnya (cepat); video format lain harus dikonversi dulu jadi lebih lama.', i: 'fa-gauge-high' },
+    { q: 'Bisa upload di atas 100 MB?', a: 'Bisa. File besar otomatis dipecah jadi beberapa bagian saat dikirim, jadi tidak kena batas 100 MB. Kalau sinyal putus, bagian itu saja yang diulang.', i: 'fa-boxes-stacked' },
+    { q: 'Kenapa unduhan di WhatsApp bisa gagal?', a: 'Biasanya karena file bukan H.264 standar. Server sekarang otomatis merapikan video ke H.264 8-bit dan menaruh indeks di awal file, supaya penerima bisa langsung memutar dan mengunduh tanpa menunggu penuh.', i: 'fa-circle-down' },
+    { q: 'Apakah data saya aman?', a: 'File disimpan sementara dan terhapus otomatis setelah kedaluwarsa atau setelah diklaim sekali.', i: 'fa-shield-halved' },
   ]
   return (
     <ModalShell onClose={onClose}>

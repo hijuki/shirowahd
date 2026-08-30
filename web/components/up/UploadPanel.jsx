@@ -114,7 +114,7 @@ export default function UploadPanel({ settings, toast }) {
     finally { setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }); setEncode(null) }
   }
 
-  const cancelUpload = () => { abortRef.current?.abort(); setUploading(false); setProgress(0); toast('Upload dibatalkan', 'info') }
+  const cancelUpload = () => { abortRef.current?.abort(); setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }); toast('Upload dibatalkan', 'info') }
 
   if (settings?.maintenance) {
     return (

@@ -59,7 +59,7 @@ export default function UploaderPage() {
 
       <Toasts toasts={toasts} />
       {showWelcome && <IntroModal onDone={() => setShowWelcome(false)} settings={settings} />}
-      {faqOpen && <FaqModal onClose={() => setFaqOpen(false)} />}
+      {faqOpen && <FaqModal onClose={() => setFaqOpen(false)} settings={settings} />}
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
 
       {/* Floating owner chat button */}
@@ -196,7 +196,7 @@ export default function UploaderPage() {
               <UploadPanel settings={settings} toast={toast} />
             </div>
 
-            <div className="anim-entrance" style={{ animationDelay: '340ms' }}>
+            <div className="anim-entrance perf-section" style={{ animationDelay: '340ms' }}>
               <HistorySection />
             </div>
 
