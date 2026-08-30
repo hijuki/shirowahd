@@ -45,8 +45,21 @@ export default function UploadPanel({ settings, toast }) {
     const valid = arr.filter(f => validExts.includes(f.name.split('.').pop().toLowerCase()))
     if (valid.length < arr.length) toast(`${arr.length - valid.length} file ditolak — format tidak didukung`, 'error')
     const max = settings?.maxFileSizeMB || 0
-    const sizeOk = valid.filter(f => max <= 0 || f.size <= max * 1024 * 1024)
+    let sizeOk = valid.filter(f => max <= 0 || f.size <= max * 1024 * 1024)
     if (sizeOk.length < valid.length) toast(`${valid.length - sizeOk.length} file melebihi batas ${max} MB`, 'error')
+    // Mode file besar (>95 MB) bisa dimatikan admin. Kalau OFF, tolak di sini
+    // dengan pesan jelas supaya user tidak menunggu upload yang pasti gagal.
+    const bigLimit = 95 * 1024 * 1024
+    const hardMB = settings?.largeUploadMaxMB || 0
+    if (settings?.allowLargeUpload === false) {
+      const before = sizeOk.length
+      sizeOk = sizeOk.filter(f => f.size <= bigLimit)
+      if (sizeOk.length < before) toast(`${before - sizeOk.length} file di atas 95 MB — mode file besar sedang dimatikan admin`, 'error')
+    } else if (hardMB > 0) {
+      const before = sizeOk.length
+      sizeOk = sizeOk.filter(f => f.size <= hardMB * 1024 * 1024)
+      if (sizeOk.length < before) toast(`${before - sizeOk.length} file melebihi batas upload besar ${hardMB} MB`, 'error')
+    }
     setFiles(prev => {
       const existing = new Set(prev.map(f => f.name + f.size))
       return [...prev, ...sizeOk.filter(f => !existing.has(f.name + f.size))]

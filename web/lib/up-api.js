@@ -5,7 +5,89 @@ export function loadSettings() {
   return fetch('/api/settings/public').then(r => r.json())
 }
 
-export function uploadFiles(files, { onProgress, field, signal }) {
+// Ambang pindah jalur: Cloudflare Free menolak body >100 MB (413) sebelum request
+// sampai ke server. Di atas ambang ini file dipecah jadi bagian kecil supaya tiap
+// request lolos proxy, lalu digabung utuh di server. File kecil tetap lewat
+// jalur lama yang sudah terbukti.
+const CHUNK_THRESHOLD = 95 * 1024 * 1024
+const CHUNK_SIZE = 20 * 1024 * 1024
+
+async function uploadChunked(files, { onProgress, signal }) {
+  const meta = files.map(f => ({ name: f.name, size: f.size }))
+  const initRes = await fetch('/upload/chunk/init', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: meta }),
+    signal,
+  })
+  const init = await initRes.json()
+  if (!initRes.ok || !init.ok) throw new Error(init.error || 'Gagal memulai upload besar')
+
+  const chunkSize = init.chunkSize || CHUNK_SIZE
+  const total = files.reduce((s, f) => s + f.size, 0)
+  let sent = 0
+  const startedAt = Date.now()
+
+  for (let fi = 0; fi < files.length; fi++) {
+    const file = files[fi]
+    const parts = Math.ceil(file.size / chunkSize)
+    for (let ci = 0; ci < parts; ci++) {
+      if (signal?.aborted) throw new Error('Upload dibatalkan')
+      const blob = file.slice(ci * chunkSize, Math.min((ci + 1) * chunkSize, file.size))
+      let lastErr = null
+      // Retry per bagian: jaringan HP sering putus sesaat; ulang bagiannya saja,
+      // bukan seluruh file.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const r = await fetch(`/upload/chunk?sid=${encodeURIComponent(init.sessionId)}&fi=${fi}&ci=${ci}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: blob,
+            signal,
+          })
+          const d = await r.json()
+          if (!r.ok || !d.ok) throw new Error(d.error || 'Bagian gagal dikirim')
+          lastErr = null
+          break
+        } catch (e) {
+          if (signal?.aborted) throw new Error('Upload dibatalkan')
+          lastErr = e
+          await new Promise(r => setTimeout(r, 800 * (attempt + 1)))
+        }
+      }
+      if (lastErr) throw lastErr
+      sent += blob.size
+      if (onProgress) {
+        const elapsed = (Date.now() - startedAt) / 1000
+        onProgress({
+          pct: Math.round((sent / total) * 100),
+          loaded: sent,
+          total,
+          speed: elapsed > 0.5 ? sent / elapsed : 0,
+        })
+      }
+    }
+  }
+
+  const finRes = await fetch('/upload/chunk/finish', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: init.sessionId }),
+    signal,
+  })
+  const fin = await finRes.json()
+  if (!finRes.ok || !fin.ok) throw new Error(fin.error || 'Gagal menggabung file')
+  return fin
+}
+
+export function uploadFiles(files, opts) {
+  const arr = Array.from(files)
+  const needsChunk = arr.some(f => f.size > CHUNK_THRESHOLD)
+  if (needsChunk) return uploadChunked(arr, opts)
+  return uploadSingle(arr, opts)
+}
+
+function uploadSingle(files, { onProgress, field, signal }) {
   const fd = new FormData()
   for (const f of files) fd.append(field, f, f.name)
   return new Promise((resolve, reject) => {

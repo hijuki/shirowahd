@@ -70,6 +70,8 @@ function loadSettings() {
     siteSubtitle: 'Upload & claim video HD',
     expireMinutes: 60,
     maxFileSizeMB: 0,
+    allowLargeUpload: true,
+    largeUploadMaxMB: 0,
     bannerText: '',
     announcement: '',
     heroTitle: '',
@@ -112,6 +114,8 @@ function saveSettings(data) {
     siteSubtitle: data.siteSubtitle ?? cur.siteSubtitle ?? 'Upload & claim video HD',
     expireMinutes: data.expireMinutes ?? cur.expireMinutes ?? 60,
     maxFileSizeMB: data.maxFileSizeMB ?? cur.maxFileSizeMB ?? 0,
+    allowLargeUpload: data.allowLargeUpload ?? cur.allowLargeUpload ?? true,
+    largeUploadMaxMB: data.largeUploadMaxMB ?? cur.largeUploadMaxMB ?? 0,
     bannerText: data.bannerText ?? cur.bannerText ?? '',
     announcement: data.announcement ?? cur.announcement ?? '',
     heroTitle: data.heroTitle ?? cur.heroTitle ?? '',
@@ -427,6 +431,93 @@ function parseMultipartFiles(body, boundary) {
   return files;
 }
 
+// --- Pipeline pemrosesan upload (dipakai jalur /upload biasa DAN jalur chunk) ---
+// Dipisah jadi fungsi supaya file besar yang masuk lewat chunk diproses dengan
+// langkah yang persis sama: remux/encode → simpan → log → notif. Tidak ada
+// perbedaan perlakuan video antara dua jalur.
+function beginUploadJob(files, clientIP) {
+  const jobId = newJob(files.map(f => f.name));
+  const job = jobs.get(jobId);
+  (async () => {
+    try {
+      let convFail = 0;
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        if (!isVideoFile(f.name)) continue;
+        job.stage = 'Encode video' + (files.length > 1 ? ' (' + (i + 1) + '/' + files.length + ')' : '') + '…';
+        job.pct = 0;
+        try {
+          files[i] = await convertToMp4Async(f.buf, f.name, p => { job.pct = p; });
+        } catch (e) {
+          convFail++;
+          console.log('[upload] ffmpeg convert failed for ' + f.name + ': ' + e.message);
+          // fallback: simpan apa adanya
+        }
+      }
+      job.stage = 'Menyimpan…';
+      const warn = convFail ? convFail + ' video gagal di-encode, disimpan tanpa konversi' : null;
+      const allImages = files.every(f => IMAGE_EXTS.includes(extname(f.name || '').toLowerCase()));
+      if (allImages && files.length >= 1) {
+        const code = storeBundle(files, clientIP);
+        if (!code) throw new Error('Server penuh');
+        const totalSize = files.reduce((s, f) => s + f.buf.length, 0);
+        addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: files.map(f => f.name).join(', '), filesize: totalSize, code, bundle: true, count: files.length });
+        recordUpload(clientIP);
+        sendTelegram('upload', `📤 <b>Upload Bundle</b>\n${files.length} file | ${(totalSize/1048576).toFixed(1)} MB\nKode: <code>${code}</code>\nIP: ${clientIP}`);
+        job.result = { ok: true, code, bundle: true, count: files.length, ...(warn && { warn }) };
+      } else {
+        const codes = [];
+        for (const file of files) {
+          const code = storeVideo(file.buf, file.name, clientIP);
+          if (!code) throw new Error('Server penuh');
+          codes.push({ code, name: file.name });
+          addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: file.name, filesize: file.buf.length, code });
+        }
+        recordUpload(clientIP);
+        sendTelegram('upload', `📤 <b>Upload</b>\n${codes.map(c=>c.name).join(', ')}\nKode: <code>${codes[0].code}</code>\nIP: ${clientIP}`);
+        job.result = { ok: true, code: codes[0].code, codes, ...(warn && { warn }) };
+      }
+    } catch (e) {
+      job.error = e.message || 'Proses gagal';
+      sendTelegram('error', `❌ <b>Upload gagal</b>\n${files.map(f => f.name).join(', ')}\nError: ${job.error}\nIP: ${clientIP}`);
+    }
+  })();
+  return jobId;
+}
+
+// --- Chunked upload (untuk file > limit proxy Cloudflare 100 MB) ---
+// Alasan: Cloudflare Free menolak body >100 MB dengan 413 sebelum request sampai
+// ke server. File besar dipecah client-side jadi bagian kecil, ditulis ke disk
+// per bagian, lalu digabung byte-per-byte tanpa transformasi apa pun.
+const CHUNK_SIZE = 20 * 1024 * 1024; // 20 MB — aman di bawah limit 100 MB Cloudflare
+const CHUNK_DIR = join(tmpdir(), 'swhd-chunks');
+const chunkSessions = new Map(); // id -> { files:[{name,size,parts:Set}], total, ip, ts }
+
+function chunkSweep() {
+  const now = Date.now();
+  for (const [id, s] of chunkSessions) {
+    if (now - s.ts > 60 * 60000) {
+      chunkSessions.delete(id);
+      try { execSync('rm -rf ' + JSON.stringify(join(CHUNK_DIR, id))); } catch {}
+    }
+  }
+}
+setInterval(chunkSweep, 10 * 60000).unref?.();
+
+function readRawBody(req, limitBytes) {
+  return new Promise((resolve, reject) => {
+    const bufs = [];
+    let len = 0;
+    req.on('data', c => {
+      len += c.length;
+      if (limitBytes && len > limitBytes) { reject(new Error('Chunk terlalu besar')); req.destroy(); return; }
+      bufs.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(bufs)));
+    req.on('error', reject);
+  });
+}
+
 // --- Server ---
 const server = http.createServer(async (req, res) => {
   const url = parseUrl(req.url);
@@ -542,6 +633,9 @@ const server = http.createServer(async (req, res) => {
       siteSubtitle: settings.siteSubtitle || 'Upload & claim video HD',
       maintenance: !!settings.maintenance,
       maxFileSizeMB: settings.maxFileSizeMB || 0,
+      allowLargeUpload: settings.allowLargeUpload !== false,
+      largeUploadMaxMB: settings.largeUploadMaxMB || 0,
+      chunkThresholdMB: 95,
       bannerText: settings.bannerText || '',
       announcement: settings.announcement || '',
       heroTitle: settings.heroTitle || '',
@@ -606,58 +700,123 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        // ponytail: async job flow — respond langsung, encode di background biar client bisa tunjukin progres tahap 2. Upgrade: antrian per-file kalau upload multi-video rame.
-        const jobId = newJob(files.map(f => f.name));
+        // ponytail: async job flow — respond langsung, encode di background biar client bisa tunjukin progres tahap 2.
+        const jobId = beginUploadJob(files, clientIP);
         jsonRes(res, 200, { ok: true, pending: true, jobId });
-        const job = jobs.get(jobId);
-        (async () => {
-          try {
-            let convFail = 0;
-            for (let i = 0; i < files.length; i++) {
-              const f = files[i];
-              if (!isVideoFile(f.name)) continue;
-              job.stage = 'Encode video' + (files.length > 1 ? ' (' + (i + 1) + '/' + files.length + ')' : '') + '…';
-              job.pct = 0;
-              try {
-                files[i] = await convertToMp4Async(f.buf, f.name, p => { job.pct = p; });
-              } catch (e) {
-                convFail++;
-                console.log('[upload] ffmpeg convert failed for ' + f.name + ': ' + e.message);
-                // fallback: simpan apa adanya
-              }
-            }
-            job.stage = 'Menyimpan…';
-            const warn = convFail ? convFail + ' video gagal di-encode, disimpan tanpa konversi' : null;
-            const allImages = files.every(f => IMAGE_EXTS.includes(extname(f.name || '').toLowerCase()));
-            if (allImages && files.length >= 1) {
-              const code = storeBundle(files, clientIP);
-              if (!code) throw new Error('Server penuh');
-              const totalSize = files.reduce((s, f) => s + f.buf.length, 0);
-              addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: files.map(f => f.name).join(', '), filesize: totalSize, code, bundle: true, count: files.length });
-              recordUpload(clientIP);
-              sendTelegram('upload', `📤 <b>Upload Bundle</b>\n${files.length} file | ${(totalSize/1048576).toFixed(1)} MB\nKode: <code>${code}</code>\nIP: ${clientIP}`);
-              job.result = { ok: true, code, bundle: true, count: files.length, ...(warn && { warn }) };
-            } else {
-              const codes = [];
-              for (const file of files) {
-                const code = storeVideo(file.buf, file.name, clientIP);
-                if (!code) throw new Error('Server penuh');
-                codes.push({ code, name: file.name });
-                addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: file.name, filesize: file.buf.length, code });
-              }
-              recordUpload(clientIP);
-              sendTelegram('upload', `📤 <b>Upload</b>\n${codes.map(c=>c.name).join(', ')}\nKode: <code>${codes[0].code}</code>\nIP: ${clientIP}`);
-              job.result = { ok: true, code: codes[0].code, codes, ...(warn && { warn }) };
-            }
-          } catch (e) {
-            job.error = e.message || 'Proses gagal';
-            sendTelegram('error', `❌ <b>Upload gagal</b>\n${files.map(f => f.name).join(', ')}\nError: ${job.error}\nIP: ${clientIP}`);
-          }
-        })();
       } catch (e) {
         jsonRes(res, 500, { ok: false, error: e.message });
       }
     });
+    return;
+  }
+
+  // --- Chunked upload: init ---
+  // Body: { files:[{name,size}] } → balikin sessionId + ukuran chunk yang dipakai client.
+  if (req.method === 'POST' && url === '/upload/chunk/init') {
+    if ((settings.ipBlacklist || []).includes(clientIP)) { jsonRes(res, 403, { ok: false, error: 'IP anda diblokir' }); return; }
+    if (settings.maintenance) { jsonRes(res, 503, { ok: false, error: 'Sedang maintenance, coba lagi nanti' }); return; }
+    if (settings.allowLargeUpload === false) {
+      jsonRes(res, 413, { ok: false, error: 'Upload file besar (>100 MB) sedang dimatikan admin. Kompres dulu atau hubungi admin.' }); return;
+    }
+    const rateCheck = checkUploadRate(clientIP, settings);
+    if (!rateCheck.ok) { jsonRes(res, 429, { ok: false, error: rateCheck.error }); return; }
+    try {
+      const body = JSON.parse((await readBody(req)) || '{}');
+      const list = Array.isArray(body.files) ? body.files : [];
+      if (!list.length) { jsonRes(res, 400, { ok: false, error: 'Daftar file kosong' }); return; }
+      const maxMB = settings.maxFileSizeMB || 0;
+      const hardMB = settings.largeUploadMaxMB || 0;
+      let total = 0;
+      for (const f of list) {
+        const sz = Number(f.size) || 0;
+        if (!f.name || sz <= 0) { jsonRes(res, 400, { ok: false, error: 'Metadata file tidak valid' }); return; }
+        if (maxMB > 0 && sz > maxMB * 1024 * 1024) { jsonRes(res, 413, { ok: false, error: 'File "' + f.name + '" terlalu besar. Maksimal ' + maxMB + ' MB' }); return; }
+        if (hardMB > 0 && sz > hardMB * 1024 * 1024) { jsonRes(res, 413, { ok: false, error: 'File "' + f.name + '" melewati batas upload besar (' + hardMB + ' MB)' }); return; }
+        total += sz;
+      }
+      const quotaMB = settings.storageQuotaMB || 0;
+      if (quotaMB > 0 && getTotalStorage() + total > quotaMB * 1024 * 1024) {
+        jsonRes(res, 507, { ok: false, error: 'Kuota storage server penuh. Coba lagi nanti.' }); return;
+      }
+      chunkSweep();
+      const id = crypto.randomBytes(8).toString('hex');
+      mkdirSync(join(CHUNK_DIR, id), { recursive: true });
+      chunkSessions.set(id, {
+        files: list.map(f => ({ name: String(f.name), size: Number(f.size), parts: new Set() })),
+        total, ip: clientIP, ts: Date.now()
+      });
+      jsonRes(res, 200, { ok: true, sessionId: id, chunkSize: CHUNK_SIZE });
+    } catch (e) {
+      jsonRes(res, 400, { ok: false, error: e.message || 'Init gagal' });
+    }
+    return;
+  }
+
+  // --- Chunked upload: terima satu bagian ---
+  // Query: ?sid=<session>&fi=<index file>&ci=<index chunk>; body = bytes mentah.
+  if (req.method === 'POST' && url === '/upload/chunk') {
+    try {
+      const q = new URLSearchParams((req.url.split('?')[1] || ''));
+      const sid = q.get('sid') || '';
+      const fi = parseInt(q.get('fi') || '-1', 10);
+      const ci = parseInt(q.get('ci') || '-1', 10);
+      const sess = chunkSessions.get(sid);
+      if (!sess) { jsonRes(res, 404, { ok: false, error: 'Sesi upload tidak ditemukan atau kedaluwarsa' }); return; }
+      if (sess.ip !== clientIP) { jsonRes(res, 403, { ok: false, error: 'Sesi bukan milik anda' }); return; }
+      if (!(fi >= 0 && fi < sess.files.length) || ci < 0) { jsonRes(res, 400, { ok: false, error: 'Index tidak valid' }); return; }
+      const buf = await readRawBody(req, CHUNK_SIZE + 1048576);
+      if (!buf.length) { jsonRes(res, 400, { ok: false, error: 'Chunk kosong' }); return; }
+      writeFileSync(join(CHUNK_DIR, sid, fi + '_' + ci + '.part'), buf);
+      sess.files[fi].parts.add(ci);
+      sess.ts = Date.now();
+      jsonRes(res, 200, { ok: true, received: ci });
+    } catch (e) {
+      jsonRes(res, 500, { ok: false, error: e.message || 'Chunk gagal' });
+    }
+    return;
+  }
+
+  // --- Chunked upload: gabung & proses ---
+  // Penggabungan murni concat urut, tanpa transformasi. Ukuran hasil wajib sama
+  // dengan ukuran yang dilaporkan client; kalau beda, ditolak (anti file korup).
+  if (req.method === 'POST' && url === '/upload/chunk/finish') {
+    let sid = '';
+    try {
+      const body = JSON.parse((await readBody(req)) || '{}');
+      sid = String(body.sessionId || '');
+      const sess = chunkSessions.get(sid);
+      if (!sess) { jsonRes(res, 404, { ok: false, error: 'Sesi upload tidak ditemukan atau kedaluwarsa' }); return; }
+      if (sess.ip !== clientIP) { jsonRes(res, 403, { ok: false, error: 'Sesi bukan milik anda' }); return; }
+      if (settings.expireMinutes) setTTL(settings.expireMinutes * 60000);
+      const files = [];
+      for (let fi = 0; fi < sess.files.length; fi++) {
+        const meta = sess.files[fi];
+        const expected = Math.ceil(meta.size / CHUNK_SIZE);
+        if (meta.parts.size !== expected) {
+          jsonRes(res, 400, { ok: false, error: 'Bagian file "' + meta.name + '" tidak lengkap (' + meta.parts.size + '/' + expected + ')' }); return;
+        }
+        const parts = [];
+        for (let ci = 0; ci < expected; ci++) {
+          const pf = join(CHUNK_DIR, sid, fi + '_' + ci + '.part');
+          if (!existsSync(pf)) { jsonRes(res, 400, { ok: false, error: 'Bagian hilang di "' + meta.name + '"' }); return; }
+          parts.push(readFileSync(pf));
+        }
+        const merged = Buffer.concat(parts);
+        if (merged.length !== meta.size) {
+          jsonRes(res, 400, { ok: false, error: 'Ukuran file "' + meta.name + '" tidak cocok (' + merged.length + ' != ' + meta.size + '). Upload ulang.' }); return;
+        }
+        files.push({ name: meta.name, buf: merged });
+      }
+      const jobId = beginUploadJob(files, clientIP);
+      jsonRes(res, 200, { ok: true, pending: true, jobId, chunked: true });
+    } catch (e) {
+      jsonRes(res, 500, { ok: false, error: e.message || 'Gabung gagal' });
+    } finally {
+      if (sid) {
+        chunkSessions.delete(sid);
+        try { execSync('rm -rf ' + JSON.stringify(join(CHUNK_DIR, sid))); } catch {}
+      }
+    }
     return;
   }
 

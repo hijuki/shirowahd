@@ -12,6 +12,7 @@ const inputFields = [
 const numFields = [
   { key: 'maxFileSizeMB', label: 'Maks File (MB)', ph: '100', icon: 'fa-weight-hanging', suffix: 'MB', desc: '0 = tanpa batas' },
   { key: 'expireMinutes', label: 'Expire (menit)', ph: '120', icon: 'fa-hourglass-half', suffix: 'min' },
+  { key: 'largeUploadMaxMB', label: 'Batas Upload Besar (MB)', ph: '0', icon: 'fa-cloud-arrow-up', suffix: 'MB', desc: '0 = tanpa batas, berlaku saat mode file besar ON' },
   { key: 'storageQuotaMB', label: 'Kuota Storage (MB)', ph: '5000', icon: 'fa-database', suffix: 'MB', desc: '0 = tanpa batas' },
   { key: 'rateLimit', label: 'Rate Limit (upload/jam)', ph: '0', icon: 'fa-gauge-high', desc: '0 = tanpa batas' },
   { key: 'rateCooldown', label: 'Rate Cooldown (detik)', ph: '0', icon: 'fa-clock', desc: 'Jeda antar upload' },
@@ -25,6 +26,7 @@ const toggles = [
   { key: 'showClaimBtn', label: 'Tombol Grup Claim', desc: 'Link grup claim di popup & kode', icon: 'fa-comments', color: '#34d399' },
   { key: 'showPopupBtns', label: 'Extra Popup Buttons', desc: 'Tombol custom tambahan', icon: 'fa-link', color: '#3b82f6' },
   { key: 'autoCleanup', label: 'Auto Cleanup', desc: 'Hapus file expired otomatis', icon: 'fa-broom', color: '#fbbf24' },
+  { key: 'allowLargeUpload', label: 'Upload File Besar (>95 MB)', desc: 'ON = file besar auto dipecah biar lolos limit Cloudflare. OFF = maksimal 95 MB.', icon: 'fa-cloud-arrow-up', color: '#22d3ee' },
   { key: 'maintenance', label: 'Mode Maintenance', desc: 'Upload dinonaktifkan sementara', icon: 'fa-screwdriver-wrench', color: '#fb7185' },
 ]
 
