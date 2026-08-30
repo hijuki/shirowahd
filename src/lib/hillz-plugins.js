@@ -76,6 +76,9 @@ const defaultConfig = {
   isEnabled: true,
 };
 
+// Catatan tabrakan nama command antar-plugin, diisi saat registrasi.
+const duplicateCommands = [];
+
 const normalizePluginNames = (name) => {
   const values = Array.isArray(name) ? name : [name];
   return values
@@ -204,7 +207,15 @@ function registerPlugin(plugin) {
     return false;
   }
 
+  // Dua plugin dengan nama utama sama saling menimpa tanpa suara — yang dimuat
+  // terakhir menang dan yang lain jadi tidak bisa dipanggil sama sekali.
+  // Perilaku tidak diubah (menimpa tetap menimpa, supaya tidak ada command yang
+  // mendadak hilang), tapi sekarang dicatat supaya ketahuan saat boot.
   for (const n of names) {
+    const prev = pluginStore.commands.get(n);
+    if (prev && prev.filePath !== plugin.filePath) {
+      duplicateCommands.push({ command: n, kept: plugin.filePath, shadowed: prev.filePath });
+    }
     pluginStore.commands.set(n, plugin);
   }
 
@@ -272,6 +283,23 @@ function printPluginTable(plugins) {
     );
   }
 
+  // Peringatkan kalau ada command yang tertimpa: sebelumnya ini diam total,
+  // jadi plugin yang kalah tampak "terpasang" padahal tidak akan pernah jalan.
+  if (duplicateCommands.length > 0) {
+    console.log("");
+    console.log(
+      `  ${theme.pill("duplikat", "system")} ${chalk.yellowBright(String(duplicateCommands.length))} ${theme.dim("command tertimpa (yang lama tidak aktif)")}`,
+    );
+    for (const d of duplicateCommands.slice(0, 10)) {
+      const keep = path.relative(process.cwd(), d.kept);
+      const lost = path.relative(process.cwd(), d.shadowed);
+      console.log(`  ${theme.dim("·")} .${d.command} ${theme.dim("aktif:")} ${keep} ${theme.dim("mati:")} ${lost}`);
+    }
+    if (duplicateCommands.length > 10) {
+      console.log(`  ${theme.dim(`+${duplicateCommands.length - 10} lainnya`)}`);
+    }
+  }
+
   console.log("");
 }
 
@@ -287,6 +315,7 @@ async function loadPlugins(pluginsDir) {
   pluginStore.commands.clear();
   pluginStore.aliases.clear();
   pluginStore.categories.clear();
+  duplicateCommands.length = 0;
 
   let loadedCount = 0;
   const loadedPlugins = [];
@@ -602,6 +631,12 @@ function unloadPlugin(name) {
   }
 }
 
+// Daftar command yang tertimpa plugin lain (nama utama sama). Dipakai untuk
+// melaporkan tabrakan setelah semua plugin dimuat.
+function getDuplicateCommands() {
+  return duplicateCommands.slice();
+}
+
 export {
   loadPlugin,
   loadPlugins,
@@ -622,4 +657,5 @@ export {
   pluginStore,
   defaultConfig,
   getAllCommandNames,
+  getDuplicateCommands,
 };
