@@ -13,13 +13,16 @@ NODE_MAJOR=22
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 # read yang tidak mematikan script saat non-interaktif (set -e + EOF)
-ask()  { local v; read -rp "$1" v </dev/tty 2>/dev/null || v=""; printf '%s' "$v"; }
+ask()  { local v; read -rp "$1" v 2>/dev/null </dev/tty || v=""; printf '%s' "$v"; }
 
 [ "$(id -u)" = 0 ] || die "Jalankan sebagai root."
 command -v curl >/dev/null || { apt-get update -qq; apt-get install -y -qq curl; }
 
 # ---------- 1. Node.js 22 + tools ----------
-if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt $NODE_MAJOR ]; then
+NODE_CUR=0
+command -v node >/dev/null && NODE_CUR=$(node -v 2>/dev/null | sed 's/^v//; s/\..*//')
+[ -n "$NODE_CUR" ] || NODE_CUR=0
+if [ "$NODE_CUR" -lt "$NODE_MAJOR" ]; then
   say "Install Node.js ${NODE_MAJOR}.x"
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - >/dev/null
   apt-get install -y -qq nodejs

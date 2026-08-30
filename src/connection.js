@@ -256,7 +256,19 @@ async function startConnection(options = {}) {
   const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
   const { version, isLatest } = await fetchLatestWaWebVersion()
   const usePairingCode = config.session?.usePairingCode === true;
-  const pairingNumber = config.session?.pairingNumber || "";
+  // Nomor pairing: file .pair-number menang atas config.js.
+  // install.sh dan tombol "Pair Ulang" di panel admin sama-sama menulis
+  // .pair-number, tapi sebelumnya file itu tidak pernah dibaca — jadi di VPS
+  // baru bot tetap minta kode untuk nomor yang ter-hardcode di config.js,
+  // bukan nomor yang diisi user di wizard. Fallback tetap ke config.js.
+  let pairingNumber = config.session?.pairingNumber || "";
+  try {
+    const pairFile = path.join(process.cwd(), ".pair-number");
+    if (fs.existsSync(pairFile)) {
+      const fromFile = fs.readFileSync(pairFile, "utf8").replace(/[^0-9]/g, "");
+      if (fromFile.length >= 10) pairingNumber = fromFile;
+    }
+  } catch { }
   const sock = makeWASocket({
     version: version,
     logger,

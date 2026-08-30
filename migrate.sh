@@ -36,7 +36,19 @@ case "${1:-}" in
     tar -xzf "$BUNDLE" -C "$SW_DIR"
     chmod 600 .env 2>/dev/null || true
     echo "✔ Import selesai (backup lama: *.pre-import.$TS)"
-    command -v pm2 >/dev/null && pm2 restart main web --update-env 2>/dev/null || true
+    # Hanya restart pm2 kalau proses main/web memang menunjuk ke $SW_DIR.
+    # Sebelumnya `pm2 restart main web` jalan tanpa syarat, jadi import ke
+    # direktori lain (mis. sandbox atau instalasi kedua) ikut me-restart
+    # instalasi produksi yang tidak ada hubungannya.
+    if command -v pm2 >/dev/null; then
+      PM_CWD=$(pm2 jlist 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const p=JSON.parse(d).find(x=>x.name==="main");process.stdout.write(p?p.pm2_env.pm_cwd:"")}catch{process.stdout.write("")}})' 2>/dev/null || echo "")
+      if [ -n "$PM_CWD" ] && [ "$PM_CWD" = "$(pwd)" ]; then
+        pm2 restart main web --update-env 2>/dev/null || true
+      else
+        echo "  (pm2 tidak di-restart: proses 'main' menunjuk ke '${PM_CWD:-tidak ada}', bukan $(pwd))"
+        echo "  Restart manual kalau ini instalasi utama: pm2 restart main web --update-env"
+      fi
+    fi
     echo "  Bot akan konek pakai sesi lama — tidak perlu pairing ulang."
     ;;
   *)
