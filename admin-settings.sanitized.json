@@ -37,7 +37,7 @@
     }
   ],
   "popupButtons": [],
-  "adminPassword": "@Hillz126",
+  "adminPassword": "__SET_VIA_ENV__",
   "maintenance": true,
   "ipBlacklist": [],
   "siteName": "STATUSHD",
@@ -57,7 +57,7 @@
   "showClaimBtn": true,
   "showPopupBtns": false,
   "domain": "swhdhlz.my.id",
-  "telegramBotToken": "8631201304:AAFkoRB-gigsHwSUFYe_4JLc_jjryu1w_fQ",
+  "telegramBotToken": "__SET_VIA_ENV__",
   "telegramChatId": "6343065438",
   "telegramNotifyUpload": true,
   "telegramNotifyClaim": false,

@@ -858,10 +858,22 @@ const server = http.createServer(async (req, res) => {
       if (!token) throw new Error('GIT_TOKEN tidak ditemukan di .env — tambahkan GIT_TOKEN=ghp_xxx di /root/shirowahd/.env');
       const authUrl = repo.replace(/^https:\/\/([^@]*@)?/, `https://${token}@`);
 
+      // admin-settings.json TIDAK di-backup langsung karena isinya password admin
+      // + token Telegram. Yang di-commit adalah salinan tersanitasi, supaya
+      // konfigurasi tetap punya backup tanpa membocorkan kredensial.
+      try {
+        const s = loadSettings();
+        const safe = { ...s };
+        for (const k of ['adminPassword', 'telegramBotToken']) {
+          if (safe[k]) safe[k] = '__SET_VIA_ENV__';
+        }
+        writeFileSync(join(__dirname, 'admin-settings.sanitized.json'), JSON.stringify(safe, null, 2), 'utf8');
+      } catch { /* jangan gagalkan backup gara-gara ini */ }
+
       // Stage semua perubahan yang relevan. config.js ikut karena isinya sekarang
       // hanya referensi process.env (tanpa secret). File state runtime sudah
       // di-untrack lewat .gitignore.
-      run('git add -A config.js admin-settings.json .gitignore .env.example main.js web-uploader.js 2>/dev/null || true');
+      run('git add -A config.js admin-settings.sanitized.json .gitignore .env.example main.js web-uploader.js 2>/dev/null || true');
       try { run('git add -A plugins/ src/ database/ web/ 2>/dev/null || true'); } catch {}
 
       let status = '';
