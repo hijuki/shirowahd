@@ -858,23 +858,27 @@ const server = http.createServer(async (req, res) => {
       if (!token) throw new Error('GIT_TOKEN tidak ditemukan di .env — tambahkan GIT_TOKEN=ghp_xxx di /root/shirowahd/.env');
       const authUrl = repo.replace(/^https:\/\/([^@]*@)?/, `https://${token}@`);
 
-      // Stage only safe files (skip node_modules/storage/session)
-      run('git add admin-settings.json .gitignore main.js web-uploader.js 2>/dev/null || true');
-      try { run('git add plugins/ src/ database/ web/ 2>/dev/null || true'); } catch {}
+      // Stage semua perubahan yang relevan. config.js ikut karena isinya sekarang
+      // hanya referensi process.env (tanpa secret). File state runtime sudah
+      // di-untrack lewat .gitignore.
+      run('git add -A config.js admin-settings.json .gitignore .env.example main.js web-uploader.js 2>/dev/null || true');
+      try { run('git add -A plugins/ src/ database/ web/ 2>/dev/null || true'); } catch {}
 
       let status = '';
       try { status = run('git status --porcelain'); } catch {}
-      const lines = status ? status.split('\n').filter(Boolean).length : 0;
+      const staged = status ? status.split('\n').filter(l => l && !l.startsWith('??')).length : 0;
+      const lines = staged;
       if (lines) {
         const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
         run(`git commit -m "backup: ${ts} (${lines} files)"`);
       }
 
       // Sinkron dulu dengan remote (riwayat bisa divergen) lalu push.
+      // autoStash menjaga sisa file dirty (log/state) tidak memblokir rebase.
       run(`git fetch ${authUrl} ${branch} 2>&1`);
       let behind = '0';
       try { behind = run(`git rev-list --count HEAD..FETCH_HEAD`); } catch {}
-      if (behind !== '0') run(`git rebase FETCH_HEAD 2>&1`);
+      if (behind !== '0') run(`git -c rebase.autoStash=true rebase FETCH_HEAD 2>&1`);
 
       let ahead = '0';
       try { ahead = run(`git rev-list --count FETCH_HEAD..HEAD`); } catch {}

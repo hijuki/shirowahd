@@ -1,3 +1,24 @@
+import { readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+
+// Muat .env sedini mungkin: semua API key sekarang dibaca dari environment,
+// bukan ditulis di file ini. Idempoten — kalau sudah dimuat main.js, tidak dobel.
+if (!process.env.__SHIROWAHD_ENV_LOADED) {
+  const envPath = join(dirname(fileURLToPath(import.meta.url)), ".env");
+  try {
+    if (typeof process.loadEnvFile === "function") process.loadEnvFile(envPath);
+    else throw new Error("no loadEnvFile");
+  } catch {
+    try {
+      for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+        const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+        if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+      }
+    } catch { /* .env optional */ }
+  }
+  process.env.__SHIROWAHD_ENV_LOADED = "1";
+}
 import { getDatabase } from "./src/lib/ourin-database.js";
 import * as ownerPremiumDb from "./src/lib/ourin-premium-db.js";
 
@@ -281,19 +302,19 @@ const config = {
   //  APIkey
   APIkey: {
     // kalian bisa daftar di https://api.lolhuman.xyz, lalu ambil apikeynya
-    lolhuman: "APIKey-Milik-Bot-SHIROWAHD(Zann,HyuuSATANN,Keisya,Danzz)",
+    lolhuman: process.env.APIKEY_LOLHUMAN || "",
     // kalian bisa daftar di https://api.neoxr.eu, lalu ambil apikeynya
-    neoxr: "Milik-Bot-SHIROWAHD",
-    fgsi: "fgsiapi-20c1605c-6d",
-    google: "AIzaSyAS-KiW0SrwiYKwexeBcGPijBVHFg2R_vo",
-    groq: "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", // API Key Groq untuk fitur transkrip (gratis di console.groq.com)
-    betabotz: "Btz-67YfP",
+    neoxr: process.env.APIKEY_NEOXR || "",
+    fgsi: process.env.APIKEY_FGSI || "",
+    google: process.env.APIKEY_GOOGLE || "",
+    groq: process.env.APIKEY_GROQ || "", // API Key Groq untuk fitur transkrip (gratis di console.groq.com)
+    betabotz: process.env.APIKEY_BETABOTZ || "",
     // kalian bisa daftar di https://covenant.sbs, dan ambil apikeynya
-    covenant: "cov_live_bb660c9e5f735e46d808b7ae362914cfe35c2936739ee2b2",
-    onlym: "ONLym-783d29",
-    obscura: "obs-byOn9RVGMzvPXZQTsP9W",
-    firefly: "SHIROWAHDNextGen",
-    cuki: "cuki-x"
+    covenant: process.env.APIKEY_COVENANT || "",
+    onlym: process.env.APIKEY_ONLYM || "",
+    obscura: process.env.APIKEY_OBSCURA || "",
+    firefly: process.env.APIKEY_FIREFLY || "",
+    cuki: process.env.APIKEY_CUKI || ""
   },
 };
 
