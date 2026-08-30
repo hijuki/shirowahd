@@ -44,6 +44,8 @@
   "siteSubtitle": "no watermark",
   "expireMinutes": 1440,
   "maxFileSizeMB": 0,
+  "allowLargeUpload": true,
+  "largeUploadMaxMB": 0,
   "bannerText": "NEW UPDATE JIKA ADA EROR HUBUNGI ADMIN",
   "announcement": "",
   "heroTitle": "STORY WA",
