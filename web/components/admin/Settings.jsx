@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSettings, saveSettings, backupToGithub } from '@/lib/admin-api'
+import { getSettings, saveSettings, backupToGithub, getBackupHistory, getTunnelStatus } from '@/lib/admin-api'
 
 const inputFields = [
   { key: 'siteName', label: 'Nama Situs', ph: 'ShiroWahd', icon: 'fa-globe' },
@@ -136,6 +136,10 @@ export default function Settings({ toast }) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [backupBusy, setBackupBusy] = useState(false)
+  const [bkHistory, setBkHistory] = useState([])
+  const [tunnel, setTunnel] = useState(null)
+
+  const loadBackupHistory = () => getBackupHistory().then(r => setBkHistory(r?.history || [])).catch(() => {})
 
   const doBackup = async () => {
     setBackupBusy(true)
@@ -144,7 +148,13 @@ export default function Settings({ toast }) {
       toast(r.message || 'Backup berhasil!', 'success')
     } catch (e) { toast('Backup gagal: ' + e.message, 'error') }
     setBackupBusy(false)
+    loadBackupHistory()
   }
+
+  useEffect(() => {
+    loadBackupHistory()
+    getTunnelStatus().then(setTunnel).catch(() => {})
+  }, [])
 
   useEffect(() => {
     getSettings().then(s => {
@@ -347,6 +357,45 @@ export default function Settings({ toast }) {
             className="w-full sm:w-auto rounded-xl px-8 py-3 font-bold bg-[#24292e] hover:bg-[#2f363d] text-white border border-white/[.08] hover:border-white/[.15] transition-all duration-[200ms] active:scale-[.97] flex items-center justify-center gap-2">
             {backupBusy ? <><i className="fa-solid fa-spinner fa-spin" />Backup...</> : <><i className="fa-brands fa-github" />Backup ke GitHub</>}
           </button>
+        </div>
+
+        {/* Status tunnel + riwayat backup */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-[14px] bg-white/[.03] border border-white/[.06] p-4 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#7e90ad]">
+              <i className="fa-solid fa-cloud-arrow-up mr-2" />Cloudflare Tunnel
+            </p>
+            {tunnel ? (
+              <div className="space-y-1 text-sm">
+                <p className="flex items-center gap-2">
+                  <span className={`inline-block w-2 h-2 rounded-full ${tunnel.running ? 'bg-[#34d399]' : 'bg-[#fb7185]'}`} />
+                  {tunnel.running ? `Aktif (${tunnel.processes} proses)` : 'Tidak berjalan'}
+                </p>
+                <p className="text-xs text-[#7e90ad]">ENABLE_TUNNEL: {tunnel.enabled ? '1' : '0'} · Kredensial: {tunnel.configured ? 'lengkap' : 'belum lengkap'}</p>
+                {tunnel.domain && <p className="text-xs font-mono text-[#7e90ad]">{tunnel.domain}</p>}
+              </div>
+            ) : <p className="text-xs text-[#7e90ad]">Memuat…</p>}
+          </div>
+
+          <div className="rounded-[14px] bg-white/[.03] border border-white/[.06] p-4 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#7e90ad]">
+              <i className="fa-solid fa-clock-rotate-left mr-2" />Riwayat Backup
+            </p>
+            {bkHistory.length ? (
+              <ul className="space-y-1.5 max-h-40 overflow-y-auto text-xs">
+                {bkHistory.slice(0, 8).map((h, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <i className={`fa-solid mt-0.5 ${h.ok ? 'fa-circle-check text-[#34d399]' : 'fa-circle-xmark text-[#fb7185]'}`} />
+                    <span className="flex-1">
+                      <span className="text-[#7e90ad]">{new Date(h.ts).toLocaleString('id-ID')}</span>
+                      {' — '}{h.message}
+                      {h.ok && h.changed ? ` (${h.changed} file)` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-xs text-[#7e90ad]">Belum ada riwayat backup.</p>}
+          </div>
         </div>
       </form>
     </div>

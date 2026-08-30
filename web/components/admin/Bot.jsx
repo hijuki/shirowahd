@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getBotStatus, getBotInternalStatus, pairBot, getBotGroups, leaveGroup, toggleGroup, broadcast, cancelBroadcast, sendMessage, execCommand } from '@/lib/admin-api'
+import { getBotStatus, getBotInternalStatus, pairBot, getBotGroups, leaveGroup, toggleGroup, broadcast, cancelBroadcast, sendMessage, execCommand, restartBot, getLogs } from '@/lib/admin-api'
 
 export default function Bot({ toast }) {
   const [status, setStatus] = useState(null)
@@ -24,7 +24,14 @@ export default function Bot({ toast }) {
 
   // exec
   const [cmd, setCmd] = useState('')
+  const [execTarget, setExecTarget] = useState('')
   const [out, setOut] = useState('')
+
+  // live log viewer
+  const [logLines, setLogLines] = useState([])
+  const [logType, setLogType] = useState('out')
+  const [logAuto, setLogAuto] = useState(false)
+  const [logBusy, setLogBusy] = useState(false)
 
   const load = async () => {
     try {
@@ -49,6 +56,34 @@ export default function Bot({ toast }) {
     catch (e) { toast(`Error: ${e.message}`, 'error') }
     finally { setBusy(false) }
   }
+
+  const doRestart = async () => {
+    if (!confirm('Restart bot WhatsApp? Koneksi akan terputus ~10 detik.')) return
+    setBusy(true)
+    try {
+      const r = await restartBot()
+      toast(r?.message || 'Bot di-restart', 'success')
+      setTimeout(load, 8000)
+    } catch (e) { toast(`Error: ${e.message}`, 'error') }
+    finally { setBusy(false) }
+  }
+
+  const loadLogs = async (type = logType) => {
+    setLogBusy(true)
+    try {
+      const r = await getLogs(type, 300)
+      setLogLines(Array.isArray(r?.lines) ? r.lines : [])
+    } catch (e) { toast(`Error log: ${e.message}`, 'error') }
+    finally { setLogBusy(false) }
+  }
+
+  // auto-refresh log tiap 5s kalau toggle aktif
+  useEffect(() => {
+    if (!logAuto) return
+    loadLogs()
+    const iv = setInterval(() => loadLogs(), 5000)
+    return () => clearInterval(iv)
+  }, [logAuto, logType])
 
   const doPair = async () => {
     if (!phone.trim()) return
@@ -84,9 +119,10 @@ export default function Bot({ toast }) {
   const doExec = async (e) => {
     e.preventDefault()
     if (!cmd.trim()) return
+    if (!execTarget.trim()) { toast('Isi JID target dulu (backend butuh target)', 'error'); return }
     setBusy(true)
     try {
-      const r = await execCommand(cmd.trim())
+      const r = await execCommand(cmd.trim(), execTarget.trim())
       setOut(typeof r === 'string' ? r : r?.output ?? r?.result ?? JSON.stringify(r, null, 2))
     } catch (e) { setOut(`Error: ${e.message}`); toast(`Error: ${e.message}`, 'error') }
     setBusy(false)
@@ -213,14 +249,46 @@ export default function Bot({ toast }) {
       {/* Exec command */}
       <div className="card p-6 md:p-8 space-y-3">
         <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-terminal text-[#22d3ee] mr-2" />Eksekusi Perintah</h2>
+        <p className="text-xs text-[#7e90ad]">Kode dieksekusi di konteks bot dengan variabel <code className="font-mono">sock</code> dan <code className="font-mono">target</code>.</p>
+        <input value={execTarget} onChange={e => setExecTarget(e.target.value)} placeholder="JID target (628xxx@s.whatsapp.net atau xxx@g.us)"
+          className="w-full rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm font-mono transition-colors duration-[150ms]" />
         <form onSubmit={doExec} className="flex gap-2">
-          <input value={cmd} onChange={e => setCmd(e.target.value)} placeholder="Contoh: status"
+          <input value={cmd} onChange={e => setCmd(e.target.value)} placeholder="Contoh: await sock.sendMessage(target, { text: 'hai' })"
             className="flex-1 rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm font-mono transition-colors duration-[150ms]" />
           <button type="submit" disabled={busy} className="btn-primary rounded-[12px] px-5 py-2.5 text-sm font-bold"><i className="fa-solid fa-play mr-1.5" />Run</button>
         </form>
         {out && (
           <pre className="rounded-[12px] bg-black/40 border border-white/[.07] p-4 text-xs font-mono overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap anim-fade">{out}</pre>
         )}
+      </div>
+
+      {/* Kontrol proses + live log */}
+      <div className="card p-6 md:p-8 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-scroll text-[#22d3ee] mr-2" />Log &amp; Kontrol Proses</h2>
+          <button onClick={doRestart} disabled={busy}
+            className="rounded-[12px] px-4 py-2.5 text-sm font-bold bg-white/5 border border-white/[.07] hover:bg-white/[.09] transition-all duration-[150ms] active:scale-[.97]">
+            <i className="fa-solid fa-rotate-right mr-2" />Restart Bot
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={logType} onChange={e => { setLogType(e.target.value); loadLogs(e.target.value) }}
+            className="rounded-[12px] px-3 py-2 bg-white/5 border border-white/[.07] outline-none text-sm">
+            <option value="out">stdout</option>
+            <option value="error">stderr</option>
+          </select>
+          <button onClick={() => loadLogs()} disabled={logBusy}
+            className="rounded-[12px] px-4 py-2 text-sm font-bold bg-white/5 border border-white/[.07] hover:bg-white/[.09] transition-all duration-[150ms] active:scale-[.97]">
+            <i className={`fa-solid fa-arrows-rotate mr-2 ${logBusy ? 'fa-spin' : ''}`} />Muat Log
+          </button>
+          <label className="flex items-center gap-2 text-xs text-[#7e90ad] cursor-pointer select-none">
+            <input type="checkbox" checked={logAuto} onChange={e => setLogAuto(e.target.checked)} className="accent-[#22d3ee]" />
+            Auto-refresh 5s
+          </label>
+        </div>
+        <pre className="rounded-[12px] bg-black/40 border border-white/[.07] p-4 text-[11px] leading-relaxed font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
+          {logLines.length ? logLines.join('\n') : 'Belum ada log dimuat.'}
+        </pre>
       </div>
     </div>
   )

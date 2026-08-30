@@ -31,12 +31,25 @@ const msgRetryCounterCache = new NodeCache({ stdTTL: 60, useClones: false });
 
 let lastMessageReceived = Date.now();
 let watchdogTimer = null;
-const WATCHDOG_TIMEOUT = 30 * 60 * 1000;
+// Watchdog: putuskan koneksi kalau tidak ada pesan masuk sama sekali, supaya
+// socket zombie tidak menggantung. Default 180 menit — sebelumnya 30 menit,
+// yang di grup sepi memicu reconnect tiap setengah jam (194x dalam 4 hari).
+// Override lewat .env: WATCHDOG_MINUTES=0 untuk mematikan total.
+const WATCHDOG_MINUTES = (() => {
+  const v = Number(process.env.WATCHDOG_MINUTES);
+  return Number.isFinite(v) && v >= 0 ? v : 180;
+})();
+const WATCHDOG_TIMEOUT = WATCHDOG_MINUTES * 60 * 1000;
 const WATCHDOG_CHECK_INTERVAL = 60 * 1000;
 
 function startWatchdog(reconnectFn, options) {
   if (watchdogTimer) clearInterval(watchdogTimer);
   lastMessageReceived = Date.now();
+
+  if (WATCHDOG_TIMEOUT <= 0) {
+    colors.logger.success("watchdog", "dimatikan (WATCHDOG_MINUTES=0)");
+    return;
+  }
 
   watchdogTimer = setInterval(() => {
     const silentMs = Date.now() - lastMessageReceived;

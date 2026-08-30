@@ -2,6 +2,7 @@ import { getVideo, getBundle, isBundle, deleteVideo } from "../../src/lib/vid-st
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join, dirname, extname } from "path";
 import { fileURLToPath } from "url";
+import https from "https";
 import { isOwner as checkOwner } from "../../config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -18,6 +19,21 @@ function saveSettings(s) {
 }
 
 let cachedGroupJids = {};
+
+// Notif Telegram untuk event claim — toggle "telegramNotifyClaim" di panel admin.
+function sendTelegramClaim(text) {
+  const s = loadSettings();
+  if (!s.telegramBotToken || !s.telegramChatId || !s.telegramNotifyClaim) return;
+  const body = JSON.stringify({ chat_id: s.telegramChatId, text, parse_mode: "HTML" });
+  const req = https.request({
+    hostname: "api.telegram.org",
+    path: "/bot" + s.telegramBotToken + "/sendMessage",
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+  });
+  req.on("error", () => {});
+  req.end(body);
+}
 
 async function getGroupJid(sock, inviteCode) {
   if (cachedGroupJids[inviteCode]) return cachedGroupJids[inviteCode];
@@ -226,6 +242,17 @@ export async function handler(m, { sock }) {
       deleteVideo(code);
     }
   }
+
+  // Notif Telegram: file berhasil diklaim lewat bot WA
+  try {
+    const claimed = results.map(r => r.code).join(", ");
+    const totalFiles = results.reduce((n, r) => n + (r.bundle ? r.bundle.length : 1), 0);
+    sendTelegramClaim(
+      "\ud83d\udce5 <b>Claim</b>\nKode: <code>" + claimed + "</code>\n" +
+      totalFiles + " file terkirim\nOleh: " + sender.replace(/@.+/, "") +
+      "\nDi: " + (isGc ? "grup" : "PC")
+    );
+  } catch { /* notif optional */ }
 
   // Visit Website button — same pattern as .menu (interactiveButtons)
   try {

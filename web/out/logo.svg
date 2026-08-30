@@ -1,30 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Upload">
   <defs>
-    <linearGradient id="g1" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="50%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#34d399"/>
+    <linearGradient id="edge" x1="24" y1="20" x2="96" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9dbcff"/>
+      <stop offset="100%" stop-color="#2f5fd8"/>
     </linearGradient>
-    <linearGradient id="g2" x1="30" y1="30" x2="90" y2="90" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
   </defs>
-  <!-- Outer rounded square -->
-  <rect x="4" y="4" width="112" height="112" rx="28" fill="#080e1c" stroke="url(#g1)" stroke-width="2.5"/>
-  <!-- Inner glow circle -->
-  <circle cx="60" cy="56" r="30" fill="url(#g2)" opacity="0.12"/>
-  <!-- Upload arrow -->
-  <g filter="url(#glow)">
-    <path d="M60 32 L60 68" stroke="url(#g2)" stroke-width="5" stroke-linecap="round"/>
-    <path d="M44 48 L60 32 L76 48" stroke="url(#g2)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Plate -->
+  <rect x="2" y="2" width="116" height="116" rx="28" fill="#0b1220"/>
+  <rect x="2.75" y="2.75" width="114.5" height="114.5" rx="27.25" fill="none" stroke="url(#edge)" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Cloud: symmetric about x=60. Bottom edge is split into two arcs whose round
+       caps stop exactly 3px clear of the 8px shaft on BOTH sides (shaft spans
+       x56–64; cap outer edge lands at 53 and 67), so the gap is even. -->
+  <g fill="none" stroke="url(#edge)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M49 80 L34 80 A15 15 0 0 1 34 50 A30 30 0 0 1 86 50 A15 15 0 0 1 86 80 L71 80"/>
   </g>
-  <!-- Cloud base -->
-  <path d="M34 64 C34 56 40 50 48 50 C50 42 58 36 68 38 C76 40 82 46 82 54 C88 54 94 60 92 68 C90 74 84 76 78 76 L42 76 C36 76 32 72 34 64Z" fill="none" stroke="url(#g1)" stroke-width="2" opacity="0.5"/>
-  <!-- Text SWHDHLZ -->
-  <text x="60" y="100" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="14" letter-spacing="3" fill="url(#g1)">SWHDHLZ</text>
+
+  <!-- Arrow: same 8px weight as the cloud -->
+  <g fill="none" stroke="#eaf0ff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 94 L60 50"/>
+    <path d="M45 65 L60 50 L75 65"/>
+  </g>
 </svg>

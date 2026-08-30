@@ -1,6 +1,6 @@
 import http from 'http';
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs';
-import { storeVideo, storeBundle, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL } from './src/lib/vid-store.js';
+import { storeVideo, storeBundle, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL, cleanOrphans } from './src/lib/vid-store.js';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
@@ -9,20 +9,46 @@ import { execSync, exec as execCb } from 'child_process';
 import { tmpdir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Load .env agar GIT_TOKEN/GIT_ADDRESS/BRANCH tersedia (dipakai fitur backup GitHub).
+// Node >=20.12 punya process.loadEnvFile; kalau tidak ada, parse manual.
+try {
+  if (typeof process.loadEnvFile === 'function') process.loadEnvFile(join(__dirname, '.env'));
+  else throw new Error('no loadEnvFile');
+} catch {
+  try {
+    for (const line of readFileSync(join(__dirname, '.env'), 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+      if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+  } catch { /* .env optional */ }
+}
+
 const PORT = 80;
 const WEB_OUT = join(__dirname, 'web', 'out');
 const SETTINGS_FILE = join(__dirname, 'admin-settings.json');
 const UPLOAD_LOG_FILE = join(__dirname, 'upload-log.json');
 
 // --- Telegram Notif ---
+// Token & chat id boleh dari admin-settings.json ATAU .env (TELEGRAM_BOT_TOKEN /
+// TELEGRAM_CHAT_ID). .env didahulukan sebagai fallback supaya secret tidak wajib
+// ditulis di file settings yang ter-track git.
+function tgCreds(s) {
+  return {
+    token: s.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN || '',
+    chatId: s.telegramChatId || process.env.TELEGRAM_CHAT_ID || '',
+  };
+}
+
 function sendTelegram(event, text) {
   const s = loadSettings();
-  if (!s.telegramBotToken || !s.telegramChatId) return;
+  const { token, chatId } = tgCreds(s);
+  if (!token || !chatId) return;
   if (event === 'upload' && !s.telegramNotifyUpload) return;
   if (event === 'claim' && !s.telegramNotifyClaim) return;
   if (event === 'error' && !s.telegramNotifyError) return;
-  const body = JSON.stringify({ chat_id: s.telegramChatId, text, parse_mode: 'HTML' });
-  const req = https.request({ hostname: 'api.telegram.org', path: `/bot${s.telegramBotToken}/sendMessage`, method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } });
+  const body = JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' });
+  const req = https.request({ hostname: 'api.telegram.org', path: `/bot${token}/sendMessage`, method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } });
   req.on('error', () => {});
   req.end(body);
 }
@@ -112,14 +138,34 @@ function saveSettings(data) {
   return s;
 }
 
+// Password admin: admin-settings.json menang (supaya tombol "Ubah Password" di
+// panel benar-benar berefek), ADMIN_PASSWORD di .env hanya fallback kalau file
+// settings kosong/hilang. Default lama tetap ada agar tidak terkunci sendiri.
 function getAdminPassword() {
-  return loadSettings().adminPassword || '@Hillz126';
+  return loadSettings().adminPassword || process.env.ADMIN_PASSWORD || '@Hillz126';
 }
 
 (function initTTL() {
   const s = loadSettings();
   if (s.expireMinutes) setTTL(s.expireMinutes * 60000);
 })();
+
+// --- Riwayat backup GitHub ---
+const BACKUP_LOG_FILE = join(__dirname, 'backup-history.json');
+
+function loadBackupHistory() {
+  try {
+    if (existsSync(BACKUP_LOG_FILE)) return JSON.parse(readFileSync(BACKUP_LOG_FILE, 'utf8'));
+  } catch { /* corrupt → mulai baru */ }
+  return [];
+}
+
+function addBackupHistory(entry) {
+  const h = loadBackupHistory();
+  h.unshift({ ts: Date.now(), ...entry });
+  if (h.length > 50) h.length = 50;
+  try { writeFileSync(BACKUP_LOG_FILE, JSON.stringify(h, null, 2), 'utf8'); } catch { /* disk full */ }
+}
 
 // --- Upload log ---
 function loadUploadLog() {
@@ -423,13 +469,22 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  if (req.method === 'GET' && url === '/favicon.svg') {
-    const fav = join(WEB_OUT, 'favicon.svg');
-    if (existsSync(fav)) {
-      res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
-      res.end(readFileSync(fav));
-      return;
+  // /favicon.svg dan /favicon.ico — fallback ke logo.svg kalau file khusus tidak ada,
+  // biar tidak 404 (browser & Telegram preview selalu minta path ini).
+  if (req.method === 'GET' && (url === '/favicon.svg' || url === '/favicon.ico')) {
+    const candidates = url === '/favicon.ico'
+      ? ['favicon.ico', 'favicon-32.png', 'logo.svg']
+      : ['favicon.svg', 'logo.svg'];
+    for (const name of candidates) {
+      const fav = join(WEB_OUT, name);
+      if (existsSync(fav)) {
+        const ct = name.endsWith('.ico') ? 'image/x-icon' : name.endsWith('.png') ? 'image/png' : 'image/svg+xml';
+        res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400' });
+        res.end(readFileSync(fav));
+        return;
+      }
     }
+    res.writeHead(404); res.end('Not found'); return;
   }
 
   if (req.method === 'GET' && url === '/api/settings/public') {
@@ -494,6 +549,18 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
+        // Kuota storage total (0 = tanpa batas). Dicek sebelum menyimpan biar disk tidak penuh.
+        const quotaMB = settings.storageQuotaMB || 0;
+        if (quotaMB > 0) {
+          const incoming = files.reduce((s, f) => s + f.buf.length, 0);
+          const used = getTotalStorage();
+          if (used + incoming > quotaMB * 1024 * 1024) {
+            const usedMB = (used / 1048576).toFixed(1);
+            sendTelegram('error', `⚠️ <b>Kuota storage penuh</b>\nTerpakai: ${usedMB} MB / ${quotaMB} MB\nUpload ditolak dari IP ${clientIP}`);
+            jsonRes(res, 507, { ok: false, error: 'Kuota storage server penuh (' + usedMB + '/' + quotaMB + ' MB). Coba lagi nanti.' }); return;
+          }
+        }
+
         // ponytail: async job flow — respond langsung, encode di background biar client bisa tunjukin progres tahap 2. Upgrade: antrian per-file kalau upload multi-video rame.
         const jobId = newJob(files.map(f => f.name));
         jsonRes(res, 200, { ok: true, pending: true, jobId });
@@ -539,6 +606,7 @@ const server = http.createServer(async (req, res) => {
             }
           } catch (e) {
             job.error = e.message || 'Proses gagal';
+            sendTelegram('error', `❌ <b>Upload gagal</b>\n${files.map(f => f.name).join(', ')}\nError: ${job.error}\nIP: ${clientIP}`);
           }
         })();
       } catch (e) {
@@ -731,7 +799,18 @@ const server = http.createServer(async (req, res) => {
       for (const v of videos) {
         if (v.remaining <= 0) { deleteVideo(v.code); deleted++; }
       }
-      jsonRes(res, 200, { ok: true, deleted });
+      const orphans = cleanOrphans();
+      jsonRes(res, 200, { ok: true, deleted, orphansDeleted: orphans.deleted, orphansFreed: orphans.freed });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // --- Cleanup orphan files (ada di disk, tidak ada di index) ---
+  if (req.method === 'POST' && url === '/admin/api/cleanup-orphans') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const r = cleanOrphans();
+      jsonRes(res, 200, { ok: true, deleted: r.deleted, freed: r.freed });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
   }
@@ -773,50 +852,112 @@ const server = http.createServer(async (req, res) => {
       run('git config user.name "shirowahd-admin"');
       run('git config user.email "admin@shirowahd.local"');
 
+      const branch = process.env.BRANCH || 'main';
+      const repo = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
+      const token = process.env.GIT_TOKEN || '';
+      if (!token) throw new Error('GIT_TOKEN tidak ditemukan di .env — tambahkan GIT_TOKEN=ghp_xxx di /root/shirowahd/.env');
+      const authUrl = repo.replace(/^https:\/\/([^@]*@)?/, `https://${token}@`);
+
       // Stage only safe files (skip node_modules/storage/session)
       run('git add admin-settings.json .gitignore main.js web-uploader.js 2>/dev/null || true');
-      try { run('git add plugins/ src/ database/ 2>/dev/null || true'); } catch {}
+      try { run('git add plugins/ src/ database/ web/ 2>/dev/null || true'); } catch {}
 
       let status = '';
       try { status = run('git status --porcelain'); } catch {}
-      if (!status) {
-        jsonRes(res, 200, { ok: true, message: 'Tidak ada perubahan untuk di-backup', changed: 0 });
+      const lines = status ? status.split('\n').filter(Boolean).length : 0;
+      if (lines) {
+        const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        run(`git commit -m "backup: ${ts} (${lines} files)"`);
+      }
+
+      // Sinkron dulu dengan remote (riwayat bisa divergen) lalu push.
+      run(`git fetch ${authUrl} ${branch} 2>&1`);
+      let behind = '0';
+      try { behind = run(`git rev-list --count HEAD..FETCH_HEAD`); } catch {}
+      if (behind !== '0') run(`git rebase FETCH_HEAD 2>&1`);
+
+      let ahead = '0';
+      try { ahead = run(`git rev-list --count FETCH_HEAD..HEAD`); } catch {}
+      if (ahead === '0' && !lines) {
+        addBackupHistory({ ok: true, changed: 0, pushed: 0, message: 'Sudah sinkron' });
+        jsonRes(res, 200, { ok: true, message: 'Sudah sinkron, tidak ada perubahan untuk di-backup', changed: 0 });
         return;
       }
-      const lines = status.split('\n').filter(Boolean).length;
-      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      run(`git commit -m "backup: ${ts} (${lines} files)"`);
 
-      // Try push with existing origin first
-      let pushed = false;
-      try { run('git push origin main 2>&1'); pushed = true; } catch {}
-
-      // Fallback: build auth URL from env
-      if (!pushed) {
-        const repo = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
-        const token = process.env.GIT_TOKEN || '';
-        if (!token) {
-          // Try reading from .env file directly
-          let envToken = '';
-          try {
-            const envFile = require('fs').readFileSync(require('path').join(__dirname, '.env'), 'utf8');
-            const m = envFile.match(/GIT_TOKEN=([^\s]+)/);
-            if (m) envToken = m[1];
-          } catch {}
-          if (!envToken) throw new Error('GIT_TOKEN tidak ditemukan di environment atau .env — tambahkan GIT_TOKEN=ghp_xxx di file .env');
-          const authUrl = repo.replace('https://', `https://${envToken}@`);
-          run(`git push ${authUrl} main 2>&1`);
-        } else {
-          const authUrl = repo.replace('https://', `https://${token}@`);
-          run(`git push ${authUrl} main 2>&1`);
-        }
-      }
-
-      jsonRes(res, 200, { ok: true, message: `Backup berhasil! ${lines} file di-push ke GitHub`, changed: lines });
+      run(`git push ${authUrl} HEAD:${branch} 2>&1`);
+      addBackupHistory({ ok: true, changed: lines, pushed: Number(ahead), message: 'Push berhasil' });
+      jsonRes(res, 200, { ok: true, message: `Backup berhasil! ${lines} file di-commit, ${ahead} commit di-push ke GitHub`, changed: lines, pushed: Number(ahead) });
     } catch (e) {
       const msg = (e.message || 'Unknown error').replace(/https:\/\/[^@]+@/g, 'https://***@');
+      addBackupHistory({ ok: false, message: msg.slice(0, 300) });
+      sendTelegram('error', `❌ <b>Backup GitHub gagal</b>\n${msg.slice(0, 300)}`);
       jsonRes(res, 500, { ok: false, error: msg });
     }
+    return;
+  }
+
+  // === RESTART BOT (pm2, fallback ke pkill lalu pm2 start) ===
+  if (req.method === 'POST' && url === '/admin/api/bot/restart') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      let out = '';
+      try {
+        out = execSync('pm2 restart main --update-env 2>&1', { encoding: 'utf8', timeout: 60000 }).trim();
+      } catch (e) {
+        // pm2 tidak ada / proses tidak terdaftar → coba start ulang lewat pm2
+        out = execSync('pm2 start main.js --name main 2>&1', { cwd: __dirname, encoding: 'utf8', timeout: 60000 }).trim();
+      }
+      sendTelegram('error', '🔄 <b>Bot di-restart</b> dari panel admin');
+      jsonRes(res, 200, { ok: true, message: 'Perintah restart dikirim ke pm2', output: out.split('\n').slice(-6).join('\n') });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.stderr ? e.stderr.toString().trim() : e.message }); }
+    return;
+  }
+
+  // === LIVE LOG VIEWER ===
+  if (req.method === 'GET' && url.startsWith('/admin/api/logs')) {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const q = new URLSearchParams((req.url.split('?')[1] || ''));
+      const lines = Math.min(Math.max(parseInt(q.get('lines') || '200', 10) || 200, 10), 2000);
+      const which = q.get('type') === 'error' ? 'main-error.log' : 'main-out.log';
+      const candidates = [
+        join(process.env.HOME || '/root', '.pm2', 'logs', which),
+        join(__dirname, 'logs', which),
+      ];
+      let file = candidates.find(f => existsSync(f));
+      if (!file) { jsonRes(res, 200, { ok: true, lines: [], note: 'File log tidak ditemukan' }); return; }
+      const out = execSync(`tail -n ${lines} ${JSON.stringify(file)}`, { encoding: 'utf8', timeout: 10000, maxBuffer: 8 * 1024 * 1024 });
+      jsonRes(res, 200, { ok: true, file, lines: out.split('\n') });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // === BACKUP HISTORY ===
+  if (req.method === 'GET' && url === '/admin/api/backup/history') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    jsonRes(res, 200, { ok: true, history: loadBackupHistory() });
+    return;
+  }
+
+  // === STATUS CLOUDFLARE TUNNEL ===
+  if (req.method === 'GET' && url === '/admin/api/tunnel') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      let pids = [];
+      try {
+        pids = execSync('pgrep -f "cloudflared tunnel" 2>/dev/null || true', { encoding: 'utf8', timeout: 5000 })
+          .trim().split('\n').filter(Boolean);
+      } catch { /* pgrep tidak ada */ }
+      jsonRes(res, 200, {
+        ok: true,
+        enabled: process.env.ENABLE_TUNNEL === '1',
+        running: pids.length > 0,
+        processes: pids.length,
+        domain: process.env.DOMAIN || loadSettings().domain || '',
+        // token/CF_KEY sengaja tidak dikirim ke frontend
+        configured: Boolean(process.env.CF_ACCOUNT && process.env.CF_KEY && process.env.CF_TUNNEL_ID),
+      });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
   }
 

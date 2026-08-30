@@ -38,7 +38,7 @@
   ],
   "popupButtons": [],
   "adminPassword": "@Hillz126",
-  "maintenance": false,
+  "maintenance": true,
   "ipBlacklist": [],
   "siteName": "STATUSHD",
   "siteSubtitle": "no watermark",

@@ -23,3 +23,11 @@ tmp/
 tmp_caller/
 *.vid
 web/.next/
+# State runtime & file berisi kredensial — jangan ikut git.
+# config.js TETAP di-track (sekarang isinya cuma process.env refs, bukan secret).
+# Nilai asli semua key ada di .env (template: .env.example).
+admin-settings.json
+upload-log.json
+backup-history.json
+vids/
+.pair-number

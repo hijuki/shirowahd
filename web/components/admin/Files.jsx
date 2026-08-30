@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { getVideos, deleteVideo, extendVideo, cleanupExpired, getUploadLog } from '@/lib/admin-api'
+import { getVideos, deleteVideo, extendVideo, cleanupExpired, cleanupOrphans, getUploadLog } from '@/lib/admin-api'
 
 const fmtBytes = (b) => {
   if (!b && b !== 0) return '—'
@@ -44,6 +44,18 @@ export default function Files({ toast }) {
   const delOne = (code) => { if (confirm(`Hapus file ${code}?`)) act(deleteVideo, 'File dihapus', code) }
   const extOne = (code) => act(extendVideo, 'Masa aktif diperpanjang +1 jam', code)
 
+  const doCleanOrphans = async () => {
+    if (!confirm('Hapus file orphan (ada di disk, tidak tercatat di index)?')) return
+    setBusy(true)
+    try {
+      const r = await cleanupOrphans()
+      const mb = ((r?.freed || 0) / 1048576).toFixed(1)
+      toast(r?.deleted ? `${r.deleted} file orphan dihapus, ${mb} MB dibebaskan` : 'Tidak ada file orphan', 'success')
+      await load()
+    } catch (e) { toast(`Error: ${e.message}`, 'error') }
+    setBusy(false)
+  }
+
   const bulkDelete = () => {
     if (!selected.size) return
     if (!confirm(`Hapus ${selected.size} file terpilih?`)) return
@@ -81,10 +93,17 @@ export default function Files({ toast }) {
           <h1 className="font-[family-name:var(--font-display)] font-bold text-2xl md:text-3xl grad-text">Files</h1>
           <p className="text-[#7e90ad] text-sm mt-1">{videos.length} file tersimpan</p>
         </div>
-        <button onClick={() => confirm('Hapus semua file kedaluwarsa?') && act(cleanupExpired, 'Cleanup selesai')}
-          disabled={busy} className="btn-primary rounded-[12px] px-4 py-2.5 text-sm font-bold">
-          <i className="fa-solid fa-broom mr-2" />Bersihkan Kedaluwarsa
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => confirm('Hapus semua file kedaluwarsa?') && act(cleanupExpired, 'Cleanup selesai')}
+            disabled={busy} className="btn-primary rounded-[12px] px-4 py-2.5 text-sm font-bold">
+            <i className="fa-solid fa-broom mr-2" />Bersihkan Kedaluwarsa
+          </button>
+          <button onClick={doCleanOrphans}
+            disabled={busy} title="Hapus file di disk yang tidak tercatat di index (sisa index reset)"
+            className="rounded-[12px] px-4 py-2.5 text-sm font-bold bg-white/5 border border-white/[.07] hover:bg-white/[.09] transition-all duration-[150ms] active:scale-[.97]">
+            <i className="fa-solid fa-ghost mr-2" />Hapus File Orphan
+          </button>
+        </div>
       </div>
 
       {/* Search + bulk actions */}

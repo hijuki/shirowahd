@@ -188,6 +188,30 @@ export function getTotalStorage() {
   } catch { return 0; }
 }
 
+// Hapus file .vid di disk yang tidak tercatat di index.json (orphan).
+// Terjadi kalau index hilang/di-reset tapi file fisik masih ada.
+export function cleanOrphans() {
+  const db = load();
+  const known = new Set();
+  for (const v of Object.values(db)) {
+    if (v.bundle) { for (const f of v.files) known.add(f.file); }
+    else if (v.file) known.add(v.file.split('/').pop().split('\\').pop());
+  }
+  let deleted = 0, freed = 0;
+  try {
+    for (const f of readdirSync(VIDS_DIR)) {
+      if (f === 'index.json' || known.has(f)) continue;
+      try {
+        const p = join(VIDS_DIR, f);
+        const sz = statSync(p).size;
+        unlinkSync(p);
+        deleted++; freed += sz;
+      } catch { /* skip file terkunci */ }
+    }
+  } catch { /* dir hilang */ }
+  return { deleted, freed };
+}
+
 function cleanup() {
   const db = load();
   const now = Date.now();
