@@ -123,7 +123,7 @@ export default function UploaderPage() {
 
               {/* Inline dev credit */}
               <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] text-[10px] tracking-wider text-[var(--t-muted)]">
-                <span className="w-[18px] h-[18px] rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white shrink-0">H</span>
+                <img src="/logo.svg" alt="" className="w-[18px] h-[18px] shrink-0" />
                 <span className="font-semibold">SWHDHLZ</span>
                 <span className="opacity-60">BY</span>
                 <span className="anime-text font-extrabold">HILLZ</span>

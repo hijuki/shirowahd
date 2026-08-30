@@ -148,16 +148,15 @@ export function IntroModal({ onDone, settings }) {
           {/* Burst rings */}
           {phase >= 1 && (
             <>
-              <span className="burst-ring" style={{ '--bs': '86px', animationDelay: '80ms', borderColor: 'rgba(37,211,102,.5)' }} />
-              <span className="burst-ring" style={{ '--bs': '118px', animationDelay: '260ms', borderColor: 'rgba(34,211,238,.4)' }} />
-              <span className="burst-ring" style={{ '--bs': '150px', animationDelay: '440ms', borderColor: 'rgba(37,211,102,.3)' }} />
+              <span className="burst-ring" style={{ '--bs': '86px', animationDelay: '80ms', borderColor: 'rgba(34,211,238,.5)' }} />
+              <span className="burst-ring" style={{ '--bs': '118px', animationDelay: '260ms', borderColor: 'rgba(59,130,246,.4)' }} />
+              <span className="burst-ring" style={{ '--bs': '150px', animationDelay: '440ms', borderColor: 'rgba(34,211,238,.3)' }} />
             </>
           )}
 
-          <div className="absolute -inset-5 rounded-full bg-[#25D366]/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.12) inset' }} />
-          <div className="relative w-[68px] h-[68px] rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
-            <span className="absolute inset-[1px] rounded-[21px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
-            <i className="fa-brands fa-whatsapp text-white text-[30px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
+          <div className="absolute -inset-5 rounded-full bg-[#22d3ee]/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(34,211,238,.12) inset' }} />
+          <div className="relative w-[68px] h-[68px] floaty">
+            <img src="/logo.svg" alt="" className="w-full h-full drop-shadow-[0_0_28px_rgba(59,130,246,.45)]" />
           </div>
 
           {/* Sparkles around logo — tx/ty precomputed */}
@@ -169,7 +168,7 @@ export function IntroModal({ onDone, settings }) {
                 top: '50%', left: '50%',
                 '--tx': `${Math.cos(rad) * dist}px`,
                 '--ty': `${Math.sin(rad) * dist}px`,
-                '--color': ['#25D366', '#22d3ee', '#3b82f6', '#34d399', '#25D366'][i],
+                '--color': ['#22d3ee', '#3b82f6', '#67e8f9', '#38bdf8', '#22d3ee'][i],
                 animationDelay: `${200 + i * 100}ms`,
               }} />
             )
@@ -187,7 +186,7 @@ export function IntroModal({ onDone, settings }) {
         {/* Badge */}
         <div className={`mt-3 transform-gpu transition-[transform,opacity] duration-[400ms] delay-100 ${phase >= 2 ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-2 opacity-0 scale-95'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           <span className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white/[.03] border border-white/[.06]">
-            <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#22d3ee] to-[#3b82f6] grid place-items-center text-[8px] font-extrabold text-white">H</span>
+            <img src="/logo.svg" alt="" className="w-5 h-5" />
             <span className="text-[9px] tracking-wider"><span className="text-[#7e90ad] font-semibold">SWHDHLZ</span> <span className="text-[#7e90ad]/40">BY</span> <span className="grad-text font-extrabold">HILLZ</span></span>
           </span>
         </div>
@@ -305,10 +304,7 @@ export function AboutModal({ onClose }) {
           <div className="relative">
             <div className="relative w-14 h-14 mx-auto mb-2.5">
               <div className="absolute -inset-2 rounded-full bg-[#22d3ee]/12 blur-lg" />
-              <div className="relative w-full h-full rounded-[16px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_0_32px_-4px_rgba(34,211,238,.4)]">
-                <span className="absolute inset-[1px] rounded-[15px] bg-gradient-to-b from-white/20 to-transparent" />
-                <span className="font-[family-name:var(--font-display)] font-extrabold text-lg text-white relative">H</span>
-              </div>
+              <img src="/logo.svg" alt="" className="relative w-full h-full drop-shadow-[0_0_24px_rgba(59,130,246,.4)]" />
             </div>
             <p className="font-[family-name:var(--font-display)] font-extrabold text-[14px] tracking-widest grad-text">SWHDHLZ</p>
             <p className="text-[#7e90ad] text-[9px] tracking-wide mt-0.5">Developed by <span className="text-[#e8f1ff] font-semibold">HILLZ</span></p>
