@@ -31,5 +31,6 @@ upload-log.json
 backup-history.json
 vids/
 .pair-number
-shirowahd-migrate.tar.gz
-session_voip/
+
+# Logo/aset brand hasil upload admin (data user, bukan kode)
+brand-assets/

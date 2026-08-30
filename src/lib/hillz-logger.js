@@ -44,6 +44,14 @@ let _booting = true;
 let _bootLogs = [];
 let _bootStart = Date.now();
 let _bootStepCount = 0;
+// Jumlah plugin asli, di-set oleh loader (hillz-plugins.js) setelah selesai memuat.
+// Sebelumnya boot summary menghitung entri log berlabel 'plugin' — hasilnya "Plugins: 1"
+// padahal 825 plugin terpasang. Pakai setter supaya tidak ada circular import.
+let _pluginTotal = 0;
+function setPluginTotal(n) {
+  const v = Number(n);
+  if (Number.isFinite(v) && v >= 0) _pluginTotal = v;
+}
 
 function line() {
   console.log(P.muted('--------------------------------------'));
@@ -58,7 +66,7 @@ function finishBoot() {
 
   const errors = _bootLogs.filter(l => l.kind === 'error').length;
   const warns  = _bootLogs.filter(l => l.kind === 'warn').length;
-  const plugins = _bootLogs.filter(l => l.label === 'plugin').length;
+  const plugins = _pluginTotal || _bootLogs.filter(l => l.label === 'plugin').length;
 
   console.log('');
   console.log(P.brand.bold('  SHIROWAHD'));
@@ -280,5 +288,5 @@ export {
   c, CODES, logger, createSpinner, spinText, typeLine, runLoader,
   playBootSequence, logMessage, logPlugin, logConnection, logErrorBox,
   printBanner, printStartup, createBanner, getTimestamp, divider,
-  theme, chalk, gradient, makeTag, finishBoot
+  theme, chalk, gradient, makeTag, finishBoot, setPluginTotal
 };

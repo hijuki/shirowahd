@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { theme, chalk, logger } from "./hillz-logger.js";
+import { theme, chalk, logger, setPluginTotal } from "./hillz-logger.js";
 /**
  * @typedef {Object} PluginConfig
  * @property {string} name - Nama command (tanpa prefix)
@@ -372,6 +372,8 @@ async function loadPlugins(pluginsDir) {
   }
 
   printPluginTable(loadedPlugins);
+  // Kasih tahu logger jumlah plugin asli supaya boot summary tidak salah hitung.
+  setPluginTotal(loadedCount);
   return loadedCount;
 }
 

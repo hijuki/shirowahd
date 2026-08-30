@@ -54,6 +54,9 @@ const EXCLUDE_DIRS = new Set([
   ".gemini",
   "fischit-main",
   ".hillz-temp",
+  // Logo/aset brand hasil upload admin = data user, bukan kode.
+  // Tanpa ini backup route ikut men-commit tiap gambar yang diupload.
+  "brand-assets",
 ]);
 
 const EXCLUDE_EXTENSIONS = new Set([
