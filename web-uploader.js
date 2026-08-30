@@ -873,7 +873,7 @@ const server = http.createServer(async (req, res) => {
       // Stage semua perubahan yang relevan. config.js ikut karena isinya sekarang
       // hanya referensi process.env (tanpa secret). File state runtime sudah
       // di-untrack lewat .gitignore.
-      run('git add -A config.js admin-settings.sanitized.json .gitignore .env.example main.js web-uploader.js 2>/dev/null || true');
+      run('git add -A config.js admin-settings.sanitized.json .gitignore .env.example main.js web-uploader.js install.sh migrate.sh README.md 2>/dev/null || true');
       try { run('git add -A plugins/ src/ database/ web/ 2>/dev/null || true'); } catch {}
 
       let status = '';
