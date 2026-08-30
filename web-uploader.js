@@ -319,7 +319,7 @@ function newJob(names) {
 }
 const VIDEO_MP4_EXTS = ['.mp4', '.m4v'];
 const VIDEO_EXTS = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.3gp', '.flv', '.wmv', '.ts', '.m4v'];
-const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg'];
+const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg', '.heic', '.heif', '.avif'];
 
 function isVideoFile(name) {
   const ext = extname(name || '').toLowerCase();

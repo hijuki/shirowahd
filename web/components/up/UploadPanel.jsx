@@ -3,10 +3,17 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { uploadFiles, pollJobStatus, fmtSize, saveHistory } from '@/lib/up-api'
 import SuccessModal from './SuccessModal'
 
-const VIDEO_EXTS = ['mp4', 'mkv', 'avi', 'mov']
-const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-const VIDEO_ACCEPT = VIDEO_EXTS.map(e => `.${e}`).join(',')
-const IMAGE_ACCEPT = IMAGE_EXTS.map(e => `.${e}`).join(',')
+// Disamakan dengan daftar di server (web-uploader.js VIDEO_EXTS/IMAGE_EXTS).
+// Sebelumnya frontend cuma kenal 4 format video & 5 gambar, jadi file lain
+// ikut ditolak diam-diam padahal server sanggup memprosesnya.
+const VIDEO_EXTS = ['mp4', 'mov', 'mkv', 'avi', 'webm', '3gp', 'flv', 'wmv', 'ts', 'm4v']
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg', 'heic', 'heif', 'avif']
+// MIME wildcard ditaruh paling depan: di Android/iOS, accept yang isinya hanya
+// daftar ".ext" bikin galeri memfilter ketat sampai banyak file tampak hilang
+// atau abu-abu. Dengan video/* (dan image/*) picker membuka galeri penuh,
+// sementara daftar ekstensi tetap dipakai browser desktop.
+const VIDEO_ACCEPT = ['video/*', ...VIDEO_EXTS.map(e => `.${e}`)].join(',')
+const IMAGE_ACCEPT = ['image/*', ...IMAGE_EXTS.map(e => `.${e}`)].join(',')
 const TAG_COLORS = {
   mp4: '#3b82f6', mkv: '#22d3ee', avi: '#fbbf24', mov: '#34d399',
   jpg: '#fb7185', jpeg: '#fb7185', png: '#34d399', gif: '#fbbf24', webp: '#22d3ee',
@@ -25,7 +32,7 @@ export default function UploadPanel({ settings, toast }) {
   const abortRef = useRef(null)
 
   const accept = tab === 'video' ? VIDEO_ACCEPT : IMAGE_ACCEPT
-  const exts = tab === 'video' ? VIDEO_EXTS.map(e => e.toUpperCase()) : ['JPG', 'PNG', 'GIF', 'WEBP']
+  const exts = tab === 'video' ? VIDEO_EXTS.map(e => e.toUpperCase()) : IMAGE_EXTS.map(e => e.toUpperCase())
   const field = tab === 'video' ? 'video' : 'image'
   const isImg = tab === 'image'
 
@@ -42,7 +49,14 @@ export default function UploadPanel({ settings, toast }) {
   const addFiles = useCallback((newFiles) => {
     const arr = Array.from(newFiles)
     const validExts = tab === 'video' ? VIDEO_EXTS : IMAGE_EXTS
-    const valid = arr.filter(f => validExts.includes(f.name.split('.').pop().toLowerCase()))
+    const mimePrefix = tab === 'video' ? 'video/' : 'image/'
+    // Terima kalau ekstensi cocok ATAU browser sudah melaporkan MIME yang benar.
+    // Perlu karena file dari galeri HP kadang datang tanpa ekstensi di nama
+    // (mis. "content://..." / "IMG_0001") — dulu semua itu ditolak.
+    const valid = arr.filter(f => {
+      const ext = (f.name.split('.').pop() || '').toLowerCase()
+      return validExts.includes(ext) || (f.type || '').toLowerCase().startsWith(mimePrefix)
+    })
     if (valid.length < arr.length) toast(`${arr.length - valid.length} file ditolak — format tidak didukung`, 'error')
     const max = settings?.maxFileSizeMB || 0
     let sizeOk = valid.filter(f => max <= 0 || f.size <= max * 1024 * 1024)
