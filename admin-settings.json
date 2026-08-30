@@ -43,7 +43,7 @@
   "siteName": "STATUSHD",
   "siteSubtitle": "no watermark",
   "expireMinutes": 30,
-  "maxFileSizeMB": 100,
+  "maxFileSizeMB": 200,
   "bannerText": "NEW UPDATE JIKA ADA EROR HUBUNGI ADMIN",
   "announcement": "",
   "heroTitle": "STORY WA",
