@@ -901,6 +901,10 @@ const server = http.createServer(async (req, res) => {
       }
 
       run(`git push ${authUrl} HEAD:${branch} 2>&1`);
+      // Push memakai URL beraut (bukan remote "origin"), jadi ref pelacak
+      // refs/remotes/origin/<branch> tidak ikut diperbarui dan bikin
+      // `git status` / rev-list terlihat "ahead" padahal sudah sinkron.
+      try { run(`git update-ref refs/remotes/origin/${branch} HEAD`); } catch {}
       addBackupHistory({ ok: true, changed: lines, pushed: Number(ahead), message: 'Push berhasil' });
       jsonRes(res, 200, { ok: true, message: `Backup berhasil! ${lines} file di-commit, ${ahead} commit di-push ke GitHub`, changed: lines, pushed: Number(ahead) });
     } catch (e) {
