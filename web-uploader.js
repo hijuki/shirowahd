@@ -446,6 +446,57 @@ function hasAudioStream(filePath) {
 
 const execP = (cmd, opts = {}) => new Promise((resolve, reject) => execCb(cmd, opts, (err, stdout, stderr) => err ? reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')) : resolve(stdout)));
 
+// ffmpeg 4.4 (Ubuntu 22.04) belum punya `-fps_mode`; padanannya `-vsync`.
+// Memakai flag yang tidak dikenal membuat ffmpeg keluar SEBELUM memproses
+// apa pun ("Unrecognized option"), jadi versinya dideteksi sekali di awal.
+const FFMPEG_PUNYA_FPS_MODE = (() => {
+  try { return execSync('ffmpeg -h full 2>&1 | grep -c -- "-fps_mode"', { timeout: 10000, stdio: 'pipe', shell: '/bin/bash' }).toString().trim() !== '0'; }
+  catch { return false; }
+})();
+
+function codecVideoOf(filePath) {
+  try {
+    return execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim().toLowerCase();
+  } catch { return ''; }
+}
+
+// Berapa banyak error decode di N detik pertama. Inilah satu-satunya cara jujur
+// menilai "video ini bisa diputar atau tidak" — ukuran berkas dan exit code
+// ffmpeg sama-sama bisa menipu.
+function hitungErrorDecode(filePath, detik) {
+  try {
+    const out = execSync(
+      'ffmpeg -v error -i ' + JSON.stringify(filePath) + ' -t ' + detik + ' -f null - 2>&1 | grep -c "Error while decoding" || true',
+      { timeout: 180000, stdio: 'pipe', shell: '/bin/bash' }
+    ).toString().trim();
+    return parseInt(out, 10) || 0;
+  } catch { return 0; }
+}
+
+// Hasil dianggap layak kalau: berkas ada, ada stream video, durasinya tidak
+// meleset jauh dari sumber, dan 15 detik pertama didekode tanpa error.
+// Batas 15 detik dipilih supaya berkas 300 MB tidak menambah menit-menit
+// verifikasi, sementara kerusakan fatal (yang selalu muncul di awal) tetap
+// tertangkap.
+function hasilLayak(outPath, durSumber) {
+  try {
+    if (!existsSync(outPath) || statSync(outPath).size < 1000) return { ok: false, alasan: 'berkas kosong' };
+    if (!codecVideoOf(outPath)) return { ok: false, alasan: 'tidak ada stream video' };
+    const durOut = probeDuration(outPath);
+    if (durSumber > 0 && durOut > 0) {
+      const selisih = Math.abs(durOut - durSumber) / durSumber;
+      // 15% memberi ruang untuk frame rusak yang memang harus dibuang di ujung,
+      // tapi tetap menangkap hasil terpotong separuh.
+      if (selisih > 0.15) return { ok: false, alasan: 'durasi meleset ' + Math.round(selisih * 100) + '%' };
+    }
+    const err = hitungErrorDecode(outPath, 15);
+    if (err > 0) return { ok: false, alasan: err + ' error decode' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, alasan: e.message };
+  }
+}
+
 // Jalankan ffmpeg sambil membaca `-progress pipe:1` dan melaporkan persen NYATA.
 // Sebelumnya hanya jalur re-encode yang punya pembaca progress; jalur remux
 // (`-c:v copy`) memakai execP yang membuang stdout, jadi bar diam di 0% lalu
@@ -509,8 +560,12 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
           probeDuration(tmpIn),
           onPct
         );
-        // Ukuran diperiksa lewat statSync, bukan dengan membaca isinya.
-        if (existsSync(tmpOut) && statSync(tmpOut).size > 1000) {
+        // Jalur copy hanya memindahkan paket — kalau paket sumber cacat,
+        // hasilnya cacat juga meski ukurannya wajar. Jadi ukuran TIDAK cukup:
+        // hasil harus lolos uji decode dulu. Kalau gagal, biarkan jatuh ke
+        // jalur re-encode di bawah yang punya mode pemulihan.
+        const nilaiRemux = hasilLayak(tmpOut, probeDuration(tmpIn));
+        if (nilaiRemux.ok) {
           return { path: tmpOut, name: toMp4Name(originalName), temp: true };
         }
       } catch {}
@@ -567,22 +622,92 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
     // encoder membuang detail di adegan ramai — itu yang bikin gambar "pecah".
     const dur = probeDuration(tmpIn);
     if (onPhase) onPhase('encode');
-    // Video besar + fps tinggi butuh lebih banyak thread frame; dibiarkan
-    // default (auto) supaya tidak mengunci DPB seperti level paksa dulu.
-    await runFfmpeg(
-      'ffmpeg -y -i ' + JSON.stringify(tmpIn) + (hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest') + ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset faster -crf 20' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
-      { timeout: 600000, maxBuffer: 10 * 1024 * 1024 },
-      dur,
-      onPct
-    );
-    // Verifikasi hasil benar-benar bisa didekode. Berkas yang lolos ffmpeg tapi
-    // gagal decode (level salah, moov rusak) dulu tetap dikirim ke user.
+    const audioSenyap = hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest';
+
+    // ── Kenapa exit code ffmpeg TIDAK dipakai sebagai penentu ──────────────
+    // Video dari pengunduh pihak ketiga (TikTok/IG saver) sering punya
+    // bitstream cacat: header mengaku 11950 frame padahal isinya 1195, sisanya
+    // paket sampah yang memicu "Invalid NAL unit size". ffmpeg mengeluhkan
+    // INPUT itu dan keluar dengan exit 69 — padahal berkas KELUARANNYA utuh:
+    // durasi benar, fps benar, nol error decode.
+    // Dulu exit code non-nol dianggap gagal, hasil bagus itu dibuang, dan yang
+    // tersimpan justru berkas rusak aslinya ("disimpan tanpa konversi") — itu
+    // sebab video sampai ke WhatsApp dalam keadaan patah-patah/tidak terputar.
+    // Sekarang keputusan diambil dari HASIL, diuji dengan decode sungguhan.
+    const perintahEncode = (extraIn, fpsArg) =>
+      'ffmpeg -y' + extraIn + ' -i ' + JSON.stringify(tmpIn) + audioSenyap +
+      ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset faster -crf 20' +
+      scaleFilter + fpsArg + ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' +
+      JSON.stringify(tmpOut);
+
+    let kegagalan = [];
     try {
-      execSync('ffmpeg -v error -xerror -i ' + JSON.stringify(tmpOut) + ' -t 3 -f null - 2>&1', { timeout: 60000, stdio: 'pipe' });
-    } catch (e) {
-      throw new Error('Hasil konversi tidak bisa diputar — video sumber mungkin rusak');
+      await runFfmpeg(perintahEncode('', fpsFlag), { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct);
+    } catch (e) { kegagalan.push('encode: ' + e.message); }
+
+    let nilai = hasilLayak(tmpOut, dur);
+    if (nilai.ok) return { path: tmpOut, name: toMp4Name(originalName), temp: true };
+    kegagalan.push('percobaan 1 ditolak (' + nilai.alasan + ')');
+
+    // ── Percobaan 2: mode tahan-rusak ─────────────────────────────────────
+    // `-err_detect ignore_err` melanjutkan walau ada paket cacat,
+    // `+genpts+discardcorrupt` membuang paket rusak dan membangun ulang
+    // timestamp — tanpa ini timestamp bolong membuat pemutar tersendat.
+    // fps dibiarkan lewat apa adanya supaya gerak asli tidak diubah.
+    try { unlinkSync(tmpOut); } catch {}
+    const lewatkanFps = FFMPEG_PUNYA_FPS_MODE ? ' -fps_mode passthrough' : ' -vsync 0';
+    try {
+      await runFfmpeg(
+        perintahEncode(' -err_detect ignore_err -fflags +genpts+discardcorrupt', lewatkanFps),
+        { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct
+      );
+    } catch (e) { kegagalan.push('tahan-rusak: ' + e.message); }
+    nilai = hasilLayak(tmpOut, dur);
+    if (nilai.ok) return { path: tmpOut, name: toMp4Name(originalName), temp: true };
+    kegagalan.push('percobaan 2 ditolak (' + nilai.alasan + ')');
+
+    // ── Percobaan 3: bongkar bitstream dulu (khusus HEVC/H.264 cacat) ─────
+    // Paket di dalam MP4 memakai format "length-prefixed"; kalau angka panjang
+    // itu yang rusak, decoder tersesat. Diubah ke Annex-B (penanda start code)
+    // membuat decoder bisa mencari batas frame sendiri dan mengabaikan sampah.
+    // Terbukti memulihkan berkas yang dua percobaan sebelumnya tolak.
+    const kodekV = codecVideoOf(tmpIn);
+    const bsf = kodekV === 'hevc' ? 'hevc_mp4toannexb' : (kodekV === 'h264' ? 'h264_mp4toannexb' : '');
+    if (bsf) {
+      try { unlinkSync(tmpOut); } catch {}
+      const rawPath = join(tmpdir(), 'upload_raw_' + id + (kodekV === 'hevc' ? '.hevc' : '.h264'));
+      try {
+        if (onPhase) onPhase('encode');
+        // Tahap 1: keluarkan stream video mentah. Sengaja tanpa runFfmpeg —
+        // ffmpeg pasti mengeluh di sini, dan keluhannya memang diabaikan.
+        try {
+          execSync('ffmpeg -y -v error -i ' + JSON.stringify(tmpIn) + ' -c:v copy -bsf:v ' + bsf + ' -f ' + (kodekV === 'hevc' ? 'hevc' : 'h264') + ' ' + JSON.stringify(rawPath) + ' 2>/dev/null || true',
+            { timeout: 300000, stdio: 'pipe', shell: '/bin/bash' });
+        } catch {}
+        if (existsSync(rawPath) && statSync(rawPath).size > 1000) {
+          // Tahap 2: encode dari stream mentah, audio diambil dari berkas asli.
+          // fps harus disebut eksplisit: stream mentah tidak menyimpan fps.
+          const fpsRaw = fpsVal > 0 ? String(fpsVal) : '30';
+          const adaAudio = hasAudioStream(tmpIn);
+          const cmd = 'ffmpeg -y -r ' + fpsRaw + ' -i ' + JSON.stringify(rawPath) +
+            (adaAudio ? ' -i ' + JSON.stringify(tmpIn) + ' -map 0:v:0 -map 1:a:0' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest -map 0:v:0 -map 1:a:0') +
+            ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset faster -crf 20' + scaleFilter +
+            ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut);
+          try { await runFfmpeg(cmd, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct); }
+          catch (e) { kegagalan.push('annexb: ' + e.message); }
+          nilai = hasilLayak(tmpOut, dur);
+          if (nilai.ok) { try { unlinkSync(rawPath); } catch {} return { path: tmpOut, name: toMp4Name(originalName), temp: true }; }
+          kegagalan.push('percobaan 3 ditolak (' + nilai.alasan + ')');
+        } else {
+          kegagalan.push('percobaan 3: stream mentah gagal diekstrak');
+        }
+      } finally { try { unlinkSync(rawPath); } catch {} }
     }
-    return { path: tmpOut, name: toMp4Name(originalName), temp: true };
+
+    // Ketiga jalur gagal menghasilkan berkas yang bisa didekode. Menyimpan
+    // sumber apa adanya lebih baik daripada mengirim hasil rusak, dan alasan
+    // tiap percobaan dicatat supaya bisa ditelusuri.
+    throw new Error('Video tidak bisa dikonversi — ' + kegagalan.join('; '));
   } catch (e) {
     // Gagal total: hasil setengah jadi dibuang supaya tidak menumpuk di /tmp.
     try { unlinkSync(tmpOut); } catch {}
