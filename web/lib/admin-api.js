@@ -45,6 +45,10 @@ export const getBackupHistory = () => api('/api/backup/history')
 export const restartBot = () => api('/api/bot/restart', { method: 'POST' })
 export const getLogs = (type = 'out', lines = 200) => api(`/api/logs?type=${type}&lines=${lines}`)
 export const getTunnelStatus = () => api('/api/tunnel')
+// Kendali Cloudflare + jalur upload langsung
+export const getCfDns = () => api('/api/cf/dns')
+export const setCfProxy = (recordId, proxied) => api('/api/cf/proxy', { method: 'POST', body: { recordId, proxied } })
+export const setDirectUpload = (enabled) => api('/api/direct-upload', { method: 'POST', body: { enabled } })
 
 // ── Brand gallery ──
 export const getGallery = () => api('/api/gallery')

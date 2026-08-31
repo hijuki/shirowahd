@@ -104,7 +104,23 @@ function loadSettings() {
     // darurat hanya untuk 8K supaya encoder tidak kehabisan memori).
     // 0 = tanpa batas sama sekali. Diturunkan HANYA kalau HP tujuan memang
     // tidak sanggup — bukan sebagai tebakan.
-    maxVideoLongSide: 3840
+    maxVideoLongSide: 3840,
+    // --- Jalur upload langsung (lewat samping Cloudflare) ---
+    //
+    // Cloudflare menolak body request >100 MB di plan Free/Pro (Business 200 MB,
+    // Enterprise 500 MB) dan itu TIDAK bisa dinaikkan dari sisi origin. Jalur
+    // langsung memakai subdomain grey-cloud (proxied=false) supaya request tidak
+    // lewat edge sama sekali, jadi tidak ada cap.
+    //
+    // MATI secara default. Menyalakannya membuka IP asli VPS dan menghilangkan
+    // perlindungan DDoS untuk subdomain itu — dipakai hanya saat perlu, lalu
+    // dimatikan lagi dari panel admin.
+    //
+    // Port 8443, BUKAN 443: port 443 di box ini dipakai sshd (satu-satunya jalan
+    // masuk SSH). Mengambil 443 untuk web akan memutus akses administrasi.
+    directUploadEnabled: false,
+    directUploadHost: 'up.swhdhlz.my.id',
+    directUploadPort: 8443
   };
 }
 
@@ -158,6 +174,9 @@ function saveSettings(data) {
     autoCleanup: data.autoCleanup ?? cur.autoCleanup ?? false,
     videoAsDocumentMB: data.videoAsDocumentMB ?? cur.videoAsDocumentMB ?? 180,
     maxVideoLongSide: data.maxVideoLongSide ?? cur.maxVideoLongSide ?? 3840,
+    directUploadEnabled: data.directUploadEnabled ?? cur.directUploadEnabled ?? false,
+    directUploadHost: nonEmpty(data.directUploadHost) ?? cur.directUploadHost ?? 'up.swhdhlz.my.id',
+    directUploadPort: data.directUploadPort ?? cur.directUploadPort ?? 8443,
     autoCleanupInterval: data.autoCleanupInterval ?? cur.autoCleanupInterval ?? 30,
     storageQuotaMB: data.storageQuotaMB ?? cur.storageQuotaMB ?? 0
   };
@@ -1241,6 +1260,12 @@ const server = http.createServer(async (req, res) => {
       chunkThresholdMB: 80,
       videoAsDocumentMB: settings.videoAsDocumentMB || 180,
       maxVideoLongSide: settings.maxVideoLongSide ?? 3840,
+      // Frontend memakai ini untuk mengarahkan upload BESAR ke jalur langsung
+      // (di luar Cloudflare) saat tuan menyalakannya dari panel. Kalau mati,
+      // nilainya null dan frontend tetap memakai host biasa seperti sekarang.
+      directUploadBase: settings.directUploadEnabled
+        ? 'https://' + (settings.directUploadHost || 'up.swhdhlz.my.id') + ':' + (settings.directUploadPort || 8443)
+        : null,
       bannerText: settings.bannerText || '',
       announcement: settings.announcement || '',
       heroTitle: settings.heroTitle || '',
@@ -1877,6 +1902,119 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ===========================================================================
+  // KENDALI CLOUDFLARE + JALUR UPLOAD LANGSUNG
+  // ===========================================================================
+  // Dua saklar terpisah, dua-duanya dari panel admin:
+  //
+  //   1. proxy Cloudflare per-record (orange ⇄ grey cloud) — lewat CF API
+  //   2. jalur upload langsung di port 8443 — lewat setelan app
+  //
+  // Kredensial dibaca dari .env (CF_EMAIL + CF_KEY) dan TIDAK PERNAH dikirim ke
+  // frontend. Zone dicari dari nama domain, tidak di-hardcode, supaya masih
+  // jalan kalau domainnya pindah.
+
+  // Panggil CF API. Balikan { status, json } — pemanggil yang memutuskan.
+  async function cfApi(path, method = 'GET', body) {
+    const email = process.env.CF_EMAIL, key = process.env.CF_KEY;
+    if (!email || !key) return { status: 0, json: null, error: 'CF_EMAIL/CF_KEY belum diisi di .env' };
+    const r = await fetch('https://api.cloudflare.com/client/v4' + path, {
+      method,
+      headers: { 'X-Auth-Email': email, 'X-Auth-Key': key, 'Content-Type': 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+      signal: AbortSignal.timeout(20000),
+    });
+    return { status: r.status, json: await r.json().catch(() => null) };
+  }
+
+  async function cfZoneId() {
+    const dom = process.env.DOMAIN || loadSettings().domain || '';
+    if (!dom) return { error: 'DOMAIN belum diisi' };
+    const r = await cfApi('/zones?name=' + encodeURIComponent(dom));
+    const z = r.json?.result?.[0];
+    return z ? { id: z.id, name: z.name, plan: z.plan?.name } : { error: 'zone ' + dom + ' tidak ditemukan' };
+  }
+
+  // Daftar record + status proxy, plus keadaan jalur langsung.
+  if (req.method === 'GET' && url === '/admin/api/cf/dns') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const z = await cfZoneId();
+      if (z.error) { jsonRes(res, 200, { ok: false, error: z.error }); return; }
+      const r = await cfApi('/zones/' + z.id + '/dns_records?per_page=100');
+      const st = loadSettings();
+      jsonRes(res, 200, {
+        ok: true,
+        zone: { name: z.name, plan: z.plan },
+        // Cap upload edge menurut plan — angka resmi Cloudflare, bukan tebakan.
+        edgeCapMB: /business/i.test(z.plan || '') ? 200 : /enterprise/i.test(z.plan || '') ? 500 : 100,
+        records: (r.json?.result || [])
+          .filter(d => d.type === 'A' || d.type === 'AAAA' || d.type === 'CNAME')
+          .map(d => ({ id: d.id, type: d.type, name: d.name, content: d.content, proxied: d.proxied })),
+        direct: {
+          enabled: !!st.directUploadEnabled,
+          host: st.directUploadHost || 'up.swhdhlz.my.id',
+          port: st.directUploadPort || 8443,
+          // Apakah sertifikatnya benar-benar ada? Kalau tidak, menyalakan saklar
+          // tidak akan membuka port — jadi panel harus jujur soal ini.
+          certReady: existsSync('/etc/letsencrypt/live/up.swhdhlz.my.id/fullchain.pem'),
+          listening: (() => {
+            try { return execSync('ss -ltn 2>/dev/null | grep -c ":' + (st.directUploadPort || 8443) + ' " || true',
+              { encoding: 'utf8', timeout: 5000 }).trim() !== '0'; } catch { return false; }
+          })(),
+        },
+      });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // Nyalakan/matikan proxy Cloudflare untuk satu record.
+  // proxied=true  → aman (IP tersembunyi), cap upload berlaku
+  // proxied=false → cap hilang, IP asli terbuka
+  if (req.method === 'POST' && url === '/admin/api/cf/proxy') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const data = JSON.parse((await readBody(req)).toString());
+      if (!data.recordId) { jsonRes(res, 400, { ok: false, error: 'recordId wajib' }); return; }
+      const z = await cfZoneId();
+      if (z.error) { jsonRes(res, 200, { ok: false, error: z.error }); return; }
+      // PATCH, bukan PUT: PUT butuh seluruh field dan menghapus yang tidak dikirim.
+      const r = await cfApi('/zones/' + z.id + '/dns_records/' + data.recordId, 'PATCH', { proxied: !!data.proxied });
+      if (!r.json?.success) {
+        jsonRes(res, 200, { ok: false, error: JSON.stringify(r.json?.errors || 'gagal').slice(0, 300) });
+        return;
+      }
+      jsonRes(res, 200, { ok: true, name: r.json.result.name, proxied: r.json.result.proxied });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // Nyalakan/matikan jalur upload langsung. Port baru hanya benar-benar terbuka
+  // setelah proses `web` restart, jadi itu dilaporkan apa adanya ke panel.
+  if (req.method === 'POST' && url === '/admin/api/direct-upload') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const data = JSON.parse((await readBody(req)).toString());
+      const mau = !!data.enabled;
+      const certOk = existsSync('/etc/letsencrypt/live/up.swhdhlz.my.id/fullchain.pem');
+      if (mau && !certOk) {
+        jsonRes(res, 200, { ok: false, error: 'Sertifikat up.swhdhlz.my.id belum ada — jalur langsung tidak bisa dinyalakan tanpa HTTPS' });
+        return;
+      }
+      const st = loadSettings();
+      st.directUploadEnabled = mau;
+      saveSettings(st);
+      jsonRes(res, 200, {
+        ok: true, enabled: mau,
+        needsRestart: true,
+        note: mau
+          ? 'Nyala setelah restart web. IP asli VPS akan terbuka di port ' + (st.directUploadPort || 8443) + '.'
+          : 'Mati setelah restart web. Semua upload kembali lewat Cloudflare.',
+      });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   // === STATUS CLOUDFLARE TUNNEL ===
   if (req.method === 'GET' && url === '/admin/api/tunnel') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
@@ -2080,3 +2218,48 @@ server.requestTimeout = 600000;
 server.headersTimeout = 600000;
 server.keepAliveTimeout = 600000;
 server.listen(PORT, () => console.log('Web uploader on port ' + PORT));
+
+// ---------------------------------------------------------------------------
+// Jalur upload langsung (HTTPS, di luar Cloudflare)
+// ---------------------------------------------------------------------------
+// Kenapa perlu: Cloudflare menolak body >100 MB di plan Free dan itu tidak bisa
+// dinaikkan dari sisi origin. Subdomain grey-cloud tidak lewat edge, jadi tidak
+// ada cap.
+//
+// Kenapa PORT 8443, bukan 443: port 443 di box ini dipakai sshd — satu-satunya
+// jalan masuk SSH. Mengambilnya untuk web = kehilangan akses administrasi.
+//
+// Handler-nya SAMA PERSIS dengan server HTTP di atas (`server` dipakai ulang
+// lewat listener yang sama), jadi tidak ada logika upload yang bercabang dua dan
+// tidak ada yang bisa berbeda perilaku antara dua jalur.
+//
+// Hidup/mati diputuskan saat proses start dari setelan `directUploadEnabled`.
+// Mematikan dari panel = port ini tidak dibuka lagi setelah restart berikutnya,
+// jadi IP tertutup lagi.
+const TLS_DIR = '/etc/letsencrypt/live/up.swhdhlz.my.id';
+
+function mulaiJalurLangsung() {
+  const s = loadSettings();
+  if (!s.directUploadEnabled) {
+    console.log('[direct] mati (directUploadEnabled=false) — semua upload lewat Cloudflare');
+    return;
+  }
+  const port = s.directUploadPort || 8443;
+  let kunci, rantai;
+  try {
+    kunci = readFileSync(join(TLS_DIR, 'privkey.pem'));
+    rantai = readFileSync(join(TLS_DIR, 'fullchain.pem'));
+  } catch (e) {
+    // Sertifikat hilang/kadaluarsa: JANGAN diam-diam jatuh ke HTTP tanpa enkripsi.
+    console.log('[direct] GAGAL: sertifikat tidak terbaca di ' + TLS_DIR + ' (' + e.code + ') — jalur langsung tidak dibuka');
+    return;
+  }
+  const srvTls = https.createServer({ key: kunci, cert: rantai }, server.listeners('request')[0]);
+  srvTls.timeout = 600000;
+  srvTls.requestTimeout = 600000;
+  srvTls.headersTimeout = 600000;
+  srvTls.keepAliveTimeout = 600000;
+  srvTls.on('error', (e) => console.log('[direct] error port ' + port + ': ' + e.message));
+  srvTls.listen(port, () => console.log('[direct] HTTPS aktif di port ' + port + ' (di luar Cloudflare, tanpa cap 100 MB)'));
+}
+mulaiJalurLangsung();

@@ -19,9 +19,32 @@ const CHUNK_THRESHOLD = 80 * 1024 * 1024
 // 5 MB selesai dalam ~20–40 detik di jaringan yang sama.
 const CHUNK_SIZE = 5 * 1024 * 1024
 
+// --- Jalur upload langsung (di luar Cloudflare) ---
+//
+// Kalau tuan menyalakan saklarnya di panel admin, `/api/settings/public`
+// mengirim `directUploadBase` (mis. "https://up.swhdhlz.my.id:8443"). Subdomain
+// itu grey-cloud, jadi request tidak lewat edge dan cap 100 MB tidak berlaku.
+// Kalau mati, nilainya null dan SEMUA jalur di berkas ini tetap memakai path
+// relatif seperti sekarang — tidak ada perubahan perilaku.
+//
+// Hanya request UPLOAD yang dialihkan. Halaman, gambar, dan panel tetap lewat
+// Cloudflare supaya tetap dapat cache dan perlindungan.
+let _basePromise = null
+function uploadBase() {
+  if (!_basePromise) {
+    _basePromise = fetch('/api/settings/public')
+      .then(r => r.json())
+      .then(s => s?.directUploadBase || '')
+      // Gagal ambil setelan tidak boleh menggagalkan upload: jatuh ke host biasa.
+      .catch(() => '')
+  }
+  return _basePromise
+}
+
 async function uploadChunked(files, { onProgress, signal }) {
+  const base = await uploadBase()
   const meta = files.map(f => ({ name: f.name, size: f.size }))
-  const initRes = await fetch('/upload/chunk/init', {
+  const initRes = await fetch(base + '/upload/chunk/init', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ files: meta }),
@@ -48,7 +71,7 @@ async function uploadChunked(files, { onProgress, signal }) {
       // yang gagal diulang, bukan seluruh file.
       for (let attempt = 0; attempt < 6; attempt++) {
         try {
-          const r = await fetch(`/upload/chunk?sid=${encodeURIComponent(init.sessionId)}&fi=${fi}&ci=${ci}`, {
+          const r = await fetch(`${base}/upload/chunk?sid=${encodeURIComponent(init.sessionId)}&fi=${fi}&ci=${ci}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/octet-stream' },
             body: blob,
@@ -86,7 +109,7 @@ async function uploadChunked(files, { onProgress, signal }) {
   let fin = null, finErr = null
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const finRes = await fetch('/upload/chunk/finish', {
+      const finRes = await fetch(base + '/upload/chunk/finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: init.sessionId }),
@@ -120,12 +143,13 @@ export function uploadFiles(files, opts) {
   return uploadSingle(arr, opts)
 }
 
-function uploadSingle(files, { onProgress, field, signal }) {
+async function uploadSingle(files, { onProgress, field, signal }) {
+  const base = await uploadBase()
   const fd = new FormData()
   for (const f of files) fd.append(field, f, f.name)
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', '/upload')
+    xhr.open('POST', base + '/upload')
     let lastLoaded = 0, lastTime = Date.now()
     xhr.upload.onprogress = e => {
       if (!e.lengthComputable || !onProgress) return

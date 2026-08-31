@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSettings, saveSettings, backupToGithub, getBackupHistory, getTunnelStatus, getGallery, uploadGalleryFile, deleteGalleryFile } from '@/lib/admin-api'
+import { getSettings, saveSettings, backupToGithub, getBackupHistory, getTunnelStatus, getGallery, uploadGalleryFile, deleteGalleryFile, getCfDns, setCfProxy, setDirectUpload } from '@/lib/admin-api'
 
 const inputFields = [
   { key: 'siteName', label: 'Nama Situs', ph: 'ShiroWahd', icon: 'fa-globe' },
@@ -207,8 +207,35 @@ export default function Settings({ toast }) {
   const [backupBusy, setBackupBusy] = useState(false)
   const [bkHistory, setBkHistory] = useState([])
   const [tunnel, setTunnel] = useState(null)
+  const [cf, setCf] = useState(null)
+  const [cfBusy, setCfBusy] = useState('')
 
   const loadBackupHistory = () => getBackupHistory().then(r => setBkHistory(r?.history || [])).catch(() => {})
+
+  const loadCf = () => getCfDns().then(setCf).catch(() => setCf({ ok: false, error: 'gagal memuat' }))
+
+  // Matikan/nyalakan proxy satu record. proxied=false membuka IP asli VPS.
+  const toggleProxy = async (rec) => {
+    setCfBusy(rec.id)
+    try {
+      const r = await setCfProxy(rec.id, !rec.proxied)
+      if (r.ok) toast(r.name + ' → ' + (r.proxied ? 'lewat Cloudflare (IP aman)' : 'langsung (IP terbuka, tanpa cap)'), 'success')
+      else toast('Gagal: ' + r.error, 'error')
+      await loadCf()
+    } catch (e) { toast('Gagal: ' + e.message, 'error') }
+    setCfBusy('')
+  }
+
+  const toggleDirect = async () => {
+    setCfBusy('direct')
+    try {
+      const r = await setDirectUpload(!cf?.direct?.enabled)
+      if (r.ok) toast(r.note + ' Restart web dari tab Bot untuk menerapkan.', 'success')
+      else toast('Gagal: ' + r.error, 'error')
+      await loadCf()
+    } catch (e) { toast('Gagal: ' + e.message, 'error') }
+    setCfBusy('')
+  }
 
   const doBackup = async () => {
     setBackupBusy(true)
@@ -223,6 +250,7 @@ export default function Settings({ toast }) {
   useEffect(() => {
     loadBackupHistory()
     getTunnelStatus().then(setTunnel).catch(() => {})
+    loadCf()
   }, [])
 
   useEffect(() => {
@@ -434,6 +462,92 @@ export default function Settings({ toast }) {
             className="w-full sm:w-auto rounded-xl px-8 py-3 font-bold bg-[#24292e] hover:bg-[#2f363d] text-white border border-white/[.08] hover:border-white/[.15] transition-all duration-[200ms] active:scale-[.97] flex items-center justify-center gap-2">
             {backupBusy ? <><i className="fa-solid fa-spinner fa-spin" />Backup...</> : <><i className="fa-brands fa-github" />Backup ke GitHub</>}
           </button>
+        </div>
+
+        {/* ── Jalur upload & proxy Cloudflare ────────────────────────────── */}
+        <div className="rounded-[14px] bg-white/[.03] border border-white/[.06] p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#7e90ad]">
+              <i className="fa-solid fa-route mr-2" />Jalur Upload &amp; Proxy
+            </p>
+            {cf?.zone && (
+              <span className="text-[10px] font-mono text-[#7e90ad]">
+                {cf.zone.plan} · cap {cf.edgeCapMB} MB
+              </span>
+            )}
+          </div>
+
+          {!cf ? <p className="text-xs text-[#7e90ad]">Memuat…</p> : !cf.ok ? (
+            <p className="text-xs text-[#fb7185]">{cf.error}</p>
+          ) : (
+            <>
+              {/* Saklar jalur langsung */}
+              <div className="rounded-[10px] bg-white/[.02] border border-white/[.05] p-3 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">Upload Langsung (lewati Cloudflare)</p>
+                    <p className="text-xs text-[#7e90ad] mt-0.5">
+                      Cloudflare menolak upload di atas {cf.edgeCapMB} MB dan itu tidak bisa dinaikkan.
+                      Jalur ini mengirim langsung ke VPS lewat <span className="font-mono">{cf.direct.host}:{cf.direct.port}</span> jadi tanpa batas.
+                    </p>
+                    <p className="text-[11px] text-[#fbbf24] mt-1">
+                      <i className="fa-solid fa-triangle-exclamation mr-1" />
+                      Saat ON: IP asli VPS terbuka &amp; tanpa perlindungan DDoS. Matikan lagi kalau sudah selesai.
+                    </p>
+                  </div>
+                  <button type="button" disabled={cfBusy === 'direct' || !cf.direct.certReady}
+                    onClick={toggleDirect}
+                    className="shrink-0 px-3 py-1.5 rounded-[10px] text-xs font-bold transition disabled:opacity-40"
+                    style={{
+                      background: cf.direct.enabled ? '#fb718522' : '#34d39922',
+                      border: '1px solid ' + (cf.direct.enabled ? '#fb718544' : '#34d39944'),
+                      color: cf.direct.enabled ? '#fb7185' : '#34d399',
+                    }}>
+                    {cfBusy === 'direct' ? '…' : cf.direct.enabled ? 'Matikan' : 'Nyalakan'}
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 text-[11px]">
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: cf.direct.enabled ? '#34d39918' : '#7e90ad18', color: cf.direct.enabled ? '#34d399' : '#7e90ad' }}>
+                    setelan: {cf.direct.enabled ? 'ON' : 'OFF'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: cf.direct.listening ? '#34d39918' : '#7e90ad18', color: cf.direct.listening ? '#34d399' : '#7e90ad' }}>
+                    port {cf.direct.port}: {cf.direct.listening ? 'terbuka' : 'tertutup'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: cf.direct.certReady ? '#34d39918' : '#fb718518', color: cf.direct.certReady ? '#34d399' : '#fb7185' }}>
+                    sertifikat: {cf.direct.certReady ? 'siap' : 'belum ada'}
+                  </span>
+                </div>
+                {cf.direct.enabled !== cf.direct.listening && (
+                  <p className="text-[11px] text-[#fbbf24]">
+                    <i className="fa-solid fa-rotate mr-1" />Setelan dan port belum sinkron — restart <span className="font-mono">web</span> dari tab Bot.
+                  </p>
+                )}
+              </div>
+
+              {/* Proxy per record DNS */}
+              <div className="space-y-1.5">
+                <p className="text-[11px] text-[#7e90ad]">Proxy Cloudflare per domain — hijau = IP aman, kuning = langsung tanpa cap.</p>
+                {cf.records.map(rec => (
+                  <div key={rec.id} className="flex items-center justify-between gap-3 rounded-[10px] bg-white/[.02] border border-white/[.05] px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-mono truncate">{rec.name}</p>
+                      <p className="text-[11px] text-[#7e90ad] font-mono">{rec.type} → {rec.content}</p>
+                    </div>
+                    <button type="button" disabled={cfBusy === rec.id} onClick={() => toggleProxy(rec)}
+                      className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition disabled:opacity-40"
+                      style={{
+                        background: rec.proxied ? '#34d39918' : '#fbbf2418',
+                        border: '1px solid ' + (rec.proxied ? '#34d39940' : '#fbbf2440'),
+                        color: rec.proxied ? '#34d399' : '#fbbf24',
+                      }}>
+                      <i className={`fa-solid mr-1 ${rec.proxied ? 'fa-shield-halved' : 'fa-bolt'}`} />
+                      {cfBusy === rec.id ? '…' : rec.proxied ? 'Proxy ON' : 'Langsung'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Status tunnel + riwayat backup */}

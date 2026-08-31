@@ -44,7 +44,7 @@
   "siteSubtitle": "no watermark",
   "expireMinutes": 1440,
   "maxFileSizeMB": 0,
-  "allowLargeUpload": false,
+  "allowLargeUpload": true,
   "largeUploadMaxMB": 0,
   "bannerText": "NEW UPDATE JIKA ADA EROR HUBUNGI ADMIN",
   "announcement": "",
@@ -69,6 +69,7 @@
   "rateCooldown": 0,
   "autoCleanup": true,
   "videoAsDocumentMB": 180,
+  "maxVideoLongSide": 3840,
   "autoCleanupInterval": 30,
   "storageQuotaMB": 100000
 }
