@@ -460,24 +460,63 @@ function codecVideoOf(filePath) {
   } catch { return ''; }
 }
 
-// Berapa banyak error decode di N detik pertama. Inilah satu-satunya cara jujur
-// menilai "video ini bisa diputar atau tidak" — ukuran berkas dan exit code
-// ffmpeg sama-sama bisa menipu.
-function hitungErrorDecode(filePath, detik) {
+// Berapa banyak keluhan yang dimuntahkan ffmpeg saat berkas ini didekode.
+// Inilah satu-satunya cara jujur menilai "video ini bisa diputar atau tidak" —
+// ukuran berkas dan exit code ffmpeg sama-sama bisa menipu.
+//
+// ── Kenapa TIDAK lagi mencari string "Error while decoding" ────────────────
+// Dulu fungsi ini hanya menghitung baris yang memuat "Error while decoding".
+// Diukur pada berkas user (VID-20260818-WA0002.mp4): berkas itu memuntahkan
+// 630 baris keluhan, tapi NOL di antaranya berbunyi "Error while decoding" —
+// semuanya berbunyi:
+//     "Application provided invalid, non monotonically increasing dts to
+//      muxer in stream 0: 1 >= 1"
+// Artinya timestamp-nya kacau, bukan piksel-nya. Karena polanya tidak cocok,
+// fungsi ini mengembalikan 0, `hasilLayak` menyatakan LULUS, dan berkas patah
+// itu dikirim ke WhatsApp. Jadi penyaringnya ada, tapi buta terhadap justru
+// jenis kerusakan yang paling sering datang dari rekaman HP.
+// Sekarang SEMUA baris pada level `-v error` dihitung: apa pun yang membuat
+// ffmpeg mengeluh saat mendekode adalah alasan sah untuk tidak mempercayai
+// berkas ini.
+//
+// `detik` 0 / tidak diisi = pindai SELURUH berkas. Biaya diukur nyata:
+// 6,95 s untuk 18 s 1080p, 16,26 s untuk 28 s 4K — murah dibanding
+// mengirim video rusak. Pemindaian sepotong dulu melewatkan kerusakan yang
+// letaknya di luar potongan itu.
+function hitungMasalahDecode(filePath, detik) {
   try {
+    const batas = detik && detik > 0 ? ' -t ' + detik : '';
     const out = execSync(
-      'ffmpeg -v error -i ' + JSON.stringify(filePath) + ' -t ' + detik + ' -f null - 2>&1 | grep -c "Error while decoding" || true',
-      { timeout: 180000, stdio: 'pipe', shell: '/bin/bash' }
+      'ffmpeg -v error -i ' + JSON.stringify(filePath) + batas + ' -f null - 2>&1 | grep -vc "^$" || true',
+      { timeout: 600000, stdio: 'pipe', shell: '/bin/bash' }
     ).toString().trim();
     return parseInt(out, 10) || 0;
   } catch { return 0; }
 }
 
+// Nama lama dipertahankan supaya pemanggil lain tidak putus.
+function hitungErrorDecode(filePath, detik) {
+  return hitungMasalahDecode(filePath, detik);
+}
+
+// Apakah BERKAS SUMBER sendiri sudah rusak? Ini yang menentukan boleh-tidaknya
+// jalur `-c copy`. Stream copy hanya memindahkan paket apa adanya: kalau paket
+// sumber cacat, hasilnya cacat juga — diukur pada berkas B, 630 keluhan di
+// sumber tetap 630 keluhan di hasil, dan prosesnya cuma 0,17 s sehingga lolos
+// tanpa curiga. Sumber bermasalah WAJIB di-encode ulang, bukan disalin.
+function sumberBermasalah(filePath) {
+  return hitungMasalahDecode(filePath, 0) > 0;
+}
+
 // Hasil dianggap layak kalau: berkas ada, ada stream video, durasinya tidak
-// meleset jauh dari sumber, dan 15 detik pertama didekode tanpa error.
-// Batas 15 detik dipilih supaya berkas 300 MB tidak menambah menit-menit
-// verifikasi, sementara kerusakan fatal (yang selalu muncul di awal) tetap
-// tertangkap.
+// meleset jauh dari sumber, dan SELURUH berkas didekode tanpa satu pun keluhan.
+//
+// Dulu hanya 15 detik pertama yang diperiksa, demi menghemat waktu. Diukur pada
+// berkas user yang panjangnya 18,027 s: 524 dari 630 keluhannya memang muncul di
+// 15 detik pertama — tapi karena polanya "monotonically increasing dts" dan
+// bukan "Error while decoding", tak satu pun terhitung. Dua lubang sekaligus.
+// Pemindaian penuh menutup lubang kedua; biayanya 7–16 s (terukur), jauh lebih
+// murah daripada mengirim video patah ke WhatsApp.
 function hasilLayak(outPath, durSumber) {
   try {
     if (!existsSync(outPath) || statSync(outPath).size < 1000) return { ok: false, alasan: 'berkas kosong' };
@@ -489,8 +528,8 @@ function hasilLayak(outPath, durSumber) {
       // tapi tetap menangkap hasil terpotong separuh.
       if (selisih > 0.15) return { ok: false, alasan: 'durasi meleset ' + Math.round(selisih * 100) + '%' };
     }
-    const err = hitungErrorDecode(outPath, 15);
-    if (err > 0) return { ok: false, alasan: err + ' error decode' };
+    const err = hitungMasalahDecode(outPath, 0);
+    if (err > 0) return { ok: false, alasan: err + ' keluhan decode' };
     return { ok: true };
   } catch (e) {
     return { ok: false, alasan: e.message };
@@ -540,7 +579,12 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
   const tmpIn = src.path;
   const tmpOut = join(tmpdir(), 'upload_out_' + id + '.mp4');
   try {
-    const forceReencode = detectNeedsReencode(tmpIn);
+    // Codec yang benar TIDAK berarti berkasnya sehat. Berkas B milik user sudah
+    // h264 High 8-bit yuv420p — lolos semua syarat `detectNeedsReencode` — tapi
+    // isinya 630 keluhan timestamp. Jalur copy menyalinnya bulat-bulat dalam
+    // 0,17 s dan hasilnya patah di WhatsApp. Jadi sumber diperiksa dulu:
+    // ada keluhan sama sekali → paksa encode ulang, jangan pernah copy.
+    const forceReencode = detectNeedsReencode(tmpIn) || sumberBermasalah(tmpIn);
     if (!forceReencode) {
       // Sumber sudah h264 8-bit yuv420p — stream copy, kualitas video 100% utuh.
       // `+faststart` memindah moov atom ke depan; tanpa ini penerima harus
@@ -576,34 +620,84 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
     // (30000/1001, 60000/1001) dikirim sebagai pecahan, bukan dibulatkan —
     // membulatkan 29.97 jadi 30 membuat audio dan video pelan-pelan bergeser
     // sampai tidak sinkron di akhir video panjang.
+    // ── fps: `r_frame_rate` bisa BOHONG, `avg_frame_rate` yang jujur ───────
+    // `r_frame_rate` adalah fps NOMINAL yang ditulis di header; pada rekaman
+    // HP nilainya sering tidak ada hubungannya dengan isi berkas. Diukur pada
+    // VID-20260818-WA0002.mp4 milik user:
+    //     r_frame_rate  = 25/1                 (nominal, palsu)
+    //     avg_frame_rate= 216600000/3603737    = 60,1 fps  (nyata)
+    // Memakai 25 pada berkas 60 fps memaksa ffmpeg membuang ~2 dari setiap 3
+    // frame, dan itulah sumber gerakan tersendat sekaligus banjir keluhan
+    // timestamp. Jadi keduanya dibaca, dan yang dipakai adalah yang NYATA
+    // ketika keduanya berselisih jauh (>20%).
     let fpsFlag = '';
     let fpsVal = 0;
     try {
-      const fps = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
-      if (fps && /^\d+\/\d+$/.test(fps)) {
-        const [num, den] = fps.split('/').map(Number);
-        fpsVal = den ? num / den : num;
-        // Batas 90fps menahan video variable-rate yang melaporkan 1000000/1 dan
-        // membuat ffmpeg mengamuk. Di bawah itu, fps sumber dipakai persis.
-        if (fpsVal > 0 && fpsVal <= 90) fpsFlag = ' -r ' + fps;
-        else if (fpsVal > 90) { fpsFlag = ' -r 90'; fpsVal = 90; }
+      const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate,avg_frame_rate -of default=nw=1 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString();
+      const ambil = (k) => (raw.match(new RegExp('^' + k + '=(.*)$', 'm')) || [, ''])[1].trim();
+      const keAngka = (f) => {
+        if (!f || !/^\d+\/\d+$/.test(f)) return 0;
+        const [n, d] = f.split('/').map(Number);
+        return d ? n / d : 0;
+      };
+      const rNom = ambil('r_frame_rate');
+      const rAvg = ambil('avg_frame_rate');
+      const vNom = keAngka(rNom);
+      const vAvg = keAngka(rAvg);
+      // Pilih fps nyata bila selisihnya >20% — di bawah itu perbedaan wajar
+      // (pembulatan internal), tidak perlu diutak-atik.
+      let pilih = rNom, pilihVal = vNom;
+      if (vNom > 0 && vAvg > 0 && Math.abs(vAvg - vNom) / vNom > 0.20) {
+        pilih = rAvg; pilihVal = vAvg;
+      } else if (!vNom && vAvg > 0) {
+        pilih = rAvg; pilihVal = vAvg;
       }
+      fpsVal = pilihVal;
+      // Batas 90fps menahan video variable-rate yang melaporkan 1000000/1 dan
+      // membuat ffmpeg mengamuk. Di bawah itu, fps sumber dipakai persis —
+      // sebagai PECAHAN, karena membulatkan 29,97 jadi 30 membuat audio dan
+      // video pelan-pelan bergeser sampai tidak sinkron.
+      if (fpsVal > 0 && fpsVal <= 90) fpsFlag = ' -r ' + pilih;
+      else if (fpsVal > 90) { fpsFlag = ' -r 90'; fpsVal = 90; }
     } catch {}
-    // Resolusi sumber DIPERTAHANKAN. Dulu apa pun di atas 1440p diperkecil,
-    // jadi video 4K kiriman user turun kualitasnya padahal dia tidak minta.
-    // Batas hanya dipasang di atas 4K, murni supaya encoder tidak kehabisan
-    // memori — dan itu pun mengikuti sisi terpanjang, bukan sisi terpendek.
+    // ── Batas resolusi 2K (2560 px sisi terpanjang) ────────────────────────
+    // Sebelumnya batasnya 4K (3840) supaya tidak ada yang diturunkan. Hasil
+    // pengukuran pada rekaman 4K user (IMG_1809.MOV, 3840x2160 HEVC):
+    //   4K  crf20 → 142.263.856 B, 39,6 Mbps, level 5.1, encode 140 s
+    //   2K  crf20 →  78.146.299 B, 21,7 Mbps, level 5.0, encode  77 s
+    //   1080p     →  48.870.224 B, 13,6 Mbps, level 4.0, encode  49 s
+    // Berkas 4K-nya SEHAT (nol keluhan decode) — jadi "patah" di HP bukan
+    // berkas rusak, tapi decoder perangkat kerasnya tidak sanggup memutar
+    // 4K@30 level 5.1 pada 39,6 Mbps. Menaikkan resolusi di atas kemampuan
+    // pemutar bukan kualitas, cuma berkas besar yang tersendat.
+    // 2560 dipilih: masih jauh di atas 1080p, level turun ke 5.0, ukuran dan
+    // waktu encode separuh, dan WhatsApp memuatnya tanpa frame drop.
+    const BATAS_SISI_PANJANG = 2560;
     let scaleFilter = '';
     let vidW = 0, vidH = 0;
     try {
       const res = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
       const [w, h] = res.split(',').map(Number);
       vidW = w || 0; vidH = h || 0;
-      if (w && h && Math.max(w, h) > 3840) {
-        if (w >= h) scaleFilter = ' -vf scale=3840:-2';
-        else scaleFilter = ' -vf scale=-2:3840';
-        // Ukuran yang dipakai untuk menghitung level ikut disesuaikan.
-        const rasio = 3840 / Math.max(w, h);
+      if (w && h && Math.max(w, h) > BATAS_SISI_PANJANG) {
+        // ── Kenapa TIDAK memakai `scale=2560:-2` / `scale=-2:2560` ───────────
+        // Bentuk itu harus memilih sisi mana yang dipatok, dan pilihannya
+        // diambil dari dimensi CODED hasil ffprobe (`w >= h`). Pada rekaman HP
+        // yang punya tag `rotate=90`, dua angka itu TERBALIK dari gambar yang
+        // sebenarnya: berkas user tercatat 3840x2160, tapi ffmpeg memutarnya
+        // otomatis sebelum filter jalan, jadi frame yang masuk ke scale sudah
+        // 2160x3840. Akibatnya `scale=2560:-2` mematok sisi PENDEK ke 2560 dan
+        // hasilnya justru MEMBESAR: terukur 2560x4552, level 6.0, 174 MB —
+        // lebih berat dari sumbernya sendiri, kebalikan dari tujuan patch ini.
+        //
+        // `force_original_aspect_ratio=decrease` memuat frame ke dalam kotak
+        // 2560x2560 dan hanya pernah MENGECILKAN, tanpa perlu tahu orientasi.
+        // `force_divisible_by=2` menjaga kedua sisi genap (yuv420p menolak
+        // dimensi ganjil). Diverifikasi pada berkas yang sama: 1440x2560,
+        // level 5.0. Keduanya ada di ffmpeg 4.4.2 milik server ini.
+        scaleFilter = ' -vf scale=' + BATAS_SISI_PANJANG + ':' + BATAS_SISI_PANJANG +
+          ':force_original_aspect_ratio=decrease:force_divisible_by=2';
+        const rasio = BATAS_SISI_PANJANG / Math.max(w, h);
         vidW = Math.round(w * rasio / 2) * 2;
         vidH = Math.round(h * rasio / 2) * 2;
       }
@@ -616,8 +710,18 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
     // alokasi buffer, dan videonya gagal diputar. Itu penyebab "video rusak
     // setelah di-re-encode". Dibiarkan otomatis, x264 menulis level yang benar.
     //
-    // CRF 20 (bukan 23) supaya detail lebih terjaga; `faster` (bukan
-    // `veryfast`) memberi kualitas per-bit lebih baik dengan CPU masih wajar.
+    // CRF 20 (bukan 23) supaya detail lebih terjaga.
+    // Preset `veryfast`, BUKAN `faster` — ini hasil pengukuran, bukan selera.
+    // Diukur pada rekaman 4K user, target 1080p, crf 20 sama:
+    //     ultrafast  25 s  108.089.119 B  (30,1 Mbps — boros, kualitas rendah)
+    //     veryfast   39 s   45.494.278 B  (12,7 Mbps)
+    //     faster     50 s   48.870.224 B  (13,6 Mbps)
+    //     medium     70 s   48.275.490 B  (13,4 Mbps)
+    // `veryfast` 22% lebih cepat dari `faster` DAN berkasnya lebih kecil pada
+    // CRF yang sama — artinya tidak ada kualitas yang ditukar; CRF menjaga
+    // kualitas, preset hanya menentukan seberapa keras encoder mencari efisiensi.
+    // `ultrafast` dibuang: 4x lipat ukuran untuk hemat 14 s, itu justru
+    // memperlambat pengiriman dan menaikkan risiko tolak WhatsApp.
     // `-maxrate/-bufsize` sengaja tidak dipakai: pembatas VBV justru memaksa
     // encoder membuang detail di adegan ramai — itu yang bikin gambar "pecah".
     const dur = probeDuration(tmpIn);
@@ -636,7 +740,7 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
     // Sekarang keputusan diambil dari HASIL, diuji dengan decode sungguhan.
     const perintahEncode = (extraIn, fpsArg) =>
       'ffmpeg -y' + extraIn + ' -i ' + JSON.stringify(tmpIn) + audioSenyap +
-      ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset faster -crf 20' +
+      ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset veryfast -crf 20' +
       scaleFilter + fpsArg + ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' +
       JSON.stringify(tmpOut);
 
@@ -691,7 +795,7 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
           const adaAudio = hasAudioStream(tmpIn);
           const cmd = 'ffmpeg -y -r ' + fpsRaw + ' -i ' + JSON.stringify(rawPath) +
             (adaAudio ? ' -i ' + JSON.stringify(tmpIn) + ' -map 0:v:0 -map 1:a:0' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest -map 0:v:0 -map 1:a:0') +
-            ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset faster -crf 20' + scaleFilter +
+            ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset veryfast -crf 20' + scaleFilter +
             ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut);
           try { await runFfmpeg(cmd, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct); }
           catch (e) { kegagalan.push('annexb: ' + e.message); }
