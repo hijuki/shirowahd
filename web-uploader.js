@@ -489,15 +489,62 @@ function codecVideoOf(filePath) {
 // 6,95 s untuk 18 s 1080p, 16,26 s untuk 28 s 4K — murah dibanding
 // mengirim video rusak. Pemindaian sepotong dulu melewatkan kerusakan yang
 // letaknya di luar potongan itu.
-function hitungMasalahDecode(filePath, detik) {
+//
+// ── KOREKSI PENTING: tidak semua keluhan berasal dari berkasnya ───────────
+// `-f null -` memasang MUXER palsu hanya supaya ffmpeg mau jalan, dan muxer itu
+// ikut mengeluh soal hal yang bukan urusan kesehatan gambar:
+//
+//   [null @ ...] Application provided invalid, non monotonically increasing
+//                dts to muxer in stream 0: 1 >= 1
+//
+// Frasa "to muxer" menandai keluhan ALAT UKUR, bukan laporan gambar rusak.
+// Diukur pada VID-20260818-WA0002.mp4 milik user: 630 keluhan lewat muxer, tapi
+// decode murni (`ffprobe -count_frames`) membaca 1083 frame dengan NOL error.
+// Berkasnya sehat di piksel; yang cacat timestamp container.
+//
+// Menghitung semuanya membuat berkas sehat dituduh rusak — termasuk keluaran
+// `.tt`/`.ttv2` yang sudah user buktikan mulus di WA/SW — lalu dipaksa encode
+// ulang dan mengecil. `hanyaDecoder = true` menyisakan keluhan decoder saja
+// (NAL rusak, frame tak terbaca), yaitu satu-satunya yang berarti gambar cacat.
+function hitungMasalahDecode(filePath, detik, hanyaDecoder) {
   try {
     const batas = detik && detik > 0 ? ' -t ' + detik : '';
+    const saring = hanyaDecoder
+      ? ' | grep -v "to muxer" | grep -v "Last message repeated"'
+      : '';
     const out = execSync(
-      'ffmpeg -v error -i ' + JSON.stringify(filePath) + batas + ' -f null - 2>&1 | grep -vc "^$" || true',
+      'ffmpeg -v error -i ' + JSON.stringify(filePath) + batas + ' -f null - 2>&1' + saring + ' | grep -vc "^$" || true',
       { timeout: 600000, stdio: 'pipe', shell: '/bin/bash' }
     ).toString().trim();
     return parseInt(out, 10) || 0;
   } catch { return 0; }
+}
+
+// Membaca fps nominal (header) dan fps nyata (rata-rata) sekaligus, sebagai
+// pecahan supaya tidak ada pembulatan yang menggeser audio.
+function bacaFps(filePath) {
+  try {
+    const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate,avg_frame_rate -of default=nw=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString();
+    const ambil = (k) => (raw.match(new RegExp('^' + k + '=(.*)$', 'm')) || [, ''])[1].trim();
+    const keAngka = (f) => {
+      if (!f || !/^\d+\/\d+$/.test(f)) return 0;
+      const [n, d] = f.split('/').map(Number);
+      return d ? n / d : 0;
+    };
+    const nominalStr = ambil('r_frame_rate');
+    const avgStr = ambil('avg_frame_rate');
+    return { nominalStr, avgStr, nominal: keAngka(nominalStr), avg: keAngka(avgStr) };
+  } catch { return { nominalStr: '', avgStr: '', nominal: 0, avg: 0 }; }
+}
+
+// Apakah fps di header menipu? Terukur pada berkas user: header bilang 25/1,
+// isinya 60,1 fps. Jalur copy meneruskan angka bohong itu apa adanya, dan
+// pemutar yang percaya header memainkannya dengan timing salah — itulah sendat
+// yang user lihat. Selisih >20% dianggap bohong; di bawah itu wajar.
+function fpsBohong(filePath) {
+  const f = bacaFps(filePath);
+  if (!(f.nominal > 0 && f.avg > 0)) return false;
+  return Math.abs(f.avg - f.nominal) / f.nominal > 0.20;
 }
 
 // Nama lama dipertahankan supaya pemanggil lain tidak putus.
@@ -510,8 +557,16 @@ function hitungErrorDecode(filePath, detik) {
 // sumber cacat, hasilnya cacat juga — diukur pada berkas B, 630 keluhan di
 // sumber tetap 630 keluhan di hasil, dan prosesnya cuma 0,17 s sehingga lolos
 // tanpa curiga. Sumber bermasalah WAJIB di-encode ulang, bukan disalin.
+//
+// Tapi "bermasalah" harus berarti bermasalah SUNGGUHAN. Dua syarat, keduanya
+// terukur, bukan tebakan:
+//   1. keluhan DECODER > 0  → gambarnya memang cacat, copy akan mewarisinya.
+//   2. fps header menipu    → copy meneruskan angka bohong, pemutar salah timing.
+// Keluhan muxer alat ukur TIDAK dihitung. Dulu dihitung, dan akibatnya hasil
+// `.ttv2` yang sudah mulus di WA ikut dipaksa encode ulang lalu mengecil —
+// tepat keluhan yang user laporkan.
 function sumberBermasalah(filePath) {
-  return hitungMasalahDecode(filePath, 0) > 0;
+  return hitungMasalahDecode(filePath, 0, true) > 0 || fpsBohong(filePath);
 }
 
 // Hasil dianggap layak kalau: berkas ada, ada stream video, durasinya tidak
@@ -534,7 +589,10 @@ function hasilLayak(outPath, durSumber) {
       // tapi tetap menangkap hasil terpotong separuh.
       if (selisih > 0.15) return { ok: false, alasan: 'durasi meleset ' + Math.round(selisih * 100) + '%' };
     }
-    const err = hitungMasalahDecode(outPath, 0);
+    // Keluhan muxer alat ukur tidak dihitung di sini juga — alasan sama seperti
+    // di `sumberBermasalah`. Yang menentukan hasil layak kirim adalah apakah
+    // DECODER bisa membaca seluruh berkas tanpa protes.
+    const err = hitungMasalahDecode(outPath, 0, true);
     if (err > 0) return { ok: false, alasan: err + ' keluhan decode' };
     return { ok: true };
   } catch (e) {
@@ -639,17 +697,11 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
     let fpsFlag = '';
     let fpsVal = 0;
     try {
-      const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate,avg_frame_rate -of default=nw=1 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString();
-      const ambil = (k) => (raw.match(new RegExp('^' + k + '=(.*)$', 'm')) || [, ''])[1].trim();
-      const keAngka = (f) => {
-        if (!f || !/^\d+\/\d+$/.test(f)) return 0;
-        const [n, d] = f.split('/').map(Number);
-        return d ? n / d : 0;
-      };
-      const rNom = ambil('r_frame_rate');
-      const rAvg = ambil('avg_frame_rate');
-      const vNom = keAngka(rNom);
-      const vAvg = keAngka(rAvg);
+      const f = bacaFps(tmpIn);
+      const rNom = f.nominalStr;
+      const rAvg = f.avgStr;
+      const vNom = f.nominal;
+      const vAvg = f.avg;
       // Pilih fps nyata bila selisihnya >20% — di bawah itu perbedaan wajar
       // (pembulatan internal), tidak perlu diutak-atik.
       let pilih = rNom, pilihVal = vNom;
