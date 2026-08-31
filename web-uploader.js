@@ -99,7 +99,12 @@ function loadSettings() {
     // Ambang kirim video sebagai dokumen. Server WhatsApp menolak upload video
     // >±180 MB (diukur: 172 MB lolos, 201 MB ditolak semua host), sedangkan
     // dokumen 300 MB tetap lolos. 0 = pakai default plugin (180).
-    videoAsDocumentMB: 180
+    videoAsDocumentMB: 180,
+    // Batas sisi terpanjang video hasil encode. 3840 = 4K lewat utuh (rem
+    // darurat hanya untuk 8K supaya encoder tidak kehabisan memori).
+    // 0 = tanpa batas sama sekali. Diturunkan HANYA kalau HP tujuan memang
+    // tidak sanggup — bukan sebagai tebakan.
+    maxVideoLongSide: 3840
   };
 }
 
@@ -152,6 +157,7 @@ function saveSettings(data) {
     rateCooldown: data.rateCooldown ?? cur.rateCooldown ?? 0,
     autoCleanup: data.autoCleanup ?? cur.autoCleanup ?? false,
     videoAsDocumentMB: data.videoAsDocumentMB ?? cur.videoAsDocumentMB ?? 180,
+    maxVideoLongSide: data.maxVideoLongSide ?? cur.maxVideoLongSide ?? 3840,
     autoCleanupInterval: data.autoCleanupInterval ?? cur.autoCleanupInterval ?? 30,
     storageQuotaMB: data.storageQuotaMB ?? cur.storageQuotaMB ?? 0
   };
@@ -660,26 +666,31 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
       if (fpsVal > 0 && fpsVal <= 90) fpsFlag = ' -r ' + pilih;
       else if (fpsVal > 90) { fpsFlag = ' -r 90'; fpsVal = 90; }
     } catch {}
-    // ── Batas resolusi 2K (2560 px sisi terpanjang) ────────────────────────
-    // Sebelumnya batasnya 4K (3840) supaya tidak ada yang diturunkan. Hasil
-    // pengukuran pada rekaman 4K user (IMG_1809.MOV, 3840x2160 HEVC):
-    //   4K  crf20 → 142.263.856 B, 39,6 Mbps, level 5.1, encode 140 s
-    //   2K  crf20 →  78.146.299 B, 21,7 Mbps, level 5.0, encode  77 s
-    //   1080p     →  48.870.224 B, 13,6 Mbps, level 4.0, encode  49 s
-    // Berkas 4K-nya SEHAT (nol keluhan decode) — jadi "patah" di HP bukan
-    // berkas rusak, tapi decoder perangkat kerasnya tidak sanggup memutar
-    // 4K@30 level 5.1 pada 39,6 Mbps. Menaikkan resolusi di atas kemampuan
-    // pemutar bukan kualitas, cuma berkas besar yang tersendat.
-    // 2560 dipilih: masih jauh di atas 1080p, level turun ke 5.0, ukuran dan
-    // waktu encode separuh, dan WhatsApp memuatnya tanpa frame drop.
-    const BATAS_SISI_PANJANG = 2560;
+    // ── Batas resolusi: SETELAN, bukan angka mati ─────────────────────────
+    // Riwayat keputusan ini, supaya tidak diputar balik tanpa alasan:
+    //   1. Dulu 4K diturunkan ke 1440p → user marah, kualitas hilang percuma.
+    //   2. Lalu batas dinaikkan ke 3840 (4K lewat utuh).
+    //   3. Sempat diturunkan ke 2560 karena SAYA menyimpulkan 4K "tidak bisa
+    //      diputar HP" dari ukuran & level-nya (142 MB, 39,6 Mbps, level 5.1).
+    //      Kesimpulan itu SALAH: user membuktikan 4K dan 90fps hasil jalur
+    //      downloader (`siapkanVideoWA`) diputar mulus di WhatsApp, termasuk
+    //      dipasang sebagai status. Yang membedakan bukan resolusi.
+    // Jadi resolusi dikembalikan utuh. 3840 dipertahankan hanya sebagai rem
+    // darurat untuk sumber di ATAS 4K (8K), murni supaya encoder tidak
+    // kehabisan memori di box 2 core — bukan untuk "menjaga kompatibilitas".
+    // Bisa diubah dari panel admin; 0 = tanpa batas sama sekali.
+    let BATAS_SISI_PANJANG = 3840;
+    try {
+      const setLimit = Number(loadSettings().maxVideoLongSide);
+      if (Number.isFinite(setLimit) && setLimit >= 0) BATAS_SISI_PANJANG = setLimit;
+    } catch {}
     let scaleFilter = '';
     let vidW = 0, vidH = 0;
     try {
       const res = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
       const [w, h] = res.split(',').map(Number);
       vidW = w || 0; vidH = h || 0;
-      if (w && h && Math.max(w, h) > BATAS_SISI_PANJANG) {
+      if (w && h && BATAS_SISI_PANJANG > 0 && Math.max(w, h) > BATAS_SISI_PANJANG) {
         // ── Kenapa TIDAK memakai `scale=2560:-2` / `scale=-2:2560` ───────────
         // Bentuk itu harus memilih sisi mana yang dipatok, dan pilihannya
         // diambil dari dimensi CODED hasil ffprobe (`w >= h`). Pada rekaman HP
@@ -1177,6 +1188,7 @@ const server = http.createServer(async (req, res) => {
       // Sebelumnya 95 dan tidak dipakai siapa pun — angka bohong di API publik.
       chunkThresholdMB: 80,
       videoAsDocumentMB: settings.videoAsDocumentMB || 180,
+      maxVideoLongSide: settings.maxVideoLongSide ?? 3840,
       bannerText: settings.bannerText || '',
       announcement: settings.announcement || '',
       heroTitle: settings.heroTitle || '',
