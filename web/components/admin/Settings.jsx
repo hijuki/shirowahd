@@ -17,6 +17,7 @@ const numFields = [
   { key: 'rateLimit', label: 'Rate Limit (upload/jam)', ph: '0', icon: 'fa-gauge-high', desc: '0 = tanpa batas' },
   { key: 'rateCooldown', label: 'Rate Cooldown (detik)', ph: '0', icon: 'fa-clock', desc: 'Jeda antar upload' },
   { key: 'autoCleanupInterval', label: 'Auto Cleanup (menit)', ph: '30', icon: 'fa-broom', desc: 'Interval bersih-bersih file expired' },
+  { key: 'videoAsDocumentMB', label: 'Video Jadi Dokumen (MB)', ph: '180', icon: 'fa-file-video', suffix: 'MB', desc: 'Video di atas ini dikirim sebagai dokumen. Server WhatsApp menolak video >180 MB; sebagai dokumen tetap lolos & kualitas utuh. 0 = pakai default 180.' },
 ]
 
 const toggles = [

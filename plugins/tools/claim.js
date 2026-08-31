@@ -8,6 +8,12 @@ import { isOwner as checkOwner } from "../../config.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SETTINGS_FILE = join(__dirname, "..", "..", "admin-settings.json");
 
+// Ambang kirim-sebagai-dokumen. Diukur langsung ke server WhatsApp:
+// 172 MB masih diterima sebagai video, 201 MB ditolak semua host. 180 MB
+// memberi sedikit ruang aman di bawah titik gagal yang terbukti.
+// Bisa ditimpa dari panel admin lewat setelan videoAsDocumentMB.
+const VIDEO_AS_DOCUMENT_DEFAULT_MB = 180;
+
 function loadSettings() {
   try {
     if (existsSync(SETTINGS_FILE)) return JSON.parse(readFileSync(SETTINGS_FILE, "utf8"));
@@ -197,6 +203,9 @@ export async function handler(m, { sock }) {
   const siteName = settings.siteName || "SHIROWAHD";
   const domain = settings.domain || "swhdhlz.my.id";
   const siteUrl = "https://" + domain;
+  const docMB = Number(settings.videoAsDocumentMB);
+  const VIDEO_AS_DOCUMENT_BYTES =
+    (Number.isFinite(docMB) && docMB > 0 ? docMB : VIDEO_AS_DOCUMENT_DEFAULT_MB) * 1048576;
 
   // 𝗗𝗘𝗩𝗘𝗟𝗢𝗣𝗘𝗗 𝗕𝗬 𝗛𝗜𝗟𝗟𝗭 — Unicode Mathematical Bold
   const devTag = "\ud835\uddd7\ud835\uddd8\ud835\udde9\ud835\uddd8\ud835\udddf\ud835\udde2\ud835\udde3\ud835\uddd8\ud835\uddd7 \ud835\uddd5\ud835\uddec \ud835\udddb\ud835\udddc\ud835\udddf\ud835\udddf\ud835\udded";
@@ -246,14 +255,38 @@ export async function handler(m, { sock }) {
         // Media dikirim sebagai { url: path }: baileys membaca file itu bertahap
         // dari disk saat mengenkripsi, jadi pemakaian memori tetap kecil berapa
         // pun ukuran videonya. Sebelumnya seluruh isi file ditahan di memori.
-        await sock.sendMessage(target, {
-          video: { url: v.path },
-          caption: "\ud83c\udfac *Video HD siap!*\n\n" + senderTag + " ini video kamu \u2705\n\n_Agar SW kamu HD, share video ini langsung dari bot ke SW kamu._\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
-          mimetype: "video/mp4",
-          fileName: (v.name || "video").replace(/\.[^.]+$/, "") + ".mp4",
-          fileLength: v.size,
-          mentions: [sender],
-        });
+        //
+        // BATAS SERVER WHATSAPP (diukur langsung, bukan tebakan):
+        //   144 MB video -> sukses | 172 MB video -> sukses
+        //   201 MB video -> "Media upload failed on all hosts" (semua host tolak)
+        //   300 MB DOKUMEN -> sukses
+        // Jadi penolakan itu batas endpoint media /mms/video, bukan bug kita dan
+        // bukan soal memori. Untuk file di atas ambang, kirim sebagai DOKUMEN:
+        // file utuh tetap sampai tanpa dikompres sama sekali (justru lebih baik
+        // daripada video, karena WA tidak mengutak-atik dokumen), penerima
+        // tinggal simpan lalu buka dari galeri.
+        const asDocument = v.size > VIDEO_AS_DOCUMENT_BYTES;
+        const baseName = (v.name || "video").replace(/\.[^.]+$/, "") + ".mp4";
+
+        if (asDocument) {
+          await sock.sendMessage(target, {
+            document: { url: v.path },
+            mimetype: "video/mp4",
+            fileName: baseName,
+            fileLength: v.size,
+            caption: "\ud83c\udfac *Video HD siap!* \u00b7 " + sizeMB + " MB\n\n" + senderTag + " ini video kamu \u2705\n\n\u26a0\ufe0f Ukurannya di atas " + Math.round(VIDEO_AS_DOCUMENT_BYTES / 1048576) + " MB, jadi WhatsApp menolak mengirimnya sebagai video. Dikirim sebagai *dokumen* supaya kualitasnya utuh 100% tanpa dikompres.\n\n_Cara pakai: tap unduh \u2192 simpan \u2192 buka dari galeri._\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
+            mentions: [sender],
+          });
+        } else {
+          await sock.sendMessage(target, {
+            video: { url: v.path },
+            caption: "\ud83c\udfac *Video HD siap!*\n\n" + senderTag + " ini video kamu \u2705\n\n_Agar SW kamu HD, share video ini langsung dari bot ke SW kamu._\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
+            mimetype: "video/mp4",
+            fileName: baseName,
+            fileLength: v.size,
+            mentions: [sender],
+          });
+        }
       }
 
       deleteVideo(code);

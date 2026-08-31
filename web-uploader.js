@@ -95,7 +95,11 @@ function loadSettings() {
     rateCooldown: 0,
     autoCleanup: false,
     autoCleanupInterval: 30,
-    storageQuotaMB: 0
+    storageQuotaMB: 0,
+    // Ambang kirim video sebagai dokumen. Server WhatsApp menolak upload video
+    // >±180 MB (diukur: 172 MB lolos, 201 MB ditolak semua host), sedangkan
+    // dokumen 300 MB tetap lolos. 0 = pakai default plugin (180).
+    videoAsDocumentMB: 180
   };
 }
 
@@ -147,6 +151,7 @@ function saveSettings(data) {
     rateLimit: data.rateLimit ?? cur.rateLimit ?? 0,
     rateCooldown: data.rateCooldown ?? cur.rateCooldown ?? 0,
     autoCleanup: data.autoCleanup ?? cur.autoCleanup ?? false,
+    videoAsDocumentMB: data.videoAsDocumentMB ?? cur.videoAsDocumentMB ?? 180,
     autoCleanupInterval: data.autoCleanupInterval ?? cur.autoCleanupInterval ?? 30,
     storageQuotaMB: data.storageQuotaMB ?? cur.storageQuotaMB ?? 0
   };
