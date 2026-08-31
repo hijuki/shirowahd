@@ -1,5 +1,5 @@
 import http from 'http';
-import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync, openSync, closeSync, writeSync } from 'fs';
 import { storeVideo, storeBundle, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL, cleanOrphans } from './src/lib/vid-store.js';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
@@ -609,20 +609,46 @@ function beginUploadJob(files, clientIP) {
 // Alasan: Cloudflare Free menolak body >100 MB dengan 413 sebelum request sampai
 // ke server. File besar dipecah client-side jadi bagian kecil, ditulis ke disk
 // per bagian, lalu digabung byte-per-byte tanpa transformasi apa pun.
-const CHUNK_SIZE = 20 * 1024 * 1024; // 20 MB — aman di bawah limit 100 MB Cloudflare
+// 5 MB, diturunkan dari 20 MB. Batas Cloudflare yang menggagalkan upload besar
+// dari HP bukan ukuran total, tapi LAMA satu request: proxy memutus koneksi yang
+// menahan request terlalu lama (~100 detik). Pada upload HP 1–2 Mbps, satu
+// bagian 20 MB butuh 80–160 detik sehingga hampir selalu putus; 5 MB selesai
+// dalam 20–40 detik di jaringan yang sama.
+const CHUNK_SIZE = 5 * 1024 * 1024;
 const CHUNK_DIR = join(tmpdir(), 'swhd-chunks');
+try { mkdirSync(CHUNK_DIR, { recursive: true }); } catch {}
 const chunkSessions = new Map(); // id -> { files:[{name,size,parts:Set}], total, ip, ts }
 
+// Sweep berdasarkan waktu bagian TERAKHIR diterima (s.ts diperbarui tiap chunk),
+// bukan waktu mulai. Upload 150 MB di jaringan HP lambat bisa lebih dari satu
+// jam; batas lama membuat sesi dihapus saat upload masih jalan, lalu chunk
+// berikutnya dapat 404 "sesi kedaluwarsa". Yang dibatasi sekarang adalah
+// DIAM tanpa aktivitas, bukan total durasi upload.
+const CHUNK_IDLE_MS = 3 * 60 * 60000; // 3 jam tanpa aktivitas
 function chunkSweep() {
   const now = Date.now();
   for (const [id, s] of chunkSessions) {
-    if (now - s.ts > 60 * 60000) {
+    if (now - s.ts > CHUNK_IDLE_MS) {
       chunkSessions.delete(id);
       try { execSync('rm -rf ' + JSON.stringify(join(CHUNK_DIR, id))); } catch {}
     }
   }
+  // Bersihkan juga direktori YATIM di disk. Daftar sesi hidup di memori, jadi
+  // setiap `pm2 restart web` di tengah upload meninggalkan bagian-bagian file
+  // yang tidak akan pernah dihapus oleh loop di atas — bocor terus sampai disk
+  // penuh. Direktori tanpa sesi aktif dan sudah lama tidak disentuh dibuang.
+  try {
+    for (const d of readdirSync(CHUNK_DIR)) {
+      if (chunkSessions.has(d)) continue;
+      const p = join(CHUNK_DIR, d);
+      try {
+        if (now - statSync(p).mtimeMs > CHUNK_IDLE_MS) execSync('rm -rf ' + JSON.stringify(p));
+      } catch {}
+    }
+  } catch {}
 }
 setInterval(chunkSweep, 10 * 60000).unref?.();
+chunkSweep(); // sapu sisa upload yang terputus oleh restart sebelumnya
 
 function readRawBody(req, limitBytes) {
   return new Promise((resolve, reject) => {
@@ -863,7 +889,11 @@ const server = http.createServer(async (req, res) => {
       mkdirSync(join(CHUNK_DIR, id), { recursive: true });
       chunkSessions.set(id, {
         files: list.map(f => ({ name: String(f.name), size: Number(f.size), parts: new Set() })),
-        total, ip: clientIP, ts: Date.now()
+        total, ip: clientIP, ts: Date.now(),
+        // Disimpan per sesi: kalau CHUNK_SIZE diubah (atau proses restart) saat
+        // ada upload berjalan, hitungan jumlah bagian di finish tetap memakai
+        // angka yang dipakai klien saat memulai, bukan angka baru.
+        chunkSize: CHUNK_SIZE
       });
       jsonRes(res, 200, { ok: true, sessionId: id, chunkSize: CHUNK_SIZE });
     } catch (e) {
@@ -882,9 +912,15 @@ const server = http.createServer(async (req, res) => {
       const ci = parseInt(q.get('ci') || '-1', 10);
       const sess = chunkSessions.get(sid);
       if (!sess) { jsonRes(res, 404, { ok: false, error: 'Sesi upload tidak ditemukan atau kedaluwarsa' }); return; }
-      if (sess.ip !== clientIP) { jsonRes(res, 403, { ok: false, error: 'Sesi bukan milik anda' }); return; }
+      // IP TIDAK dipakai sebagai kunci pemilik. HP rutin berganti IP di tengah
+      // upload besar (IPv6 privacy extension, pindah WiFi↔seluler, CGNAT), dan
+      // pengecekan ketat membuat upload >100 MB nyaris selalu mati di tengah
+      // dengan 403. Pemilik dibuktikan oleh sessionId acak 64-bit yang hanya
+      // diketahui pengunggah; sesi hanya bisa menulis bagian file miliknya
+      // sendiri, tidak bisa membaca apa pun.
+      if (sess.ip !== clientIP) sess.ip = clientIP;
       if (!(fi >= 0 && fi < sess.files.length) || ci < 0) { jsonRes(res, 400, { ok: false, error: 'Index tidak valid' }); return; }
-      const buf = await readRawBody(req, CHUNK_SIZE + 1048576);
+      const buf = await readRawBody(req, (sess.chunkSize || CHUNK_SIZE) + 1048576);
       if (!buf.length) { jsonRes(res, 400, { ok: false, error: 'Chunk kosong' }); return; }
       writeFileSync(join(CHUNK_DIR, sid, fi + '_' + ci + '.part'), buf);
       sess.files[fi].parts.add(ci);
@@ -906,26 +942,35 @@ const server = http.createServer(async (req, res) => {
       sid = String(body.sessionId || '');
       const sess = chunkSessions.get(sid);
       if (!sess) { jsonRes(res, 404, { ok: false, error: 'Sesi upload tidak ditemukan atau kedaluwarsa' }); return; }
-      if (sess.ip !== clientIP) { jsonRes(res, 403, { ok: false, error: 'Sesi bukan milik anda' }); return; }
+      // Sama seperti /upload/chunk: IP boleh berubah selama upload berjalan.
       if (settings.expireMinutes) setTTL(settings.expireMinutes * 60000);
       const files = [];
       for (let fi = 0; fi < sess.files.length; fi++) {
         const meta = sess.files[fi];
-        const expected = Math.ceil(meta.size / CHUNK_SIZE);
+        const expected = Math.ceil(meta.size / (sess.chunkSize || CHUNK_SIZE));
         if (meta.parts.size !== expected) {
           jsonRes(res, 400, { ok: false, error: 'Bagian file "' + meta.name + '" tidak lengkap (' + meta.parts.size + '/' + expected + ')' }); return;
         }
-        const parts = [];
-        for (let ci = 0; ci < expected; ci++) {
-          const pf = join(CHUNK_DIR, sid, fi + '_' + ci + '.part');
-          if (!existsSync(pf)) { jsonRes(res, 400, { ok: false, error: 'Bagian hilang di "' + meta.name + '"' }); return; }
-          parts.push(readFileSync(pf));
+        // Gabung dengan APPEND ke satu file di disk, bukan Buffer.concat di RAM:
+        // concat menahan seluruh isi file dua kali sekaligus (array bagian +
+        // hasil gabungan), yang pada file ratusan MB cukup untuk membuat proses
+        // ini kehabisan memori dan mati tanpa pesan.
+        const mergedPath = join(CHUNK_DIR, sid, fi + '_merged.bin');
+        const fd = openSync(mergedPath, 'w');
+        try {
+          for (let ci = 0; ci < expected; ci++) {
+            const pf = join(CHUNK_DIR, sid, fi + '_' + ci + '.part');
+            if (!existsSync(pf)) { closeSync(fd); jsonRes(res, 400, { ok: false, error: 'Bagian hilang di "' + meta.name + '"' }); return; }
+            const part = readFileSync(pf);
+            writeSync(fd, part, 0, part.length);
+            try { unlinkSync(pf); } catch {}   // bebaskan disk selagi jalan
+          }
+        } finally { try { closeSync(fd); } catch {} }
+        const mergedSize = statSync(mergedPath).size;
+        if (mergedSize !== meta.size) {
+          jsonRes(res, 400, { ok: false, error: 'Ukuran file "' + meta.name + '" tidak cocok (' + mergedSize + ' != ' + meta.size + '). Upload ulang.' }); return;
         }
-        const merged = Buffer.concat(parts);
-        if (merged.length !== meta.size) {
-          jsonRes(res, 400, { ok: false, error: 'Ukuran file "' + meta.name + '" tidak cocok (' + merged.length + ' != ' + meta.size + '). Upload ulang.' }); return;
-        }
-        files.push({ name: meta.name, buf: merged });
+        files.push({ name: meta.name, buf: readFileSync(mergedPath) });
       }
       const jobId = beginUploadJob(files, clientIP);
       jsonRes(res, 200, { ok: true, pending: true, jobId, chunked: true });

@@ -9,8 +9,15 @@ export function loadSettings() {
 // sampai ke server. Di atas ambang ini file dipecah jadi bagian kecil supaya tiap
 // request lolos proxy, lalu digabung utuh di server. File kecil tetap lewat
 // jalur lama yang sudah terbukti.
-const CHUNK_THRESHOLD = 95 * 1024 * 1024
-const CHUNK_SIZE = 20 * 1024 * 1024
+// Ambang diturunkan dari 95 MB ke 80 MB: jalur single mengirim seluruh file
+// dalam SATU request, jadi file 85–95 MB pun bisa melewati batas waktu proxy
+// pada jaringan HP. Di atas 80 MB selalu dipecah.
+const CHUNK_THRESHOLD = 80 * 1024 * 1024
+// 5 MB, bukan 20 MB. Cloudflare memutus koneksi yang menahan satu request
+// terlalu lama (~100 detik); pada jaringan HP 1–2 Mbps satu bagian 20 MB butuh
+// 80–160 detik, jadi upload besar dari HP hampir selalu putus di tengah.
+// 5 MB selesai dalam ~20–40 detik di jaringan yang sama.
+const CHUNK_SIZE = 5 * 1024 * 1024
 
 async function uploadChunked(files, { onProgress, signal }) {
   const meta = files.map(f => ({ name: f.name, size: f.size }))
@@ -35,9 +42,11 @@ async function uploadChunked(files, { onProgress, signal }) {
       if (signal?.aborted) throw new Error('Upload dibatalkan')
       const blob = file.slice(ci * chunkSize, Math.min((ci + 1) * chunkSize, file.size))
       let lastErr = null
-      // Retry per bagian: jaringan HP sering putus sesaat; ulang bagiannya saja,
-      // bukan seluruh file.
-      for (let attempt = 0; attempt < 3; attempt++) {
+      // Retry per bagian dengan 6 percobaan dan jeda bertambah (1s→16s):
+      // jaringan HP putus-nyambung selama menit-menit pertama, dan 3 percobaan
+      // dengan jeda pendek terlalu cepat menyerah pada file besar. Hanya bagian
+      // yang gagal diulang, bukan seluruh file.
+      for (let attempt = 0; attempt < 6; attempt++) {
         try {
           const r = await fetch(`/upload/chunk?sid=${encodeURIComponent(init.sessionId)}&fi=${fi}&ci=${ci}`, {
             method: 'POST',
@@ -45,17 +54,19 @@ async function uploadChunked(files, { onProgress, signal }) {
             body: blob,
             signal,
           })
-          const d = await r.json()
+          // 5xx dari proxy (524/522/502) tidak selalu punya body JSON.
+          let d = {}
+          try { d = await r.json() } catch { d = { ok: false, error: 'Jaringan terputus (kode ' + r.status + ')' } }
           if (!r.ok || !d.ok) throw new Error(d.error || 'Bagian gagal dikirim')
           lastErr = null
           break
         } catch (e) {
           if (signal?.aborted) throw new Error('Upload dibatalkan')
           lastErr = e
-          await new Promise(r => setTimeout(r, 800 * (attempt + 1)))
+          await new Promise(r => setTimeout(r, Math.min(16000, 1000 * Math.pow(2, attempt))))
         }
       }
-      if (lastErr) throw lastErr
+      if (lastErr) throw new Error('Bagian ' + (ci + 1) + ' gagal setelah 6 percobaan: ' + lastErr.message)
       sent += blob.size
       if (onProgress) {
         const elapsed = (Date.now() - startedAt) / 1000
@@ -69,20 +80,42 @@ async function uploadChunked(files, { onProgress, signal }) {
     }
   }
 
-  const finRes = await fetch('/upload/chunk/finish', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId: init.sessionId }),
-    signal,
-  })
-  const fin = await finRes.json()
-  if (!finRes.ok || !fin.ok) throw new Error(fin.error || 'Gagal menggabung file')
+  // Penggabungan di server butuh waktu untuk file besar; kalau proxy memutus
+  // respons, coba lagi — bagian-bagiannya sudah ada di server, jadi mengulang
+  // finish aman dan tidak perlu mengunggah ulang.
+  let fin = null, finErr = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const finRes = await fetch('/upload/chunk/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: init.sessionId }),
+        signal,
+      })
+      let d = {}
+      try { d = await finRes.json() } catch { d = { ok: false, error: 'Server tidak merespons saat menggabung (kode ' + finRes.status + ')' } }
+      if (!finRes.ok || !d.ok) throw new Error(d.error || 'Gagal menggabung file')
+      fin = d
+      break
+    } catch (e) {
+      if (signal?.aborted) throw new Error('Upload dibatalkan')
+      finErr = e
+      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
+    }
+  }
+  if (!fin) throw finErr || new Error('Gagal menggabung file')
   return fin
 }
 
 export function uploadFiles(files, opts) {
   const arr = Array.from(files)
-  const needsChunk = arr.some(f => f.size > CHUNK_THRESHOLD)
+  // Ambang diperiksa terhadap TOTAL, bukan per file. Jalur single mengirim
+  // SEMUA file yang dipilih dalam satu request multipart, jadi 3 file @50 MB
+  // menghasilkan body 150 MB dan ditolak proxy dengan 413 walaupun tidak ada
+  // satu pun file yang melewati ambang. Ini penyebab upload gagal saat memilih
+  // beberapa video sekaligus.
+  const totalSize = arr.reduce((n, f) => n + (f.size || 0), 0)
+  const needsChunk = totalSize > CHUNK_THRESHOLD || arr.some(f => f.size > CHUNK_THRESHOLD)
   if (needsChunk) return uploadChunked(arr, opts)
   return uploadSingle(arr, opts)
 }
@@ -102,13 +135,23 @@ function uploadSingle(files, { onProgress, field, signal }) {
       onProgress({ pct: Math.round((e.loaded / e.total) * 100), loaded: e.loaded, total: e.total, speed })
     }
     xhr.onload = () => {
+      // Penolakan proxy (413) membalas HTML, bukan JSON. Tanpa cabang ini
+      // pesannya jadi "Respons server tidak valid" yang tidak menjelaskan
+      // apa pun, padahal penyebabnya jelas: body terlalu besar.
+      if (xhr.status === 413) {
+        reject(new Error('File terlalu besar untuk dikirim sekaligus. Coba upload satu per satu.'))
+        return
+      }
+      if (xhr.status === 0) { reject(new Error('Koneksi terputus saat mengirim')); return }
       try {
         const data = JSON.parse(xhr.responseText)
         if (xhr.status >= 200 && xhr.status < 300 && data.ok) resolve(data)
-        else reject(new Error(data.error || 'Upload gagal'))
-      } catch { reject(new Error('Respons server tidak valid')) }
+        else reject(new Error(data.error || 'Upload gagal (kode ' + xhr.status + ')'))
+      } catch {
+        reject(new Error('Server menolak upload (kode ' + xhr.status + ')'))
+      }
     }
-    xhr.onerror = () => reject(new Error('Koneksi gagal'))
+    xhr.onerror = () => reject(new Error('Koneksi gagal — periksa jaringan lalu coba lagi'))
     xhr.onabort = () => reject(new Error('Upload dibatalkan'))
     signal?.addEventListener('abort', () => xhr.abort())
     xhr.send(fd)

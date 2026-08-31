@@ -63,12 +63,12 @@ export default function UploadPanel({ settings, toast }) {
     if (sizeOk.length < valid.length) toast(`${valid.length - sizeOk.length} file melebihi batas ${max} MB`, 'error')
     // Mode file besar (>95 MB) bisa dimatikan admin. Kalau OFF, tolak di sini
     // dengan pesan jelas supaya user tidak menunggu upload yang pasti gagal.
-    const bigLimit = 95 * 1024 * 1024
+    const bigLimit = 80 * 1024 * 1024
     const hardMB = settings?.largeUploadMaxMB || 0
     if (settings?.allowLargeUpload === false) {
       const before = sizeOk.length
       sizeOk = sizeOk.filter(f => f.size <= bigLimit)
-      if (sizeOk.length < before) toast(`${before - sizeOk.length} file di atas 95 MB — mode file besar sedang dimatikan admin`, 'error')
+      if (sizeOk.length < before) toast(`${before - sizeOk.length} file di atas 80 MB — mode file besar sedang dimatikan admin`, 'error')
     } else if (hardMB > 0) {
       const before = sizeOk.length
       sizeOk = sizeOk.filter(f => f.size <= hardMB * 1024 * 1024)
