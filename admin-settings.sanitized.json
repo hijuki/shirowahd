@@ -68,6 +68,7 @@
   "rateLimit": 0,
   "rateCooldown": 0,
   "autoCleanup": true,
+  "videoAsDocumentMB": 180,
   "autoCleanupInterval": 30,
   "storageQuotaMB": 100000
 }

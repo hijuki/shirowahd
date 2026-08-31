@@ -62,7 +62,7 @@ export { ModalShell }
 /* ─── Close button ─── */
 function CloseBtn({ onClick }) {
   return (
-    <button onClick={onClick} className="w-8 h-8 rounded-full bg-white/[.04] border border-white/[.08] grid place-items-center text-[var(--t-muted)] hover:text-white hover:bg-white/[.1] hover:rotate-90 hover:border-white/20 transition-all duration-[250ms]" style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+    <button onClick={onClick} aria-label="Tutup" className="w-10 h-10 rounded-full bg-white/[.04] border border-white/[.08] grid place-items-center text-[var(--t-muted)] hover:text-white hover:bg-white/[.1] hover:rotate-90 hover:border-white/20 transition-all duration-[250ms]" style={{ transitionTimingFunction: 'var(--ease-out)' }}>
       <i className="fa-solid fa-xmark text-xs" />
     </button>
   )
@@ -125,7 +125,7 @@ export function IntroModal({ onDone, settings }) {
     <ModalShell onClose={onDone}>
       {/* Skip — jangan paksa user scroll sampai bawah */}
       <button onClick={onDone} aria-label="Lewati"
-        className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/[.04] border border-white/[.08] grid place-items-center text-[var(--t-muted)] hover:text-white hover:bg-white/[.1] transition-all duration-[250ms]">
+        aria-label="Tutup" className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-white/[.04] border border-white/[.08] grid place-items-center text-[var(--t-muted)] hover:text-white hover:bg-white/[.1] transition-all duration-[250ms]">
         <i className="fa-solid fa-xmark text-xs" />
       </button>
 

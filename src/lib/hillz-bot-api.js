@@ -1,5 +1,11 @@
 import http from 'http';
 import { getSocket, isConnected } from '../connection.js';
+import {
+  getPluginCount,
+  getAllCommandNames,
+  getDuplicateCommands,
+  getCategories,
+} from './hillz-plugins.js';
 
 const BOT_API_PORT = 8081;
 let server = null;
@@ -36,6 +42,27 @@ export function startBotApi() {
         connected: isConnected(),
         user: sock?.user || null
       });
+      return;
+    }
+
+    // Ringkasan plugin: jumlah nyata dari registry (bukan hasil hitung baris log)
+    // plus daftar command yang saling menimpa. Tanpa ini tabrakan nama command
+    // hanya terlihat sekali saat boot lalu hilang dari log.
+    if (req.method === 'GET' && url === '/plugins') {
+      try {
+        const names = getAllCommandNames();
+        const dups = getDuplicateCommands();
+        json(res, 200, {
+          ok: true,
+          plugins: getPluginCount(),
+          commands: names.length,
+          categories: getCategories().length,
+          duplicateCount: dups.length,
+          duplicates: dups,
+        });
+      } catch (e) {
+        json(res, 500, { error: e.message });
+      }
       return;
     }
 

@@ -69,8 +69,17 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 
-  const mins = String(Math.floor(left / 60000)).padStart(2, '0')
-  const secs = String(Math.floor(left / 1000) % 60).padStart(2, '0')
+  // Format waktu adaptif: dengan expireMinutes 1440 (24 jam) tampilan lama
+  // menghasilkan "1440:00" yang tidak terbaca sebagai waktu. Di atas 1 jam
+  // tampilkan jam+menit, di bawahnya tetap mm:ss agar detik terasa mendesak.
+  const totalSec = Math.floor(left / 1000)
+  const showHours = totalSec >= 3600
+  const mins = showHours
+    ? String(Math.floor(totalSec / 3600)) + 'j'
+    : String(Math.floor(totalSec / 60)).padStart(2, '0')
+  const secs = showHours
+    ? String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0') + 'm'
+    : String(totalSec % 60).padStart(2, '0')
   const pct = Math.max(0, (left / (expireMinutes * 60000)) * 100)
   const urgent = left < 5 * 60000
 
@@ -171,7 +180,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
             <i className="fa-solid fa-hourglass-half text-[9px]" /> Berlaku sampai
           </span>
           <span className={`font-mono font-bold text-[13px] tabular-nums ${urgent ? 'text-bad animate-pulse' : 'text-[#34d399]'}`}>
-            {mins}:{secs}
+            {mins}{showHours ? ' ' : ':'}{secs}
           </span>
         </div>
         <div className="expire-bar"><div style={{ width: pct + '%' }} className={urgent ? '!bg-gradient-to-r !from-bad !to-[#fbbf24]' : '!bg-gradient-to-r !from-[#34d399] !to-[#10b981]'} /></div>
@@ -195,7 +204,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
                 </span>
                 <span className="flex-1 min-w-0 text-left">
                   <span className="block font-bold text-[11px] truncate">{btn.name || 'Grup Claim'}</span>
-                  <span className="block text-[var(--t-muted)] text-[8px] truncate">Buka &amp; paste kode .claim</span>
+                  <span className="block text-[var(--t-muted)] text-[10px] truncate">Buka &amp; paste kode .claim</span>
                 </span>
                 <span className="w-7 h-7 shrink-0 rounded-full grid place-items-center bg-[#34d399]/12 border border-[#34d399]/20 transition-transform duration-[200ms] group-hover:translate-x-0.5">
                   <i className="fa-solid fa-arrow-right text-[#34d399] text-[9px]" />

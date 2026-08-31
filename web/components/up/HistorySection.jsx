@@ -10,6 +10,13 @@ function timeAgo(ts) {
   return `${Math.floor(s / 86400)}h lalu`
 }
 
+// Sisa waktu terbaca: "1440m" tidak informatif, jadi >=60 menit tampil jam.
+function fmtRemaining(m) {
+  if (m >= 1440) return `${Math.floor(m / 1440)}h ${Math.floor((m % 1440) / 60)}j`
+  if (m >= 60) return `${Math.floor(m / 60)}j ${m % 60}m`
+  return `${m}m`
+}
+
 function expirePercent(h) {
   if (!h.timestamp || !h.expireMinutes) return 0
   const elapsed = Date.now() - h.timestamp
@@ -119,7 +126,7 @@ export default function HistorySection() {
                         )}
                         <span className="flex items-center gap-1 text-ok">
                           <i className="fa-solid fa-hourglass-half text-[7px]" />
-                          {remaining}m
+                          {fmtRemaining(remaining)}
                         </span>
                       </div>
                     </div>

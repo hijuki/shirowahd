@@ -105,7 +105,7 @@ export default function UploaderPage() {
                   <span className="hero-mote hero-mote-3" />
                   <span className="hero-mote hero-mote-4" />
                   <span className="hero-3d-card">
-                    <img src={settings?.heroImageUrl || '/hero.jpg'} alt="" className="hero-orb-img" />
+                    <img src={settings?.heroImageUrl || '/hero.jpg'} alt={(settings?.siteName || 'SWHDHLZ') + ' — kirim video HD tanpa kompresi'} className="hero-orb-img" />
                     <span className="hero-3d-shine" />
                   </span>
                 </div>
@@ -165,7 +165,7 @@ export default function UploaderPage() {
               </div>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] text-[9px] font-extrabold tracking-wider bg-[#22d3ee]/8 border border-[#22d3ee]/20 text-[#67e8f9]">
                 <i className="fa-regular fa-clock text-[8px] opacity-60" />
-                {settings?.expireMinutes || 60}m
+                {(() => { const m = settings?.expireMinutes || 60; return m >= 1440 ? `${Math.floor(m / 1440)} HARI` : m >= 60 ? `${Math.floor(m / 60)} JAM` : `${m}m` })()}
               </span>
             </div>
 

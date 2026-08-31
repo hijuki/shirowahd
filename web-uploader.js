@@ -910,7 +910,10 @@ const server = http.createServer(async (req, res) => {
       maxFileSizeMB: settings.maxFileSizeMB || 0,
       allowLargeUpload: settings.allowLargeUpload !== false,
       largeUploadMaxMB: settings.largeUploadMaxMB || 0,
-      chunkThresholdMB: 95,
+      // Nilai ini harus sama dengan CHUNK_THRESHOLD di web/lib/up-api.js (80 MB).
+      // Sebelumnya 95 dan tidak dipakai siapa pun — angka bohong di API publik.
+      chunkThresholdMB: 80,
+      videoAsDocumentMB: settings.videoAsDocumentMB || 180,
       bannerText: settings.bannerText || '',
       announcement: settings.announcement || '',
       heroTitle: settings.heroTitle || '',
@@ -1673,6 +1676,13 @@ const server = http.createServer(async (req, res) => {
   if (url === '/admin/api/bot/exec' && req.method === 'POST') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     proxyBotApi(req, res, 'POST', '/exec');
+    return;
+  }
+
+  // Ringkasan plugin + tabrakan nama command, diambil langsung dari registry bot.
+  if (url === '/admin/api/bot/plugins' && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'GET', '/plugins');
     return;
   }
 

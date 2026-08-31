@@ -191,7 +191,7 @@ export default function UploadPanel({ settings, toast }) {
               onDragLeave={() => setDrag(false)}
               className={`drop-luxe drop-3d py-9 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
             >
-              <input ref={fileRef} type="file" accept={accept} multiple className="hidden" onChange={e => addFiles(e.target.files)} />
+              <input ref={fileRef} type="file" accept={accept} multiple aria-label="Pilih file video atau foto untuk diupload" className="hidden" onChange={e => addFiles(e.target.files)} />
               <div className="drop-halo">
                 <div className={`w-16 h-16 mx-auto rounded-[18px] grid place-items-center mb-4 transition-all duration-[250ms] floaty ${isImg
                   ? 'bg-[#34d399]/12 border border-[#34d399]/25 shadow-[0_0_36px_-8px_rgba(52,211,153,.4)]'
@@ -227,10 +227,10 @@ export default function UploadPanel({ settings, toast }) {
                       return (
                         <div key={key} className="relative aspect-square rounded-[12px] overflow-hidden border border-white/[.07] group hover:border-[#3b82f6]/30 transition-all duration-[150ms]">
                           {thumbs[key] && <img src={thumbs[key]} alt="" className="w-full h-full object-cover" />}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[150ms]" />
-                          <p className="absolute bottom-1 left-1.5 right-1.5 text-[7px] text-white font-bold truncate opacity-0 group-hover:opacity-100 transition-opacity duration-[150ms]">{f.name}</p>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-[150ms]" />
+                          <p className="absolute bottom-1 left-1.5 right-1.5 text-[10px] text-white font-bold truncate opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-[150ms]">{f.name}</p>
                           {!uploading && (
-                            <button onClick={(e) => { e.stopPropagation(); removeFile(f) }} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-bad/90 text-white text-[8px] grid place-items-center opacity-0 group-hover:opacity-100 transition-all duration-[150ms]">
+                            <button onClick={(e) => { e.stopPropagation(); removeFile(f) }} aria-label={'Hapus ' + f.name} className="absolute top-1 right-1 w-7 h-7 rounded-full bg-bad/90 text-white text-[11px] grid place-items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-[150ms]">
                               <i className="fa-solid fa-xmark" />
                             </button>
                           )}
@@ -253,7 +253,7 @@ export default function UploadPanel({ settings, toast }) {
                           </div>
                           <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded-[5px]" style={{ color: TAG_COLORS[ext.toLowerCase()], background: `${TAG_COLORS[ext.toLowerCase()]}12` }}>{ext}</span>
                           {!uploading && (
-                            <button onClick={() => removeFile(f)} className="w-6 h-6 shrink-0 rounded-full bg-bad/10 text-bad text-[9px] grid place-items-center opacity-0 group-hover:opacity-100 transition-all duration-[150ms]">
+                            <button onClick={() => removeFile(f)} aria-label={'Hapus ' + f.name} className="w-10 h-10 shrink-0 rounded-full bg-bad/10 text-bad text-[12px] grid place-items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-[150ms]">
                               <i className="fa-solid fa-xmark" />
                             </button>
                           )}

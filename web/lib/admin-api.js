@@ -31,6 +31,7 @@ export const blacklistAction = (action, ip) => api('/api/blacklist', { method: '
 export const getBotStatus = () => api('/api/bot/status')
 export const getBlacklist = () => api('/api/blacklist')
 export const getBotInternalStatus = () => api('/api/bot/internal-status')
+export const getBotPlugins = () => api('/api/bot/plugins')
 export const pairBot = (number) => api('/api/bot/pair', { method: 'POST', body: { number } })
 export const getBotGroups = () => api('/api/bot/groups')
 export const leaveGroup = (jid) => api('/api/bot/groups/leave', { method: 'POST', body: { jid } })

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 
 export default function Navbar({ settings, onFaq, onAbout }) {
-  const btn = 'relative w-9 h-9 rounded-[12px] grid place-items-center border transition-all duration-[200ms] active:scale-90 group overflow-hidden'
+  const btn = 'relative w-10 h-10 rounded-[12px] grid place-items-center border transition-all duration-[200ms] active:scale-90 group overflow-hidden'
   const logoUrl = settings?.logoUrl || ''
 
   const [theme, setTheme] = useState('dark')
@@ -57,20 +57,20 @@ export default function Navbar({ settings, onFaq, onAbout }) {
       {/* Quick actions with hover shine */}
       <div className="flex items-center gap-2 relative z-10">
         {/* Theme toggle */}
-        <button onClick={toggleTheme} title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
+        <button onClick={toggleTheme} title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'} aria-label={theme === 'dark' ? 'Ganti ke mode terang' : 'Ganti ke mode gelap'}
           className={`${btn} bg-white/[.03] border-white/[.07] text-[var(--t-muted)] hover:text-[#fbbf24] hover:border-[#fbbf24]/30 hover:bg-[#fbbf24]/[.08]`}>
           <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-[12px] transition-transform duration-[250ms] ${theme === 'light' ? 'rotate-[360deg]' : ''}`} />
           <span className="absolute inset-0 bg-gradient-to-b from-white/[.06] to-transparent pointer-events-none" />
         </button>
-        <button onClick={onFaq} title="FAQ" className={`${btn} bg-white/[.03] border-white/[.07] text-[var(--t-muted)] hover:text-[#22d3ee] hover:border-[#22d3ee]/30 hover:bg-[#22d3ee]/[.08]`}>
+        <button onClick={onFaq} title="FAQ" aria-label="FAQ" className={`${btn} bg-white/[.03] border-white/[.07] text-[var(--t-muted)] hover:text-[#22d3ee] hover:border-[#22d3ee]/30 hover:bg-[#22d3ee]/[.08]`}>
           <i className="fa-solid fa-circle-question text-[12px]" />
           <span className="absolute inset-0 bg-gradient-to-b from-white/[.06] to-transparent pointer-events-none" />
         </button>
-        <button onClick={onAbout} title="Tentang" className={`${btn} bg-white/[.03] border-white/[.07] text-[var(--t-muted)] hover:text-[#3b82f6] hover:border-[#3b82f6]/30 hover:bg-[#3b82f6]/[.08]`}>
+        <button onClick={onAbout} title="Tentang" aria-label="Tentang" className={`${btn} bg-white/[.03] border-white/[.07] text-[var(--t-muted)] hover:text-[#3b82f6] hover:border-[#3b82f6]/30 hover:bg-[#3b82f6]/[.08]`}>
           <i className="fa-solid fa-circle-info text-[12px]" />
           <span className="absolute inset-0 bg-gradient-to-b from-white/[.06] to-transparent pointer-events-none" />
         </button>
-        <a href="/admin" title="Admin" className={`${btn} bg-[#34d399]/[.06] border-[#34d399]/20 text-[#34d399] hover:text-white hover:border-[#34d399]/40 hover:bg-[#34d399]/20 shadow-[0_0_12px_-3px_rgba(52,211,153,.2)]`}>
+        <a href="/admin" title="Admin" aria-label="Panel Admin" className={`${btn} bg-[#34d399]/[.06] border-[#34d399]/20 text-[#34d399] hover:text-white hover:border-[#34d399]/40 hover:bg-[#34d399]/20 shadow-[0_0_12px_-3px_rgba(52,211,153,.2)]`}>
           <i className="fa-solid fa-user-shield text-[11px]" />
           <span className="absolute inset-0 bg-gradient-to-b from-white/[.08] to-transparent pointer-events-none" />
         </a>

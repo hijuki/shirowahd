@@ -1,10 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getBotStatus, getBotInternalStatus, pairBot, getBotGroups, leaveGroup, toggleGroup, broadcast, cancelBroadcast, sendMessage, execCommand, restartBot, getLogs } from '@/lib/admin-api'
+import { getBotStatus, getBotInternalStatus, getBotPlugins, pairBot, getBotGroups, leaveGroup, toggleGroup, broadcast, cancelBroadcast, sendMessage, execCommand, restartBot, getLogs } from '@/lib/admin-api'
 
 export default function Bot({ toast }) {
   const [status, setStatus] = useState(null)
   const [internal, setInternal] = useState(null)
+  const [plug, setPlug] = useState(null)
+  const [showDups, setShowDups] = useState(false)
   const [groups, setGroups] = useState([])
   const [busy, setBusy] = useState(false)
 
@@ -43,6 +45,7 @@ export default function Bot({ toast }) {
       setGroups(Array.isArray(gr) ? gr : Array.isArray(gr?.groups) ? gr.groups : [])
     } catch { }
     getBotInternalStatus().then(r => setInternal(r)).catch(() => { })
+    getBotPlugins().then(r => setPlug(r)).catch(() => { })
   }
   useEffect(() => {
     load()
@@ -172,6 +175,56 @@ export default function Bot({ toast }) {
           </p>
         </div>
         <button onClick={load} disabled={busy} className="ml-auto rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] hover:border-[#22d3ee]/40 transition-all duration-[150ms] active:scale-[.97] text-sm"><i className="fa-solid fa-arrows-rotate mr-1.5" />Refresh</button>
+      </div>
+
+      {/* Plugin registry — angka dari registry bot, bukan hitungan baris log */}
+      <div className="card p-6 md:p-8">
+        <h2 className="font-[family-name:var(--font-display)] font-bold mb-4 text-base">
+          <i className="fa-solid fa-puzzle-piece text-[#a78bfa] mr-2" />Plugin
+        </h2>
+        {!plug?.ok ? (
+          <p className="text-[#7e90ad] text-sm">Data plugin belum tersedia. Bot mungkin sedang booting.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { l: 'Plugin aktif', v: plug.plugins, c: '#34d399' },
+                { l: 'Command + alias', v: plug.commands, c: '#67e8f9' },
+                { l: 'Kategori', v: plug.categories, c: '#93c5fd' },
+                { l: 'Nama tabrakan', v: plug.duplicateCount, c: plug.duplicateCount ? '#fbbf24' : '#7e90ad' },
+              ].map(s => (
+                <div key={s.l} className="rounded-[14px] px-4 py-3 bg-white/[.03] border border-white/[.06]">
+                  <p className="text-[10px] font-bold tracking-wider uppercase text-[#7e90ad]">{s.l}</p>
+                  <p className="text-xl font-bold tabular-nums" style={{ color: s.c }}>{s.v}</p>
+                </div>
+              ))}
+            </div>
+            {plug.duplicateCount > 0 && (
+              <div className="mt-4">
+                <button onClick={() => setShowDups(v => !v)}
+                  className="min-h-10 rounded-[12px] px-4 py-2.5 bg-[#fbbf24]/[.08] border border-[#fbbf24]/25 text-[#fbbf24] text-sm font-bold transition-all duration-[150ms] active:scale-[.97]">
+                  <i className={`fa-solid fa-chevron-${showDups ? 'up' : 'down'} mr-1.5`} />
+                  {showDups ? 'Sembunyikan' : 'Lihat'} {plug.duplicateCount} command yang saling menimpa
+                </button>
+                {showDups && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-[#7e90ad] text-xs">
+                      Dua plugin memakai nama command yang sama; yang dimuat terakhir menang, yang lain tidak pernah jalan.
+                      Ini bukan error — hanya perlu diketahui agar tidak bingung saat sebuah command terasa &quot;salah fungsi&quot;.
+                    </p>
+                    {plug.duplicates.map((d, i) => (
+                      <div key={d.command + i} className="rounded-[12px] px-3 py-2.5 bg-white/[.02] border border-white/[.06] text-xs">
+                        <p className="font-mono font-bold text-[#fbbf24]">.{d.command}</p>
+                        <p className="text-[#34d399] mt-1 break-all"><i className="fa-solid fa-check mr-1" />aktif: {d.kept}</p>
+                        <p className="text-[#7e90ad] break-all"><i className="fa-solid fa-xmark mr-1" />mati: {d.shadowed}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Pairing */}
