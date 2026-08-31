@@ -349,13 +349,31 @@ function needsConvert(name) {
 // Semua kondisi itu sekarang memaksa re-encode ke H.264 8-bit yuv420p + AAC.
 function detectNeedsReencode(filePath) {
   try {
-    const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,profile -of default=nw=1:nk=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim().split('\n').map(x => x.trim());
-    const [codec, profile, pixFmt] = [raw[0] || '', raw[1] || '', raw[2] || ''];
+    // Dibaca per-NAMA (key=value), bukan berdasarkan urutan baris: urutan output
+    // ffprobe mengikuti urutan field internalnya, bukan urutan yang kita minta,
+    // jadi destructuring posisional mudah tertukar saat daftar field diubah.
+    const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,profile -of default=nw=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString();
+    const get = (k) => (raw.match(new RegExp('^' + k + '=(.*)$', 'm')) || [, ''])[1].trim();
+    const codec = get('codec_name').toLowerCase();
+    const pixFmt = get('pix_fmt').toLowerCase();
+    const profile = get('profile');
     if (codec !== 'h264') return true;
     if (pixFmt && pixFmt !== 'yuv420p') return true;
     if (/10|4:4:4|4:2:2/.test(profile)) return true;
+    // Audio non-AAC tidak memaksa re-encode VIDEO — audionya saja yang
+    // ditranscode di jalur copy, jadi video tetap utuh.
     return false;
   } catch { return false; }
+}
+
+// Codec audio sumber. Dipakai untuk memutuskan `-c:a copy` (audio sudah AAC)
+// atau transcode ke AAC. Sebelumnya audio SELALU di-encode ulang ke 320k walau
+// sumbernya sudah AAC — jadi file yang mestinya lolos "tanpa compress" tetap
+// kehilangan keutuhan track audionya dan ukurannya membengkak.
+function audioCodecOf(filePath) {
+  try {
+    return execSync('ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim().toLowerCase();
+  } catch { return ''; }
 }
 
 // Video tanpa audio kadang gagal diunduh penerima. Kalau tidak ada track audio,
@@ -386,9 +404,12 @@ async function convertToMp4Async(buf, originalName, onPct) {
       // `+faststart` memindah moov atom ke depan; tanpa ini penerima harus
       // mengunduh seluruh file sebelum bisa memutar, yang di WA sering
       // terlihat sebagai unduhan gagal/menggantung.
-      const silentAudio = hasAudioStream(tmpIn)
-        ? ' -c:a aac -b:a 320k'
-        : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest -c:a aac -b:a 128k';
+      // Audio sudah AAC → salin apa adanya (track audio tetap byte-identik).
+      // Bukan AAC (mp3/opus/ac3) → transcode, karena WA butuh AAC.
+      // Tidak ada audio sama sekali → tempel audio senyap.
+      const silentAudio = !hasAudioStream(tmpIn)
+        ? ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest -c:a aac -b:a 128k'
+        : (audioCodecOf(tmpIn) === 'aac' ? ' -c:a copy' : ' -c:a aac -b:a 320k');
       try {
         await execP(
           'ffmpeg -y -i ' + JSON.stringify(tmpIn) + silentAudio + ' -c:v copy -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
@@ -1325,11 +1346,16 @@ const server = http.createServer(async (req, res) => {
     try {
       const sessionDir = join(__dirname, 'storage', 'session');
       const hasSession = existsSync(join(sessionDir, 'creds.json'));
-      // ponytail: bot runs inside same process via import in start-all.js; upgrade to separate process check if split later
-      const botOnline = hasSession && process.uptime() > 30;
+      // Status bot HARUS ditanya ke bot-nya sendiri (internal API 127.0.0.1:8081).
+      // Sebelumnya botOnline = hasSession && uptime proses WEB > 30 detik, jadi
+      // panel menampilkan ONLINE walaupun proses bot mati — cuma menandakan
+      // "file sesi ada dan web sudah hidup", bukan bot benar-benar tersambung.
+      const live = await botInternalStatus();
       jsonRes(res, 200, {
         ok: true,
-        botOnline,
+        botOnline: live ? live.connected === true : false,
+        botReachable: !!live,
+        user: live?.user || null,
         hasSession,
         pid: process.pid,
         uptime: Date.now() - (process.uptime() * 1000),
@@ -1390,6 +1416,26 @@ const server = http.createServer(async (req, res) => {
 
   res.writeHead(404); res.end('Not found');
 });
+
+// Tanya status ke internal API bot. Timeout pendek: kalau bot mati, panel harus
+// cepat menampilkan OFFLINE, bukan menunggu sampai request browser habis waktu.
+function botInternalStatus() {
+  return new Promise(resolve => {
+    let done = false;
+    const finish = v => { if (!done) { done = true; resolve(v); } };
+    try {
+      const r = http.request({ hostname: '127.0.0.1', port: 8081, path: '/status', method: 'GET', timeout: 2000 }, resp => {
+        let data = '';
+        resp.on('data', c => data += c);
+        resp.on('end', () => { try { finish(JSON.parse(data)); } catch { finish(null); } });
+      });
+      r.on('timeout', () => { r.destroy(); finish(null); });
+      r.on('error', () => finish(null));
+      r.end();
+    } catch { finish(null); }
+    setTimeout(() => finish(null), 2500);
+  });
+}
 
 // --- Bot API proxy helper ---
 function proxyBotApi(clientReq, clientRes, method, path) {
