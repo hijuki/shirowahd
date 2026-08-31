@@ -74,7 +74,7 @@ export default function Security({ toast }) {
           </div>
         ))}
         {pwMsg && <p className={`text-sm anim-fade ${pwMsg.ok ? 'text-emerald-300' : 'text-bad'}`}><i className={`fa-solid ${pwMsg.ok ? 'fa-circle-check' : 'fa-triangle-exclamation'} mr-1.5`} />{pwMsg.text}</p>}
-        <button type="submit" disabled={pwBusy} className="btn-primary rounded-[12px] px-6 py-3 font-[family-name:var(--font-display)] font-bold">
+        <button type="submit" disabled={pwBusy} className="btn-primary min-h-10 rounded-[12px] px-6 py-3 font-[family-name:var(--font-display)] font-bold">
           {pwBusy ? <><i className="fa-solid fa-spinner fa-spin mr-2" />Menyimpan…</> : <><i className="fa-solid fa-check mr-2" />Ubah Password</>}
         </button>
       </form>
@@ -114,8 +114,10 @@ export default function Security({ toast }) {
           <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-screwdriver-wrench text-[#fbbf24] mr-2" />Mode Maintenance</h2>
           <p className="text-[#7e90ad] text-sm mt-0.5">Saat aktif, upload dinonaktifkan untuk semua pengguna</p>
         </div>
-        <button onClick={toggleMaint} disabled={busy}
-          className={`relative w-14 h-8 rounded-full transition-all duration-[250ms] shrink-0 ml-4 ${maint ? 'bg-gradient-to-r from-[#fbbf24] to-[#fb7185] shadow-[0_0_18px_rgba(251,113,133,.45)]' : 'bg-white/10'}`}
+        {/* after:-inset-y-1 = area sentuh 40px. Dipakai ::after (bukan padding) karena
+            padding pada elemen rounded-full ikut mewarnai latar dan bentuk pil jadi berubah. */}
+        <button onClick={toggleMaint} disabled={busy} aria-label="Mode maintenance" aria-pressed={!!maint}
+          className={`relative w-14 h-8 after:content-[''] after:absolute after:-inset-y-1 after:inset-x-0 rounded-full transition-all duration-[250ms] shrink-0 ml-4 ${maint ? 'bg-gradient-to-r from-[#fbbf24] to-[#fb7185] shadow-[0_0_18px_rgba(251,113,133,.45)]' : 'bg-white/10'}`}
           style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-[250ms] ${maint ? 'translate-x-6' : ''}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
         </button>

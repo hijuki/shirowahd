@@ -255,7 +255,10 @@ export default function Bot({ toast }) {
               const enabled = !g.disabled && g.enabled !== false
               return (
                 <div key={jid} className="hist-item rounded-[12px] bg-white/[.04] border border-white/[.05] px-4 py-3 flex items-center gap-3">
-                  <input type="checkbox" aria-label="Pilih grup untuk broadcast" checked={selJids.has(jid)} onChange={() => toggleSel(jid)} title="Pilih untuk broadcast" className="w-5 h-5 shrink-0 accent-[#22d3ee]" />
+                  {/* area sentuh 40px lewat <label>; padding pada checkbox diabaikan browser */}
+                  <label aria-label="Pilih grup untuk broadcast" title="Pilih untuk broadcast" className="shrink-0 -m-2.5 p-2.5 cursor-pointer inline-flex items-center">
+                    <input type="checkbox" checked={selJids.has(jid)} onChange={() => toggleSel(jid)} className="w-5 h-5 accent-[#22d3ee]" />
+                  </label>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{groupName(g)}</p>
                     <p className="text-xs text-[#7e90ad] font-mono truncate">{jid}</p>
@@ -318,7 +321,7 @@ export default function Bot({ toast }) {
         <form onSubmit={doExec} className="flex gap-2">
           <input value={cmd} onChange={e => setCmd(e.target.value)} placeholder="Contoh: await sock.sendMessage(target, { text: 'hai' })"
             className="flex-1 rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm font-mono transition-colors duration-[150ms]" />
-          <button type="submit" disabled={busy} className="btn-primary rounded-[12px] px-5 py-2.5 text-sm font-bold"><i className="fa-solid fa-play mr-1.5" />Run</button>
+          <button type="submit" disabled={busy} className="btn-primary min-h-10 rounded-[12px] px-5 py-2.5 text-sm font-bold"><i className="fa-solid fa-play mr-1.5" />Run</button>
         </form>
         {out && (
           <pre className="rounded-[12px] bg-black/40 border border-white/[.07] p-4 text-xs font-mono overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap anim-fade">{out}</pre>
@@ -345,7 +348,9 @@ export default function Bot({ toast }) {
             <i className={`fa-solid fa-arrows-rotate mr-2 ${logBusy ? 'fa-spin' : ''}`} />Muat Log
           </button>
           <label className="flex items-center gap-2 text-xs text-[#7e90ad] cursor-pointer select-none">
-            <input type="checkbox" checked={logAuto} onChange={e => setLogAuto(e.target.checked)} className="accent-[#22d3ee]" />
+            <span className="-m-2.5 p-2.5 inline-flex items-center">
+              <input type="checkbox" aria-label="Auto refresh log" checked={logAuto} onChange={e => setLogAuto(e.target.checked)} className="w-5 h-5 accent-[#22d3ee]" />
+            </span>
             Auto-refresh 5s
           </label>
         </div>

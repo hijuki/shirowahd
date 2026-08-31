@@ -82,7 +82,7 @@ export default function Dashboard({ toast }) {
           <Stat icon="fa-calendar-day" label="Hari Ini" value={stats.uploadsToday ?? 0} color="#3b82f6" />
           <Stat icon="fa-database" label="Total Tersimpan" value={fmtBytes(stats?.totalStorage)} color="#34d399" />
           <Stat icon="fa-weight-hanging" label="Ukuran Aktif" value={fmtBytes(stats?.totalSize)} color="#fbbf24" />
-          <Stat icon="fa-clock" label="Expire" value={`${stats?.expireMinutes ?? 60}m`} color="#34d399" />
+          <Stat icon="fa-clock" label="Expire" value={(() => { const m = stats?.expireMinutes ?? 60; return m >= 1440 ? `${Math.floor(m / 1440)} hari` : m >= 60 ? `${Math.floor(m / 60)} jam` : `${m}m` })()} color="#34d399" />
           <Stat icon="fa-chart-simple" label="Rata-rata Ukuran" value={fmtBytes(stats?.totalActive ? Math.round((stats?.totalSize || 0) / stats.totalActive) : 0)} color="#fb7185" />
         </div>
       )}
@@ -150,7 +150,7 @@ export default function Dashboard({ toast }) {
               <p className="text-xs text-[#7e90ad]">Nonaktifkan upload sementara</p>
             </div>
             <button onClick={toggleMaint} disabled={busy}
-              className={`relative w-14 h-8 rounded-full transition-all duration-[250ms] shrink-0 ${maint ? 'bg-gradient-to-r from-[#fbbf24] to-[#fb7185] shadow-[0_0_18px_rgba(251,113,133,.45)]' : 'bg-white/10'}`}
+              className={`relative w-14 h-8 after:content-[''] after:absolute after:-inset-y-1 after:inset-x-0 rounded-full transition-all duration-[250ms] shrink-0 ${maint ? 'bg-gradient-to-r from-[#fbbf24] to-[#fb7185] shadow-[0_0_18px_rgba(251,113,133,.45)]' : 'bg-white/10'}`}
               style={{ transitionTimingFunction: 'var(--ease-out)' }}>
               <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-[250ms] ${maint ? 'translate-x-6' : ''}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
             </button>

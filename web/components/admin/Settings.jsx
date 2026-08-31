@@ -47,7 +47,10 @@ const linkTypes = [
 
 function Toggle({ on, onChange, label, desc, icon, color }) {
   return (
-    <label className="flex items-center justify-between gap-3 py-3 cursor-pointer group">
+    /* <label> tidak meneruskan klik ke <button> (bukan form control), jadi handler
+       ditaruh di baris; tombol di dalam sengaja tanpa onClick supaya klik cukup
+       menggelembung ke baris = satu kali toggle, bukan dua. */
+    <label onClick={onChange} className="flex items-center justify-between gap-3 py-3 cursor-pointer group">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {icon && (
           <div className="w-8 h-8 shrink-0 rounded-[10px] grid place-items-center" style={{ background: `${color || '#22d3ee'}12`, border: `1px solid ${color || '#22d3ee'}25` }}>
@@ -59,7 +62,7 @@ function Toggle({ on, onChange, label, desc, icon, color }) {
           {desc && <p className="text-[11px] text-[#7e90ad] mt-0.5">{desc}</p>}
         </div>
       </div>
-      <button type="button" onClick={onChange}
+      <button type="button" role="switch" aria-checked={!!on} aria-label={label}
         className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-[250ms] ${on ? 'bg-[#22d3ee]' : 'bg-white/10'}`}>
         <span className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white shadow-md transition-all duration-[250ms] ${on ? 'left-[22px]' : 'left-[3px]'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
       </button>
@@ -176,15 +179,15 @@ function BrandGallery({ data, set }) {
                 <div className="h-20 rounded-lg bg-[#0b1220] grid place-items-center overflow-hidden">
                   <img src={f.url} alt={f.name} className="max-h-full max-w-full object-contain" />
                 </div>
-                <p className="text-[9px] font-mono text-[#7e90ad] truncate" title={f.name}>{f.name}</p>
+                <p className="text-[10px] font-mono text-[#7e90ad] truncate" title={f.name}>{f.name}</p>
                 <div className="flex flex-wrap gap-1">
-                  <button onClick={() => applyTo('logoUrl', f.url)} className={`text-[9px] font-bold px-2 py-1 rounded-md transition-colors duration-[150ms] ${isLogo ? 'bg-[#22d3ee]/25 text-[#22d3ee]' : 'bg-white/[.05] text-[#7e90ad] hover:text-white'}`}>
+                  <button onClick={() => applyTo('logoUrl', f.url)} className={`min-h-10 text-[11px] font-bold px-3 py-2 rounded-lg transition-colors duration-[150ms] ${isLogo ? 'bg-[#22d3ee]/25 text-[#22d3ee]' : 'bg-white/[.05] text-[#7e90ad] hover:text-white'}`}>
                     {isLogo ? '✓ Logo' : 'Jadikan Logo'}
                   </button>
-                  <button onClick={() => applyTo('heroImageUrl', f.url)} className={`text-[9px] font-bold px-2 py-1 rounded-md transition-colors duration-[150ms] ${isHero ? 'bg-[#38bdf8]/25 text-[#38bdf8]' : 'bg-white/[.05] text-[#7e90ad] hover:text-white'}`}>
+                  <button onClick={() => applyTo('heroImageUrl', f.url)} className={`min-h-10 text-[11px] font-bold px-3 py-2 rounded-lg transition-colors duration-[150ms] ${isHero ? 'bg-[#38bdf8]/25 text-[#38bdf8]' : 'bg-white/[.05] text-[#7e90ad] hover:text-white'}`}>
                     {isHero ? '✓ Hero' : 'Jadikan Hero'}
                   </button>
-                  <button onClick={() => { if (confirm(`Hapus ${f.name}?`)) deleteGalleryFile(f.name).then(load) }} className="text-[9px] px-2 py-1 rounded-md bg-white/[.05] text-red-400/70 hover:text-red-400 transition-colors duration-[150ms]">
+                  <button onClick={() => { if (confirm(`Hapus ${f.name}?`)) deleteGalleryFile(f.name).then(load) }} aria-label={`Hapus ${f.name}`} className="min-h-10 min-w-10 text-[12px] px-3 py-2 rounded-lg bg-white/[.05] text-red-400/70 hover:text-red-400 transition-colors duration-[150ms]">
                     <i className="fa-solid fa-trash" />
                   </button>
                 </div>
@@ -309,9 +312,9 @@ export default function Settings({ toast }) {
                   <i className={`fa-solid ${f.icon} text-[8px] text-[#3b82f6]/60`} />
                   {f.label}
                 </label>
-                <input type="number" value={data[f.key] ?? ''} onChange={e => set(f.key, e.target.value)} placeholder={f.ph}
-                  className="w-full rounded-xl px-3 py-2 bg-white/[.04] border border-white/[.08] focus:border-[#3b82f6]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
-                {f.desc && <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">{f.desc}</p>}
+                <input type="number" inputMode="numeric" value={data[f.key] ?? ''} onChange={e => set(f.key, e.target.value)} placeholder={f.ph}
+                  className="w-full min-h-10 rounded-xl px-3 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#3b82f6]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
+                {f.desc && <p className="text-[10px] leading-snug text-[#7e90ad]/60 mt-1">{f.desc}</p>}
               </div>
             ))}
           </div>

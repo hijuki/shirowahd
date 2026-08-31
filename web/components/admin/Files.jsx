@@ -139,7 +139,7 @@ export default function Files({ toast }) {
             <table className="hidden md:table w-full text-sm">
               <thead>
                 <tr className="text-[#7e90ad] text-xs uppercase tracking-wider border-b border-white/[.07]">
-                  <th className="px-4 py-3 w-10"><input type="checkbox" checked={allSelected} onChange={e => e.target.checked ? setSelected(new Set(filtered.map(v => v.code))) : setSelected(new Set())} /></th>
+                  <th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Pilih semua file" checked={allSelected} onChange={e => e.target.checked ? setSelected(new Set(filtered.map(v => v.code))) : setSelected(new Set())} /></th>
                   <th className="px-4 py-3 text-left">Nama</th>
                   <th className="px-4 py-3 text-left">Kode</th>
                   <th className="px-4 py-3 text-left">Ukuran</th>
@@ -152,7 +152,7 @@ export default function Files({ toast }) {
               <tbody>
                 {filtered.map(v => (
                   <tr key={v.code} className="border-b border-white/[.04] hover:bg-white/[.03] transition-colors duration-[150ms]">
-                    <td className="px-4 py-3"><input type="checkbox" checked={selected.has(v.code)} onChange={() => toggleSel(v.code)} /></td>
+                    <td className="px-4 py-3"><input type="checkbox" aria-label={`Pilih ${v.code}`} checked={selected.has(v.code)} onChange={() => toggleSel(v.code)} /></td>
                     <td className="px-4 py-3 max-w-[220px] truncate font-medium" title={v.name}>{v.name}</td>
                     <td className="px-4 py-3 font-mono text-[#67e8f9]">{v.code}</td>
                     <td className="px-4 py-3">{fmtBytes(v.size)}</td>
@@ -172,7 +172,11 @@ export default function Files({ toast }) {
               {filtered.map(v => (
                 <div key={v.code} className="p-4 flex gap-3 items-start">
                   {/* Kotak centang bawaan 13x13px tidak bisa dipencet akurat di HP. */}
-                  <input type="checkbox" aria-label={`Pilih ${v.code}`} checked={selected.has(v.code)} onChange={() => toggleSel(v.code)} className="mt-1 w-5 h-5 shrink-0 accent-[#22d3ee]" />
+                  {/* Padding TIDAK berlaku di input[type=checkbox] (appearance bawaan browser
+                      mengabaikannya), jadi area sentuh 40px dibuat lewat <label> pembungkus. */}
+                  <label aria-label={`Pilih ${v.code}`} className="shrink-0 -m-2.5 p-2.5 cursor-pointer inline-flex items-start">
+                    <input type="checkbox" checked={selected.has(v.code)} onChange={() => toggleSel(v.code)} className="mt-1 w-5 h-5 accent-[#22d3ee]" />
+                  </label>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">{v.name}</p>
                     <p className="text-xs text-[#7e90ad] mt-0.5 font-mono text-[#67e8f9]">{v.code} · {fmtBytes(v.size)} · {v.type}</p>
