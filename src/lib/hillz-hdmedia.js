@@ -108,7 +108,7 @@ export function pilihUrlTerbaik(kandidat) {
 
 function infoVideo(file) {
   const raw = jalankan(
-    `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,pix_fmt,profile,r_frame_rate -of default=nw=1 ${JSON.stringify(file)}`
+    `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,pix_fmt,profile,r_frame_rate,avg_frame_rate -of default=nw=1 ${JSON.stringify(file)}`
   );
   const get = (k) => (raw.match(new RegExp(`^${k}=(.*)$`, "m")) || [, ""])[1].trim();
   return {
@@ -118,7 +118,40 @@ function infoVideo(file) {
     pixFmt: get("pix_fmt").toLowerCase(),
     profile: get("profile"),
     fps: get("r_frame_rate"),
+    fpsAvg: get("avg_frame_rate"),
   };
+}
+
+/** Pecahan ffprobe ("30000/1001") → angka. 0 kalau bukan pecahan sah. */
+function fraksiKeAngka(f) {
+  if (!f || !/^\d+\/\d+$/.test(f)) return 0;
+  const [n, d] = f.split("/").map(Number);
+  return d ? n / d : 0;
+}
+
+/**
+ * Apakah fps di header berbohong soal isi berkas?
+ *
+ * BUG NYATA yang ini tangani (dilaporkan user: "kadang fps nya ngebug di ttv2,
+ * kadang fps nya ga bener seperti video aslinya, tapi segi kualitas udh oke").
+ * Diukur pada rekaman HP nyata:
+ *
+ *   r_frame_rate  = 25/1                 ← yang ditulis di header
+ *   avg_frame_rate= 216600000/3603737    = 60,1 fps  ← isi sebenarnya
+ *   1083 paket / 18,027 s                = 60,08 fps ← dihitung manual, cocok
+ *
+ * Kalimat "kualitas oke tapi fps ngebug" itu tanda tangan jalur REMUX: `-c:v
+ * copy` menyalin piksel sempurna (karena itu kualitas oke) tapi ikut menyalin
+ * header fps yang salah, jadi pemutar memainkannya dengan timing keliru.
+ *
+ * Selisih >20% dianggap bohong; di bawah itu wajar (pembulatan internal, mis.
+ * 29,974 vs 29,970 = 0,1%).
+ */
+function fpsBohong(info) {
+  const nominal = fraksiKeAngka(info.fps);
+  const avg = fraksiKeAngka(info.fpsAvg);
+  if (!(nominal > 0 && avg > 0)) return false;
+  return Math.abs(avg - nominal) / nominal > 0.20;
 }
 
 function adaAudio(file) {
@@ -192,10 +225,15 @@ export async function unduhKeTemp(url, referer, basis) {
 export async function siapkanVideoWA(fileMasuk, opts = {}) {
   const hapusSumber = opts.hapusSumber !== false;
   const info = infoVideo(fileMasuk);
+  // Codec benar TIDAK berarti berkasnya siap kirim. Selain codec/pix_fmt, fps
+  // header yang menipu juga memaksa encode ulang: jalur remux menyalin header
+  // itu apa adanya sehingga videonya "jernih tapi timing-nya ngaco".
+  const fpsNgaco = fpsBohong(info);
   const perluEncode =
     info.codec !== "h264" ||
     (info.pixFmt && info.pixFmt !== "yuv420p") ||
-    /10|4:4:4|4:2:2/.test(info.profile);
+    /10|4:4:4|4:2:2/.test(info.profile) ||
+    fpsNgaco;
 
   const out = path.join(TMP, "wa_" + crypto.randomBytes(8).toString("hex") + ".mp4");
   const audioArgs = !adaAudio(fileMasuk)
@@ -218,13 +256,29 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
     try { fs.unlinkSync(out); } catch {}
   }
 
-  // Encode ulang. Resolusi & fps tidak disentuh — hanya codec dan pix_fmt.
+  // Encode ulang. RESOLUSI tidak disentuh sama sekali.
+  //
+  // fps: kalau header jujur, dibiarkan apa adanya (ffmpeg memakai fps sumber).
+  // Kalau header berbohong, fps NYATA dipaksa lewat `-r` sebagai PECAHAN —
+  // membulatkan 60,1 jadi 60 membuat audio dan video pelan-pelan bergeser.
+  // Diukur: tanpa `-r`, ffmpeg percaya header 25/1 dan membuang 630 dari 1083
+  // paket; dengan `-r` fps nyata, semua 1083 paket bertahan.
+  //
+  // Batas 90 fps menahan berkas VFR ngawur yang melaporkan angka raksasa
+  // (mis. 1000000/1) dan membuat encoder mengamuk.
+  const fpsArgs = [];
+  if (fpsNgaco) {
+    const avg = fraksiKeAngka(info.fpsAvg);
+    if (avg > 0 && avg <= 90) fpsArgs.push("-r", info.fpsAvg);
+    else if (avg > 90) fpsArgs.push("-r", "90");
+  }
   const argsEnc = [
     "-y", "-err_detect", "ignore_err", "-fflags", "+genpts+discardcorrupt",
     "-i", fileMasuk,
     ...(adaAudio(fileMasuk) ? [] : ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-shortest"]),
+    ...fpsArgs,
     "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
-    "-preset", "faster", "-crf", "20",
+    "-preset", "veryfast", "-crf", "20",
     "-c:a", "aac", "-b:a", "192k", "-ac", "2",
     "-movflags", "+faststart", out,
   ];
