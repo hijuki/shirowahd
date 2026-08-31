@@ -517,37 +517,71 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
     }
     // Re-encode to H.264 — either forced (HEVC/VP9/AV1) or stream copy failed
     try { unlinkSync(tmpOut); } catch {}
+    // FPS asli dipertahankan apa adanya sampai 90fps. Nilai pecahan NTSC
+    // (30000/1001, 60000/1001) dikirim sebagai pecahan, bukan dibulatkan —
+    // membulatkan 29.97 jadi 30 membuat audio dan video pelan-pelan bergeser
+    // sampai tidak sinkron di akhir video panjang.
     let fpsFlag = '';
+    let fpsVal = 0;
     try {
       const fps = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
       if (fps && /^\d+\/\d+$/.test(fps)) {
         const [num, den] = fps.split('/').map(Number);
-        const fpsVal = den ? num / den : num;
-        // Cap at 90fps — prevents ffmpeg meltdown from variable-rate videos reporting 1000000/1
+        fpsVal = den ? num / den : num;
+        // Batas 90fps menahan video variable-rate yang melaporkan 1000000/1 dan
+        // membuat ffmpeg mengamuk. Di bawah itu, fps sumber dipakai persis.
         if (fpsVal > 0 && fpsVal <= 90) fpsFlag = ' -r ' + fps;
-        else if (fpsVal > 90) fpsFlag = ' -r 90';
+        else if (fpsVal > 90) { fpsFlag = ' -r 90'; fpsVal = 90; }
       }
     } catch {}
-    // Auto-downscale: cap at 1440p (2K). WA can't display 4K anyway.
+    // Resolusi sumber DIPERTAHANKAN. Dulu apa pun di atas 1440p diperkecil,
+    // jadi video 4K kiriman user turun kualitasnya padahal dia tidak minta.
+    // Batas hanya dipasang di atas 4K, murni supaya encoder tidak kehabisan
+    // memori — dan itu pun mengikuti sisi terpanjang, bukan sisi terpendek.
     let scaleFilter = '';
+    let vidW = 0, vidH = 0;
     try {
       const res = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
       const [w, h] = res.split(',').map(Number);
-      if (w && h && Math.min(w, h) > 1440) {
-        // Landscape: height=1440, Portrait: width=1440. Keep aspect ratio.
-        if (w > h) scaleFilter = ' -vf scale=-2:1440';
-        else scaleFilter = ' -vf scale=1440:-2';
+      vidW = w || 0; vidH = h || 0;
+      if (w && h && Math.max(w, h) > 3840) {
+        if (w >= h) scaleFilter = ' -vf scale=3840:-2';
+        else scaleFilter = ' -vf scale=-2:3840';
+        // Ukuran yang dipakai untuk menghitung level ikut disesuaikan.
+        const rasio = 3840 / Math.max(w, h);
+        vidW = Math.round(w * rasio / 2) * 2;
+        vidH = Math.round(h * rasio / 2) * 2;
       }
     } catch {}
-    // ponytail: crf 23 = good quality, lighter than 18. veryfast preset = much less CPU. Upgrade to crf 18 + fast if server has dedicated GPU/power.
+    // `-level` TIDAK dipaksa lagi. Sebelumnya selalu ditulis `-level 4.1`,
+    // padahal 1440p@90fps butuh level 5.2 dan 4K butuh 5.1+. x264 hanya
+    // mencetak peringatan ("MB rate > level limit") lalu tetap menulis 4.1 di
+    // header — jadi berkasnya sah secara bitstream tapi HEADERNYA BOHONG.
+    // Decoder perangkat keras (HP, WhatsApp) mempercayai header itu, menolak
+    // alokasi buffer, dan videonya gagal diputar. Itu penyebab "video rusak
+    // setelah di-re-encode". Dibiarkan otomatis, x264 menulis level yang benar.
+    //
+    // CRF 20 (bukan 23) supaya detail lebih terjaga; `faster` (bukan
+    // `veryfast`) memberi kualitas per-bit lebih baik dengan CPU masih wajar.
+    // `-maxrate/-bufsize` sengaja tidak dipakai: pembatas VBV justru memaksa
+    // encoder membuang detail di adegan ramai — itu yang bikin gambar "pecah".
     const dur = probeDuration(tmpIn);
     if (onPhase) onPhase('encode');
+    // Video besar + fps tinggi butuh lebih banyak thread frame; dibiarkan
+    // default (auto) supaya tidak mengunci DPB seperti level paksa dulu.
     await runFfmpeg(
-      'ffmpeg -y -i ' + JSON.stringify(tmpIn) + (hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest') + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset veryfast -crf 23' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
+      'ffmpeg -y -i ' + JSON.stringify(tmpIn) + (hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest') + ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset faster -crf 20' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
       { timeout: 600000, maxBuffer: 10 * 1024 * 1024 },
       dur,
       onPct
     );
+    // Verifikasi hasil benar-benar bisa didekode. Berkas yang lolos ffmpeg tapi
+    // gagal decode (level salah, moov rusak) dulu tetap dikirim ke user.
+    try {
+      execSync('ffmpeg -v error -xerror -i ' + JSON.stringify(tmpOut) + ' -t 3 -f null - 2>&1', { timeout: 60000, stdio: 'pipe' });
+    } catch (e) {
+      throw new Error('Hasil konversi tidak bisa diputar — video sumber mungkin rusak');
+    }
     return { path: tmpOut, name: toMp4Name(originalName), temp: true };
   } catch (e) {
     // Gagal total: hasil setengah jadi dibuang supaya tidak menumpuk di /tmp.

@@ -8,12 +8,13 @@ import SuccessModal from './SuccessModal'
 // ikut ditolak diam-diam padahal server sanggup memprosesnya.
 const VIDEO_EXTS = ['mp4', 'mov', 'mkv', 'avi', 'webm', '3gp', 'flv', 'wmv', 'ts', 'm4v']
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg', 'heic', 'heif', 'avif']
-// MIME wildcard ditaruh paling depan: di Android/iOS, accept yang isinya hanya
-// daftar ".ext" bikin galeri memfilter ketat sampai banyak file tampak hilang
-// atau abu-abu. Dengan video/* (dan image/*) picker membuka galeri penuh,
-// sementara daftar ekstensi tetap dipakai browser desktop.
-const VIDEO_ACCEPT = ['video/*', ...VIDEO_EXTS.map(e => `.${e}`)].join(',')
-const IMAGE_ACCEPT = ['image/*', ...IMAGE_EXTS.map(e => `.${e}`)].join(',')
+// accept HANYA wildcard MIME. Mencampur `video/*` dengan daftar ".ext" justru
+// mempersempit: Android memetakan tiap ekstensi ke MIME lalu memfilter dengan
+// hasil pemetaan itu, sehingga file hasil download yang MIME-nya kosong atau
+// application/octet-stream TIDAK MUNCUL di galeri sama sekali. Ekstensi tetap
+// dipakai untuk validasi setelah file dipilih, bukan untuk menyaring picker.
+const VIDEO_ACCEPT = 'video/*'
+const IMAGE_ACCEPT = 'image/*'
 const TAG_COLORS = {
   mp4: '#3b82f6', mkv: '#22d3ee', avi: '#fbbf24', mov: '#34d399',
   jpg: '#fb7185', jpeg: '#fb7185', png: '#34d399', gif: '#fbbf24', webp: '#22d3ee',
@@ -30,8 +31,11 @@ export default function UploadPanel({ settings, toast }) {
   const [drag, setDrag] = useState(false)
   const [thumbs, setThumbs] = useState({})
   const abortRef = useRef(null)
+  // Pelarian terakhir kalau galeri HP masih menyembunyikan file (sebagian ROM
+  // Android memfilter walau accept sudah wildcard): buka picker tanpa filter.
+  const [semuaFile, setSemuaFile] = useState(false)
 
-  const accept = tab === 'video' ? VIDEO_ACCEPT : IMAGE_ACCEPT
+  const accept = semuaFile ? undefined : (tab === 'video' ? VIDEO_ACCEPT : IMAGE_ACCEPT)
   const exts = tab === 'video' ? VIDEO_EXTS.map(e => e.toUpperCase()) : IMAGE_EXTS.map(e => e.toUpperCase())
   const field = tab === 'video' ? 'video' : 'image'
   const isImg = tab === 'image'
@@ -55,7 +59,12 @@ export default function UploadPanel({ settings, toast }) {
     // (mis. "content://..." / "IMG_0001") — dulu semua itu ditolak.
     const valid = arr.filter(f => {
       const ext = (f.name.split('.').pop() || '').toLowerCase()
-      return validExts.includes(ext) || (f.type || '').toLowerCase().startsWith(mimePrefix)
+      if (validExts.includes(ext) || (f.type || '').toLowerCase().startsWith(mimePrefix)) return true
+      // Mode "semua file": MIME kosong / octet-stream tetap diterima dan
+      // dibiarkan diputuskan server, yang memeriksa ISI file (probe 4 MB
+      // pertama) — jauh lebih andal daripada menebak dari nama.
+      const mime = (f.type || '').toLowerCase()
+      return semuaFile && (!mime || mime === 'application/octet-stream')
     })
     if (valid.length < arr.length) toast(`${arr.length - valid.length} file ditolak — format tidak didukung`, 'error')
     const max = settings?.maxFileSizeMB || 0
@@ -205,6 +214,14 @@ export default function UploadPanel({ settings, toast }) {
               <p className="text-[var(--t-muted)] text-[12px] mt-1.5">
                 atau <span className="text-[#22d3ee] font-semibold underline underline-offset-4 decoration-[#22d3ee]/40">pilih file</span>
               </p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setSemuaFile(v => !v); setTimeout(() => fileRef.current?.click(), 0) }}
+                className="mt-3 min-h-10 px-4 rounded-[12px] text-[11px] font-bold bg-white/[.05] border border-white/[.08] text-[var(--t-muted)] hover:text-white transition-colors duration-[150ms]"
+              >
+                <i className="fa-solid fa-folder-open mr-1.5" />
+                {semuaFile ? 'Kembali ke filter galeri' : 'File tidak muncul? Tampilkan semua'}
+              </button>
 
             </div>
 

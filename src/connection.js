@@ -25,6 +25,43 @@ import {
   isLidConverted,
 } from "./lib/hillz-lid.js";
 import { initAutoBackup } from "./lib/hillz-auto-backup.js";
+// ── Penyaring kebocoran kunci privat ────────────────────────────────────────
+// libsignal (node_modules/libsignal/src/session_record.js:301) memanggil
+// `console.info("Removing old closed session:", oldestSession)` dan objek itu
+// berisi currentRatchet.ephemeralKeyPair.privKey, rootKey, chainKey, serta
+// registrationId — semuanya materi kunci yang bisa dipakai mendekripsi sesi.
+// Logger pino yang kita pasang `level: "silent"` TIDAK menangkapnya karena
+// libsignal menulis ke `console` global, bukan ke logger yang di-inject.
+// Menambal file di node_modules akan hilang tiap `npm install`, jadi
+// penyaringnya dipasang di sisi kita: console.info/log/debug dibungkus, dan
+// hanya baris yang cocok pola sesi/kunci yang dibuang. Sisanya lolos apa adanya
+// supaya log operasional tidak ikut hilang.
+{
+  const POLA_RAHASIA = /Removing old closed session|SessionEntry|ephemeralKeyPair|currentRatchet|rootKey|remoteIdentityKey|pendingPreKey|privKey/;
+  const berisiRahasia = (args) => {
+    for (const a of args) {
+      if (typeof a === "string") { if (POLA_RAHASIA.test(a)) return true; continue; }
+      if (a && typeof a === "object") {
+        // Cek dangkal pada nama properti — cukup untuk SessionEntry dan
+        // turunannya, tanpa biaya serialisasi objek besar tiap panggilan.
+        try {
+          const nama = a.constructor && a.constructor.name;
+          if (nama && POLA_RAHASIA.test(nama)) return true;
+          for (const k of Object.keys(a)) if (POLA_RAHASIA.test(k)) return true;
+        } catch { }
+      }
+    }
+    return false;
+  };
+  for (const metode of ["info", "log", "debug"]) {
+    const asli = console[metode].bind(console);
+    console[metode] = (...args) => {
+      if (berisiRahasia(args)) return;
+      asli(...args);
+    };
+  }
+}
+
 const groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 const processedMessages = new NodeCache({ stdTTL: 30, useClones: false });
 const msgRetryCounterCache = new NodeCache({ stdTTL: 60, useClones: false });
