@@ -34,3 +34,10 @@ vids/
 
 # Logo/aset brand hasil upload admin (data user, bukan kode)
 brand-assets/
+
+# Cache favicon hasil turunan logo admin (dibangun ulang otomatis saat dibutuhkan).
+# Ditaruh di luar brand-assets/ supaya tidak muncul sebagai entri di galeri admin.
+.icon-cache/
+
+# Cadangan sementara hasil audit
+*.bak-audit

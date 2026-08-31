@@ -44,7 +44,8 @@ export default function Layout({ active, setActive, children }) {
             <i className="fa-solid fa-shield-halved text-[#67e8f9]" />
             <span className="font-[family-name:var(--font-display)] font-bold grad-text">Admin</span>
           </div>
-          <button onClick={logout} className="text-[#7e90ad] hover:text-bad transition-all duration-[150ms] text-sm"><i className="fa-solid fa-right-from-bracket" /></button>
+          {/* Target sentuh 44px: ikon 14x20px terlalu kecil untuk jempol di HP. */}
+          <button onClick={logout} aria-label="Keluar dari admin" className="text-[#7e90ad] hover:text-bad transition-all duration-[150ms] text-sm min-w-11 min-h-11 flex items-center justify-center -mr-2"><i className="fa-solid fa-right-from-bracket" /></button>
         </header>
 
         <div className="p-4 md:p-8 max-w-6xl mx-auto anim-entrance">

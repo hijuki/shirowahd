@@ -128,7 +128,16 @@ export default function Bot({ toast }) {
     setBusy(false)
   }
 
-  const groupName = (g) => g.name || g.subject || g.jid || g.id
+  // WhatsApp mengembalikan subject "" untuk sebagian grup (metadata belum sinkron),
+  // dan rantai `||` lama lolos dari string kosong ke JID mentah — jadi tampil
+  // "120363411642455263@g.us" dua kali berturut-turut. Sekarang string kosong
+  // dianggap tidak ada, dan JID dipendekkan supaya baris tidak jadi sampah angka.
+  const groupName = (g) => {
+    const pick = [g.name, g.subject].map(v => (v || '').trim()).find(Boolean)
+    if (pick) return pick
+    const jid = g.jid || g.id || ''
+    return jid ? '(tanpa nama) ' + jid.replace(/@g\.us$/, '').slice(-6) : '(tanpa nama)'
+  }
   const groupJid = (g) => g.jid || g.id
   const fmtUptime = (s) => {
     // ponytail: server kadang kirim epoch ms (Date.now()-t0), kadang detik — bedakan via magnitude
@@ -193,17 +202,18 @@ export default function Bot({ toast }) {
               const enabled = !g.disabled && g.enabled !== false
               return (
                 <div key={jid} className="hist-item rounded-[12px] bg-white/[.04] border border-white/[.05] px-4 py-3 flex items-center gap-3">
-                  <input type="checkbox" checked={selJids.has(jid)} onChange={() => toggleSel(jid)} title="Pilih untuk broadcast" />
+                  <input type="checkbox" aria-label="Pilih grup untuk broadcast" checked={selJids.has(jid)} onChange={() => toggleSel(jid)} title="Pilih untuk broadcast" className="w-5 h-5 shrink-0 accent-[#22d3ee]" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{groupName(g)}</p>
                     <p className="text-xs text-[#7e90ad] font-mono truncate">{jid}</p>
                   </div>
                   <button onClick={() => run(toggleGroup, null, jid)} disabled={busy}
-                    className={`chip px-3 py-1.5 text-[11px] transition-all duration-[150ms] active:scale-[.97] ${enabled ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-[#7e90ad]'}`}>
+                    className={`chip px-3 min-h-10 inline-flex items-center text-[11px] transition-all duration-[150ms] active:scale-[.97] ${enabled ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-[#7e90ad]'}`}>
                     {enabled ? 'AKTIF' : 'NONAKTIF'}
                   </button>
+                  {/* Keluar grup tidak bisa dibatalkan — targetnya jangan 23x23px. */}
                   <button onClick={() => confirm(`Bot keluar dari grup "${groupName(g)}"?`) && run(leaveGroup, 'Keluar dari grup', jid)}
-                    disabled={busy} title="Keluar grup" className="text-bad hover:text-bad/70 transition-all duration-[150ms] px-1 active:scale-[.97]"><i className="fa-solid fa-right-from-bracket" /></button>
+                    disabled={busy} title="Keluar grup" aria-label={`Keluar dari grup ${groupName(g)}`} className="text-bad hover:text-bad/70 transition-all duration-[150ms] min-w-10 min-h-10 flex items-center justify-center shrink-0 active:scale-[.97]"><i className="fa-solid fa-right-from-bracket" /></button>
                 </div>
               )
             })}

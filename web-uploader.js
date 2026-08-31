@@ -1,6 +1,6 @@
 import http from 'http';
-import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync, openSync, closeSync, writeSync } from 'fs';
-import { storeVideo, storeBundle, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL, cleanOrphans } from './src/lib/vid-store.js';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync, openSync, closeSync, writeSync, renameSync } from 'fs';
+import { storeVideo, storeBundle, storeVideoFile, storeBundleFiles, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL, cleanOrphans } from './src/lib/vid-store.js';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
@@ -353,6 +353,41 @@ function bufHasVideoStream(buf, name) {
   finally { try { unlinkSync(tmp); } catch {} }
 }
 
+// Satu item upload boleh diwakili isinya ({buf}) ATAU lokasinya ({path}).
+// File besar masuk lewat jalur chunk yang sudah menuliskannya ke disk, jadi
+// membacanya kembali ke memori hanya untuk diserahkan ke ffmpeg membuat proses
+// menahan ratusan MB tanpa guna. Helper di bawah membuat seluruh pipeline bisa
+// bekerja dengan salah satu bentuk tanpa cabang di mana-mana.
+function itemSize(f) {
+  if (f.buf) return f.buf.length;
+  try { return statSync(f.path).size; } catch { return 0; }
+}
+
+// Materialisasi ke file di disk. Kalau item sudah berupa path, dipakai langsung
+// (tidak ada penyalinan). Kalau masih buffer (upload kecil lewat /upload biasa),
+// ditulis ke berkas sementara.
+function itemToPath(f, hintExt) {
+  if (f.path) return { path: f.path, temp: false };
+  const ext = extname(f.name || '').toLowerCase() || hintExt || '.vid';
+  const t = join(tmpdir(), 'upload_in_' + crypto.randomBytes(8).toString('hex') + ext);
+  writeFileSync(t, f.buf);
+  return { path: t, temp: true };
+}
+
+// Versi bufHasVideoStream untuk item berbasis path: ffprobe langsung membaca
+// berkasnya, tidak perlu menyalin 4 MB pertama ke tempat lain.
+function pathHasVideoStream(fp) {
+  try {
+    const out = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 ' + JSON.stringify(fp), { timeout: 15000, stdio: 'pipe' }).toString();
+    return out.includes('video');
+  } catch { return false; }
+}
+
+function itemHasVideoStream(f) {
+  if (f.path) return pathHasVideoStream(f.path);
+  return bufHasVideoStream(f.buf, f.name);
+}
+
 function needsConvert(name) {
   const ext = extname(name || '').toLowerCase();
   return isVideoFile(name) && !VIDEO_MP4_EXTS.includes(ext);
@@ -438,13 +473,17 @@ function toMp4Name(originalName) {
   return /\.[^.\/]+$/.test(n) ? n.replace(/\.[^.\/]+$/, '.mp4') : n + '.mp4';
 }
 
-async function convertToMp4Async(buf, originalName, onPct, onPhase) {
+// Menerima item {buf}|{path} dan SELALU mengembalikan {path,name} — hasil ffmpeg
+// dibiarkan di disk, tidak dibaca ke memori. Pemanggil yang menyimpannya cukup
+// memindahkan berkasnya. Ini yang membuat video 300 MB bisa diproses tanpa
+// menahan 300 MB (dulu: buf masuk + hasil dibaca lagi = dua kali ukuran file).
+async function convertToMp4Async(item, originalName, onPct, onPhase) {
   const id = crypto.randomBytes(8).toString('hex');
   const ext = extname(originalName || '').toLowerCase() || '.vid';
-  const tmpIn = join(tmpdir(), 'upload_in_' + id + ext);
+  const src = itemToPath(item, ext);
+  const tmpIn = src.path;
   const tmpOut = join(tmpdir(), 'upload_out_' + id + '.mp4');
   try {
-    writeFileSync(tmpIn, buf);
     const forceReencode = detectNeedsReencode(tmpIn);
     if (!forceReencode) {
       // Sumber sudah h264 8-bit yuv420p — stream copy, kualitas video 100% utuh.
@@ -465,8 +504,9 @@ async function convertToMp4Async(buf, originalName, onPct, onPhase) {
           probeDuration(tmpIn),
           onPct
         );
-        if (existsSync(tmpOut) && readFileSync(tmpOut).length > 1000) {
-          return { buf: readFileSync(tmpOut), name: toMp4Name(originalName) };
+        // Ukuran diperiksa lewat statSync, bukan dengan membaca isinya.
+        if (existsSync(tmpOut) && statSync(tmpOut).size > 1000) {
+          return { path: tmpOut, name: toMp4Name(originalName), temp: true };
         }
       } catch {}
     }
@@ -503,10 +543,15 @@ async function convertToMp4Async(buf, originalName, onPct, onPhase) {
       dur,
       onPct
     );
-    return { buf: readFileSync(tmpOut), name: toMp4Name(originalName) };
-  } finally {
-    try { unlinkSync(tmpIn); } catch {}
+    return { path: tmpOut, name: toMp4Name(originalName), temp: true };
+  } catch (e) {
+    // Gagal total: hasil setengah jadi dibuang supaya tidak menumpuk di /tmp.
     try { unlinkSync(tmpOut); } catch {}
+    throw e;
+  } finally {
+    // Hanya berkas sementara milik fungsi ini yang dihapus. Kalau sumbernya
+    // adalah berkas chunk milik pemanggil, biarkan — pemanggil yang mengurus.
+    if (src.temp) { try { unlinkSync(tmpIn); } catch {} }
   }
 }
 
@@ -546,7 +591,7 @@ function beginUploadJob(files, clientIP) {
         if (isVideoFile(f.name)) return i;
         const ext = extname(f.name || '').toLowerCase();
         if (IMAGE_EXTS.includes(ext)) return -1;              // foto: jangan diprobe
-        return bufHasVideoStream(f.buf, f.name) ? i : -1;     // ekstensi asing/kosong
+        return itemHasVideoStream(f) ? i : -1;                // ekstensi asing/kosong
       }).filter(i => i >= 0);
       const totalVid = vidIdx.length || 1;
       for (let n = 0; n < vidIdx.length; n++) {
@@ -557,14 +602,18 @@ function beginUploadJob(files, clientIP) {
         // pct global: bagian file ke-n mengisi slot [n/totalVid, (n+1)/totalVid]
         const scale = (p) => Math.round(((n + p / 100) / totalVid) * 100);
         try {
-          files[i] = await convertToMp4Async(
-            f.buf, f.name,
+          const converted = await convertToMp4Async(
+            f, f.name,
             p => { job.pct = Math.min(99, scale(p)); },
             phase => {
               // Label jujur: beda antara "cuma dirapikan" dan "dikonversi ulang".
               job.stage = (phase === 'remux' ? 'Merapikan video' : 'Konversi video') + suffix + '…';
             }
           );
+          // Sumber lama (berkas chunk / berkas sementara) tidak dipakai lagi:
+          // hapus segera supaya /tmp tidak menyimpan dua salinan file besar.
+          if (f.path && f.path !== converted.path) { try { unlinkSync(f.path); } catch {} }
+          files[i] = converted;
         } catch (e) {
           convFail++;
           console.log('[upload] ffmpeg convert failed for ' + f.name + ': ' + e.message);
@@ -576,9 +625,12 @@ function beginUploadJob(files, clientIP) {
       const warn = convFail ? convFail + ' video gagal di-encode, disimpan tanpa konversi' : null;
       const allImages = files.every(f => IMAGE_EXTS.includes(extname(f.name || '').toLowerCase()));
       if (allImages && files.length >= 1) {
-        const code = storeBundle(files, clientIP);
+        // Item berbasis path dipindahkan; item berbasis buffer ditulis seperti dulu.
+        const code = files.every(f => f.path)
+          ? storeBundleFiles(files, clientIP)
+          : storeBundle(files.map(f => (f.buf ? f : { name: f.name, buf: readFileSync(f.path) })), clientIP);
         if (!code) throw new Error('Server penuh');
-        const totalSize = files.reduce((s, f) => s + f.buf.length, 0);
+        const totalSize = files.reduce((s, f) => s + itemSize(f), 0);
         addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: files.map(f => f.name).join(', '), filesize: totalSize, code, bundle: true, count: files.length });
         recordUpload(clientIP);
         sendTelegram('upload', `📤 <b>Upload Bundle</b>\n${files.length} file | ${(totalSize/1048576).toFixed(1)} MB\nKode: <code>${code}</code>\nIP: ${clientIP}`);
@@ -587,10 +639,13 @@ function beginUploadJob(files, clientIP) {
       } else {
         const codes = [];
         for (const file of files) {
-          const code = storeVideo(file.buf, file.name, clientIP);
+          const fsize = itemSize(file);
+          const code = file.path
+            ? storeVideoFile(file.path, file.name, clientIP)
+            : storeVideo(file.buf, file.name, clientIP);
           if (!code) throw new Error('Server penuh');
           codes.push({ code, name: file.name });
-          addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: file.name, filesize: file.buf.length, code });
+          addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: file.name, filesize: fsize, code });
         }
         recordUpload(clientIP);
         sendTelegram('upload', `📤 <b>Upload</b>\n${codes.map(c=>c.name).join(', ')}\nKode: <code>${codes[0].code}</code>\nIP: ${clientIP}`);
@@ -599,6 +654,9 @@ function beginUploadJob(files, clientIP) {
       }
     } catch (e) {
       job.error = e.message || 'Proses gagal';
+      // Job gagal di tengah: berkas sementara yang belum dipindahkan ke store
+      // akan menggantung di /tmp selamanya kalau tidak dibersihkan di sini.
+      for (const f of files) { if (f && f.path) { try { unlinkSync(f.path); } catch {} } }
       sendTelegram('error', `❌ <b>Upload gagal</b>\n${files.map(f => f.name).join(', ')}\nError: ${job.error}\nIP: ${clientIP}`);
     }
   })();
@@ -614,6 +672,40 @@ function beginUploadJob(files, clientIP) {
 // menahan request terlalu lama (~100 detik). Pada upload HP 1–2 Mbps, satu
 // bagian 20 MB butuh 80–160 detik sehingga hampir selalu putus; 5 MB selesai
 // dalam 20–40 detik di jaringan yang sama.
+// Turunkan logo brand jadi ikon PNG persegi berukuran `size`.
+// Hasilnya di-cache di disk dengan kunci mtime, jadi ffmpeg hanya dipanggil sekali
+// per logo per ukuran — bukan tiap permintaan favicon.
+const ICON_CACHE = join(__dirname, '.icon-cache');
+function brandIconPng(srcPath, size) {
+  try {
+    const st = statSync(srcPath);
+    const key = 'i' + size + '_' + st.mtimeMs + '_' + st.size + '.png';
+    const out = join(ICON_CACHE, key);
+    if (existsSync(out)) return readFileSync(out);
+    if (!existsSync(ICON_CACHE)) mkdirSync(ICON_CACHE, { recursive: true });
+    // Padding transparan supaya logo non-persegi tidak gepeng.
+    const vf = 'scale=' + size + ':' + size + ':force_original_aspect_ratio=decrease,'
+      + 'pad=' + size + ':' + size + ':(ow-iw)/2:(oh-ih)/2:color=0x00000000';
+    execSync('ffmpeg -v error -y -i ' + JSON.stringify(srcPath) + ' -vf ' + JSON.stringify(vf)
+      + ' -frames:v 1 -f image2 ' + JSON.stringify(out), { timeout: 15000, stdio: 'pipe' });
+    // Buang berkas cache lama supaya direktori tidak tumbuh tiap ganti logo.
+    try {
+      for (const f of readdirSync(ICON_CACHE)) {
+        if (f !== key && /^i\d+_/.test(f) && Date.now() - statSync(join(ICON_CACHE, f)).mtimeMs > 86400000) unlinkSync(join(ICON_CACHE, f));
+      }
+    } catch {}
+    return existsSync(out) ? readFileSync(out) : null;
+  } catch { return null; }
+}
+
+// Ruang disk bebas di partisi tempat berkas sementara ditulis.
+function freeDiskBytes() {
+  try {
+    const out = execSync('df -kP ' + JSON.stringify(tmpdir()) + ' | tail -1', { timeout: 5000, stdio: 'pipe' }).toString().trim().split(/\s+/);
+    return (Number(out[3]) || 0) * 1024;
+  } catch { return 0; }
+}
+
 const CHUNK_SIZE = 5 * 1024 * 1024;
 const CHUNK_DIR = join(tmpdir(), 'swhd-chunks');
 try { mkdirSync(CHUNK_DIR, { recursive: true }); } catch {}
@@ -624,11 +716,21 @@ const chunkSessions = new Map(); // id -> { files:[{name,size,parts:Set}], total
 // jam; batas lama membuat sesi dihapus saat upload masih jalan, lalu chunk
 // berikutnya dapat 404 "sesi kedaluwarsa". Yang dibatasi sekarang adalah
 // DIAM tanpa aktivitas, bukan total durasi upload.
-const CHUNK_IDLE_MS = 3 * 60 * 60000; // 3 jam tanpa aktivitas
+// 45 menit tanpa bagian baru. Angka lama (3 jam) dipilih agar upload lambat
+// tidak terputus, tapi jeda antar-bagian pada koneksi HP paling buruk pun
+// hitungan menit, bukan jam — sementara satu sesi terlantar bisa menahan
+// ratusan MB. 45 menit tetap sangat longgar untuk upload yang benar-benar jalan.
+const CHUNK_IDLE_MS = 45 * 60000;
+// Sesi yang dibuka lalu ditinggalkan sebelum satu bagian pun terkirim (pengguna
+// menutup tab, koneksi gagal di awal) tidak perlu ditunggu 3 jam — itu hanya
+// menahan tempat di disk. Yang sudah berjalan tetap diberi tenggang panjang.
+const CHUNK_EMPTY_IDLE_MS = 30 * 60000; // 30 menit untuk sesi tanpa progres
 function chunkSweep() {
   const now = Date.now();
   for (const [id, s] of chunkSessions) {
-    if (now - s.ts > CHUNK_IDLE_MS) {
+    const started = s.files.some(f => f.parts.size > 0);
+    const limit = started ? CHUNK_IDLE_MS : CHUNK_EMPTY_IDLE_MS;
+    if (now - s.ts > limit) {
       chunkSessions.delete(id);
       try { execSync('rm -rf ' + JSON.stringify(join(CHUNK_DIR, id))); } catch {}
     }
@@ -639,8 +741,12 @@ function chunkSweep() {
   // penuh. Direktori tanpa sesi aktif dan sudah lama tidak disentuh dibuang.
   try {
     for (const d of readdirSync(CHUNK_DIR)) {
-      if (chunkSessions.has(d)) continue;
+      // Berkas gabungan hasil finish (`<sid>_f0.bin`) berada di luar direktori
+      // sesi supaya tidak terhapus saat sesi dibersihkan. Kalau job pemrosesan
+      // mati sebelum memindahkannya, berkas itu jadi yatim — ikut disapu.
       const p = join(CHUNK_DIR, d);
+      if (chunkSessions.has(d)) continue;
+      if (/^[0-9a-f]{16}_f\d+\.bin$/.test(d) && chunkSessions.has(d.split('_f')[0])) continue;
       try {
         if (now - statSync(p).mtimeMs > CHUNK_IDLE_MS) execSync('rm -rf ' + JSON.stringify(p));
       } catch {}
@@ -721,17 +827,35 @@ const server = http.createServer(async (req, res) => {
   }
 
 
-  // Auto-adapt favicon: kalau admin set logo dari gallery (raster), semua path favicon ikut logo itu.
+  // Auto-adapt favicon: kalau admin set logo dari gallery, semua path ikon ikut logo itu.
   // HARUS sebelum route static generik, karena file favicon lama masih ada di WEB_OUT.
+  //
+  // Dulu logo dikirim UTUH ke setiap path ikon: foto 31 KB dipakai sebagai ikon
+  // 16x16, dan Content-Type diambil dari ekstensi berkas ASAL — jadi `/favicon.ico`
+  // dan `/favicon-32.png` mengaku `image/jpeg`, `/logo.svg` mengaku JPEG pula.
+  // Sebagian browser menolak ikon yang tipenya tidak cocok, dan HP menanggung
+  // unduhan penuh untuk gambar sebesar kuku. Sekarang tiap ukuran diturunkan
+  // sekali pakai ffmpeg lalu dipakai ulang dari cache, dan tipe selalu jujur.
   if (req.method === 'GET' && ['/favicon.ico', '/favicon.svg', '/favicon-32.png', '/apple-touch-icon.png', '/logo.svg'].includes(url)) {
     const lu = settings.logoUrl || '';
     if (lu.startsWith('/brand/') && /\.(png|jpg|jpeg|webp|svg)$/i.test(lu)) {
       const bf = join(BRAND_DIR, lu.slice(7).replace(/[^\w.-]/g, ''));
       if (existsSync(bf)) {
-        const t = { '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.svg':'image/svg+xml' };
-        res.writeHead(200, { 'Content-Type': t[extname(bf).toLowerCase()] || 'image/png', 'Cache-Control': 'public, max-age=300' });
-        res.end(readFileSync(bf));
-        return;
+        const isSvg = extname(bf).toLowerCase() === '.svg';
+        // /logo.svg dipakai sebagai gambar penuh (bukan ikon kecil) → kirim asli.
+        if (url === '/logo.svg' || (url === '/favicon.svg' && isSvg)) {
+          const t = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
+          res.writeHead(200, { 'Content-Type': t[extname(bf).toLowerCase()] || 'image/png', 'Cache-Control': 'public, max-age=300' });
+          res.end(readFileSync(bf));
+          return;
+        }
+        const size = url === '/apple-touch-icon.png' ? 180 : 32;
+        const icon = brandIconPng(bf, size);
+        if (icon) {
+          res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' });
+          res.end(icon);
+          return;
+        }
       }
     }
   }
@@ -873,9 +997,15 @@ const server = http.createServer(async (req, res) => {
       const maxMB = settings.maxFileSizeMB || 0;
       const hardMB = settings.largeUploadMaxMB || 0;
       let total = 0;
+      // Pagar mutlak. `maxFileSizeMB: 0` berarti "tanpa batas" di pengaturan, dan
+      // itu memang yang diinginkan — tapi tanpa batas juga berarti klien iseng
+      // bisa mengaku mengirim 50 GB, dan server langsung menyiapkan sesi untuknya.
+      // 4 GB per berkas jauh di atas kebutuhan nyata, sekaligus menutup celah itu.
+      const ABS_MAX = 4 * 1024 * 1024 * 1024;
       for (const f of list) {
         const sz = Number(f.size) || 0;
         if (!f.name || sz <= 0) { jsonRes(res, 400, { ok: false, error: 'Metadata file tidak valid' }); return; }
+        if (sz > ABS_MAX) { jsonRes(res, 413, { ok: false, error: 'File "' + f.name + '" melewati batas wajar (maks 4 GB per file).' }); return; }
         if (maxMB > 0 && sz > maxMB * 1024 * 1024) { jsonRes(res, 413, { ok: false, error: 'File "' + f.name + '" terlalu besar. Maksimal ' + maxMB + ' MB' }); return; }
         if (hardMB > 0 && sz > hardMB * 1024 * 1024) { jsonRes(res, 413, { ok: false, error: 'File "' + f.name + '" melewati batas upload besar (' + hardMB + ' MB)' }); return; }
         total += sz;
@@ -883,6 +1013,15 @@ const server = http.createServer(async (req, res) => {
       const quotaMB = settings.storageQuotaMB || 0;
       if (quotaMB > 0 && getTotalStorage() + total > quotaMB * 1024 * 1024) {
         jsonRes(res, 507, { ok: false, error: 'Kuota storage server penuh. Coba lagi nanti.' }); return;
+      }
+      // Ruang disk NYATA diperiksa, bukan cuma kuota di pengaturan. Upload besar
+      // memakai tempat sementara untuk bagian-bagian + berkas gabungan + hasil
+      // ffmpeg, jadi kebutuhan puncaknya sekitar tiga kali ukuran file. Kalau
+      // ruang kurang, upload ditolak SEKARANG dengan pesan jelas — jauh lebih
+      // baik daripada gagal di tengah setelah pengguna menunggu lama.
+      const freeB = freeDiskBytes();
+      if (freeB > 0 && total * 3 + 200 * 1024 * 1024 > freeB) {
+        jsonRes(res, 507, { ok: false, error: 'Ruang disk server tidak cukup untuk file sebesar ini (' + (freeB / 1073741824).toFixed(1) + ' GB tersisa). Coba file lebih kecil.' }); return;
       }
       chunkSweep();
       const id = crypto.randomBytes(8).toString('hex');
@@ -970,7 +1109,13 @@ const server = http.createServer(async (req, res) => {
         if (mergedSize !== meta.size) {
           jsonRes(res, 400, { ok: false, error: 'Ukuran file "' + meta.name + '" tidak cocok (' + mergedSize + ' != ' + meta.size + '). Upload ulang.' }); return;
         }
-        files.push({ name: meta.name, buf: readFileSync(mergedPath) });
+        // Diserahkan sebagai PATH. Membacanya ke memori di sini berarti file
+        // 300 MB ditahan utuh hanya untuk diteruskan ke ffmpeg yang toh butuh
+        // berkas di disk. Berkas gabungan dipindahkan ke lokasi netral supaya
+        // tidak ikut terhapus saat direktori sesi dibersihkan.
+        const keepPath = join(CHUNK_DIR, sid + '_f' + fi + '.bin');
+        try { renameSync(mergedPath, keepPath); } catch {}
+        files.push({ name: meta.name, path: existsSync(keepPath) ? keepPath : mergedPath });
       }
       const jobId = beginUploadJob(files, clientIP);
       jsonRes(res, 200, { ok: true, pending: true, jobId, chunked: true });
@@ -986,7 +1131,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && url === '/upload/status') {
-    const id = (req.url.split('id=')[1] || '').split('&')[0];
+    // Query dibaca lewat URLSearchParams: `split('id=')` juga cocok dengan
+    // `jobId=` dan parameter lain yang kebetulan berakhiran "id", jadi mudah
+    // mengambil nilai yang salah begitu ada parameter tambahan.
+    const q = new URLSearchParams((req.url.split('?')[1] || ''));
+    const id = q.get('id') || q.get('jobId') || '';
     const job = id && jobs.get(id);
     if (!job) { jsonRes(res, 404, { ok: false, error: 'Job tidak ditemukan' }); return; }
     jsonRes(res, 200, { ok: true, stage: job.stage, pct: job.pct, error: job.error, result: job.result });
@@ -1056,10 +1205,14 @@ const server = http.createServer(async (req, res) => {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     try {
       if (!existsSync(BRAND_DIR)) mkdirSync(BRAND_DIR, { recursive: true });
+      // Hanya berkas gambar: direktori atau berkas tersembunyi yang nyasar ke sini
+      // dulu ikut terdaftar sebagai "logo" yang bisa dipilih admin.
       const files = readdirSync(BRAND_DIR).map(f => {
         const st = statSync(join(BRAND_DIR, f));
-        return { name: f, url: `/brand/${f}`, size: st.size, mtime: st.mtimeMs };
-      }).sort((a, b) => b.mtime - a.mtime);
+        return { name: f, url: `/brand/${f}`, size: st.size, mtime: st.mtimeMs, isFile: st.isFile() };
+      }).filter(f => f.isFile && !f.name.startsWith('.') && /\.(png|jpe?g|webp|svg|gif|ico)$/i.test(f.name))
+        .map(({ isFile, ...f }) => f)
+        .sort((a, b) => b.mtime - a.mtime);
       jsonRes(res, 200, { ok: true, files });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync, readdirSync, statSync, renameSync, openSync, closeSync, readSync, writeSync } from 'fs';
 import { randomBytes } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -7,14 +7,38 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const VIDS_DIR = join(__dirname, '..', '..', 'vids');
 const INDEX = join(VIDS_DIR, 'index.json');
 const CODE_LEN = 2;
-const DEFAULT_TTL = 3600000; // 1 hour
+const DEFAULT_TTL = 3600000; // 1 jam — hanya dipakai kalau setelan belum ada
+const SETTINGS_FILE = join(__dirname, '..', '..', 'admin-settings.json');
 
 if (!existsSync(VIDS_DIR)) mkdirSync(VIDS_DIR, { recursive: true });
 
 let customTTL = null;
 
 export function setTTL(ms) { customTTL = ms; }
-export function getTTL() { return customTTL || DEFAULT_TTL; }
+
+// BUG YANG DIPERBAIKI: TTL dulu hanya diketahui lewat setTTL(), dan yang
+// memanggilnya cuma web-uploader.js. Proses BOT (main) meng-import modul ini
+// tanpa pernah memanggil setTTL, jadi ia memakai DEFAULT_TTL 1 jam — padahal
+// admin menyetel expireMinutes 1440 (24 jam). Akibatnya setiap kali bot
+// menyentuh store (getVideoFile/checkVideo memanggil cleanup()), semua kode
+// yang berumur >1 jam DIHAPUS, dan user yang klaim jam kedua dapat
+// "kode tidak ada" walau panel bilang file masih hidup 24 jam.
+// Sekarang setelan dibaca langsung dari admin-settings.json, jadi kedua proses
+// selalu sepakat tanpa bergantung siapa yang mengingat memanggil setTTL.
+let ttlCache = { ms: 0, at: 0 };
+function settingsTTL() {
+  // Cache 5 detik: cleanup() dipanggil sangat sering, jangan baca disk tiap kali.
+  if (Date.now() - ttlCache.at < 5000) return ttlCache.ms;
+  let ms = 0;
+  try {
+    const m = Number(JSON.parse(readFileSync(SETTINGS_FILE, 'utf8')).expireMinutes);
+    if (Number.isFinite(m) && m > 0) ms = m * 60000;
+  } catch { /* setelan belum ada / rusak → pakai default */ }
+  ttlCache = { ms, at: Date.now() };
+  return ms;
+}
+
+export function getTTL() { return customTTL || settingsTTL() || DEFAULT_TTL; }
 
 function load() {
   try { return JSON.parse(readFileSync(INDEX, 'utf8')); } catch { return {}; }
@@ -58,6 +82,68 @@ export function storeBundle(files, ip) {
     writeFileSync(join(VIDS_DIR, fname), files[i].buf);
     fileEntries.push({ name: files[i].name, file: fname, size: files[i].buf.length });
     totalSize += files[i].buf.length;
+  }
+  db[code] = { bundle: true, files: fileEntries, ts: Date.now(), ip: ip || 'unknown', totalSize };
+  save(db);
+  return code;
+}
+
+// Varian storeVideo/storeBundle yang MEMINDAHKAN berkas dari disk, bukan
+// menerima isinya di memori. Untuk video 300 MB, versi buffer memaksa seluruh
+// isi file ditahan di RAM hanya untuk dituliskan lagi ke disk. rename() pada
+// filesystem yang sama nyaris tanpa biaya; kalau beda device, disalin bertahap.
+function moveInto(srcPath, destPath) {
+  try {
+    renameSync(srcPath, destPath);
+    return;
+  } catch (e) {
+    if (e.code !== 'EXDEV') throw e;
+  }
+  // Beda filesystem (/tmp vs disk data): salin bertahap 4 MB, jangan sekali muat.
+  const rfd = openSync(srcPath, 'r');
+  const wfd = openSync(destPath, 'w');
+  try {
+    const buf = Buffer.allocUnsafe(4 * 1024 * 1024);
+    let pos = 0;
+    for (;;) {
+      const n = readSync(rfd, buf, 0, buf.length, pos);
+      if (n <= 0) break;
+      writeSync(wfd, buf, 0, n);
+      pos += n;
+    }
+  } finally {
+    try { closeSync(rfd); } catch {}
+    try { closeSync(wfd); } catch {}
+  }
+  try { unlinkSync(srcPath); } catch {}
+}
+
+export function storeVideoFile(srcPath, name, ip) {
+  cleanup();
+  const db = load();
+  const code = genCode(db);
+  if (!code) return null;
+  const size = statSync(srcPath).size;
+  const file = join(VIDS_DIR, code + '.vid');
+  moveInto(srcPath, file);
+  db[code] = { name, file: code + '.vid', size, ts: Date.now(), ip: ip || 'unknown' };
+  save(db);
+  return code;
+}
+
+export function storeBundleFiles(files, ip) {
+  cleanup();
+  const db = load();
+  const code = genCode(db);
+  if (!code) return null;
+  const fileEntries = [];
+  let totalSize = 0;
+  for (let i = 0; i < files.length; i++) {
+    const fname = code + '_' + i + '.vid';
+    const size = statSync(files[i].path).size;
+    moveInto(files[i].path, join(VIDS_DIR, fname));
+    fileEntries.push({ name: files[i].name, file: fname, size });
+    totalSize += size;
   }
   db[code] = { bundle: true, files: fileEntries, ts: Date.now(), ip: ip || 'unknown', totalSize };
   save(db);

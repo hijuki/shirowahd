@@ -181,7 +181,7 @@ export function IntroModal({ onDone, settings }) {
           <h2 className="font-[family-name:var(--font-display)] font-bold text-[22px] tracking-tight leading-none grad-text">
             {settings?.siteName || 'SHIROWAHD'}
           </h2>
-          <p className="text-[#7e90ad] text-[10px] mt-1.5 tracking-wide">Upload media HD ke grup WhatsApp</p>
+          <p className="text-[#7e90ad] text-[11px] mt-1.5 tracking-wide">Upload media HD ke grup WhatsApp</p>
         </div>
 
         {/* Badge */}
@@ -206,7 +206,7 @@ export function IntroModal({ onDone, settings }) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-[12px]">{s.t}</p>
-              <p className="text-[#7e90ad] text-[9px] leading-snug mt-0.5">{s.d}</p>
+              <p className="text-[#7e90ad] text-[11px] leading-snug mt-0.5">{s.d}</p>
             </div>
             <span className="w-6 h-6 shrink-0 rounded-full grid place-items-center text-[9px] font-extrabold border" style={{ background: `${s.c}10`, color: s.c, borderColor: `${s.c}25` }}>{idx + 1}</span>
           </div>
@@ -331,7 +331,7 @@ export function AboutModal({ onClose }) {
 
         <div className="flex items-center gap-2 p-2.5 rounded-[10px] bg-[#34d399]/[.05] border border-[#34d399]/12">
           <i className="fa-solid fa-shield-halved text-[#34d399] text-[10px]" />
-          <p className="text-[#7e90ad] text-[9px] leading-snug">File tersimpan sementara — terhapus otomatis setelah expired.</p>
+          <p className="text-[#7e90ad] text-[11px] leading-snug">File tersimpan sementara — terhapus otomatis setelah expired.</p>
         </div>
 
         <div className="grid grid-cols-3 gap-1.5">

@@ -277,8 +277,8 @@ export default function UploadPanel({ settings, toast }) {
                     <div>
                       <p className="text-[11px] font-bold text-[var(--t-ink)]">{encode ? encode.stage : 'Mengupload…'}</p>
                       {encode
-                        ? <p className="text-[9px] font-mono text-[var(--t-muted)]">Menyiapkan agar lancar diunduh di WA</p>
-                        : <p className="text-[9px] font-mono text-[var(--t-muted)]">{fmtSize(progress.loaded)} / {fmtSize(progress.total)}</p>}
+                        ? <p className="text-[11px] font-mono text-[var(--t-muted)]">Menyiapkan agar lancar diunduh di WA</p>
+                        : <p className="text-[11px] font-mono text-[var(--t-muted)]">{fmtSize(progress.loaded)} / {fmtSize(progress.total)}</p>}
                     </div>
                   </div>
                   <div className="text-right">

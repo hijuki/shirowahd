@@ -171,14 +171,16 @@ export default function Files({ toast }) {
             <div className="md:hidden divide-y divide-white/[.05]">
               {filtered.map(v => (
                 <div key={v.code} className="p-4 flex gap-3 items-start">
-                  <input type="checkbox" checked={selected.has(v.code)} onChange={() => toggleSel(v.code)} className="mt-1" />
+                  {/* Kotak centang bawaan 13x13px tidak bisa dipencet akurat di HP. */}
+                  <input type="checkbox" aria-label={`Pilih ${v.code}`} checked={selected.has(v.code)} onChange={() => toggleSel(v.code)} className="mt-1 w-5 h-5 shrink-0 accent-[#22d3ee]" />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">{v.name}</p>
                     <p className="text-xs text-[#7e90ad] mt-0.5 font-mono text-[#67e8f9]">{v.code} · {fmtBytes(v.size)} · {v.type}</p>
                     <p className="text-xs text-[#7e90ad] mt-0.5"><i className="fa-solid fa-clock mr-1" />Sisa {remainingLabel(v)} · {fmtTime(v.ts || v.timestamp)}</p>
                     <div className="mt-2 flex gap-2">
-                      <button onClick={() => extOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-2.5 py-1.5 bg-[#22d3ee]/15 text-[#67e8f9] border border-[#22d3ee]/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1" />+1 Jam</button>
-                      <button onClick={() => delOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-2.5 py-1.5 bg-bad/15 text-bad border border-bad/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-trash mr-1" />Hapus</button>
+                      {/* min-h-10 (40px): tinggi 30px membuat tombol Hapus mudah tersalah-pencet. */}
+                      <button onClick={() => extOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-3 min-h-10 inline-flex items-center bg-[#22d3ee]/15 text-[#67e8f9] border border-[#22d3ee]/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1" />+1 Jam</button>
+                      <button onClick={() => delOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-3 min-h-10 inline-flex items-center bg-bad/15 text-bad border border-bad/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-trash mr-1" />Hapus</button>
                     </div>
                   </div>
                 </div>
