@@ -487,7 +487,10 @@ async function extendSocket(sock) {
     else if (typeof source === "string" && fs.existsSync(source)) {
       mimeType = mime.lookup(source) || "application/octet-stream";
       fileName = path.basename(source);
-      data = fs.readFileSync(source);
+      // { url: path } dibaca Baileys sebagai stream. readFileSync memuat seluruh
+      // berkas ke RAM — pada video besar itu memicu OOM (terbukti: 300 MB →
+      // rss 1794 MB → proses dibunuh kernel).
+      data = { url: source };
     } else if (isUrlObject(source)) data = { url: source.url };
     else
       throw new Error(
@@ -545,7 +548,10 @@ async function extendSocket(sock) {
       } else if (typeof source === "string" && /^https?:\/\//.test(source))
         data = { url: source };
       else if (typeof source === "string" && fs.existsSync(source))
-        data = fs.readFileSync(source);
+        // Berkas lokal diteruskan sebagai { url: path }, BUKAN readFileSync.
+        // Baileys membaca path sebagai stream; readFileSync memuat seluruh
+        // video ke RAM dan itu penyebab OOM pada berkas besar.
+        data = { url: source };
       else if (source === null) data = null;
       if (mediaType === "image" && data) msg.image = data;
       else if (mediaType === "video" && data) {

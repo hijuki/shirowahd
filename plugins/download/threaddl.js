@@ -1,5 +1,6 @@
 import axios from "axios";
 import he from "he";
+import { urutkanKualitas } from "../../src/lib/hillz-hdmedia.js";
 
 const BASE_URL = "https://workers-playground-cool-wood-c008.accoutydusra.workers.dev";
 
@@ -103,13 +104,19 @@ Halo! Ini hasil unduhan Threads yang kamu minta:
 
 *Semoga bermanfaat ya!* Jangan lupa mampir lagi kalau mau download yang lain. 🚀`;
 
+    // normalizeResult() memasukkan SETIAP varian kualitas video sebagai entri
+    // terpisah, jadi kode lama mengirim video yang sama berkali-kali (360p, 720p,
+    // 1080p) sebagai album. Ambil varian terbaik per video saja.
+    const videoTerbaik = urutkanKualitas(
+      result
+        .filter((x) => x.Type === "video")
+        .map((x) => ({ url: x.Result_url, quality: x.Quality || "" })),
+    );
+
     const mediaList = [];
+    if (videoTerbaik.length) mediaList.push({ video: { url: videoTerbaik[0].url } });
     for (const item of result) {
-      if (item.Type === "image") {
-        mediaList.push({ image: { url: item.Result_url } });
-      } else if (item.Type === "video") {
-        mediaList.push({ video: { url: item.Result_url } });
-      }
+      if (item.Type === "image") mediaList.push({ image: { url: item.Result_url } });
     }
 
     if (mediaList.length > 1) {

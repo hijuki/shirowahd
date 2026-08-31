@@ -91,18 +91,14 @@ async function handleTiktok(url) {
   if (res?.duration === 0) {
     (res.images || []).forEach((v) => media.push({ type: "image", url: v }));
   } else {
+    // URL tidak di-concat di sini. tikwm kadang mengembalikan URL absolut CDN;
+    // menempelkan basis menghasilkan "https://www.tikwm.comhttps://…" yang
+    // gagal resolve DNS. `basis` diteruskan ke pengunduh, yang hanya memakainya
+    // bila URL-nya memang relatif.
     if (res?.hdplay)
-      media.push({
-        type: "video",
-        url: "https://www.tikwm.com" + res.hdplay,
-        quality: "HD",
-      });
+      media.push({ type: "video", url: res.hdplay, quality: "HD", size: res.hd_size, basis: "https://www.tikwm.com" });
     if (res?.play)
-      media.push({
-        type: "video",
-        url: "https://www.tikwm.com" + res.play,
-        quality: "NoWM",
-      });
+      media.push({ type: "video", url: res.play, quality: "NoWM", size: res.size, basis: "https://www.tikwm.com" });
   }
 
   return {
@@ -118,13 +114,17 @@ async function handleFacebook(url) {
   const { fbdown } = await import("btch-downloader");
   const data = await fbdown(url);
   if (!data?.status) throw new Error("Facebook API returned no data");
-  const videoUrl = data.HD || data.Normal_video;
-  if (!videoUrl) throw new Error("No video URL");
+  // Kedua varian diteruskan, bukan hanya yang terpilih: kalau URL HD mati,
+  // pengunduh bisa jatuh ke SD sendiri tanpa membuat perintahnya gagal total.
+  const media = [];
+  if (data.HD) media.push({ type: "video", url: data.HD, quality: "HD" });
+  if (data.Normal_video) media.push({ type: "video", url: data.Normal_video, quality: "SD" });
+  if (!media.length) throw new Error("No video URL");
   return {
     platform: "facebook",
     title: data.title || "Facebook",
     thumbnail: data.thumbnail || null,
-    media: [{ type: "video", url: videoUrl, quality: data.HD ? "HD" : "SD" }],
+    media,
   };
 }
 

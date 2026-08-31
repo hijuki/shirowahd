@@ -1,5 +1,7 @@
 import { fbdown } from '../../src/scraper/fbdown.js'
 import te from '../../src/lib/hillz-error.js'
+import fs from 'fs'
+import { ambilVideoHD, ringkasKualitas } from '../../src/lib/hillz-hdmedia.js'
 
 const pluginConfig = {
     name: 'facebookdl',
@@ -43,31 +45,35 @@ async function handler(m, { sock }) {
             return m.reply(`❌ Gagal mengambil video. Coba link lain atau pastikan postingan bersifat publik.\n\n_Catatan: Sistem saat ini belum mendukung download foto Facebook, hanya video._`)
         }
         
-        // Find HD if available, else SD, else first item
-        let video = data.result.medias.find(m => m.quality === "hd") || 
-                    data.result.medias.find(m => m.quality === "sd") || 
-                    data.result.medias[0];
-        
-        if (!video || !video.url) {
+        // Pemilihan `quality === "hd"` persis hanya cocok bila API menulis label
+        // itu apa adanya. Kenyataannya label bervariasi ("HD", "720p",
+        // "hd_no_watermark"), dan kalau tidak ada yang sama persis, kode lama
+        // langsung memakai medias[0] — bisa SD. Penilaian kualitas sekarang
+        // memakai skoring (label, dimensi, ukuran) dengan fallback berjenjang.
+        const kandidat = (data.result.medias || []).filter(v => v && v.url)
+        if (!kandidat.length) {
             await m.react('❌')
             return m.reply(`❌ Video tidak ditemukan di link tersebut.\n\n_Catatan: Sistem saat ini belum mendukung download foto Facebook, hanya video._`)
         }
         
+        const siap = await ambilVideoHD(kandidat, { referer: 'https://www.facebook.com/' })
+
         let caption = `🎥 *FACEBOOK DOWNLOADER*\n\n`
         caption += `*Judul:* ${data.result.title || "Video Facebook"}\n`
-        caption += `*Kualitas:* ${video.quality ? video.quality.toUpperCase() : "Normal"}\n`
-        if (video.formattedSize) {
-            caption += `*Ukuran:* ${video.formattedSize}\n`
-        }
+        caption += `*Kualitas:* ${ringkasKualitas(siap)}\n`
         caption += `\n_Catatan: Fitur ini tidak mensupport postingan foto._`
 
-        await sock.sendMedia(m.chat, video.url, caption, m, {
-            type: 'video',
-            contextInfo: {
-                forwardingScore: 99,
-                isForwarded: true
-            }
-        })
+        try {
+            await sock.sendMedia(m.chat, siap.path, caption, m, {
+                type: 'video',
+                contextInfo: {
+                    forwardingScore: 99,
+                    isForwarded: true
+                }
+            })
+        } finally {
+            if (siap.temp) { try { fs.unlinkSync(siap.path) } catch {} }
+        }
         
         await m.react('✅')
     } catch (err) {

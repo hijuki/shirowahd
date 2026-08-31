@@ -1,4 +1,6 @@
 import axios from "axios";
+import { ambilVideoHD, ringkasKualitas } from "../../src/lib/hillz-hdmedia.js";
+import fs from "fs";
 
 async function tiktokDl(url) {
   function formatNumber(integer) {
@@ -50,20 +52,15 @@ async function tiktokDl(url) {
   if (res?.duration == 0) {
     res.images.forEach((v) => data.push({ type: "photo", url: v }));
   } else {
-    data.push(
-      {
-        type: "watermark",
-        url: "https://www.tikwm.com" + (res?.wmplay || "/undefined"),
-      },
-      {
-        type: "nowatermark",
-        url: "https://www.tikwm.com" + (res?.play || "/undefined"),
-      },
-      {
-        type: "nowatermark_hd",
-        url: "https://www.tikwm.com" + (res?.hdplay || "/undefined"),
-      },
-    );
+    // URL disimpan APA ADANYA (tanpa concat basis). tikwm kadang mengembalikan
+    // URL absolut CDN, kadang path relatif; concat buta menghasilkan
+    // "https://www.tikwm.comhttps://v16m…" → ENOTFOUND, unduhan gagal dan
+    // pengirim jatuh ke kandidat resolusi lebih rendah. `basis` diteruskan ke
+    // ambilVideoHD dan hanya dipakai bila URL-nya memang relatif.
+    // `size` disertakan sebagai petunjuk pemilihan kualitas.
+    if (res?.wmplay) data.push({ type: "watermark", url: res.wmplay, size: res.wm_size });
+    if (res?.play) data.push({ type: "nowatermark", url: res.play, size: res.size });
+    if (res?.hdplay) data.push({ type: "nowatermark_hd", url: res.hdplay, size: res.hd_size });
   }
 
   return {
@@ -84,7 +81,9 @@ async function tiktokDl(url) {
       title: res.music_info.title,
       author: res.music_info.author,
       album: res.music_info.album || null,
-      url: "https://www.tikwm.com" + res.music || res.music_info.play,
+      // Tanda kurung wajib: `"a" + x || y` dievaluasi sebagai `("a" + x) || y`,
+      // dan string non-kosong selalu truthy → fallback music_info.play tidak pernah jalan.
+      url: res.music ? "https://www.tikwm.com" + res.music : res.music_info?.play,
     },
     stats: {
       views: formatNumber(res.play_count),
@@ -141,9 +140,20 @@ async function handler(m, { sock }) {
     };
 
     if (result.durations > 0 && result.duration !== "0 Seconds") {
-      const videoItem = result.data.find(
-        (e) => e.type === "nowatermark_hd" || e.type === "nowatermark",
-      ) || result.data[0];
+      // BUG LAMA: `find(e => e.type === "nowatermark_hd" || e.type === "nowatermark")`
+      // berhenti di elemen PERTAMA yang memenuhi salah satu syarat. Urutan array
+      // adalah [watermark, nowatermark, nowatermark_hd], jadi yang selalu terpilih
+      // `nowatermark` = 576x1024, sementara HD 1080x1920 tidak pernah terpakai.
+      // Diukur di tikwm: SD 576x1024 vs HD 1080x1920 (3,5x piksel, ukuran mirip).
+      //
+      // Sekarang: kandidat diurutkan berdasarkan kualitas, diunduh, lalu
+      // dipastikan kompatibel WA. hdplay TikTok berisi HEVC — WhatsApp hanya bisa
+      // H.264, jadi memilih HD saja tidak cukup, harus dikonversi TANPA
+      // menurunkan resolusi/fps.
+      const siap = await ambilVideoHD(result.data, {
+        referer: "https://www.tiktok.com/",
+        basis: "https://www.tikwm.com",
+      });
 
       const caption =
         `🎵 *𝗧 𝗜 𝗞 𝗧 𝗢 𝗞  -  𝗗 𝗢 𝗪 𝗡 𝗟 𝗢 𝗔 𝗗 𝗘 𝗥*\n\n` +
@@ -160,10 +170,18 @@ async function handler(m, { sock }) {
         `- Shares: *${result.stats.share}*\n` +
         `- Downloads: *${result.stats.download}*`;
 
-      await sock.sendButton(m.chat, videoItem.url, caption, m, {
-        type: "video",
-        buttons: [musicButton],
-      });
+      const captionHD = caption + `\n\n- Kualitas: *${ringkasKualitas(siap)}*`;
+      try {
+        // Dikirim sebagai path berkas, bukan { url }: berkasnya sudah diperiksa
+        // codec + decode-nya di sini, sesuatu yang tidak mungkin bila Baileys
+        // mengunduh sendiri dari URL.
+        await sock.sendButton(m.chat, siap.path, captionHD, m, {
+          type: "video",
+          buttons: [musicButton],
+        });
+      } finally {
+        if (siap.temp) { try { fs.unlinkSync(siap.path); } catch {} }
+      }
     } else {
       const caption =
         `📸 *𝗧 𝗜 𝗞 𝗧 𝗢 𝗞  -  𝗗 𝗢 𝗪 𝗡 𝗟 𝗢 𝗔 𝗗 𝗘 𝗥*\n\n` +

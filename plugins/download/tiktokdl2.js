@@ -4,6 +4,8 @@ import crypto from 'crypto'
 import { generateWAMessage, generateWAMessageFromContent, jidNormalizedUser } from 'hillz'
 import config from '../../config.js'
 import te from '../../src/lib/hillz-error.js'
+import fs from 'fs'
+import { ambilVideoHD, ringkasKualitas } from '../../src/lib/hillz-hdmedia.js'
 const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -79,11 +81,15 @@ function parseResponse(html) {
             const json = JSON.parse(raw.replace(/&quot;/g, '"'))
             if (!json.URL) return
 
+            // Label opsi ikut disimpan ("download mp4 hd", "download mp4 [1080p]", …).
+            // Tanpa label, semua URL terlihat sama dan kode lama memakai nowm[0]
+            // begitu saja — padahal urutan opsi di halaman TIDAK dijamin
+            // tertinggi dulu. Label inilah yang membuat pemilihan HD mungkin.
             if (label.includes('mp4') && !label.includes('watermark')) {
-                data.downloads.nowm.push(...json.URL)
+                json.URL.forEach((u) => data.downloads.nowm.push({ url: u, quality: label }))
             }
             if (label.includes('watermark')) {
-                data.downloads.wm.push(...json.URL)
+                json.URL.forEach((u) => data.downloads.wm.push({ url: u, quality: label }))
             }
             if (label.includes('mp3')) {
                 data.mp3.push(...json.URL)
@@ -101,7 +107,11 @@ async function savett(url) {
 }
 
 const pluginConfig = {
-    name: ['tiktok2', 'tt2', 'ttmp4'],
+    // `ttmp4` DIBUANG dari sini. Nama itu juga dipakai tiktokdl.js, dan plugin
+    // yang dimuat terakhir menimpa yang pertama — akibatnya `.ttmp4` menjalankan
+    // tiktokdl2, bukan tiktokdl seperti yang tertulis di menu. Satu nama harus
+    // dimiliki satu plugin.
+    name: ['tiktok2', 'tt2', 'ttv2'],
     alias: ['tiktokdl2', 'ttdown2'],
     category: 'download',
     description: 'Download video/slide TikTok tanpa watermark',
@@ -145,24 +155,47 @@ async function handler(m, { sock }) {
             `⏱️ Duration: ${result.duration || '-'}`
 
         if (result.type === 'video' && result.downloads.nowm.length > 0) {
-            const videoRes = await axios.get(result.downloads.nowm[0], {
-                responseType: 'arraybuffer',
-                timeout: 60000,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-                    'Referer': 'https://www.tiktok.com/'
-                }
-            })
+            // Dulu: `nowm[0]` + `arraybuffer` + `Buffer.from`. Dua masalah —
+            // (a) opsi pertama belum tentu resolusi tertinggi, (b) memuat video
+            // penuh ke RAM. Sekarang kandidat diurutkan pakai label kualitas,
+            // diunduh ke berkas, dipastikan H.264 (WA tidak bisa HEVC) tanpa
+            // menurunkan resolusi/fps, lalu dikirim sebagai path (stream).
+            // savett memberi URL CDN TikTok yang bertanda tangan, dan tanda tangan
+            // itu tidak selalu berlaku untuk IP kita: diuji langsung, host
+            // `v16-webapp-prime.us.tiktok.com` menjawab 403 sementara
+            // `api16-normal-useastred.tiktokv.eu` menjawab 200 — untuk video yang
+            // SAMA, hanya beda token. Karena itu kandidat tikwm ditambahkan
+            // sebagai cadangan; ambilVideoHD mencoba berurutan dan berhenti di
+            // yang pertama berhasil, jadi perintah tidak lagi mati total saat
+            // CDN savett menolak.
+            const kandidat = [...result.downloads.nowm]
+            try {
+                const cad = await axios.post('https://www.tikwm.com/api/', {}, {
+                    headers: { 'User-Agent': headers['User-Agent'] },
+                    params: { url, count: 12, cursor: 0, web: 1, hd: 1 },
+                    timeout: 30000,
+                })
+                const d = cad.data?.data
+                if (d?.hdplay) kandidat.push({ url: d.hdplay, quality: 'hd', size: d.hd_size, basis: 'https://www.tikwm.com' })
+                if (d?.play) kandidat.push({ url: d.play, quality: 'sd', size: d.size, basis: 'https://www.tikwm.com' })
+            } catch { /* cadangan gagal, lanjut dengan kandidat savett saja */ }
 
-            await sock.sendMessage(
-                m.chat,
-                {
-                    video: Buffer.from(videoRes.data),
-                    mimetype: 'video/mp4',
-                    caption,
-                },
-                { quoted: m }
-            )
+            const siap = await ambilVideoHD(kandidat, {
+                referer: 'https://www.tiktok.com/'
+            })
+            try {
+                await sock.sendMessage(
+                    m.chat,
+                    {
+                        video: { url: siap.path },
+                        mimetype: 'video/mp4',
+                        caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*`,
+                    },
+                    { quoted: m }
+                )
+            } finally {
+                if (siap.temp) { try { fs.unlinkSync(siap.path) } catch {} }
+            }
 
             m.react('✅')
             return

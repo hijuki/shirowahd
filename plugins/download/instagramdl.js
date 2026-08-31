@@ -1,4 +1,6 @@
 import instagramDownloader from "../../src/scraper/ig.js";
+import fs from "fs";
+import { ambilVideoHD, ringkasKualitas } from "../../src/lib/hillz-hdmedia.js";
 const pluginConfig = {
   name: "instagramdl",
   alias: ["igdl", "ig", "instagram"],
@@ -58,11 +60,35 @@ async function handler(m, { sock }) {
 
     for (const item of result.media) {
       if (item.type === "video" || item.type === "mp4") {
-        await sock.sendMessage(
-          m.chat,
-          { video: { url: item.url }, caption },
-          { quoted: m },
-        );
+        // Dulu `{ video: { url } }` langsung: Baileys mengunduh sendiri, jadi
+        // tidak ada kesempatan memeriksa codec. Reel Instagram kadang HEVC dan
+        // WhatsApp tidak bisa memutarnya. Sekarang diunduh dulu, dipastikan
+        // H.264 tanpa menurunkan resolusi, baru dikirim.
+        let siap;
+        try {
+          siap = await ambilVideoHD([item], { referer: "https://www.instagram.com/" });
+        } catch {
+          siap = null;
+        }
+        if (siap) {
+          try {
+            await sock.sendMessage(
+              m.chat,
+              { video: { url: siap.path }, caption: caption ? caption + `\n🎬 ${ringkasKualitas(siap)}` : "" },
+              { quoted: m },
+            );
+          } finally {
+            if (siap.temp) { try { fs.unlinkSync(siap.path); } catch {} }
+          }
+        } else {
+          // Kalau penyiapan gagal, kirim apa adanya — lebih baik terkirim
+          // daripada gagal total.
+          await sock.sendMessage(
+            m.chat,
+            { video: { url: item.url }, caption },
+            { quoted: m },
+          );
+        }
       } else {
         await sock.sendMessage(
           m.chat,

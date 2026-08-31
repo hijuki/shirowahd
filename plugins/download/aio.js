@@ -1,6 +1,8 @@
 import { aiodl } from "../../src/scraper/aio.js";
 import te from "../../src/lib/hillz-error.js";
 import { saluranCtx } from "../../src/lib/hillz-context.js";
+import fs from "fs";
+import { ambilVideoHD, ringkasKualitas } from "../../src/lib/hillz-hdmedia.js";
 
 const pluginConfig = {
   name: "aio",
@@ -55,6 +57,29 @@ async function handler(m, { sock }) {
     }
 
     const ctxInfo = saluranCtx();
+
+    // `break` di akhir loop berarti hanya item PERTAMA yang dikirim. Untuk video
+    // itu justru yang kita mau — tapi kandidat video harus dipilih berdasarkan
+    // kualitas, bukan urutan kemunculan. Semua kandidat video dikumpulkan dulu.
+    const kandidatVideo = result.media.filter((x) => x.type === "video");
+    if (kandidatVideo.length) {
+      const siap = await ambilVideoHD(kandidatVideo, {
+        basis: kandidatVideo.find((x) => x.basis)?.basis,
+      });
+      try {
+        await sock.sendMedia(
+          m.chat,
+          siap.path,
+          (result.title ? result.title + "\n" : "") + `📺 ${ringkasKualitas(siap)}`,
+          m,
+          { type: "video", contextInfo: ctxInfo },
+        );
+      } finally {
+        if (siap.temp) { try { fs.unlinkSync(siap.path); } catch {} }
+      }
+      await m.react("✅");
+      return;
+    }
 
     for (const item of result.media) {
       if (item.type === "video") {
