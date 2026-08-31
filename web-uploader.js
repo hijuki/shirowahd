@@ -327,12 +327,30 @@ function newJob(names) {
   return id;
 }
 const VIDEO_MP4_EXTS = ['.mp4', '.m4v'];
-const VIDEO_EXTS = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.3gp', '.flv', '.wmv', '.ts', '.m4v'];
+// Daftar diperluas: sebelumnya .mpg/.mpeg/.ogv/.m2ts/.mts/.vob/.asf dll TIDAK
+// dikenali sebagai video, jadi file itu disimpan MENTAH — tanpa konversi ke
+// H.264, tanpa faststart — dan penerima WA tidak bisa memutarnya sama sekali.
+const VIDEO_EXTS = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.3gp', '.3g2', '.flv', '.wmv', '.ts', '.m4v',
+  '.mpg', '.mpeg', '.mpe', '.m1v', '.m2v', '.ogv', '.ogm', '.m2ts', '.mts', '.vob', '.asf', '.rm', '.rmvb',
+  '.divx', '.f4v', '.mxf', '.dv', '.mp2', '.m2p', '.qt', '.amv', '.mjpeg', '.mjpg'];
 const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg', '.heic', '.heif', '.avif'];
 
 function isVideoFile(name) {
   const ext = extname(name || '').toLowerCase();
   return VIDEO_EXTS.includes(ext);
+}
+
+// Fallback untuk file yang ekstensinya tidak dikenal atau tidak ada sama sekali
+// (galeri HP kadang mengirim nama tanpa ekstensi). Isi file yang diperiksa,
+// bukan namanya, jadi video tetap diproses dan tidak lolos mentah ke penerima.
+function bufHasVideoStream(buf, name) {
+  const tmp = join(tmpdir(), 'probe_' + crypto.randomBytes(6).toString('hex') + (extname(name || '') || ''));
+  try {
+    writeFileSync(tmp, buf.length > 4 * 1024 * 1024 ? buf.subarray(0, 4 * 1024 * 1024) : buf);
+    const out = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 ' + JSON.stringify(tmp), { timeout: 10000, stdio: 'pipe' }).toString();
+    return out.includes('video');
+  } catch { return false; }
+  finally { try { unlinkSync(tmp); } catch {} }
 }
 
 function needsConvert(name) {
@@ -387,11 +405,40 @@ function hasAudioStream(filePath) {
 }
 
 const execP = (cmd, opts = {}) => new Promise((resolve, reject) => execCb(cmd, opts, (err, stdout, stderr) => err ? reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')) : resolve(stdout)));
+
+// Jalankan ffmpeg sambil membaca `-progress pipe:1` dan melaporkan persen NYATA.
+// Sebelumnya hanya jalur re-encode yang punya pembaca progress; jalur remux
+// (`-c:v copy`) memakai execP yang membuang stdout, jadi bar diam di 0% lalu
+// melompat — itu yang terlihat seperti "loading dua kali".
+function runFfmpeg(cmd, opts, dur, onPct) {
+  return new Promise((resolve, reject) => {
+    const p = execCb(cmd, opts, (err, stdout, stderr) => {
+      if (err) reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal'));
+      else resolve(stdout);
+    });
+    if (p.stdout && onPct && dur > 0) {
+      p.stdout.on('data', d => {
+        const m = String(d).match(/out_time_ms=(\d+)/g);
+        if (!m) return;
+        const sec = m[m.length - 1].split('=')[1] / 1e6;
+        onPct(Math.max(1, Math.min(99, Math.round(sec / dur * 100))));
+      });
+    }
+  });
+}
 function probeDuration(f) {
   try { return parseFloat(execSync('ffprobe -v error -show_entries format=duration -of csv=p=0 ' + JSON.stringify(f), { timeout: 10000, stdio: 'pipe' }).toString().trim()) || 0; } catch { return 0; }
 }
 
-async function convertToMp4Async(buf, originalName, onPct) {
+// Nama hasil selalu berakhir .mp4. `replace` saja tidak cukup: nama tanpa
+// ekstensi (galeri HP) tidak cocok pola dan tersimpan tanpa .mp4, lalu klien
+// menebak tipenya keliru.
+function toMp4Name(originalName) {
+  const n = String(originalName || 'video');
+  return /\.[^.\/]+$/.test(n) ? n.replace(/\.[^.\/]+$/, '.mp4') : n + '.mp4';
+}
+
+async function convertToMp4Async(buf, originalName, onPct, onPhase) {
   const id = crypto.randomBytes(8).toString('hex');
   const ext = extname(originalName || '').toLowerCase() || '.vid';
   const tmpIn = join(tmpdir(), 'upload_in_' + id + ext);
@@ -411,12 +458,15 @@ async function convertToMp4Async(buf, originalName, onPct) {
         ? ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest -c:a aac -b:a 128k'
         : (audioCodecOf(tmpIn) === 'aac' ? ' -c:a copy' : ' -c:a aac -b:a 320k');
       try {
-        await execP(
+        if (onPhase) onPhase('remux');
+        await runFfmpeg(
           'ffmpeg -y -i ' + JSON.stringify(tmpIn) + silentAudio + ' -c:v copy -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
-          { timeout: 300000, maxBuffer: 10 * 1024 * 1024 }
+          { timeout: 300000, maxBuffer: 10 * 1024 * 1024 },
+          probeDuration(tmpIn),
+          onPct
         );
         if (existsSync(tmpOut) && readFileSync(tmpOut).length > 1000) {
-          return { buf: readFileSync(tmpOut), name: originalName.replace(/\.[^.]+$/, '.mp4') };
+          return { buf: readFileSync(tmpOut), name: toMp4Name(originalName) };
         }
       } catch {}
     }
@@ -446,20 +496,14 @@ async function convertToMp4Async(buf, originalName, onPct) {
     } catch {}
     // ponytail: crf 23 = good quality, lighter than 18. veryfast preset = much less CPU. Upgrade to crf 18 + fast if server has dedicated GPU/power.
     const dur = probeDuration(tmpIn);
-    await new Promise((resolve, reject) => {
-      const p = execCb(
-        'ffmpeg -y -i ' + JSON.stringify(tmpIn) + (hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest') + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset veryfast -crf 23' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
-        { timeout: 600000, maxBuffer: 10 * 1024 * 1024 },
-        (err, stdout, stderr) => { if (err) reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')); else resolve(); }
-      );
-      if (p.stdout) p.stdout.on('data', d => {
-        const m = String(d).match(/out_time_ms=(\d+)/g);
-        if (!m || !(dur > 0) || !onPct) return;
-        const sec = m[m.length - 1].split('=')[1] / 1e6;
-        onPct(Math.max(1, Math.min(98, Math.round(sec / dur * 100))));
-      });
-    });
-    return { buf: readFileSync(tmpOut), name: originalName.replace(/\.[^.]+$/, '.mp4') };
+    if (onPhase) onPhase('encode');
+    await runFfmpeg(
+      'ffmpeg -y -i ' + JSON.stringify(tmpIn) + (hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest') + ' -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -preset veryfast -crf 23' + scaleFilter + fpsFlag + ' -c:a aac -b:a 192k -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
+      { timeout: 600000, maxBuffer: 10 * 1024 * 1024 },
+      dur,
+      onPct
+    );
+    return { buf: readFileSync(tmpOut), name: toMp4Name(originalName) };
   } finally {
     try { unlinkSync(tmpIn); } catch {}
     try { unlinkSync(tmpOut); } catch {}
@@ -496,18 +540,37 @@ function beginUploadJob(files, clientIP) {
   (async () => {
     try {
       let convFail = 0;
-      for (let i = 0; i < files.length; i++) {
+      // Hitung dulu berapa video yang perlu diproses supaya bar bisa berjalan
+      // 0→100 satu kali untuk keseluruhan job, bukan reset ke 0 tiap file.
+      const vidIdx = files.map((f, i) => {
+        if (isVideoFile(f.name)) return i;
+        const ext = extname(f.name || '').toLowerCase();
+        if (IMAGE_EXTS.includes(ext)) return -1;              // foto: jangan diprobe
+        return bufHasVideoStream(f.buf, f.name) ? i : -1;     // ekstensi asing/kosong
+      }).filter(i => i >= 0);
+      const totalVid = vidIdx.length || 1;
+      for (let n = 0; n < vidIdx.length; n++) {
+        const i = vidIdx[n];
         const f = files[i];
-        if (!isVideoFile(f.name)) continue;
-        job.stage = 'Encode video' + (files.length > 1 ? ' (' + (i + 1) + '/' + files.length + ')' : '') + '…';
-        job.pct = 0;
+        const suffix = files.length > 1 ? ' (' + (n + 1) + '/' + vidIdx.length + ')' : '';
+        job.stage = 'Memeriksa video' + suffix + '…';
+        // pct global: bagian file ke-n mengisi slot [n/totalVid, (n+1)/totalVid]
+        const scale = (p) => Math.round(((n + p / 100) / totalVid) * 100);
         try {
-          files[i] = await convertToMp4Async(f.buf, f.name, p => { job.pct = p; });
+          files[i] = await convertToMp4Async(
+            f.buf, f.name,
+            p => { job.pct = Math.min(99, scale(p)); },
+            phase => {
+              // Label jujur: beda antara "cuma dirapikan" dan "dikonversi ulang".
+              job.stage = (phase === 'remux' ? 'Merapikan video' : 'Konversi video') + suffix + '…';
+            }
+          );
         } catch (e) {
           convFail++;
           console.log('[upload] ffmpeg convert failed for ' + f.name + ': ' + e.message);
           // fallback: simpan apa adanya
         }
+        job.pct = Math.min(99, scale(100));
       }
       job.stage = 'Menyimpan…';
       const warn = convFail ? convFail + ' video gagal di-encode, disimpan tanpa konversi' : null;
@@ -519,6 +582,7 @@ function beginUploadJob(files, clientIP) {
         addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: files.map(f => f.name).join(', '), filesize: totalSize, code, bundle: true, count: files.length });
         recordUpload(clientIP);
         sendTelegram('upload', `📤 <b>Upload Bundle</b>\n${files.length} file | ${(totalSize/1048576).toFixed(1)} MB\nKode: <code>${code}</code>\nIP: ${clientIP}`);
+        job.pct = 100; job.stage = 'Selesai';
         job.result = { ok: true, code, bundle: true, count: files.length, ...(warn && { warn }) };
       } else {
         const codes = [];
@@ -530,6 +594,7 @@ function beginUploadJob(files, clientIP) {
         }
         recordUpload(clientIP);
         sendTelegram('upload', `📤 <b>Upload</b>\n${codes.map(c=>c.name).join(', ')}\nKode: <code>${codes[0].code}</code>\nIP: ${clientIP}`);
+        job.pct = 100; job.stage = 'Selesai';
         job.result = { ok: true, code: codes[0].code, codes, ...(warn && { warn }) };
       }
     } catch (e) {

@@ -93,18 +93,30 @@ export default function UploadPanel({ settings, toast }) {
       // Tahap 2: server encode di background — polling status sampai result
       let final = res
       if (res.pending && res.jobId) {
+        // Polling 400ms (dulu 1200ms): jeda 1,2 detik membuat bar terlihat
+        // melompat dan kode baru muncul lama setelah server sebenarnya selesai.
+        // Saat result datang, pct dipaksa 100 dulu supaya bar benar-benar
+        // menyentuh 100% tepat ketika kode ditampilkan — tidak berhenti di 98.
         final = await new Promise((resolve, reject) => {
-          const t = setInterval(async () => {
+          let stop = false
+          const tick = async () => {
+            if (stop) return
             try {
               const s = await pollJobStatus(res.jobId)
-              if (s.error) { clearInterval(t); reject(new Error(s.error)); return }
+              if (s.error) { stop = true; reject(new Error(s.error)); return }
+              if (s.result) {
+                stop = true
+                setEncode({ stage: 'Selesai', pct: 100 })
+                resolve(s.result)
+                return
+              }
               if (s.stage || typeof s.pct === 'number') setEncode({ stage: s.stage || 'Memproses…', pct: s.pct || 0 })
-              if (s.result) { clearInterval(t); resolve(s.result) }
-            } catch (e) { clearInterval(t); reject(e) }
-          }, 1200)
+              setTimeout(tick, 400)
+            } catch (e) { stop = true; reject(e) }
+          }
+          tick()
         })
       }
-      setEncode(null)
       saveHistory({ code: final.code, codes: final.codes, bundle: final.bundle, count: final.count, files: files.map(f => f.name), totalSize: files.reduce((s, f) => s + f.size, 0), timestamp: Date.now(), expireMinutes: settings?.expireMinutes || 60 })
       setResult({ ...final, expireMinutes: settings?.expireMinutes || 60 })
       if (final.warn) toast(final.warn, 'info')
@@ -114,7 +126,14 @@ export default function UploadPanel({ settings, toast }) {
     finally { setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }); setEncode(null) }
   }
 
-  const cancelUpload = () => { abortRef.current?.abort(); setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }); toast('Upload dibatalkan', 'info') }
+  const cancelUpload = () => { abortRef.current?.abort(); setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }); setEncode(null); toast('Upload dibatalkan', 'info') }
+
+  // SATU skala 0→100 untuk seluruh proses, biar bar tidak pernah balik ke 0.
+  // Transfer jaringan mengisi 0–60%, pemrosesan server mengisi 60–100%.
+  // Kalau server tidak perlu memproses (mis. foto), transfer langsung ke 100%.
+  const totalPct = encode
+    ? Math.min(100, 60 + Math.round((encode.pct / 100) * 40))
+    : Math.round(progress.pct * (uploading ? 0.6 : 1))
 
   if (settings?.maintenance) {
     return (
@@ -258,12 +277,12 @@ export default function UploadPanel({ settings, toast }) {
                     <div>
                       <p className="text-[11px] font-bold text-[var(--t-ink)]">{encode ? encode.stage : 'Mengupload…'}</p>
                       {encode
-                        ? <p className="text-[9px] font-mono text-[var(--t-muted)]">Konversi ke MP4 H.264</p>
+                        ? <p className="text-[9px] font-mono text-[var(--t-muted)]">Menyiapkan agar lancar diunduh di WA</p>
                         : <p className="text-[9px] font-mono text-[var(--t-muted)]">{fmtSize(progress.loaded)} / {fmtSize(progress.total)}</p>}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[16px] font-[family-name:var(--font-display)] font-extrabold grad-text tabular-nums">{encode ? encode.pct : progress.pct}%</p>
+                    <p className="text-[16px] font-[family-name:var(--font-display)] font-extrabold grad-text tabular-nums">{totalPct}%</p>
                     <p className="text-[9px] font-mono font-bold text-[#67e8f9]">
                       {encode ? 'ffmpeg' : progress.speed > 0 ? `${(progress.speed * 8 / 1000000).toFixed(1)} Mbps` : '—'}
                     </p>
@@ -275,7 +294,7 @@ export default function UploadPanel({ settings, toast }) {
                   <div
                     className="absolute inset-y-0 left-0 rounded-full transition-all duration-[250ms]"
                     style={{
-                      width: (encode ? encode.pct : progress.pct) + '%',
+                      width: totalPct + '%',
                       background: 'linear-gradient(90deg, #22d3ee, #3b82f6, #34d399)',
                       boxShadow: '0 0 16px rgba(34,211,238,.5), 0 0 4px rgba(34,211,238,.8)',
                       transitionTimingFunction: 'var(--ease-out)',
