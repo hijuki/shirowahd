@@ -107,6 +107,35 @@ export function getVideo(code) {
   return { buf: readFileSync(filePath), path: filePath, name: e.name, size: e.size, createdAt: e.ts };
 }
 
+// Varian getVideo/getBundle yang HANYA mengembalikan lokasi file, tanpa membaca
+// isinya ke memori. Dipakai jalur kirim WhatsApp: baileys bisa menerima
+// { url: path } dan membaca file itu bertahap sendiri, jadi video 170 MB tidak
+// perlu ditahan utuh di RAM (yang pada box 3 GB membuat bot nyaris mati).
+// Fungsi getVideo/getBundle di atas dibiarkan apa adanya untuk pemakai lain.
+export function getVideoFile(code) {
+  cleanup();
+  const db = load();
+  const e = db[code.toUpperCase()];
+  if (!e) return null;
+  const filePath = resolveFile(e);
+  if (!existsSync(filePath)) { delete db[code.toUpperCase()]; save(db); return null; }
+  return { path: filePath, name: e.name, size: e.size, createdAt: e.ts };
+}
+
+export function getBundleFiles(code) {
+  cleanup();
+  const db = load();
+  const e = db[code.toUpperCase()];
+  if (!e || !e.bundle) return null;
+  const result = [];
+  for (const f of e.files) {
+    const filePath = join(VIDS_DIR, f.file);
+    if (!existsSync(filePath)) continue;
+    result.push({ path: filePath, name: f.name, size: f.size });
+  }
+  return result.length > 0 ? result : null;
+}
+
 export function checkVideo(code) {
   cleanup();
   const db = load();

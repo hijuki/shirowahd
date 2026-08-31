@@ -1,4 +1,4 @@
-import { getVideo, getBundle, isBundle, deleteVideo } from "../../src/lib/vid-store.js";
+import { getVideoFile, getBundleFiles, isBundle, deleteVideo } from "../../src/lib/vid-store.js";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join, dirname, extname } from "path";
 import { fileURLToPath } from "url";
@@ -171,11 +171,14 @@ export async function handler(m, { sock }) {
   const notFound = [];
   for (const code of codes) {
     if (isBundle(code)) {
-      const bundle = getBundle(code);
+      // Hanya lokasi file yang diambil, bukan isinya. Pada video besar
+      // (170 MB) memuat isi ke memori di sini membuat proses bot melonjak
+      // ratusan MB sekaligus di box yang RAM-nya terbatas.
+      const bundle = getBundleFiles(code);
       if (bundle) results.push({ code, bundle });
       else notFound.push(code);
     } else {
-      const v = getVideo(code);
+      const v = getVideoFile(code);
       if (v) results.push({ code, v });
       else notFound.push(code);
     }
@@ -211,11 +214,11 @@ export async function handler(m, { sock }) {
           ? "\ud83d\udcf7 *Foto " + (i+1) + "/" + total + "* \u2022 " + sizeMB + " MB\n\n" + senderTag + " ini file kamu \u2705\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag
           : "\ud83d\udcf7 *Foto " + (i+1) + "/" + total + "* \u2022 " + sizeMB + " MB";
         await sock.sendMessage(target, {
-          image: f.buf,
+          image: { url: f.path },
           caption,
           mimetype: mime,
           fileName: f.name || ("foto-" + (i + 1) + ".jpg"),
-          fileLength: f.buf.length,
+          fileLength: f.size,
           mentions: i === 0 ? [sender] : [],
         });
       }
@@ -227,11 +230,11 @@ export async function handler(m, { sock }) {
       if (isImage(v.name)) {
         const mime = getImageMimeType(v.name);
         await sock.sendMessage(target, {
-          image: v.buf,
+          image: { url: v.path },
           caption: "\ud83d\udcf7 " + sizeMB + " MB\n\n" + senderTag + " ini file kamu \u2705\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
           mimetype: mime,
           fileName: v.name || "foto.jpg",
-          fileLength: v.buf.length,
+          fileLength: v.size,
           mentions: [sender],
         });
       } else {
@@ -239,12 +242,16 @@ export async function handler(m, { sock }) {
         // WhatsApp menampilkan media tanpa ukuran dan unduhan penerima lebih
         // sering menggantung/gagal. jpegThumbnail kosong dibiarkan agar WA
         // membuat thumbnail sendiri dari file (lebih andal daripada tanpa apa pun).
+        //
+        // Media dikirim sebagai { url: path }: baileys membaca file itu bertahap
+        // dari disk saat mengenkripsi, jadi pemakaian memori tetap kecil berapa
+        // pun ukuran videonya. Sebelumnya seluruh isi file ditahan di memori.
         await sock.sendMessage(target, {
-          video: v.buf,
+          video: { url: v.path },
           caption: "\ud83c\udfac *Video HD siap!*\n\n" + senderTag + " ini video kamu \u2705\n\n_Agar SW kamu HD, share video ini langsung dari bot ke SW kamu._\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
           mimetype: "video/mp4",
           fileName: (v.name || "video").replace(/\.[^.]+$/, "") + ".mp4",
-          fileLength: v.buf.length,
+          fileLength: v.size,
           mentions: [sender],
         });
       }
