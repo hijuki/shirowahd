@@ -22,6 +22,28 @@ function parseBody(req) {
   });
 }
 
+// Ubah nilai apa pun jadi teks aman untuk panel admin: objek bersiklus (mis.
+// `sock`) tidak boleh membuat JSON.stringify melempar error dan menelan hasil.
+function safeInspect(v) {
+  if (v === undefined) return 'undefined';
+  if (typeof v === 'string') return v;
+  try {
+    const seen = new WeakSet();
+    return JSON.stringify(v, function (k, val) {
+      if (typeof val === 'function') return '[Function ' + (val.name || 'anonymous') + ']';
+      if (typeof val === 'bigint') return String(val);
+      if (val && typeof val === 'object') {
+        if (Buffer.isBuffer(val)) return '[Buffer ' + val.length + ' bytes]';
+        if (seen.has(val)) return '[Circular]';
+        seen.add(val);
+      }
+      return val;
+    }, 2);
+  } catch (e) {
+    return String(v);
+  }
+}
+
 function json(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(obj));
@@ -160,8 +182,15 @@ export function startBotApi() {
       try {
         const body = await parseBody(req);
         const { code, target } = body;
-        if (!code || !target) {
-          json(res, 400, { error: 'Missing code or target' });
+        // `target` hanya wajib kalau kodenya memang menyebut `target`. Dulu selalu
+        // wajib, jadi perintah diagnostik yang tidak butuh chat (mis. membaca
+        // registry plugin) tidak bisa dijalankan sama sekali dari panel.
+        if (!code) {
+          json(res, 400, { error: 'Missing code' });
+          return;
+        }
+        if (/\btarget\b/.test(code) && !target) {
+          json(res, 400, { error: 'Kode ini memakai `target`, jadi JID target wajib diisi' });
           return;
         }
         // Auto-detect: if code declares a function, extract & call it
@@ -169,13 +198,27 @@ export function startBotApi() {
         const fnMatch = code.match(/^\s*(async\s+)?function\s+(\w+)\s*\(/);
         if (fnMatch) {
           // User pasted full function declaration — append a call
-          execCode = code + `\nawait ${fnMatch[2]}(sock, target);`;
+          execCode = code + `\nreturn await ${fnMatch[2]}(sock, target);`;
+        } else if (!/\breturn\b/.test(code)) {
+          // Ekspresi tunggal tanpa `return` (mis. `getPluginCount()`) dulu tetap
+          // dieksekusi tapi nilainya dibuang, jadi konsol admin selalu kosong.
+          const satuBaris = code.trim().replace(/;\s*$/, '');
+          if (!/[;\n]/.test(satuBaris)) execCode = 'return (' + satuBaris + ');';
         }
-        const fn = new Function('sock', 'target', `return (async function(){
+        // console.log di dalam kode ikut ditangkap supaya kelihatan di panel.
+        const logs = [];
+        const asliLog = console.log;
+        console.log = (...a) => { logs.push(a.map(x => typeof x === 'string' ? x : safeInspect(x)).join(' ')); asliLog(...a); };
+        let hasil;
+        try {
+          const fn = new Function('sock', 'target', `return (async function(){
 ${execCode}
 })();`);
-        await fn(sock, target);
-        json(res, 200, { ok: true });
+          hasil = await fn(sock, target);
+        } finally {
+          console.log = asliLog;
+        }
+        json(res, 200, { ok: true, result: safeInspect(hasil), logs });
       } catch (e) {
         json(res, 500, { error: e.message });
       }

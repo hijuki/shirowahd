@@ -122,11 +122,18 @@ export default function Bot({ toast }) {
   const doExec = async (e) => {
     e.preventDefault()
     if (!cmd.trim()) return
-    if (!execTarget.trim()) { toast('Isi JID target dulu (backend butuh target)', 'error'); return }
+    // Target hanya perlu kalau kodenya memang menyebut `target` — perintah
+    // diagnostik seperti `getPluginCount()` tidak mengirim pesan ke siapa pun.
+    const butuhTarget = /\btarget\b/.test(cmd)
+    if (butuhTarget && !execTarget.trim()) { toast('Kode ini memakai `target`, isi JID dulu', 'error'); return }
     setBusy(true)
     try {
       const r = await execCommand(cmd.trim(), execTarget.trim())
-      setOut(typeof r === 'string' ? r : r?.output ?? r?.result ?? JSON.stringify(r, null, 2))
+      const bagian = []
+      if (r?.logs?.length) bagian.push(r.logs.join('\n'))
+      const nilai = typeof r === 'string' ? r : (r?.output ?? r?.result)
+      if (nilai !== undefined && nilai !== null && nilai !== 'undefined') bagian.push(String(nilai))
+      setOut(bagian.length ? bagian.join('\n') : '(selesai, tidak ada nilai kembalian)')
     } catch (e) { setOut(`Error: ${e.message}`); toast(`Error: ${e.message}`, 'error') }
     setBusy(false)
   }
@@ -315,8 +322,20 @@ export default function Bot({ toast }) {
       {/* Exec command */}
       <div className="card p-6 md:p-8 space-y-3">
         <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-terminal text-[#22d3ee] mr-2" />Eksekusi Perintah</h2>
-        <p className="text-xs text-[#7e90ad]">Kode dieksekusi di konteks bot dengan variabel <code className="font-mono">sock</code> dan <code className="font-mono">target</code>.</p>
-        <input value={execTarget} onChange={e => setExecTarget(e.target.value)} placeholder="JID target (628xxx@s.whatsapp.net atau xxx@g.us)"
+        <p className="text-xs text-[#7e90ad]">Kode dieksekusi di konteks bot dengan variabel <code className="font-mono">sock</code> dan <code className="font-mono">target</code>. Nilai kembalian &amp; <code className="font-mono">console.log</code> ikut ditampilkan. JID hanya wajib kalau kode memakai <code className="font-mono">target</code>.</p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            ['Cek koneksi', 'sock.user'],
+            ['Jumlah plugin', "(await import('/root/shirowahd/src/lib/hillz-plugins.js')).getPluginCount()"],
+            ['Pakai RAM', 'process.memoryUsage()'],
+          ].map(([label, kode]) => (
+            <button key={label} type="button" onClick={() => setCmd(kode)}
+              className="min-h-10 rounded-[10px] px-3 text-[11px] font-bold bg-white/[.05] border border-white/[.07] text-[#7e90ad] hover:text-white transition-colors duration-[150ms]">
+              {label}
+            </button>
+          ))}
+        </div>
+        <input value={execTarget} onChange={e => setExecTarget(e.target.value)} placeholder="JID target (opsional — hanya bila kode memakai `target`)"
           className="w-full rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm font-mono transition-colors duration-[150ms]" />
         <form onSubmit={doExec} className="flex gap-2">
           <input value={cmd} onChange={e => setCmd(e.target.value)} placeholder="Contoh: await sock.sendMessage(target, { text: 'hai' })"
