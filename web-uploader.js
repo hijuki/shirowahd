@@ -174,7 +174,7 @@ function saveSettings(data) {
     autoCleanup: data.autoCleanup ?? cur.autoCleanup ?? false,
     videoAsDocumentMB: data.videoAsDocumentMB ?? cur.videoAsDocumentMB ?? 180,
     maxVideoLongSide: data.maxVideoLongSide ?? cur.maxVideoLongSide ?? 1280,
-    directUploadEnabled: data.directUploadEnabled ?? cur.directUploadEnabled ?? false,
+    directUploadEnabled: data.directUploadEnabled !== undefined ? !!data.directUploadEnabled : (cur.directUploadEnabled !== undefined ? cur.directUploadEnabled : true),
     directUploadHost: nonEmpty(data.directUploadHost) ?? cur.directUploadHost ?? 'up.swhdhlz.my.id',
     directUploadPort: data.directUploadPort ?? cur.directUploadPort ?? 8443,
     autoCleanupInterval: data.autoCleanupInterval ?? cur.autoCleanupInterval ?? 30,
@@ -1192,6 +1192,7 @@ async function handleRequest(req, res) {
       const saved = saveSettings(data);
       if (saved.expireMinutes) setTTL(saved.expireMinutes * 60000);
       startAutoCleanup(); // restart auto-cleanup with new settings
+      mulaiJalurLangsung();
       jsonRes(res, 200, { ok: true });
     } catch (e) {
       jsonRes(res, 400, { ok: false, error: e.message });
