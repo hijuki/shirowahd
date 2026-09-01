@@ -146,7 +146,7 @@ export default function UploadPanel({ settings, toast }) {
   // Kalau server tidak perlu memproses (mis. foto), transfer langsung ke 100%.
   const totalPct = encode
     ? (encode.pct >= 100 ? 100 : Math.max(1, Math.min(99, Math.round(encode.pct))))
-    : (uploading ? Math.min(99, Math.round(progress.pct || 0)) : (success ? 100 : 0))
+    : (uploading ? Math.min(99, Math.round(progress.pct || 0)) : (result ? 100 : 0))
 
   if (settings?.maintenance) {
     return (
