@@ -1,11 +1,11 @@
 'use client'
 
 const tabs = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
-  { id: 'files', label: 'Media Files', icon: 'fa-folder-open' },
-  { id: 'settings', label: 'Pengaturan', icon: 'fa-sliders' },
-  { id: 'security', label: 'Keamanan', icon: 'fa-shield-halved' },
-  { id: 'bot', label: 'Bot WhatsApp', icon: 'fa-robot' },
+  { id: 'dashboard', label: 'Dashboard', shortLabel: 'Dashboard', icon: 'fa-chart-pie' },
+  { id: 'files', label: 'Media Files', shortLabel: 'Files', icon: 'fa-folder-open' },
+  { id: 'settings', label: 'Pengaturan', shortLabel: 'Settings', icon: 'fa-sliders' },
+  { id: 'security', label: 'Keamanan', shortLabel: 'Security', icon: 'fa-shield-halved' },
+  { id: 'bot', label: 'Bot WhatsApp', shortLabel: 'Bot WA', icon: 'fa-robot' },
 ]
 
 export default function Layout({ active, setActive, children }) {
@@ -112,19 +112,21 @@ export default function Layout({ active, setActive, children }) {
       </main>
 
       {/* Bottom Bar Mobile Navigation */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[rgba(6,10,20,0.92)] backdrop-blur-2xl border-t border-white/[.08] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex justify-around">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[rgba(6,10,20,0.95)] backdrop-blur-2xl border-t border-white/[.08] px-1.5 py-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around gap-1">
         {tabs.map(t => {
           const isActive = active === t.id
           return (
             <button
               key={t.id}
               onClick={() => setActive(t.id)}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition-all duration-150 text-[10px] font-bold ${isActive
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl transition-all duration-150 ${isActive
                 ? 'text-[#38bdf8] bg-[#0062FF]/15'
                 : 'text-[#7e90ad] hover:text-white'}`}
             >
               <i className={`fa-solid ${t.icon} text-base`} />
-              <span className="truncate max-w-[64px]">{t.label}</span>
+              <span className="text-[10px] font-bold tracking-tight whitespace-nowrap text-center">
+                {t.shortLabel || t.label}
+              </span>
             </button>
           )
         })}
