@@ -2,12 +2,13 @@ import axios from "axios";
 import moment from "moment-timezone";
 import PhoneNum from "awesome-phonenumber";
 import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
+import { fetchGetcontactTags } from "./getcontact.js";
 
 const pluginConfig = {
   name: "dossier",
   alias: ["intel", "lacaknomor", "osintnomor", "ceknomor", "threatdossier", "deepintel"],
   category: "stalker",
-  description: "Deep OSINT Dossier: Identitas nomor, nama E-Wallet asli, HLR operator, status WA, & threat score",
+  description: "Deep OSINT Dossier: Identitas nomor, GetContact Tags, HLR operator, status WA, & threat score",
   usage: ".dossier <nomor / tag / reply>",
   example: ".dossier 081234567890",
   cooldown: 5,
@@ -15,7 +16,7 @@ const pluginConfig = {
   isEnabled: true,
 };
 
-// Database HLR Prefix Indonesia Lengkap (Operator + Wilayah Asal)
+// Database HLR Prefix Indonesia Lengkap
 const HLR_DATABASE = [
   // Telkomsel
   { prefix: "0811", operator: "Telkomsel", card: "Kartu Halo (Pasca)", region: "Nasional (Pascabayar)" },
@@ -72,7 +73,6 @@ function getHlrInfo(rawPhone) {
   const matched = HLR_DATABASE.find((item) => item.prefix === p4);
   if (matched) return matched;
 
-  // Fallback
   if (std.startsWith("081") || std.startsWith("082") || std.startsWith("0851") || std.startsWith("0852") || std.startsWith("0853")) {
     return { operator: "Telkomsel", card: "SimPATI/by.U/AS", region: "Indonesia (Nasional)" };
   }
@@ -95,74 +95,22 @@ function getHlrInfo(rawPhone) {
   return { operator: "Unknown Telco", card: "Cellular", region: "Indonesia" };
 }
 
-// Inquiry E-Wallet Realtime (DANA, GoPay, ShopeePay, OVO)
-async function checkEwalletName(phoneDigits) {
-  let standard08 = phoneDigits;
-  if (standard08.startsWith("62")) standard08 = "0" + standard08.slice(2);
+// Threat Score Calculator
+function evaluateThreatDossier({ hasWa, hasPp, hasBio, isBusiness, gtcTagsCount, operator }) {
+  let score = 0;
 
-  const results = {
-    dana: null,
-    gopay: null,
-    shopeepay: null,
-    ovo: null,
-    primaryName: null,
-  };
-
-  // Endpoint 1: E-Wallet Inquiry Gateway
-  try {
-    const res = await axios.get(`https://api.verifikasi.me/v1/inquiry?phone=${standard08}`, { timeout: 4000 }).catch(() => null);
-    if (res?.data?.data) {
-      const d = res.data.data;
-      if (d.dana?.name) results.dana = d.dana.name;
-      if (d.gopay?.name) results.gopay = d.gopay.name;
-      if (d.shopeepay?.name) results.shopeepay = d.shopeepay.name;
-      if (d.ovo?.name) results.ovo = d.ovo.name;
-    }
-  } catch {}
-
-  // Endpoint 2: Fallback Cek E-Wallet Publik
-  if (!results.dana && !results.gopay) {
-    try {
-      const payload = { target: standard08, type: "ewallet" };
-      const res = await axios.post("https://api.orderkuota.com/v2/inquiry/account", payload, { timeout: 3500 }).catch(() => null);
-      if (res?.data?.name) {
-        results.primaryName = res.data.name;
-        if (!results.dana) results.dana = res.data.name;
-      }
-    } catch {}
-  }
-
-  // Cari nama terverifikasi paling representatif
-  results.primaryName = results.dana || results.gopay || results.shopeepay || results.ovo || results.primaryName || "TIDAK TERBUKA / PRIVATE";
-  return results;
-}
-
-// Data Breach & Threat Score Calculator
-function evaluateThreatDossier({ hasWa, hasPp, hasBio, isBusiness, ewalletName, operator }) {
-  let score = 0; // 0 = Safe/Legit, 100 = Dangerous/Fraud
-
-  // 1. Akun tidak terdaftar di WA tapi diselidiki
   if (!hasWa) score += 20;
-
-  // 2. Tidak ada Foto Profil (Ghost Account indicator)
   if (!hasPp) score += 25;
-
-  // 3. Tidak ada Bio / About
   if (!hasBio) score += 15;
 
-  // 4. E-Wallet status
-  if (ewalletName && ewalletName !== "TIDAK TERBUKA / PRIVATE") {
-    score -= 20; // Ada rekening terverifikasi = tingkat kredibilitas naik
+  if (gtcTagsCount > 0) {
+    score -= 20; // Ada jejak kontak riil tersimpan
   } else {
-    score += 15; // Anonim/tidak ada e-wallet terdeteksi
+    score += 15; // Burner / belum tersimpan
   }
 
-  // 5. Operator Telco virtual / provider sering disalahgunakan
-  if (operator === "Smartfren" || operator === "AXIS") {
-    score += 5;
-  }
+  if (operator === "Smartfren" || operator === "AXIS") score += 5;
 
-  // Clamp 0 - 100
   score = Math.max(5, Math.min(95, score));
 
   let threatLevel = "🟢 LOW RISK / VERIFIED PROFILE";
@@ -178,7 +126,7 @@ function evaluateThreatDossier({ hasWa, hasPp, hasBio, isBusiness, ewalletName, 
   return { score, threatLevel, badge };
 }
 
-async function handler(m, { sock, args, text, command }) {
+async function handler(m, { sock, text, command }) {
   let targetRaw = "";
 
   if (m.quoted?.sender) {
@@ -192,7 +140,7 @@ async function handler(m, { sock, args, text, command }) {
   if (!targetRaw || targetRaw.length < 5) {
     return m.reply(
       `🎯 *ᴅᴇᴇᴘ ᴏsɪɴᴛ & ɴᴜᴍʙᴇʀ ᴛʜʀᴇᴀᴛ ᴅᴏssɪᴇʀ*\n\n` +
-        `> Lacak identitas nomor, HLR operator, nama asli E-Wallet, status WA & skor ancaman.\n\n` +
+        `> Lacak identitas nomor, GetContact Tags, HLR operator, status WA & skor ancaman.\n\n` +
         `*Cara Penggunaan:*\n` +
         `> • \`${m.prefix}${command} 081234567890\`\n` +
         `> • \`${m.prefix}${command} 6281234567890\`\n` +
@@ -201,11 +149,8 @@ async function handler(m, { sock, args, text, command }) {
     );
   }
 
-  // Format ke standar 62 & 08
   let numClean = targetRaw.replace(/^0/, "62");
-  if (!numClean.startsWith("62")) {
-    numClean = "62" + numClean;
-  }
+  if (!numClean.startsWith("62")) numClean = "62" + numClean;
   const jid = `${numClean}@s.whatsapp.net`;
   const std08 = "0" + numClean.slice(2);
 
@@ -213,7 +158,7 @@ async function handler(m, { sock, args, text, command }) {
   await m.reply(
     `🛰️ *ᴍᴇɴɢᴀᴋsᴇs ᴅᴇᴇᴘ ᴏsɪɴᴛ ᴅᴀᴛᴀʙᴀsᴇ...*\n\n` +
       `> Target: \`+${numClean}\` (\`${std08}\`)\n` +
-      `> Memindai HLR Network, WhatsApp Core, E-Wallet Inquiry & Threat Intelligence...`
+      `> Memindai GetContact, HLR Network, WhatsApp Core, & Threat Intelligence...`
   );
 
   try {
@@ -228,23 +173,14 @@ async function handler(m, { sock, args, text, command }) {
     let businessProfile = null;
 
     if (existsOnWa) {
-      try {
-        ppUrl = await sock.profilePictureUrl(jid, "image");
-      } catch {}
-
+      try { ppUrl = await sock.profilePictureUrl(jid, "image"); } catch {}
       try {
         const fetchBio = await sock.fetchStatus(jid);
         if (fetchBio?.status) bioStatus = fetchBio.status;
         if (fetchBio?.setAt) bioUpdated = moment(fetchBio.setAt).tz("Asia/Jakarta").format("DD MMM YYYY, HH:mm [WIB]");
       } catch {}
-
-      try {
-        waName = (await sock.getName(jid)) || "Unknown";
-      } catch {}
-
-      try {
-        businessProfile = await sock.getBusinessProfile(jid);
-      } catch {}
+      try { waName = (await sock.getName(jid)) || "Unknown"; } catch {}
+      try { businessProfile = await sock.getBusinessProfile(jid); } catch {}
     }
 
     // 2. HLR & Carrier Intelligence
@@ -260,8 +196,8 @@ async function handler(m, { sock, args, text, command }) {
       }
     } catch {}
 
-    // 3. E-Wallet Inquiry Name
-    const ewallet = await checkEwalletName(numClean);
+    // 3. GetContact Tags Intelligence
+    const gtc = await fetchGetcontactTags(numClean);
 
     // 4. Threat & Security Evaluation
     const threat = evaluateThreatDossier({
@@ -269,11 +205,11 @@ async function handler(m, { sock, args, text, command }) {
       hasPp: !!ppUrl,
       hasBio: !!bioStatus,
       isBusiness: !!businessProfile,
-      ewalletName: ewallet.primaryName,
+      gtcTagsCount: gtc.tags.length,
       operator: hlr.operator,
     });
 
-    // 5. Visual Dossier Formatting (Dark Luxury Classified Theme)
+    // 5. Visual Dossier Formatting
     let body = `🗂️ *━━━━━━━━━━━━━━━━━━━━━━━*\n`;
     body += `🎯 *ᴅᴇᴇᴘ ᴏsɪɴᴛ • ᴛʜʀᴇᴀᴛ ᴅᴏssɪᴇʀ*\n`;
     body += `🗂️ *━━━━━━━━━━━━━━━━━━━━━━━*\n\n`;
@@ -282,8 +218,19 @@ async function handler(m, { sock, args, text, command }) {
     body += `┃ 📱 *Nomor:* \`${intlFormat}\` (${std08})\n`;
     body += `┃ 🌐 *Negara:* ${countryName}\n`;
     body += `┃ 📛 *Nama WhatsApp:* ${waName}\n`;
-    body += `┃ 💳 *Nama E-Wallet:* ${ewallet.primaryName}\n`;
+    body += `┃ 🏷️ *Nama Utama (GTC):* ${gtc.name || "TIDAK TERBUKA / PRIVATE"}\n`;
     body += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
+
+    if (gtc.tags.length > 0) {
+      body += `╭┈┈⬡「 🏷️ *ɢᴇᴛᴄᴏɴᴛᴀᴄᴛ ᴛᴀɢs* 」\n`;
+      gtc.tags.slice(0, 8).forEach((t, i) => {
+        body += `┃ ${i + 1}. ${t}\n`;
+      });
+      if (gtc.tags.length > 8) {
+        body += `┃ _...dan ${gtc.tags.length - 8} tag lainnya._\n`;
+      }
+      body += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
+    }
 
     body += `╭┈┈⬡「 📡 *ᴛᴇʟᴄᴏ & ʜʟʀ ɪɴᴛᴇʟ* 」\n`;
     body += `┃ 🏢 *Operator:* ${hlr.operator}\n`;
@@ -316,9 +263,8 @@ async function handler(m, { sock, args, text, command }) {
 
     body += `🔗 *Tautan Langsung Target:*\n`;
     body += `> 💬 *Direct Chat:* https://wa.me/${numClean}\n\n`;
-    body += `_Intelijen dihimpun secara otomatis dari HLR Network & Public OSINT Feed._`;
+    body += `_Data dihimpun dari GetContact, HLR Network & Public OSINT Directory._`;
 
-    // Interactive Quick Actions via sendButton
     const buttons = [
       {
         name: "cta_url",
@@ -331,8 +277,8 @@ async function handler(m, { sock, args, text, command }) {
       {
         name: "quick_reply",
         buttonParamsJson: JSON.stringify({
-          display_text: "🔍 Stalk Akun WA",
-          id: `${m.prefix}wastalk ${numClean}`,
+          display_text: "🏷️ Lihat Semua Tags GTC",
+          id: `${m.prefix}getcontact ${numClean}`,
         }),
       },
     ];
