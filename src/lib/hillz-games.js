@@ -144,14 +144,33 @@ class HillzGames {
         caption += `🎁 Hadiah: *Limit, Koin, EXP (random)*\n\n`;
         caption += `_Jawab langsung atau ketik "nyerah"\nSetiap salah, hint akan bertambah_`;
 
-        sentMsg = await sock.sendMessage(
-          chatId,
+        const gameButtons = [
           {
-            image: imageBuffer,
-            caption,
-            contextInfo: getGameContextInfo(),
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: "💡 Minta Hint",
+              id: "hint",
+            }),
           },
-          { quoted: m },
+          {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🏳️ Nyerah",
+              id: "nyerah",
+            }),
+          },
+        ];
+
+        sentMsg = await sock.sendButton(
+          chatId,
+          imageBuffer,
+          caption,
+          m,
+          {
+            buttons: gameButtons,
+            footer: `${config.bot?.name || "SHIROWAHD"} 🎮 Game Interactive`,
+            contextInfo: getGameContextInfo(),
+          }
         );
       } else {
         let text = `${cfg.emoji} *${cfg.title}*\n\n`;
@@ -163,13 +182,33 @@ class HillzGames {
         text += `🎁 Hadiah: *Limit, Koin, EXP (random)*\n\n`;
         text += `_Jawab langsung atau ketik "nyerah"\nSetiap salah, hint akan bertambah_`;
 
-        sentMsg = await sendGamePreview(
-          sock,
+        const gameButtons = [
+          {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: "💡 Minta Hint",
+              id: "hint",
+            }),
+          },
+          {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🏳️ Nyerah",
+              id: "nyerah",
+            }),
+          },
+        ];
+
+        sentMsg = await sock.sendButton(
           chatId,
+          null,
           text,
-          `${cfg.emoji} ${cfg.title}`,
-          "Jawab pertanyaan!",
-          { quoted: m },
+          m,
+          {
+            buttons: gameButtons,
+            footer: `${config.bot?.name || "SHIROWAHD"} 🎮 Game Interactive`,
+            contextInfo: getGameContextInfo(),
+          }
         );
       }
 
@@ -191,6 +230,17 @@ class HillzGames {
 
       const userAnswer = (m.body || "").trim();
       if (!userAnswer || userAnswer.startsWith(".")) return false;
+
+      if (userAnswer.toLowerCase() === "hint" || userAnswer.toLowerCase() === "minta hint") {
+        const answer = session.question[cfg.answerField];
+        session.hintLevel = (session.hintLevel || cfg.hintCount) + 1;
+        const progressiveHint = getHint(answer, session.hintLevel);
+        await m.reply(`💡 *PETUNJUK TAMBAHAN:*
+\`\`\`${progressiveHint}\`\`\`
+
+_Ayo tebak lagi!_`);
+        return true;
+      }
 
       if (isSurrender(userAnswer)) {
         endSession(chatId);
