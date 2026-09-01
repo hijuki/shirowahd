@@ -977,7 +977,7 @@ async function handleRequest(req, res) {
         successToday: Math.max(stats.uploadsToday || 0, successToday),
         failedToday: failedToday,
         totalStorage: getTotalStorage(),
-        directReady: true,
+        directReady: !!settings.directUploadEnabled,
         serverTime: Date.now()
       });
     } catch (e) {

@@ -235,7 +235,7 @@ export function AboutModal({ onClose }) {
         </div>
         <div className="flex items-center justify-between pb-2 border-b border-white/[0.04]">
           <span className="text-slate-400 font-medium">Direct Port</span>
-          <span className="font-mono font-bold text-emerald-400">TLS Port 8443 (Grey Cloud)</span>
+          <span className="font-mono font-bold text-emerald-400">High-Speed Stream</span>
         </div>
         <div className="flex items-center justify-between pb-2 border-b border-white/[0.04]">
           <span className="text-slate-400 font-medium">Transcoding Profile</span>

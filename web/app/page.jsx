@@ -217,7 +217,7 @@ export default function UploaderPage() {
                 {footerText || `${settings?.siteName || 'SHIROWAHD'} · SWHDHLZ BY HILLZ`}
               </p>
               <p className="text-slate-600 text-[9px] mt-1 font-mono">
-                Ultra HD Engine · Direct TLS 8443 Active
+                Ultra HD Engine · High-Speed Active
               </p>
             </footer>
           </div>

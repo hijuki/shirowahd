@@ -38,6 +38,7 @@ export default function LiveStats() {
   const total = stats?.totalToday || 0
   const success = stats?.successToday || total
   const failed = stats?.failedToday || 0
+  const isDirectOn = stats?.directReady !== false
 
   return (
     <div className="mb-6">
@@ -52,9 +53,9 @@ export default function LiveStats() {
             Aktivitas Server Hari Ini
           </span>
         </div>
-        <span className="text-[9px] font-mono font-medium text-slate-400 flex items-center gap-1">
-          <i className="fa-solid fa-bolt-lightning text-sky-400 text-[8px]" />
-          TLS 8443 Direct
+        <span className={`text-[9px] font-mono font-bold flex items-center gap-1 ${isDirectOn ? 'text-sky-400' : 'text-slate-500'}`}>
+          <i className={`fa-solid ${isDirectOn ? 'fa-bolt-lightning text-sky-400' : 'fa-bolt text-slate-500'} text-[8px]`} />
+          {isDirectOn ? '100MB+ ON' : '100MB+ OFF'}
         </span>
       </div>
 
