@@ -1,103 +1,71 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSettings, saveSettings, backupToGithub, getBackupHistory, getTunnelStatus, getGallery, uploadGalleryFile, deleteGalleryFile, getCfDns, setCfProxy, setDirectUpload, restartBot, restartWeb, restartAll } from '@/lib/admin-api'
+import {
+  getSettings, saveSettings, backupToGithub, getBackupHistory,
+  getTunnelStatus, getGallery, uploadGalleryFile, deleteGalleryFile,
+  getCfDns, setCfProxy, setDirectUpload,
+  restartBot, restartWeb, restartAll
+} from '@/lib/admin-api'
 
-const inputFields = [
-  { key: 'siteName', label: 'Nama Situs', ph: 'ShiroWahd', icon: 'fa-globe' },
-  { key: 'siteSubtitle', label: 'Subtitle', ph: 'Upload video & foto', icon: 'fa-pen' },
-  { key: 'ownerWhatsapp', label: 'Nomor WhatsApp Owner', ph: '628xxx', icon: 'fa-brands fa-whatsapp' },
-  { key: 'domain', label: 'Domain', ph: 'example.com', icon: 'fa-link' },
+const CATEGORIES = [
+  { id: 'network', label: 'Jalur & Layanan', icon: 'fa-network-wired', color: '#38bdf8' },
+  { id: 'branding', label: 'Tampilan & Brand', icon: 'fa-palette', color: '#818cf8' },
+  { id: 'links', label: 'Grup & Saluran WA', icon: 'fa-comments', color: '#34d399' },
+  { id: 'storage', label: 'Media & Storage', icon: 'fa-database', color: '#fbbf24' },
+  { id: 'security', label: 'Keamanan & Notif', icon: 'fa-shield-halved', color: '#fb7185' },
 ]
 
-const numFields = [
-  { key: 'maxFileSizeMB', label: 'Maks File (MB)', ph: '100', icon: 'fa-weight-hanging', suffix: 'MB', desc: '0 = tanpa batas' },
-  { key: 'expireMinutes', label: 'Expire (menit)', ph: '120', icon: 'fa-hourglass-half', suffix: 'min' },
-  { key: 'largeUploadMaxMB', label: 'Batas Upload Besar (MB)', ph: '0', icon: 'fa-cloud-arrow-up', suffix: 'MB', desc: '0 = tanpa batas, berlaku saat mode file besar ON' },
-  { key: 'storageQuotaMB', label: 'Kuota Storage (MB)', ph: '5000', icon: 'fa-database', suffix: 'MB', desc: '0 = tanpa batas' },
-  { key: 'rateLimit', label: 'Rate Limit (upload/jam)', ph: '0', icon: 'fa-gauge-high', desc: '0 = tanpa batas' },
-  { key: 'rateCooldown', label: 'Rate Cooldown (detik)', ph: '0', icon: 'fa-clock', desc: 'Jeda antar upload' },
-  { key: 'autoCleanupInterval', label: 'Auto Cleanup (menit)', ph: '30', icon: 'fa-broom', desc: 'Interval bersih-bersih file expired' },
-  { key: 'videoAsDocumentMB', label: 'Video Jadi Dokumen (MB)', ph: '180', icon: 'fa-file-video', suffix: 'MB', desc: 'Video di atas ini dikirim sebagai dokumen. Server WhatsApp menolak video >180 MB; sebagai dokumen tetap lolos & kualitas utuh. 0 = pakai default 180.' },
-]
-
-const toggles = [
-  { key: 'showWelcome', label: 'Welcome Popup', desc: 'Popup intro saat pertama buka', icon: 'fa-door-open', color: '#22d3ee' },
-  { key: 'showOwnerBtn', label: 'Tombol Chat Developer', desc: 'Button WA owner di popup', icon: 'fa-brands fa-whatsapp', color: '#25D366' },
-  { key: 'showChannelsBtn', label: 'Tombol Saluran', desc: 'Link channel di popup', icon: 'fa-tower-broadcast', color: '#22d3ee' },
-  { key: 'showClaimBtn', label: 'Tombol Grup Claim', desc: 'Link grup claim di popup & kode', icon: 'fa-comments', color: '#34d399' },
-  { key: 'showPopupBtns', label: 'Extra Popup Buttons', desc: 'Tombol custom tambahan', icon: 'fa-link', color: '#3b82f6' },
-  { key: 'autoCleanup', label: 'Auto Cleanup', desc: 'Hapus file expired otomatis', icon: 'fa-broom', color: '#fbbf24' },
-  { key: 'allowLargeUpload', label: 'Upload File Besar (>95 MB)', desc: 'ON = file besar auto dipecah biar lolos limit Cloudflare. OFF = maksimal 95 MB.', icon: 'fa-cloud-arrow-up', color: '#22d3ee' },
-  { key: 'maintenance', label: 'Mode Maintenance', desc: 'Upload dinonaktifkan sementara', icon: 'fa-screwdriver-wrench', color: '#fb7185' },
-]
-
-const telegramToggles = [
-  { key: 'telegramNotifyUpload', label: 'Notif Upload', desc: 'Kirim notifikasi saat ada upload baru' },
-  { key: 'telegramNotifyClaim', label: 'Notif Claim', desc: 'Kirim notifikasi saat ada klaim file' },
-  { key: 'telegramNotifyError', label: 'Notif Error', desc: 'Kirim notifikasi saat ada error' },
-]
-
-// Link list types
 const linkTypes = [
-  { key: 'channels', label: 'Saluran / Channel', icon: 'fa-tower-broadcast', color: '#22d3ee', phName: 'Nama saluran', phLink: 'https://whatsapp.com/channel/xxx' },
-  { key: 'claimGroups', label: 'Grup Claim', icon: 'fa-comments', color: '#34d399', phName: 'Nama grup', phLink: 'https://chat.whatsapp.com/xxx' },
-  { key: 'groups', label: 'Grup WhatsApp', icon: 'fa-users', color: '#3b82f6', phName: 'Nama grup', phLink: 'https://chat.whatsapp.com/xxx' },
-  { key: 'popupButtons', label: 'Custom Popup Buttons', icon: 'fa-link', color: '#fb7185', phName: 'Label tombol', phLink: 'https://link-tujuan' },
+  { key: 'channels', label: 'Saluran / Channel WA', icon: 'fa-tower-broadcast', color: '#38bdf8', phName: 'Nama Saluran', phLink: 'https://whatsapp.com/channel/...' },
+  { key: 'claimGroups', label: 'Grup Klaim Video', icon: 'fa-comments', color: '#34d399', phName: 'Nama Grup Klaim', phLink: 'https://chat.whatsapp.com/...' },
+  { key: 'groups', label: 'Grup Komunitas WA', icon: 'fa-users', color: '#818cf8', phName: 'Nama Grup', phLink: 'https://chat.whatsapp.com/...' },
+  { key: 'popupButtons', label: 'Custom Popup Buttons', icon: 'fa-link', color: '#f43f5e', phName: 'Label Tombol', phLink: 'https://...' },
 ]
 
 function Toggle({ on, onChange, label, desc, icon, color }) {
   return (
-    /* <label> tidak meneruskan klik ke <button> (bukan form control), jadi handler
-       ditaruh di baris; tombol di dalam sengaja tanpa onClick supaya klik cukup
-       menggelembung ke baris = satu kali toggle, bukan dua. */
-    <label onClick={onChange} className="flex items-center justify-between gap-3 py-3 cursor-pointer group">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+    <div onClick={onChange} className="flex items-center justify-between gap-4 py-3.5 px-4 rounded-xl bg-white/[.02] border border-white/[.05] hover:border-white/[.10] hover:bg-white/[.04] transition-all duration-150 cursor-pointer group">
+      <div className="flex items-center gap-3.5 min-w-0 flex-1">
         {icon && (
-          <div className="w-8 h-8 shrink-0 rounded-[10px] grid place-items-center" style={{ background: `${color || '#22d3ee'}12`, border: `1px solid ${color || '#22d3ee'}25` }}>
-            <i className={`fa-solid ${icon} text-[11px]`} style={{ color: color || '#22d3ee' }} />
+          <div className="w-9 h-9 shrink-0 rounded-lg grid place-items-center transition-transform group-hover:scale-105" style={{ background: `${color || '#38bdf8'}15`, border: `1px solid ${color || '#38bdf8'}30` }}>
+            <i className={`fa-solid ${icon} text-xs`} style={{ color: color || '#38bdf8' }} />
           </div>
         )}
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold">{label}</p>
-          {desc && <p className="text-[11px] text-[#7e90ad] mt-0.5">{desc}</p>}
+          <p className="text-[13px] font-semibold text-white/90 group-hover:text-white transition-colors">{label}</p>
+          {desc && <p className="text-[11px] text-[#7e90ad] mt-0.5 leading-relaxed">{desc}</p>}
         </div>
       </div>
       <button type="button" role="switch" aria-checked={!!on} aria-label={label}
-        className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-[250ms] ${on ? 'bg-[#22d3ee]' : 'bg-white/10'}`}>
-        <span className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white shadow-md transition-all duration-[250ms] ${on ? 'left-[22px]' : 'left-[3px]'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
+        className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-200 ${on ? 'bg-[#0062FF]' : 'bg-white/10'}`}>
+        <span className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white shadow-md transition-all duration-200 ${on ? 'left-[22px]' : 'left-[3px]'}`} />
       </button>
-    </label>
+    </div>
   )
 }
 
-// Per-link card with inline toggle
 function LinkCard({ item, onChange, onRemove, phName, phLink, color }) {
   return (
-    <div className="rounded-[14px] bg-white/[.02] border border-white/[.06] p-3 space-y-2 group hover:border-white/[.10] transition-all duration-[150ms]">
+    <div className="rounded-xl bg-white/[.02] border border-white/[.06] p-3.5 space-y-2.5 hover:border-white/[.12] transition-all duration-150">
       <div className="flex items-center gap-2">
         <input value={item.name || ''} onChange={e => onChange({ ...item, name: e.target.value })} placeholder={phName}
-          className="flex-1 min-w-0 rounded-[10px] px-3 py-2 bg-white/[.04] border border-white/[.06] focus:border-[#22d3ee]/40 outline-none text-[13px] font-semibold transition-colors duration-[150ms]" />
-        <button type="button" onClick={onRemove} className="w-8 h-8 shrink-0 rounded-[10px] grid place-items-center text-bad/50 hover:text-bad hover:bg-bad/10 transition-all duration-[150ms]">
-          <i className="fa-solid fa-trash-can text-[10px]" />
+          className="flex-1 min-w-0 rounded-lg px-3 py-2 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-xs font-semibold text-white/90 placeholder:text-[#7e90ad]/50 transition-colors" />
+        <button type="button" onClick={onRemove} className="w-8 h-8 shrink-0 rounded-lg grid place-items-center text-bad/60 hover:text-bad hover:bg-bad/10 transition-colors">
+          <i className="fa-solid fa-trash-can text-xs" />
         </button>
       </div>
-      <input value={item.link || ''} onChange={e => onChange({ ...item, link: e.target.value })} placeholder={phLink}
-        className="w-full rounded-[10px] px-3 py-2 bg-white/[.04] border border-white/[.06] focus:border-[#22d3ee]/40 outline-none text-[12px] font-mono text-[#7e90ad] transition-colors duration-[150ms]" />
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[#7e90ad]/60 font-semibold flex items-center gap-1.5">
-          <span className={`w-[6px] h-[6px] rounded-full transition-colors duration-[150ms] ${item.visible !== false ? 'bg-ok' : 'bg-white/20'}`} />
-          {item.visible !== false ? 'Tampil di uploader' : 'Tersembunyi'}
-        </span>
+      <div className="flex items-center gap-2">
+        <input value={item.link || ''} onChange={e => onChange({ ...item, link: e.target.value })} placeholder={phLink}
+          className="flex-1 min-w-0 rounded-lg px-3 py-2 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-xs font-mono text-[#7e90ad] placeholder:text-[#7e90ad]/40 transition-colors" />
         <button type="button" onClick={() => onChange({ ...item, visible: item.visible === false ? true : false })}
-          className={`relative w-9 h-5 rounded-full transition-colors duration-[250ms] ${item.visible !== false ? 'bg-ok' : 'bg-white/10'}`}>
-          <span className={`absolute top-[2px] w-[16px] h-[16px] rounded-full bg-white shadow-sm transition-all duration-[250ms] ${item.visible !== false ? 'left-[18px]' : 'left-[2px]'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
+          className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all ${item.visible !== false ? 'bg-good/15 text-good border border-good/30' : 'bg-white/[.05] text-[#7e90ad] border border-white/[.08]'}`}>
+          {item.visible !== false ? 'Aktif' : 'Off'}
         </button>
       </div>
     </div>
   )
 }
 
-// Link list section with add button
 function LinkSection({ type, data, setData }) {
   const items = data[type.key] || []
   const setItems = (newItems) => setData(p => ({ ...p, [type.key]: newItems }))
@@ -106,30 +74,25 @@ function LinkSection({ type, data, setData }) {
   const remove = (idx) => setItems(items.filter((_, i) => i !== idx))
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-[9px] grid place-items-center" style={{ background: `${type.color}12`, border: `1px solid ${type.color}25` }}>
-            <i className={`fa-solid ${type.icon} text-[10px]`} style={{ color: type.color }} />
-          </div>
-          <div>
-            <p className="text-[12px] font-bold">{type.label}</p>
-            <p className="text-[9px] text-[#7e90ad]">{items.length} item</p>
-          </div>
-        </div>
-        <button type="button" onClick={add} className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-white/[.04] border border-white/[.06] hover:bg-white/[.08] hover:border-white/[.12] text-[11px] font-bold transition-all duration-[150ms] active:scale-[.97]">
-          <i className="fa-solid fa-plus text-[9px]" style={{ color: type.color }} /> Tambah
+        <span className="text-xs font-bold uppercase tracking-wider text-white/80 flex items-center gap-2">
+          <i className={`fa-solid ${type.icon} text-xs`} style={{ color: type.color }} />
+          {type.label}
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-white/[.06] text-[#7e90ad]">
+            {items.length}
+          </span>
+        </span>
+        <button type="button" onClick={add} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/[.05] hover:bg-white/[.10] text-white/90 border border-white/[.08] transition-all flex items-center gap-1.5 active:scale-95">
+          <i className="fa-solid fa-plus text-[10px]" />Tambah
         </button>
       </div>
-
       {items.length === 0 ? (
-        <div className="py-4 text-center rounded-[12px] border border-dashed border-white/[.06]">
-          <p className="text-[#7e90ad]/50 text-[11px]">Belum ada. Klik "Tambah" untuk menambahkan.</p>
-        </div>
+        <p className="text-xs text-[#7e90ad]/60 italic py-2">Belum ada link ditambahkan.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {items.map((item, idx) => (
-            <LinkCard key={idx} item={item} onChange={it => update(idx, it)} onRemove={() => remove(idx)} phName={type.phName} phLink={type.phLink} color={type.color} />
+            <LinkCard key={idx} item={item} onChange={v => update(idx, v)} onRemove={() => remove(idx)} phName={type.phName} phLink={type.phLink} color={type.color} />
           ))}
         </div>
       )}
@@ -137,59 +100,84 @@ function LinkSection({ type, data, setData }) {
   )
 }
 
-
 function BrandGallery({ data, set }) {
   const [files, setFiles] = useState([])
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+
   const load = () => getGallery().then(r => setFiles(r?.files || [])).catch(() => {})
   useEffect(() => { load() }, [])
 
   const onUpload = async (e) => {
     const f = e.target.files?.[0]
-    e.target.value = ''
     if (!f) return
     setBusy(true); setMsg('')
-    try { await uploadGalleryFile(f); await load(); setMsg('Terupload ✓') }
-    catch (err) { setMsg(err.message) }
-    setBusy(false)
+    try {
+      const res = await uploadGalleryFile(f)
+      if (res.ok) { setMsg('File terupload: ' + res.file.name); load() }
+      else { setMsg('Gagal: ' + (res.error || 'unknown')) }
+    } catch (err) { setMsg('Error: ' + err.message) }
+    finally { setBusy(false); e.target.value = '' }
   }
 
-  const applyTo = (key, url) => { set(key, url); setMsg(`Dipakai sebagai ${key === 'logoUrl' ? 'Logo' : 'Foto Hero'} — jangan lupa Simpan`) }
+  const onDelete = async (name) => {
+    if (!confirm('Hapus file ' + name + ' dari galeri?')) return
+    try {
+      await deleteGalleryFile(name)
+      if (data.logoUrl?.includes(name)) set('logoUrl', '')
+      if (data.heroImageUrl?.includes(name)) set('heroImageUrl', '')
+      load()
+    } catch (e) { alert('Gagal hapus: ' + e.message) }
+  }
+
+  const applyTo = (key, url) => {
+    set(key, url)
+    setMsg(`Dipakai sebagai ${key === 'logoUrl' ? 'Logo' : 'Foto Hero'} — klik Simpan di bawah`)
+  }
 
   return (
-    <div className="card p-5 space-y-3">
-      <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
-        <i className="fa-solid fa-images text-[#22d3ee]" /> Galeri Brand
-      </h3>
-      <p className="text-[11px] text-[#7e90ad]/70">Upload gambar sekali, lalu pakai sebagai Logo atau Foto Hero. Kalau logo dipakai dari sini, favicon web otomatis ikut.</p>
-      <label className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-[150ms] ${busy ? 'opacity-50 pointer-events-none' : 'hover:brightness-110'}`}
-        style={{ background: 'rgba(34,211,238,.08)', border: '1px solid rgba(34,211,238,.25)' }}>
-        <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'} text-[#22d3ee]`} />
-        {busy ? 'Mengupload…' : 'Upload Gambar'}
-        <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg,.gif,.ico" className="hidden" onChange={onUpload} />
-      </label>
-      {msg && <p className="text-[11px] text-[#34d399]">{msg}</p>}
-      {files.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div className="p-5 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-xs font-bold tracking-wider uppercase text-white/90 flex items-center gap-2">
+            <i className="fa-solid fa-images text-[#818cf8]" /> Galeri Gambar Server
+          </h4>
+          <p className="text-[11px] text-[#7e90ad] mt-0.5">Upload logo atau background hero langsung ke server lokal</p>
+        </div>
+        <label className={`px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#0062FF] hover:bg-[#0052D6] text-white transition-all cursor-pointer flex items-center gap-2 ${busy ? 'opacity-50 pointer-events-none' : ''}`}>
+          <i className="fa-solid fa-cloud-arrow-up text-xs" />
+          {busy ? 'Mengupload…' : 'Upload File'}
+          <input type="file" accept="image/*" onChange={onUpload} className="hidden" />
+        </label>
+      </div>
+
+      {msg && <p className="text-xs text-[#38bdf8] font-medium bg-[#38bdf8]/10 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20">{msg}</p>}
+
+      {files.length === 0 ? (
+        <p className="text-xs text-[#7e90ad]/60 italic py-3 text-center border border-dashed border-white/[.08] rounded-xl">Belum ada file di galeri.</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {files.map(f => {
-            const isLogo = data.logoUrl === f.url, isHero = data.heroImageUrl === f.url
+            const isLogo = data.logoUrl === f.url
+            const isHero = data.heroImageUrl === f.url
             return (
-              <div key={f.name} className={`rounded-xl p-2.5 space-y-2 border transition-colors duration-[150ms] ${isLogo || isHero ? 'border-[#22d3ee]/40 bg-[#22d3ee]/[.04]' : 'border-white/[.07] bg-white/[.02]'}`}>
-                <div className="h-20 rounded-lg bg-[#0b1220] grid place-items-center overflow-hidden">
-                  <img src={f.url} alt={f.name} className="max-h-full max-w-full object-contain" />
+              <div key={f.name} className="group relative rounded-xl overflow-hidden bg-white/[.03] border border-white/[.08] hover:border-white/[.20] transition-all flex flex-col">
+                <div className="aspect-video w-full bg-black/40 relative overflow-hidden flex items-center justify-center">
+                  <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
+                  <div className="absolute top-1.5 right-1.5 flex gap-1">
+                    {isLogo && <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-[#0062FF] text-white">LOGO</span>}
+                    {isHero && <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-[#34d399] text-black">HERO</span>}
+                  </div>
                 </div>
-                <p className="text-[10px] font-mono text-[#7e90ad] truncate" title={f.name}>{f.name}</p>
-                <div className="flex flex-wrap gap-1">
-                  <button onClick={() => applyTo('logoUrl', f.url)} className={`min-h-10 text-[11px] font-bold px-3 py-2 rounded-lg transition-colors duration-[150ms] ${isLogo ? 'bg-[#22d3ee]/25 text-[#22d3ee]' : 'bg-white/[.05] text-[#7e90ad] hover:text-white'}`}>
-                    {isLogo ? '✓ Logo' : 'Jadikan Logo'}
-                  </button>
-                  <button onClick={() => applyTo('heroImageUrl', f.url)} className={`min-h-10 text-[11px] font-bold px-3 py-2 rounded-lg transition-colors duration-[150ms] ${isHero ? 'bg-[#38bdf8]/25 text-[#38bdf8]' : 'bg-white/[.05] text-[#7e90ad] hover:text-white'}`}>
-                    {isHero ? '✓ Hero' : 'Jadikan Hero'}
-                  </button>
-                  <button onClick={() => { if (confirm(`Hapus ${f.name}?`)) deleteGalleryFile(f.name).then(load) }} aria-label={`Hapus ${f.name}`} className="min-h-10 min-w-10 text-[12px] px-3 py-2 rounded-lg bg-white/[.05] text-red-400/70 hover:text-red-400 transition-colors duration-[150ms]">
-                    <i className="fa-solid fa-trash" />
-                  </button>
+                <div className="p-2.5 flex-1 flex flex-col justify-between gap-2">
+                  <p className="text-[11px] font-mono text-[#7e90ad] truncate" title={f.name}>{f.name}</p>
+                  <div className="flex items-center justify-between gap-1 pt-1 border-t border-white/[.06]">
+                    <div className="flex gap-1">
+                      <button type="button" onClick={() => applyTo('logoUrl', f.url)} className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${isLogo ? 'bg-[#0062FF]/20 text-[#38bdf8] border border-[#0062FF]/40' : 'bg-white/[.06] text-white/80 hover:bg-white/[.12]'}`}>Logo</button>
+                      <button type="button" onClick={() => applyTo('heroImageUrl', f.url)} className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${isHero ? 'bg-[#34d399]/20 text-[#34d399] border border-[#34d399]/40' : 'bg-white/[.06] text-white/80 hover:bg-white/[.12]'}`}>Hero</button>
+                    </div>
+                    <button type="button" onClick={() => onDelete(f.name)} className="w-6 h-6 rounded text-bad/60 hover:text-bad hover:bg-bad/10 grid place-items-center text-[10px] transition-colors"><i className="fa-solid fa-trash" /></button>
+                  </div>
                 </div>
               </div>
             )
@@ -201,6 +189,7 @@ function BrandGallery({ data, set }) {
 }
 
 export default function Settings({ toast }) {
+  const [activeTab, setActiveTab] = useState('network')
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -211,435 +200,653 @@ export default function Settings({ toast }) {
   const [cfBusy, setCfBusy] = useState('')
 
   const loadBackupHistory = () => getBackupHistory().then(r => setBkHistory(r?.history || [])).catch(() => {})
+  const loadCf = () => getCfDns().then(setCf).catch(() => setCf({ ok: false, error: 'Gagal memuat info Cloudflare' }))
 
-  const loadCf = () => getCfDns().then(setCf).catch(() => setCf({ ok: false, error: 'gagal memuat' }))
-
-  // Matikan/nyalakan proxy satu record. proxied=false membuka IP asli VPS.
   const toggleProxy = async (rec) => {
     setCfBusy(rec.id)
     try {
       const r = await setCfProxy(rec.id, !rec.proxied)
-      if (r.ok) toast(r.name + ' → ' + (r.proxied ? 'lewat Cloudflare (IP aman)' : 'langsung (IP terbuka, tanpa cap)'), 'success')
-      else toast('Gagal: ' + r.error, 'error')
-      await loadCf()
-    } catch (e) { toast('Gagal: ' + e.message, 'error') }
-    setCfBusy('')
+      if (r.ok) {
+        toast(`Proxy ${rec.name} diubah jadi ${!rec.proxied ? 'ON' : 'OFF'}`, 'success')
+        loadCf()
+      } else {
+        toast('Gagal ubah proxy: ' + (r.error || 'unknown'), 'error')
+      }
+    } catch (e) { toast('Error: ' + e.message, 'error') }
+    finally { setCfBusy('') }
   }
 
   const toggleDirect = async () => {
     setCfBusy('direct')
     try {
-      const r = await setDirectUpload(!cf?.direct?.enabled)
-      if (r.ok) toast(r.note + ' Restart web dari tab Bot untuk menerapkan.', 'success')
-      else toast('Gagal: ' + r.error, 'error')
-      await loadCf()
-    } catch (e) { toast('Gagal: ' + e.message, 'error') }
-    setCfBusy('')
+      const mau = !cf?.direct?.enabled
+      const r = await setDirectUpload(mau)
+      if (r.ok) {
+        toast(r.note || (mau ? 'Jalur langsung diaktifkan' : 'Jalur langsung dimatikan'), 'success')
+        loadCf()
+      } else {
+        toast('Gagal: ' + (r.error || 'unknown'), 'error')
+      }
+    } catch (e) { toast('Error: ' + e.message, 'error') }
+    finally { setCfBusy('') }
   }
 
   const doBackup = async () => {
     setBackupBusy(true)
     try {
       const r = await backupToGithub()
-      toast(r.message || 'Backup berhasil!', 'success')
-    } catch (e) { toast('Backup gagal: ' + e.message, 'error') }
-    setBackupBusy(false)
-    loadBackupHistory()
+      if (r.ok) {
+        toast(`Backup berhasil (${r.changed} file diperbarui)`, 'success')
+        loadBackupHistory()
+      } else {
+        toast('Backup gagal: ' + (r.error || 'unknown'), 'error')
+      }
+    } catch (e) { toast('Error: ' + e.message, 'error') }
+    finally { setBackupBusy(false) }
   }
 
   useEffect(() => {
+    getSettings()
+      .then(s => {
+        for (const t of linkTypes) {
+          const arr = s[t.key]
+          if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] === 'string') {
+            s[t.key] = arr.map(item => {
+              const p = item.split(/\s+—\s+/)
+              return { name: p[0] || '', link: p[1] || '', visible: true }
+            })
+          }
+        }
+        setData(s)
+      })
+      .catch(e => toast('Gagal memuat settings: ' + e.message, 'error'))
+      .finally(() => setLoading(false))
+
     loadBackupHistory()
     getTunnelStatus().then(setTunnel).catch(() => {})
     loadCf()
   }, [])
 
-  useEffect(() => {
-    getSettings().then(s => {
-      if (s) {
-        // Normalize link arrays: ensure each item has {name, link, visible}
-        for (const t of linkTypes) {
-          const arr = s[t.key]
-          if (Array.isArray(arr)) {
-            s[t.key] = arr.map(item => {
-              if (typeof item === 'string') {
-                const p = item.split(/\s+—\s+/)
-                return { name: p[0] || '', link: p[1] || '', visible: true }
-              }
-              return { name: item.name || '', link: item.link || '', visible: item.visible !== false }
-            })
-          } else {
-            s[t.key] = []
-          }
-        }
-        setData(s)
-      }
-    }).finally(() => setLoading(false))
-  }, [])
-
   const set = (k, v) => setData(p => ({ ...p, [k]: v }))
-  const toggle = (k) => set(k, !data[k])
+  const toggle = (k) => setData(p => ({ ...p, [k]: !p[k] }))
 
   const save = async (e) => {
-    e.preventDefault(); setBusy(true)
+    if (e) e.preventDefault()
+    setBusy(true)
     try {
-      const payload = { ...data }
-      // Number fields
-      for (const f of numFields) {
-        if (payload[f.key] != null) payload[f.key] = Number(payload[f.key]) || 0
+      const res = await saveSettings(data)
+      if (res.ok) {
+        toast('Pengaturan berhasil disimpan!', 'success')
+        loadCf()
+      } else {
+        toast('Gagal menyimpan: ' + (res.error || 'unknown'), 'error')
       }
-      // Link arrays already in {name, link, visible} format
-      await saveSettings(payload)
-      toast('Tersimpan!', 'success')
-    } catch (e) { toast(e.message, 'error') }
-    setBusy(false)
+    } catch (err) {
+      toast('Error: ' + err.message, 'error')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  if (loading) return (
-    <div className="space-y-6">
-      <div><div className="skeleton h-7 w-40 mb-2" /><div className="skeleton h-4 w-56" /></div>
-      <div className="card p-6 space-y-4">{[...Array(6)].map((_, i) => <div key={i}><div className="skeleton h-4 w-24 mb-2" /><div className="skeleton h-10 w-full" /></div>)}</div>
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-[#0062FF] border-t-transparent animate-spin" />
+        <p className="text-xs font-mono text-[#7e90ad]">Memuat konfigurasi server...</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-[family-name:var(--font-display)] font-bold text-2xl grad-text">Settings</h1>
-        <p className="text-[#7e90ad] text-sm mt-1">Konfigurasi situs & fitur</p>
+    <div className="space-y-6 max-w-5xl mx-auto pb-20">
+      {/* Header Info */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[.06]">
+        <div>
+          <h1 className="font-[family-name:var(--font-display)] font-extrabold text-2xl tracking-tight text-white flex items-center gap-3">
+            <span>Server Settings</span>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#0062FF]/15 text-[#38bdf8] border border-[#0062FF]/30">
+              v3.3.0
+            </span>
+          </h1>
+          <p className="text-xs text-[#7e90ad] mt-1">Konfigurasi jaringan, tampilan uploader, kuota media, dan keamanan</p>
+        </div>
+
+        {/* Global Save Button Desktop */}
+        <div className="hidden sm:flex items-center gap-2.5">
+          <button type="button" onClick={doBackup} disabled={backupBusy}
+            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/[.04] hover:bg-white/[.08] text-white/90 border border-white/[.08] hover:border-white/[.15] transition-all flex items-center gap-2 active:scale-95">
+            <i className={`fa-brands fa-github ${backupBusy ? 'fa-spin' : ''}`} />
+            {backupBusy ? 'Backup...' : 'Backup GitHub'}
+          </button>
+          <button type="button" onClick={save} disabled={busy}
+            className="px-6 py-2.5 rounded-xl text-xs font-extrabold bg-[#0062FF] hover:bg-[#0052D6] text-white shadow-[0_0_24px_-4px_rgba(0,98,255,0.5)] transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50">
+            <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
+            {busy ? 'Menyimpan…' : 'Simpan Semua'}
+          </button>
+        </div>
       </div>
 
-      <form onSubmit={save} className="space-y-4">
-        {/* Umum */}
-        <div className="card p-5 space-y-4">
-          <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
-            <i className="fa-solid fa-gear text-[#22d3ee]" /> Umum
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {inputFields.map(f => (
-              <div key={f.key}>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block flex items-center gap-1.5">
-                  <i className={`${f.icon.startsWith('fa-brands') ? f.icon : `fa-solid ${f.icon}`} text-[9px] text-[#22d3ee]/60`} />
-                  {f.label}
-                </label>
-                <input type="text" value={data[f.key] ?? ''} onChange={e => set(f.key, e.target.value)} placeholder={f.ph}
-                  className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
+      {/* Category Segmented Tabs */}
+      <div className="flex gap-1.5 p-1 rounded-2xl bg-white/[.03] border border-white/[.06] overflow-x-auto no-scrollbar">
+        {CATEGORIES.map(c => {
+          const isActive = activeTab === c.id
+          return (
+            <button
+              key={c.id}
+              onClick={() => setActiveTab(c.id)}
+              className={`flex-1 min-w-[130px] sm:min-w-0 py-3 px-3.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2.5 select-none ${isActive
+                ? 'bg-[#0062FF] text-white shadow-[0_4px_16px_rgba(0,98,255,0.35)]'
+                : 'text-[#7e90ad] hover:text-white hover:bg-white/[.04]'}`}
+            >
+              <i className={`fa-solid ${c.icon} text-xs`} style={{ color: isActive ? '#ffffff' : c.color }} />
+              <span className="whitespace-nowrap">{c.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <form onSubmit={save} className="space-y-6">
+        {/* =================================================================== */}
+        {/* TAB 1: JALUR & LAYANAN (NETWORK & SERVICES) */}
+        {/* =================================================================== */}
+        {activeTab === 'network' && (
+          <div className="space-y-6 anim-fade">
+            {/* Quick Restart Service Card */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                    <i className="fa-solid fa-arrows-rotate text-[#38bdf8]" /> Kontrol Cepat Service (PM2)
+                  </h3>
+                  <p className="text-xs text-[#7e90ad] mt-0.5">Restart instan untuk reload konfigurasi port, sertifikat SSL, atau update bot</p>
+                </div>
+                <span className="text-[10px] font-mono text-[#7e90ad] bg-white/[.04] px-2.5 py-1 rounded-full border border-white/[.06] self-start sm:self-auto">
+                  Host: 95.111.221.189
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Limits & Quota */}
-        <div className="card p-5 space-y-4">
-          <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
-            <i className="fa-solid fa-sliders text-[#3b82f6]" /> Batas & Kuota
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {numFields.map(f => (
-              <div key={f.key}>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block flex items-center gap-1.5">
-                  <i className={`fa-solid ${f.icon} text-[8px] text-[#3b82f6]/60`} />
-                  {f.label}
-                </label>
-                <input type="number" inputMode="numeric" value={data[f.key] ?? ''} onChange={e => set(f.key, e.target.value)} placeholder={f.ph}
-                  className="w-full min-h-10 rounded-xl px-3 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#3b82f6]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
-                {f.desc && <p className="text-[10px] leading-snug text-[#7e90ad]/60 mt-1">{f.desc}</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tampilan Web Uploader */}
-        <div className="card p-5 space-y-4">
-          <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
-            <i className="fa-solid fa-palette text-[#22d3ee]" /> Tampilan Web Uploader
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Judul Hero</label>
-              <input type="text" value={data.heroTitle ?? ''} onChange={e => set('heroTitle', e.target.value)} placeholder="Upload Media HD"
-                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
-              <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Kosong = default "Upload Media HD"</p>
-            </div>
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Highlight Text</label>
-              <input type="text" value={data.heroSubtitle ?? ''} onChange={e => set('heroSubtitle', e.target.value)} placeholder="Media HD"
-                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
-              <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Bagian yang gradient warna (kosong = "Media HD")</p>
-            </div>
-          </div>
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Deskripsi Hero</label>
-            <textarea value={data.heroDesc ?? ''} onChange={e => set('heroDesc', e.target.value)} rows={2}
-              placeholder="Kirim video & foto ke grup WhatsApp lewat kode klaim — cepat & mudah"
-              className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm resize-y transition-colors duration-[150ms]" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">URL Logo</label>
-              <input type="text" value={data.logoUrl ?? ''} onChange={e => set('logoUrl', e.target.value)} placeholder="/logo.svg atau https://..."
-                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
-              <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Kosong = ikon WhatsApp default</p>
-            </div>
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">URL Foto Hero</label>
-              <input type="text" value={data.heroImageUrl ?? ''} onChange={e => set('heroImageUrl', e.target.value)} placeholder="/hero.jpg atau https://..."
-                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
-              <p className="text-[8px] text-[#7e90ad]/50 mt-0.5">Foto besar di hero halaman utama. Kosong = /hero.jpg</p>
-            </div>
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Footer Text</label>
-              <input type="text" value={data.footerText ?? ''} onChange={e => set('footerText', e.target.value)} placeholder="SWHDHLZ · BY HILLZ"
-                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
-            </div>
-          </div>
-        </div>
-
-        <BrandGallery data={data} set={set} />
-
-        {/* Pengumuman */}
-        <div className="card p-5 space-y-3">
-          <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
-            <i className="fa-solid fa-bullhorn text-[#fbbf24]" /> Pengumuman
-          </h3>
-          <textarea value={data.announcement ?? ''} onChange={e => set('announcement', e.target.value)}
-            placeholder="Tulis pengumuman — muncul di halaman upload (kosongkan untuk sembunyikan)"
-            rows={3} className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#fbbf24]/40 outline-none text-sm resize-y transition-colors duration-[150ms]" />
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Banner Text (singkat)</label>
-            <input type="text" value={data.bannerText ?? ''} onChange={e => set('bannerText', e.target.value)} placeholder="Info singkat di atas upload area"
-              className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#22d3ee]/40 outline-none text-sm transition-colors duration-[150ms]" />
-          </div>
-        </div>
-
-        {/* Fitur Popup & Tampilan — toggles */}
-        <div className="card p-5">
-          <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 mb-2 flex items-center gap-2">
-            <i className="fa-solid fa-toggle-on text-[#34d399]" /> Fitur Popup & Tampilan
-          </h3>
-          <div className="divide-y divide-white/[.05]">
-            {toggles.map(t => <Toggle key={t.key} on={data[t.key] !== false} onChange={() => toggle(t.key)} label={t.label} desc={t.desc} icon={t.icon} color={t.color} />)}
-          </div>
-        </div>
-
-        {/* Link & Grup — per-item with toggle */}
-        <div className="card p-5 space-y-5">
-          <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
-            <i className="fa-solid fa-link text-[#22d3ee]" /> Link & Grup
-          </h3>
-          <p className="text-[11px] text-[#7e90ad] -mt-2">Setiap link punya toggle sendiri — kontrol mana yang muncul di web uploader.</p>
-          {linkTypes.map(type => (
-            <LinkSection key={type.key} type={type} data={data} setData={setData} />
-          ))}
-        </div>
-
-        {/* Telegram Notifications */}
-        <div className="card p-5 space-y-3">
-          <h3 className="text-xs font-bold tracking-[.15em] uppercase text-[#7e90ad]/60 flex items-center gap-2">
-            <i className="fa-brands fa-telegram text-[#2AABEE]" /> Notifikasi Telegram
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Bot Token</label>
-              <input type="text" value={data.telegramBotToken ?? ''} onChange={e => set('telegramBotToken', e.target.value)} placeholder="123456:ABC-DEF..."
-                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#2AABEE]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#7e90ad] mb-1 block">Chat ID</label>
-              <input type="text" value={data.telegramChatId ?? ''} onChange={e => set('telegramChatId', e.target.value)} placeholder="-1001234567890"
-                className="w-full rounded-xl px-3.5 py-2.5 bg-white/[.04] border border-white/[.08] focus:border-[#2AABEE]/40 outline-none text-sm font-mono transition-colors duration-[150ms]" />
-            </div>
-          </div>
-          <div className="divide-y divide-white/[.05]">
-            {telegramToggles.map(t => <Toggle key={t.key} on={!!data[t.key]} onChange={() => toggle(t.key)} label={t.label} desc={t.desc} icon="fa-bell" color="#2AABEE" />)}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <button type="submit" disabled={busy} className="btn-primary w-full sm:w-auto rounded-xl px-8 py-3 font-bold">
-            {busy ? <><i className="fa-solid fa-spinner fa-spin mr-2" />Menyimpan…</> : <><i className="fa-solid fa-floppy-disk mr-2" />Simpan</>}
-          </button>
-          <button type="button" onClick={doBackup} disabled={backupBusy}
-            className="w-full sm:w-auto rounded-xl px-8 py-3 font-bold bg-[#24292e] hover:bg-[#2f363d] text-white border border-white/[.08] hover:border-white/[.15] transition-all duration-[200ms] active:scale-[.97] flex items-center justify-center gap-2">
-            {backupBusy ? <><i className="fa-solid fa-spinner fa-spin" />Backup...</> : <><i className="fa-brands fa-github" />Backup ke GitHub</>}
-          </button>
-        </div>
-
-        {/* ── Jalur upload & proxy Cloudflare ────────────────────────────── */}
-        <div className="rounded-[14px] bg-white/[.03] border border-white/[.06] p-4 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#7e90ad]">
-              <i className="fa-solid fa-route mr-2" />Jalur Upload &amp; Proxy
-            </p>
-            {cf?.zone && (
-              <span className="text-[10px] font-mono text-[#7e90ad]">
-                {cf.zone.plan} · cap {cf.edgeCapMB} MB
-              </span>
-            )}
-          </div>
-
-          {!cf ? <p className="text-xs text-[#7e90ad]">Memuat…</p> : !cf.ok ? (
-            <p className="text-xs text-[#fb7185]">{cf.error}</p>
-          ) : (
-            <>
-              {/* Saklar jalur langsung */}
-              <div className="rounded-[10px] bg-white/[.02] border border-white/[.05] p-3 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">Upload Langsung (lewati Cloudflare)</p>
-                    <p className="text-xs text-[#7e90ad] mt-0.5">
-                      Cloudflare menolak upload di atas {cf.edgeCapMB} MB dan itu tidak bisa dinaikkan.
-                      Jalur ini mengirim langsung ke VPS lewat <span className="font-mono">{cf.direct.host}:{cf.direct.port}</span> jadi tanpa batas.
-                    </p>
-                    <p className="text-[11px] text-[#fbbf24] mt-1">
-                      <i className="fa-solid fa-triangle-exclamation mr-1" />
-                      Saat ON: IP asli VPS terbuka &amp; tanpa perlindungan DDoS. Matikan lagi kalau sudah selesai.
-                    </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      toast('Sedang me-restart Web Uploader...', 'info')
+                      await restartWeb()
+                      setTimeout(() => { toast('Web Uploader berhasil di-restart!', 'success'); loadCf() }, 1500)
+                    } catch (e) { toast('Gagal restart web: ' + e.message, 'error') }
+                  }}
+                  className="p-3.5 rounded-xl bg-white/[.03] hover:bg-[#38bdf8]/10 border border-white/[.06] hover:border-[#38bdf8]/30 transition-all text-left group flex items-center gap-3.5"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[#38bdf8]/15 border border-[#38bdf8]/30 grid place-items-center shrink-0">
+                    <i className="fa-solid fa-globe text-sm text-[#38bdf8] group-hover:scale-110 transition-transform" />
                   </div>
-                  <button type="button" disabled={cfBusy === 'direct' || !cf.direct.certReady}
-                    onClick={toggleDirect}
-                    className="shrink-0 px-3 py-1.5 rounded-[10px] text-xs font-bold transition disabled:opacity-40"
-                    style={{
-                      background: cf.direct.enabled ? '#fb718522' : '#34d39922',
-                      border: '1px solid ' + (cf.direct.enabled ? '#fb718544' : '#34d39944'),
-                      color: cf.direct.enabled ? '#fb7185' : '#34d399',
-                    }}>
-                    {cfBusy === 'direct' ? '…' : cf.direct.enabled ? 'Matikan' : 'Nyalakan'}
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2 text-[11px]">
-                  <span className="px-2 py-0.5 rounded-full" style={{ background: cf.direct.enabled ? '#34d39918' : '#7e90ad18', color: cf.direct.enabled ? '#34d399' : '#7e90ad' }}>
-                    setelan: {cf.direct.enabled ? 'ON' : 'OFF'}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full" style={{ background: cf.direct.listening ? '#34d39918' : '#7e90ad18', color: cf.direct.listening ? '#34d399' : '#7e90ad' }}>
-                    port {cf.direct.port}: {cf.direct.listening ? 'terbuka' : 'tertutup'}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full" style={{ background: cf.direct.certReady ? '#34d39918' : '#fb718518', color: cf.direct.certReady ? '#34d399' : '#fb7185' }}>
-                    sertifikat: {cf.direct.certReady ? 'siap' : 'belum ada'}
-                  </span>
-                </div>
-                {cf.direct.enabled !== cf.direct.listening && (
-                  <p className="text-[11px] text-[#fbbf24]">
-                    <i className="fa-solid fa-rotate mr-1" />Setelan dan port belum sinkron — restart <span className="font-mono">web</span> dari tab Bot.
+                  <div>
+                    <p className="text-xs font-bold text-white/90 group-hover:text-white">Restart Web</p>
+                    <p className="text-[10px] text-[#7e90ad]">Port 80 & 8443 (HTTP/TLS)</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      toast('Sedang me-restart Bot WhatsApp...', 'info')
+                      await restartBot()
+                      toast('Bot WhatsApp berhasil di-restart!', 'success')
+                    } catch (e) { toast('Gagal restart bot: ' + e.message, 'error') }
+                  }}
+                  className="p-3.5 rounded-xl bg-white/[.03] hover:bg-[#34d399]/10 border border-white/[.06] hover:border-[#34d399]/30 transition-all text-left group flex items-center gap-3.5"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[#34d399]/15 border border-[#34d399]/30 grid place-items-center shrink-0">
+                    <i className="fa-brands fa-whatsapp text-base text-[#34d399] group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white/90 group-hover:text-white">Restart Bot WA</p>
+                    <p className="text-[10px] text-[#7e90ad]">Baileys WhatsApp daemon</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      toast('Sedang me-restart SEMUA service...', 'info')
+                      await restartAll()
+                      setTimeout(() => { toast('Semua service berhasil di-restart!', 'success'); loadCf() }, 2000)
+                    } catch (e) { toast('Gagal restart: ' + e.message, 'error') }
+                  }}
+                  className="p-3.5 rounded-xl bg-white/[.03] hover:bg-white/[.08] border border-white/[.06] hover:border-white/[.15] transition-all text-left group flex items-center gap-3.5"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-white/[.08] border border-white/[.15] grid place-items-center shrink-0">
+                    <i className="fa-solid fa-rotate text-sm text-white group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white/90 group-hover:text-white">Restart Semua</p>
+                    <p className="text-[10px] text-[#7e90ad]">Bot + Web sekaligus</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Direct Upload Bypass Card */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                      <i className="fa-solid fa-bolt text-[#38bdf8]" /> Direct Upload TLS 8443 (Bypass Cloudflare 100 MB)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-[#7e90ad] leading-relaxed max-w-2xl">
+                    Cloudflare Free menolak request payload &gt;100 MB (Error 413). Jalur ini menggunakan subdomain Grey-Cloud <span className="text-[#38bdf8] font-mono">up.swhdhlz.my.id:8443</span> dengan sertifikat SSL Let's Encrypt resmi untuk upload file tanpa batas ukuran dan tanpa chunking.
                   </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={cfBusy === 'direct' || !cf?.direct?.certReady}
+                  onClick={toggleDirect}
+                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all active:scale-95 disabled:opacity-40 flex items-center gap-2 ${cf?.direct?.enabled
+                    ? 'bg-bad/15 text-bad border border-bad/30 hover:bg-bad/25'
+                    : 'bg-good/15 text-good border border-good/30 hover:bg-good/25'}`}
+                >
+                  <i className={`fa-solid ${cfBusy === 'direct' ? 'fa-spinner fa-spin' : cf?.direct?.enabled ? 'fa-power-off' : 'fa-play'}`} />
+                  {cfBusy === 'direct' ? 'Memproses…' : cf?.direct?.enabled ? 'Matikan Jalur Direct' : 'Nyalakan Jalur Direct'}
+                </button>
+              </div>
+
+              {/* Status Badges */}
+              <div className="flex flex-wrap gap-2.5 pt-2">
+                <div className="px-3 py-1.5 rounded-lg bg-white/[.03] border border-white/[.06] flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${cf?.direct?.enabled ? 'bg-good animate-pulse' : 'bg-[#7e90ad]'}`} />
+                  <span className="text-xs font-mono text-[#7e90ad]">Setelan: <strong className="text-white">{cf?.direct?.enabled ? 'AKTIF (ON)' : 'MATI (OFF)'}</strong></span>
+                </div>
+                <div className="px-3 py-1.5 rounded-lg bg-white/[.03] border border-white/[.06] flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${cf?.direct?.listening ? 'bg-good' : 'bg-bad'}`} />
+                  <span className="text-xs font-mono text-[#7e90ad]">Port 8443: <strong className="text-white">{cf?.direct?.listening ? 'OPEN (LISTEN)' : 'CLOSED'}</strong></span>
+                </div>
+                <div className="px-3 py-1.5 rounded-lg bg-white/[.03] border border-white/[.06] flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${cf?.direct?.certReady ? 'bg-good' : 'bg-bad'}`} />
+                  <span className="text-xs font-mono text-[#7e90ad]">SSL Let's Encrypt: <strong className="text-white">{cf?.direct?.certReady ? 'VALID (Ready)' : 'Missing'}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Cloudflare DNS & Tunnel Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* DNS Records */}
+              <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                    <i className="fa-solid fa-cloud text-[#38bdf8]" /> DNS Cloudflare Records
+                  </h3>
+                  {cf?.zone && (
+                    <span className="text-[10px] font-mono text-[#7e90ad] bg-white/[.04] px-2 py-0.5 rounded border border-white/[.06]">
+                      {cf.zone.plan} · Limit {cf.edgeCapMB} MB
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#7e90ad]">
+                  Klik tombol untuk beralih mode Proxy CDN (Shield) atau Grey-Cloud Direct (Bypass limit).
+                </p>
+
+                {!cf ? (
+                  <p className="text-xs font-mono text-[#7e90ad] py-4 text-center">Memuat data DNS...</p>
+                ) : !cf.ok ? (
+                  <p className="text-xs text-bad bg-bad/10 p-3 rounded-xl border border-bad/20">{cf.error}</p>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {cf.records.map(rec => (
+                      <div key={rec.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[.02] border border-white/[.05] hover:border-white/[.10] transition-all">
+                        <div className="min-w-0">
+                          <p className="text-xs font-mono font-bold text-white/90 truncate">{rec.name}</p>
+                          <p className="text-[10px] text-[#7e90ad] font-mono">{rec.type} → {rec.content}</p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={cfBusy === rec.id}
+                          onClick={() => toggleProxy(rec)}
+                          className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 ${rec.proxied
+                            ? 'bg-[#34d399]/15 text-[#34d399] border border-[#34d399]/30 hover:bg-[#34d399]/25'
+                            : 'bg-[#fbbf24]/15 text-[#fbbf24] border border-[#fbbf24]/30 hover:bg-[#fbbf24]/25'}`}
+                        >
+                          <i className={`fa-solid ${rec.proxied ? 'fa-shield-halved' : 'fa-bolt'}`} />
+                          {cfBusy === rec.id ? '…' : rec.proxied ? 'Proxy ON' : 'Direct (Grey)'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* Proxy per record DNS */}
-              <div className="space-y-1.5">
-                <p className="text-[11px] text-[#7e90ad]">Proxy Cloudflare per domain — hijau = IP aman, kuning = langsung tanpa cap.</p>
-                {cf.records.map(rec => (
-                  <div key={rec.id} className="flex items-center justify-between gap-3 rounded-[10px] bg-white/[.02] border border-white/[.05] px-3 py-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-mono truncate">{rec.name}</p>
-                      <p className="text-[11px] text-[#7e90ad] font-mono">{rec.type} → {rec.content}</p>
+              {/* Tunnel & Riwayat Backup */}
+              <div className="space-y-6">
+                <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-3">
+                  <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                    <i className="fa-solid fa-route text-[#818cf8]" /> Cloudflare Tunnel
+                  </h3>
+                  {tunnel ? (
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${tunnel.running ? 'bg-good' : 'bg-bad'}`} />
+                        <span className="font-semibold text-white/90">{tunnel.running ? `Aktif (${tunnel.processes} proses)` : 'Tidak berjalan'}</span>
+                      </div>
+                      <p className="text-[11px] text-[#7e90ad]">ENABLE_TUNNEL: <strong className="text-white font-mono">{tunnel.enabled ? '1' : '0'}</strong> · Kredensial: <strong className="text-white">{tunnel.configured ? 'Lengkap' : 'Belum lengkap'}</strong></p>
+                      {tunnel.domain && <p className="text-[11px] font-mono text-[#38bdf8] bg-[#38bdf8]/10 px-2.5 py-1 rounded border border-[#38bdf8]/20">{tunnel.domain}</p>}
                     </div>
-                    <button type="button" disabled={cfBusy === rec.id} onClick={() => toggleProxy(rec)}
-                      className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition disabled:opacity-40"
-                      style={{
-                        background: rec.proxied ? '#34d39918' : '#fbbf2418',
-                        border: '1px solid ' + (rec.proxied ? '#34d39940' : '#fbbf2440'),
-                        color: rec.proxied ? '#34d399' : '#fbbf24',
-                      }}>
-                      <i className={`fa-solid mr-1 ${rec.proxied ? 'fa-shield-halved' : 'fa-bolt'}`} />
-                      {cfBusy === rec.id ? '…' : rec.proxied ? 'Proxy ON' : 'Langsung'}
+                  ) : <p className="text-xs text-[#7e90ad]">Memuat info tunnel...</p>}
+                </div>
+
+                <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                      <i className="fa-solid fa-clock-rotate-left text-[#34d399]" /> Riwayat Backup GitHub
+                    </h3>
+                    <button type="button" onClick={doBackup} disabled={backupBusy} className="text-xs text-[#38bdf8] hover:underline font-bold">
+                      Backup Sekarang
                     </button>
+                  </div>
+                  {bkHistory.length ? (
+                    <ul className="space-y-2 max-h-32 overflow-y-auto text-xs pr-1">
+                      {bkHistory.slice(0, 5).map((h, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[11px] p-2 rounded-lg bg-white/[.02] border border-white/[.04]">
+                          <i className={`fa-solid mt-0.5 ${h.ok ? 'fa-circle-check text-good' : 'fa-circle-xmark text-bad'}`} />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[#7e90ad] font-mono">{new Date(h.ts).toLocaleString('id-ID')}</span>
+                            <p className="text-white/90 truncate">{h.message} {h.ok && h.changed ? `(${h.changed} file)` : ''}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-xs text-[#7e90ad]/60 italic">Belum ada riwayat backup.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 2: TAMPILAN & BRAND (APPEARANCE & BRANDING) */}
+        {/* =================================================================== */}
+        {activeTab === 'branding' && (
+          <div className="space-y-6 anim-fade">
+            {/* Identity Form */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-5">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-solid fa-globe text-[#818cf8]" /> Identitas Utama & Header
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Nama Situs</label>
+                  <input type="text" value={data.siteName ?? ''} onChange={e => set('siteName', e.target.value)} placeholder="SHIROWAHD"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-semibold text-white transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Subtitle Web</label>
+                  <input type="text" value={data.siteSubtitle ?? ''} onChange={e => set('siteSubtitle', e.target.value)} placeholder="Upload & claim video HD"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm text-white/90 transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Domain Publik</label>
+                  <input type="text" value={data.domain ?? ''} onChange={e => set('domain', e.target.value)} placeholder="swhdhlz.my.id"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-mono text-white/90 transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Footer Brand Text</label>
+                  <input type="text" value={data.footerText ?? ''} onChange={e => set('footerText', e.target.value)} placeholder="SWHDHLZ · BY SHIRO HLZ"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm text-white/90 transition-colors" />
+                </div>
+              </div>
+            </div>
+
+            {/* Hero Section Form */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-5">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-solid fa-wand-magic-sparkles text-[#38bdf8]" /> Bagian Hero (Halaman Depan)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Judul Hero (Title)</label>
+                  <input type="text" value={data.heroTitle ?? ''} onChange={e => set('heroTitle', e.target.value)} placeholder="STORY WA"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-semibold text-white transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Highlight Text (Gradient)</label>
+                  <input type="text" value={data.heroSubtitle ?? ''} onChange={e => set('heroSubtitle', e.target.value)} placeholder="HD"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-semibold text-[#38bdf8] transition-colors" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Deskripsi Hero</label>
+                <textarea value={data.heroDesc ?? ''} onChange={e => set('heroDesc', e.target.value)} rows={2}
+                  placeholder="ALAT UNTUK MEMBUAT STATUS WA KAMU TANPA COMPRES"
+                  className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm text-white/90 resize-y transition-colors" />
+              </div>
+            </div>
+
+            {/* Galeri Gambar Brand */}
+            <BrandGallery data={data} set={set} />
+
+            {/* Pengumuman & Banner */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-4">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-solid fa-bullhorn text-[#fbbf24]" /> Banner & Pengumuman Publik
+              </h3>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Banner Bar Singkat (Atas Upload Area)</label>
+                <input type="text" value={data.bannerText ?? ''} onChange={e => set('bannerText', e.target.value)} placeholder="NEW UPDATE JIKA ADA EROR HUBUNGI ADMIN"
+                  className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm text-white transition-colors" />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Pengumuman Lengkap (Popup / Halaman)</label>
+                <textarea value={data.announcement ?? ''} onChange={e => set('announcement', e.target.value)} rows={3}
+                  placeholder="Tulis pengumuman resmi di sini (kosongkan jika tidak ada)..."
+                  className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm text-white/90 resize-y transition-colors" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 3: GRUP & SALURAN WA (WHATSAPP LINKS) */}
+        {/* =================================================================== */}
+        {activeTab === 'links' && (
+          <div className="space-y-6 anim-fade">
+            {/* Owner WA Field */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-4">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-brands fa-whatsapp text-[#25D366]" /> Nomor WhatsApp Owner
+              </h3>
+              <div className="max-w-md">
+                <input type="text" value={data.ownerWhatsapp ?? ''} onChange={e => set('ownerWhatsapp', e.target.value)} placeholder="6282262421536"
+                  className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#25D366]/60 outline-none text-sm font-mono text-white transition-colors" />
+                <p className="text-[11px] text-[#7e90ad] mt-1">Gunakan format internasional tanpa tanda + (contoh: 6282262421536)</p>
+              </div>
+            </div>
+
+            {/* List Links Groups & Channels */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                    <i className="fa-solid fa-link text-[#38bdf8]" /> Daftar Grup, Saluran & Tombol Klaim
+                  </h3>
+                  <p className="text-xs text-[#7e90ad] mt-0.5">Setiap link dapat dinyalakan/dimatikan kapan saja secara mandiri</p>
+                </div>
+              </div>
+
+              <div className="space-y-6 divide-y divide-white/[.06]">
+                {linkTypes.map(type => (
+                  <div key={type.key} className="pt-6 first:pt-0">
+                    <LinkSection type={type} data={data} setData={setData} />
                   </div>
                 ))}
               </div>
-            </>
-          )}
-        </div>
-
-        {/* Quick Service Restarts */}
-        <div className="rounded-[14px] bg-white/[.03] border border-white/[.06] p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#7e90ad]">
-              <i className="fa-solid fa-arrows-rotate mr-2 text-[#38bdf8]" />Kontrol Service &amp; Restart
-            </p>
-            <span className="text-[10px] text-[#7e90ad]">PM2 Process Manager</span>
+            </div>
           </div>
-          <p className="text-xs text-[#7e90ad]">
-            Restart service secara instan jika ada perubahan setelan port, SSL, atau setelah update bot/web.
-          </p>
-          <div className="flex flex-wrap gap-2.5 pt-1">
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  toast('Sedang me-restart Web Service...', 'info')
-                  await restartWeb()
-                  setTimeout(() => { toast('Web Uploader berhasil di-restart!', 'success'); loadCf() }, 1500)
-                } catch (e) { toast('Gagal restart web: ' + e.message, 'error') }
-              }}
-              className="px-3.5 py-2 rounded-[10px] bg-[#38bdf8]/15 border border-[#38bdf8]/30 hover:bg-[#38bdf8]/25 text-[#38bdf8] text-xs font-bold transition flex items-center gap-1.5"
-            >
-              <i className="fa-solid fa-globe" />Restart Web Uploader
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  toast('Sedang me-restart Bot WhatsApp...', 'info')
-                  await restartBot()
-                  toast('Bot WhatsApp berhasil di-restart!', 'success')
-                } catch (e) { toast('Gagal restart bot: ' + e.message, 'error') }
-              }}
-              className="px-3.5 py-2 rounded-[10px] bg-[#34d399]/15 border border-[#34d399]/30 hover:bg-[#34d399]/25 text-[#34d399] text-xs font-bold transition flex items-center gap-1.5"
-            >
-              <i className="fa-brands fa-whatsapp" />Restart Bot WA
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  toast('Sedang me-restart SEMUA service...', 'info')
-                  await restartAll()
-                  setTimeout(() => { toast('Semua service (Bot + Web) berhasil di-restart!', 'success'); loadCf() }, 2000)
-                } catch (e) { toast('Gagal restart: ' + e.message, 'error') }
-              }}
-              className="px-3.5 py-2 rounded-[10px] bg-white/[.06] border border-white/[.12] hover:bg-white/[.10] text-[var(--t-ink)] text-xs font-bold transition flex items-center gap-1.5"
-            >
-              <i className="fa-solid fa-rotate" />Restart Semua (All)
-            </button>
-          </div>
-        </div>
+        )}
 
-        {/* Status tunnel + riwayat backup */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-[14px] bg-white/[.03] border border-white/[.06] p-4 space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#7e90ad]">
-              <i className="fa-solid fa-cloud-arrow-up mr-2" />Cloudflare Tunnel
-            </p>
-            {tunnel ? (
-              <div className="space-y-1 text-sm">
-                <p className="flex items-center gap-2">
-                  <span className={`inline-block w-2 h-2 rounded-full ${tunnel.running ? 'bg-[#34d399]' : 'bg-[#fb7185]'}`} />
-                  {tunnel.running ? `Aktif (${tunnel.processes} proses)` : 'Tidak berjalan'}
-                </p>
-                <p className="text-xs text-[#7e90ad]">ENABLE_TUNNEL: {tunnel.enabled ? '1' : '0'} · Kredensial: {tunnel.configured ? 'lengkap' : 'belum lengkap'}</p>
-                {tunnel.domain && <p className="text-xs font-mono text-[#7e90ad]">{tunnel.domain}</p>}
+        {/* =================================================================== */}
+        {/* TAB 4: MEDIA & STORAGE (LIMITS & ENCODING) */}
+        {/* =================================================================== */}
+        {activeTab === 'storage' && (
+          <div className="space-y-6 anim-fade">
+            {/* Upload Limits & Rules */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-5">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-solid fa-sliders text-[#fbbf24]" /> Batasan File & Standar WhatsApp
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Maks Ukuran File (MB)</label>
+                  <input type="number" value={data.maxFileSizeMB ?? ''} onChange={e => set('maxFileSizeMB', e.target.value)} placeholder="0"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-mono text-white transition-colors" />
+                  <p className="text-[10px] text-[#7e90ad] mt-1">0 = tanpa batas maksimal</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Video Jadi Dokumen (MB)</label>
+                  <input type="number" value={data.videoAsDocumentMB ?? ''} onChange={e => set('videoAsDocumentMB', e.target.value)} placeholder="180"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-mono text-white transition-colors" />
+                  <p className="text-[10px] text-[#7e90ad] mt-1">Server WA menolak video biasa &gt;180MB; kirim sebagai dokumen agar tembus utuh.</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Batas Upload Besar (MB)</label>
+                  <input type="number" value={data.largeUploadMaxMB ?? ''} onChange={e => set('largeUploadMaxMB', e.target.value)} placeholder="0"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-mono text-white transition-colors" />
+                  <p className="text-[10px] text-[#7e90ad] mt-1">Berlaku saat mode file besar aktif</p>
+                </div>
               </div>
-            ) : <p className="text-xs text-[#7e90ad]">Memuat…</p>}
-          </div>
+            </div>
 
-          <div className="rounded-[14px] bg-white/[.03] border border-white/[.06] p-4 space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#7e90ad]">
-              <i className="fa-solid fa-clock-rotate-left mr-2" />Riwayat Backup
-            </p>
-            {bkHistory.length ? (
-              <ul className="space-y-1.5 max-h-40 overflow-y-auto text-xs">
-                {bkHistory.slice(0, 8).map((h, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <i className={`fa-solid mt-0.5 ${h.ok ? 'fa-circle-check text-[#34d399]' : 'fa-circle-xmark text-[#fb7185]'}`} />
-                    <span className="flex-1">
-                      <span className="text-[#7e90ad]">{new Date(h.ts).toLocaleString('id-ID')}</span>
-                      {' — '}{h.message}
-                      {h.ok && h.changed ? ` (${h.changed} file)` : ''}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="text-xs text-[#7e90ad]">Belum ada riwayat backup.</p>}
+            {/* Retention & Cleanup */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-5">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-solid fa-broom text-[#34d399]" /> Masa Aktif & Pembersihan Otomatis
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Masa Aktif File (Menit)</label>
+                  <input type="number" value={data.expireMinutes ?? ''} onChange={e => set('expireMinutes', e.target.value)} placeholder="1440"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-mono text-white transition-colors" />
+                  <p className="text-[10px] text-[#7e90ad] mt-1">1440 menit = 24 jam</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Interval Auto-Cleanup (Menit)</label>
+                  <input type="number" value={data.autoCleanupInterval ?? ''} onChange={e => set('autoCleanupInterval', e.target.value)} placeholder="30"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-mono text-white transition-colors" />
+                  <p className="text-[10px] text-[#7e90ad] mt-1">Jeda waktu cron sweep file expired</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Kuota Storage VPS (MB)</label>
+                  <input type="number" value={data.storageQuotaMB ?? ''} onChange={e => set('storageQuotaMB', e.target.value)} placeholder="5000"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#0062FF]/60 outline-none text-sm font-mono text-white transition-colors" />
+                  <p className="text-[10px] text-[#7e90ad] mt-1">0 = tanpa batas kuota</p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Toggle
+                  on={data.autoCleanup !== false}
+                  onChange={() => toggle('autoCleanup')}
+                  label="Aktifkan Auto Cleanup Otomatis"
+                  desc="Hapus berkas video/foto yang sudah melewati batas waktu kadaluarsa secara otomatis di latar belakang"
+                  icon="fa-broom"
+                  color="#34d399"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 5: KEAMANAN & NOTIFIKASI (SECURITY & NOTIFICATIONS) */}
+        {/* =================================================================== */}
+        {activeTab === 'security' && (
+          <div className="space-y-6 anim-fade">
+            {/* Telegram Notifications */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-5">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-brands fa-telegram text-[#2AABEE]" /> Notifikasi Telegram Bot
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Telegram Bot Token</label>
+                  <input type="text" value={data.telegramBotToken ?? ''} onChange={e => set('telegramBotToken', e.target.value)} placeholder="123456:ABC-DEF..."
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#2AABEE]/60 outline-none text-sm font-mono text-white transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Telegram Chat ID</label>
+                  <input type="text" value={data.telegramChatId ?? ''} onChange={e => set('telegramChatId', e.target.value)} placeholder="-1001234567890"
+                    className="w-full rounded-xl px-4 py-3 bg-white/[.04] border border-white/[.08] focus:border-[#2AABEE]/60 outline-none text-sm font-mono text-white transition-colors" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <Toggle on={!!data.telegramNotifyUpload} onChange={() => toggle('telegramNotifyUpload')} label="Notif Upload Baru" icon="fa-cloud-arrow-up" color="#2AABEE" />
+                <Toggle on={!!data.telegramNotifyClaim} onChange={() => toggle('telegramNotifyClaim')} label="Notif Klaim File" icon="fa-check-double" color="#34d399" />
+                <Toggle on={!!data.telegramNotifyError} onChange={() => toggle('telegramNotifyError')} label="Notif Error Server" icon="fa-triangle-exclamation" color="#fb7185" />
+              </div>
+            </div>
+
+            {/* UI Feature Toggles */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-4">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-solid fa-toggle-on text-[#38bdf8]" /> Saklar Fitur Tampilan Publik
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Toggle on={data.showWelcome !== false} onChange={() => toggle('showWelcome')} label="Welcome Intro Popup" desc="Popup sambutan saat web pertama dibuka" icon="fa-door-open" color="#38bdf8" />
+                <Toggle on={data.showOwnerBtn !== false} onChange={() => toggle('showOwnerBtn')} label="Tombol Chat Developer" desc="Tampilkan tombol WhatsApp owner di popup" icon="fa-brands fa-whatsapp" color="#25D366" />
+                <Toggle on={data.showChannelsBtn !== false} onChange={() => toggle('showChannelsBtn')} label="Tombol Saluran WA" desc="Tampilkan link saluran di popup" icon="fa-tower-broadcast" color="#38bdf8" />
+                <Toggle on={data.showClaimBtn !== false} onChange={() => toggle('showClaimBtn')} label="Tombol Grup Klaim" desc="Tampilkan link grup klaim di web & modal sukses" icon="fa-comments" color="#34d399" />
+                <Toggle on={data.showPopupBtns !== false} onChange={() => toggle('showPopupBtns')} label="Extra Popup Buttons" desc="Tampilkan tombol custom tambahan di popup" icon="fa-link" color="#818cf8" />
+                <Toggle on={data.allowLargeUpload !== false} onChange={() => toggle('allowLargeUpload')} label="Mode Upload Besar (>95MB)" desc="Ijinkan pengiriman file besar di web" icon="fa-cloud-arrow-up" color="#38bdf8" />
+              </div>
+            </div>
+
+            {/* Mode Maintenance */}
+            <div className="p-6 rounded-2xl bg-white/[.02] border border-white/[.06] space-y-3">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase text-white/90 flex items-center gap-2">
+                <i className="fa-solid fa-screwdriver-wrench text-[#fb7185]" /> Mode Pemeliharaan (Maintenance)
+              </h3>
+              <Toggle
+                on={!!data.maintenance}
+                onChange={() => toggle('maintenance')}
+                label="Nyalakan Mode Maintenance"
+                desc="Saat aktif, upload dinonaktifkan sementara dan halaman web menampilkan pesan pemeliharaan server"
+                icon="fa-screwdriver-wrench"
+                color="#fb7185"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Floating Mobile/Desktop Sticky Save Bar */}
+        <div className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-8 z-40 max-w-xl ml-auto">
+          <div className="p-2.5 rounded-2xl bg-[rgba(4,7,15,0.92)] backdrop-blur-2xl border border-white/[.15] shadow-[0_12px_40px_rgba(0,0,0,0.8)] flex items-center justify-between gap-3">
+            <div className="hidden sm:flex items-center gap-2 pl-3">
+              <span className="w-2 h-2 rounded-full bg-[#0062FF] animate-pulse" />
+              <span className="text-xs font-mono text-[#7e90ad]">Panel Pengaturan Siap Disimpan</span>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button type="button" onClick={doBackup} disabled={backupBusy}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/[.06] hover:bg-white/[.12] text-white/90 border border-white/[.08] transition-all flex items-center justify-center gap-2 active:scale-95">
+                <i className={`fa-brands fa-github ${backupBusy ? 'fa-spin' : ''}`} />
+                <span className="hidden sm:inline">Backup</span>
+              </button>
+              <button type="submit" disabled={busy}
+                className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl text-xs font-extrabold bg-[#0062FF] hover:bg-[#0052D6] text-white shadow-[0_0_20px_rgba(0,98,255,0.4)] transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
+                <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
+                {busy ? 'Menyimpan…' : 'Simpan Perubahan'}
+              </button>
+            </div>
           </div>
         </div>
       </form>
