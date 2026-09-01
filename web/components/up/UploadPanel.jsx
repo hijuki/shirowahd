@@ -1,358 +1,383 @@
 'use client'
-import { useState, useRef, useCallback, useEffect } from 'react'
-import { uploadFiles, pollJobStatus, fmtSize, saveHistory } from '@/lib/up-api'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import SuccessModal from './SuccessModal'
+import { uploadFiles, formatSize, pollJobStatus } from '@/lib/up-api'
 
-// Disamakan dengan daftar di server (web-uploader.js VIDEO_EXTS/IMAGE_EXTS).
-// Sebelumnya frontend cuma kenal 4 format video & 5 gambar, jadi file lain
-// ikut ditolak diam-diam padahal server sanggup memprosesnya.
 const VIDEO_EXTS = ['mp4', 'mov', 'mkv', 'avi', 'webm', '3gp', 'flv', 'wmv', 'ts', 'm4v']
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg', 'heic', 'heif', 'avif']
-// accept HANYA wildcard MIME. Mencampur `video/*` dengan daftar ".ext" justru
-// mempersempit: Android memetakan tiap ekstensi ke MIME lalu memfilter dengan
-// hasil pemetaan itu, sehingga file hasil download yang MIME-nya kosong atau
-// application/octet-stream TIDAK MUNCUL di galeri sama sekali. Ekstensi tetap
-// dipakai untuk validasi setelah file dipilih, bukan untuk menyaring picker.
-const VIDEO_ACCEPT = 'video/*'
-const IMAGE_ACCEPT = 'image/*'
-const TAG_COLORS = {
-  mp4: '#3b82f6', mkv: '#22d3ee', avi: '#fbbf24', mov: '#34d399',
-  jpg: '#fb7185', jpeg: '#fb7185', png: '#34d399', gif: '#fbbf24', webp: '#22d3ee',
-}
 
-export default function UploadPanel({ settings, toast }) {
+export default function UploadPanel({ settings, onToast }) {
   const [tab, setTab] = useState('video')
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState({ pct: 0, loaded: 0, total: 0, speed: 0 })
-  const [encode, setEncode] = useState(null) // { stage, pct }
+  const [progress, setProgress] = useState(0)
+  const [uploadStats, setUploadStats] = useState({ speed: '0 MB/s', eta: '0s', sent: '0 MB', total: '0 MB' })
   const [result, setResult] = useState(null)
-  const fileRef = useRef(null)
-  const [drag, setDrag] = useState(false)
-  const [thumbs, setThumbs] = useState({})
-  const abortRef = useRef(null)
-  // Pelarian terakhir kalau galeri HP masih menyembunyikan file (sebagian ROM
-  // Android memfilter walau accept sudah wildcard): buka picker tanpa filter.
+  const [dragOver, setDragOver] = useState(false)
   const [semuaFile, setSemuaFile] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [processStatus, setProcessStatus] = useState('')
 
-  const accept = semuaFile ? undefined : (tab === 'video' ? VIDEO_ACCEPT : IMAGE_ACCEPT)
-  const exts = tab === 'video' ? VIDEO_EXTS.map(e => e.toUpperCase()) : IMAGE_EXTS.map(e => e.toUpperCase())
-  const field = tab === 'video' ? 'video' : 'image'
-  const isImg = tab === 'image'
+  const fileInputRef = useRef(null)
+  const abortCtrlRef = useRef(null)
 
-  useEffect(() => {
-    if (!isImg) return
-    const newThumbs = {}
-    files.forEach(f => {
-      if (!thumbs[f.name + f.size]) newThumbs[f.name + f.size] = URL.createObjectURL(f)
-    })
-    if (Object.keys(newThumbs).length) setThumbs(t => ({ ...t, ...newThumbs }))
-    return () => { Object.values(newThumbs).forEach(URL.revokeObjectURL) }
-  }, [files, isImg])
+  const maxMB = settings?.maxFileSizeMB || 100
+  const maxBytes = maxMB * 1024 * 1024
+  const allowLarge = settings?.allowLargeUpload !== false
+  const largeMaxMB = settings?.largeUploadMaxMB || 1024
 
-  const addFiles = useCallback((newFiles) => {
-    let arr = Array.from(newFiles)
-    if (tab === 'video' && arr.length > 1) {
-      toast('Hanya 1 video per upload', 'info')
-      arr = arr.slice(0, 1)
+  const handleDrag = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragOver(true)
+    else if (e.type === 'dragleave') setDragOver(false)
+  }, [])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+    if (uploading) return
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(Array.from(e.dataTransfer.files))
     }
-    const validExts = tab === 'video' ? VIDEO_EXTS : IMAGE_EXTS
-    const mimePrefix = tab === 'video' ? 'video/' : 'image/'
-    // Terima kalau ekstensi cocok ATAU browser sudah melaporkan MIME yang benar.
-    // Perlu karena file dari galeri HP kadang datang tanpa ekstensi di nama
-    // (mis. "content://..." / "IMG_0001") — dulu semua itu ditolak.
-    const valid = arr.filter(f => {
-      const ext = (f.name.split('.').pop() || '').toLowerCase()
-      if (validExts.includes(ext) || (f.type || '').toLowerCase().startsWith(mimePrefix)) return true
-      // Mode "semua file": MIME kosong / octet-stream tetap diterima dan
-      // dibiarkan diputuskan server, yang memeriksa ISI file (probe 4 MB
-      // pertama) — jauh lebih andal daripada menebak dari nama.
-      const mime = (f.type || '').toLowerCase()
-      return semuaFile && (!mime || mime === 'application/octet-stream')
-    })
-    if (valid.length < arr.length) toast(`${arr.length - valid.length} file ditolak — format tidak didukung`, 'error')
-    const max = settings?.maxFileSizeMB || 0
-    let sizeOk = valid.filter(f => max <= 0 || f.size <= max * 1024 * 1024)
-    if (sizeOk.length < valid.length) toast(`${valid.length - sizeOk.length} file melebihi batas ${max} MB`, 'error')
-    // Mode file besar (>95 MB) bisa dimatikan admin. Kalau OFF, tolak di sini
-    // dengan pesan jelas supaya user tidak menunggu upload yang pasti gagal.
-    const bigLimit = 80 * 1024 * 1024
-    const hardMB = settings?.largeUploadMaxMB || 0
-    if (settings?.allowLargeUpload === false) {
-      const before = sizeOk.length
-      sizeOk = sizeOk.filter(f => f.size <= bigLimit)
-      if (sizeOk.length < before) toast(`${before - sizeOk.length} file di atas 80 MB — mode file besar sedang dimatikan admin`, 'error')
-    } else if (hardMB > 0) {
-      const before = sizeOk.length
-      sizeOk = sizeOk.filter(f => f.size <= hardMB * 1024 * 1024)
-      if (sizeOk.length < before) toast(`${before - sizeOk.length} file melebihi batas upload besar ${hardMB} MB`, 'error')
-    }
-    setFiles(prev => {
-      const existing = new Set(prev.map(f => f.name + f.size))
-      return [...prev, ...sizeOk.filter(f => !existing.has(f.name + f.size))]
-    })
-  }, [tab, settings, toast])
+  }, [uploading])
 
-  const removeFile = (f) => setFiles(prev => prev.filter(x => x !== f))
-  const clearAll = () => { setFiles([]); setThumbs({}) }
-  const handleDrop = (e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files) }
+  const addFiles = (newFiles) => {
+    if (!newFiles.length) return
 
-  const doUpload = async () => {
-    if (!files.length || uploading) return
-    setUploading(true); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 })
-    abortRef.current = new AbortController()
-    try {
-      const res = await uploadFiles(files, { field, onProgress: p => setProgress(p), signal: abortRef.current.signal })
-      // Tahap 2: server encode di background — polling status sampai result
-      let final = res
-      if (res.pending && res.jobId) {
-        // Polling 400ms (dulu 1200ms): jeda 1,2 detik membuat bar terlihat
-        // melompat dan kode baru muncul lama setelah server sebenarnya selesai.
-        // Saat result datang, pct dipaksa 100 dulu supaya bar benar-benar
-        // menyentuh 100% tepat ketika kode ditampilkan — tidak berhenti di 98.
-        final = await new Promise((resolve, reject) => {
-          let stop = false
-          const tick = async () => {
-            if (stop) return
-            try {
-              const s = await pollJobStatus(res.jobId)
-              if (s.error) { stop = true; reject(new Error(s.error)); return }
-              if (s.result) {
-                stop = true
-                setEncode({ stage: 'Selesai', pct: 100 })
-                resolve(s.result)
-                return
-              }
-              if (s.stage || typeof s.pct === 'number') setEncode({ stage: s.stage || 'Memproses…', pct: s.pct || 0 })
-              setTimeout(tick, 400)
-            } catch (e) { stop = true; reject(e) }
-          }
-          tick()
-        })
+    if (tab === 'video') {
+      const vid = newFiles[0]
+      const ext = vid.name.split('.').pop().toLowerCase()
+      if (!VIDEO_EXTS.includes(ext) && !vid.type.startsWith('video/') && !semuaFile) {
+        onToast?.('Hanya format video yang diperbolehkan di tab ini', 'error')
+        return
       }
-      saveHistory({ code: final.code, codes: final.codes, bundle: final.bundle, count: final.count, files: files.map(f => f.name), totalSize: files.reduce((s, f) => s + f.size, 0), timestamp: Date.now(), expireMinutes: settings?.expireMinutes || 60 })
-      setResult({ ...final, expireMinutes: settings?.expireMinutes || 60 })
-      if (final.warn) toast(final.warn, 'info')
-      else toast('Upload berhasil!', 'success')
-      setFiles([]); setThumbs({})
-    } catch (e) { if (e.message !== 'Upload dibatalkan') toast(e.message, 'error') }
-    finally { setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }); setEncode(null) }
+      const cap = allowLarge ? largeMaxMB * 1024 * 1024 : maxBytes
+      if (vid.size > cap) {
+        onToast?.(`Ukuran video melebihi batas (${allowLarge ? largeMaxMB : maxMB}MB)`, 'error')
+        return
+      }
+      setFiles([vid])
+    } else {
+      const validImages = []
+      for (const f of newFiles) {
+        const ext = f.name.split('.').pop().toLowerCase()
+        if (IMAGE_EXTS.includes(ext) || f.type.startsWith('image/') || semuaFile) {
+          if (f.size <= maxBytes) {
+            validImages.push(f)
+          } else {
+            onToast?.(`File ${f.name} melebihi batas ${maxMB}MB`, 'error')
+          }
+        }
+      }
+      if (validImages.length) {
+        setFiles((prev) => [...prev, ...validImages].slice(0, 20))
+      }
+    }
   }
 
-  const cancelUpload = () => { abortRef.current?.abort(); setUploading(false); setProgress({ pct: 0, loaded: 0, total: 0, speed: 0 }); setEncode(null); toast('Upload dibatalkan', 'info') }
+  const removeFile = (idx) => {
+    if (uploading) return
+    setFiles((prev) => prev.filter((_, i) => i !== idx))
+  }
 
-  // SATU skala 0→100 untuk seluruh proses, biar bar tidak pernah balik ke 0.
-  // Transfer jaringan mengisi 0–60%, pemrosesan server mengisi 60–100%.
-  // Kalau server tidak perlu memproses (mis. foto), transfer langsung ke 100%.
-  const totalPct = encode
-    ? (encode.pct >= 100 ? 100 : Math.max(1, Math.min(99, Math.round(encode.pct))))
-    : (uploading ? Math.min(99, Math.round(progress.pct || 0)) : (result ? 100 : 0))
+  const startUpload = async () => {
+    if (!files.length || uploading) return
+    setUploading(true)
+    setProgress(0)
+    setIsProcessing(false)
+    setProcessStatus('')
+    abortCtrlRef.current = new AbortController()
 
-  if (settings?.maintenance) {
-    return (
-      <div className="card p-8 text-center">
-        <div className="w-16 h-16 mx-auto rounded-[20px] bg-[#fbbf24]/10 border border-[#fbbf24]/30 grid place-items-center mb-4">
-          <i className="fa-solid fa-screwdriver-wrench text-[#fbbf24] text-2xl" />
-        </div>
-        <h2 className="font-[family-name:var(--font-display)] font-bold text-lg">Sedang Maintenance</h2>
-        <p className="text-[#7e90ad] text-sm mt-2">Server dalam pemeliharaan. Coba lagi nanti ya.</p>
-      </div>
-    )
+    try {
+      const res = await uploadFiles(files, {
+        signal: abortCtrlRef.current.signal,
+        onProgress: (p, stats) => {
+          setProgress(p)
+          if (stats) {
+            setUploadStats({
+              speed: stats.speed || '0 MB/s',
+              eta: stats.eta || '0s',
+              sent: formatSize(stats.loaded || 0),
+              total: formatSize(stats.total || 0),
+            })
+          }
+        },
+      })
+
+      if (res.pending && res.jobId) {
+        setIsProcessing(true)
+        setProcessStatus('Memproses video di server...')
+        const pollResult = await pollJobStatus(res.jobId, (status) => {
+          setProcessStatus(status || 'Mengoptimalkan kualitas video...')
+        })
+        if (pollResult && pollResult.ok) {
+          setResult(pollResult)
+          setFiles([])
+        } else {
+          onToast?.(pollResult?.error || 'Gagal memproses video', 'error')
+        }
+      } else if (res.ok) {
+        setResult(res)
+        setFiles([])
+      } else {
+        onToast?.(res.error || 'Gagal mengunggah berkas', 'error')
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        onToast?.(err.message || 'Terjadi kesalahan jaringan', 'error')
+      }
+    } finally {
+      setUploading(false)
+      setIsProcessing(false)
+    }
+  }
+
+  const cancelUpload = () => {
+    if (abortCtrlRef.current) {
+      abortCtrlRef.current.abort()
+      setUploading(false)
+      setIsProcessing(false)
+      setProgress(0)
+      onToast?.('Upload dibatalkan', 'info')
+    }
   }
 
   return (
-    <>
-      <div className="space-y-4">
-        {/* Tab selector — segmented pill */}
-        <div className="flex gap-1 p-1 rounded-[16px] bg-white/[.03] border border-white/[.06] relative">
-          {[['video', 'fa-video', 'Video'], ['image', 'fa-image', 'Foto']].map(([t, icon, label]) => (
-            <button key={t} onClick={() => { if (!uploading) { setTab(t); clearAll() } }}
-              className={`flex-1 py-3 rounded-[12px] font-bold text-[13px] tracking-wide transition-all duration-[250ms] active:scale-[.97] ${tab === t
-                ? 'tab-pill-active text-[#e8f1ff]'
-                : 'text-[#7e90ad] hover:text-white/80 hover:bg-white/[.04]'}`}
-              style={{ transitionTimingFunction: 'var(--ease-out)' }}
-            >
-              <i className={`fa-solid ${icon} mr-2 ${tab === t ? 'text-[#22d3ee]' : ''}`} />{label}
-            </button>
-          ))}
+    <div className="relative w-full">
+      {/* Outer Glow Container */}
+      <div className="relative rounded-[26px] bg-[#070C18] border border-white/[0.08] p-4 sm:p-6 shadow-[0_28px_80px_-16px_rgba(0,0,0,0.9)] overflow-hidden">
+        
+        {/* Animated Top Border Shimmer */}
+        <div className="absolute top-0 inset-x-0 h-[2px] overflow-hidden rounded-t-[26px]">
+          <div className="h-full w-[200%] bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" style={{ animation: 'modalShimmer 3.5s ease-in-out infinite' }} />
         </div>
 
-        {/* Main upload card */}
-        <div className="card card-3d">
-          <div className="absolute -inset-6 -z-10 rounded-[32px] bg-gradient-to-b from-[#22d3ee]/[.05] via-transparent to-[#3b82f6]/[.04] blur-xl pointer-events-none" />
-          <div className="p-5">
-            {/* Format badges + server info */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex flex-wrap gap-1.5">
-                {exts.map(ext => (
-                  <span key={ext} className="px-2 py-0.5 rounded-[6px] text-[8px] font-extrabold tracking-[.12em] border"
-                    style={{ color: TAG_COLORS[ext.toLowerCase()], borderColor: `${TAG_COLORS[ext.toLowerCase()]}30`, background: `${TAG_COLORS[ext.toLowerCase()]}08` }}>
-                    {ext}
-                  </span>
-                ))}
-              </div>
-              <span className="text-[9px] font-mono font-bold tracking-wider text-[var(--t-muted)]/70 uppercase">
-                {settings?.maxFileSizeMB > 0 ? `≤${settings.maxFileSizeMB}MB` : '∞'}
+        {/* Tab Segmented Control */}
+        <div className="flex items-center p-1 rounded-[16px] bg-white/[0.03] border border-white/[0.06] mb-5">
+          <button
+            onClick={() => {
+              if (!uploading) {
+                setTab('video')
+                setFiles([])
+              }
+            }}
+            className={`flex-1 py-2.5 rounded-[12px] font-extrabold text-[12px] tracking-wide flex items-center justify-center gap-2 transition-all duration-200 ${
+              tab === 'video'
+                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(0,98,255,0.4)]'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+            }`}
+          >
+            <i className="fa-solid fa-video text-[13px]" />
+            <span>Video Ultra HD</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (!uploading) {
+                setTab('image')
+                setFiles([])
+              }
+            }}
+            className={`flex-1 py-2.5 rounded-[12px] font-extrabold text-[12px] tracking-wide flex items-center justify-center gap-2 transition-all duration-200 ${
+              tab === 'image'
+                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(0,98,255,0.4)]'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+            }`}
+          >
+            <i className="fa-solid fa-image text-[13px]" />
+            <span>Foto Original</span>
+          </button>
+        </div>
+
+        {/* Dropzone Area */}
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => {
+            if (!uploading && fileInputRef.current) fileInputRef.current.click()
+          }}
+          className={`relative rounded-[20px] border-2 border-dashed transition-all duration-300 p-6 sm:p-8 text-center cursor-pointer overflow-hidden ${
+            dragOver
+              ? 'border-sky-400 bg-sky-500/[0.08] shadow-[0_0_35px_rgba(56,189,248,0.25)] scale-[1.01]'
+              : 'border-white/[0.1] bg-white/[0.015] hover:border-sky-400/40 hover:bg-white/[0.03]'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple={tab === 'image'}
+            accept={
+              semuaFile
+                ? '*/*'
+                : tab === 'video'
+                ? 'video/mp4,video/quicktime,video/x-matroska,video/avi,video/webm,video/*'
+                : 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/*'
+            }
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.length) addFiles(Array.from(e.target.files))
+            }}
+          />
+
+          {/* Floating Icon */}
+          <div className="relative w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-[20px] bg-gradient-to-br from-sky-400/15 to-blue-600/10 border border-sky-400/30 grid place-items-center mb-3.5 shadow-lg group-hover:scale-105 transition-transform">
+            <i className={`fa-solid ${tab === 'video' ? 'fa-cloud-arrow-up' : 'fa-images'} text-sky-400 text-[24px] sm:text-[28px]`} />
+          </div>
+
+          <h3 className="font-extrabold text-[15px] sm:text-[16px] text-white tracking-tight mb-1">
+            {tab === 'video' ? 'Pilih atau Tarik Video HD ke Sini' : 'Pilih atau Tarik Foto ke Sini'}
+          </h3>
+          <p className="text-slate-400 text-[11px] font-medium max-w-[280px] mx-auto mb-3.5">
+            {tab === 'video'
+              ? `Maksimal 1 video (${allowLarge ? largeMaxMB : maxMB}MB) · Format MP4, MOV, MKV`
+              : `Hingga 20 foto per batch · Format JPG, PNG, WEBP, HEIC`}
+          </p>
+
+          {/* Micro Specs Tags */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 pointer-events-none">
+            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-slate-300">
+              100% Stream Copy
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-emerald-400">
+              Zero Loss
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-sky-400">
+              Auto FastStart
+            </span>
+          </div>
+        </div>
+
+        {/* Selected Files Preview List */}
+        {files.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-400 flex items-center justify-between px-1">
+              <span>Berkas Terpilih ({files.length})</span>
+              <span className="text-sky-400 font-mono">{formatSize(files.reduce((a, b) => a + b.size, 0))}</span>
+            </p>
+            <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
+              {files.map((file, idx) => (
+                <div
+                  key={file.name + idx}
+                  className="flex items-center justify-between gap-3 p-2.5 rounded-[12px] bg-white/[0.03] border border-white/[0.07]"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center shrink-0">
+                      <i className={`fa-solid ${tab === 'video' ? 'fa-film' : 'fa-image'} text-sky-400 text-[11px]`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-white truncate max-w-[200px] sm:max-w-[280px]">{file.name}</p>
+                      <p className="text-[9px] text-slate-400 font-mono">{formatSize(file.size)}</p>
+                    </div>
+                  </div>
+                  {!uploading && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeFile(idx)
+                      }}
+                      className="w-6 h-6 rounded-full bg-white/[0.05] hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 grid place-items-center transition-colors"
+                    >
+                      <i className="fa-solid fa-xmark text-[10px]" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Upload Progress & Telemetry */}
+        {(uploading || isProcessing) && (
+          <div className="mt-4 p-4 rounded-[16px] bg-white/[0.025] border border-white/[0.08] space-y-3">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-white font-bold flex items-center gap-2">
+                <i className="fa-solid fa-circle-notch fa-spin text-sky-400 text-xs" />
+                {isProcessing ? processStatus : 'Mengunggah Berkas...'}
               </span>
+              <span className="font-mono font-extrabold text-sky-400 text-sm">{progress}%</span>
             </div>
 
-            {/* Drop zone */}
-            <div
-              onClick={() => { if (!uploading) fileRef.current?.click() }}
-              onDrop={handleDrop}
-              onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
-              onDragLeave={() => setDrag(false)}
-              className={`drop-luxe drop-3d py-9 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
-            >
-              <input ref={fileRef} type="file" accept={accept} multiple={tab !== 'video'} aria-label="Pilih file video atau foto untuk diupload" className="hidden" onChange={e => addFiles(e.target.files)} />
-              <div className="drop-halo">
-                <div className={`w-16 h-16 mx-auto rounded-[18px] grid place-items-center mb-4 transition-all duration-[250ms] floaty ${isImg
-                  ? 'bg-[#34d399]/12 border border-[#34d399]/25 shadow-[0_0_36px_-8px_rgba(52,211,153,.4)]'
-                  : 'bg-[#22d3ee]/12 border border-[#3b82f6]/30 shadow-[0_0_36px_-8px_rgba(59,130,246,.4)]'}`}>
-                  <i className={`fa-solid ${isImg ? 'fa-images text-[#34d399]' : 'fa-cloud-arrow-up text-[#67e8f9]'} text-[22px]`} />
-                </div>
-              </div>
-              <p className="font-[family-name:var(--font-display)] font-bold text-[15px] tracking-tight">
-                {tab === 'video' ? 'Drop video di sini' : 'Drop foto di sini'}
-              </p>
-              <p className="text-[var(--t-muted)] text-[12px] mt-1.5">
-                atau <span className="text-[#22d3ee] font-semibold underline underline-offset-4 decoration-[#22d3ee]/40">pilih file</span>
-              </p>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setSemuaFile(v => !v); setTimeout(() => fileRef.current?.click(), 0) }}
-                className="mt-3 min-h-10 px-4 rounded-[12px] text-[11px] font-bold bg-white/[.05] border border-white/[.08] text-[var(--t-muted)] hover:text-white transition-colors duration-[150ms]"
-              >
-                <i className="fa-solid fa-folder-open mr-1.5" />
-                {semuaFile ? 'Kembali ke filter galeri' : 'File tidak muncul? Tampilkan semua'}
-              </button>
-
+            {/* Progress Bar */}
+            <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
             </div>
 
-            {/* File list */}
-            {files.length > 0 && (
-              <div className="mt-4 stagger">
-                <div className="flex items-center justify-between px-0.5 mb-2">
-                  <span className="text-[var(--t-muted)] text-[10px] font-bold">
-                    {files.length} file · {fmtSize(files.reduce((s, f) => s + f.size, 0))}
-                  </span>
-                  <button onClick={clearAll} disabled={uploading} className="text-bad/60 text-[10px] font-bold hover:text-bad transition-all duration-[150ms] disabled:opacity-30">
-                    <i className="fa-solid fa-trash-can mr-1" />Hapus
-                  </button>
+            {/* Stats Telemetry */}
+            {!isProcessing && (
+              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/[0.04] text-[10px] text-slate-400">
+                <div>
+                  <p className="text-slate-400">Kecepatan</p>
+                  <p className="font-mono font-bold text-white">{uploadStats.speed}</p>
                 </div>
-
-                {isImg ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {files.map(f => {
-                      const key = f.name + f.size
-                      return (
-                        <div key={key} className="relative aspect-square rounded-[12px] overflow-hidden border border-white/[.07] group hover:border-[#3b82f6]/30 transition-all duration-[150ms]">
-                          {thumbs[key] && <img src={thumbs[key]} alt="" className="w-full h-full object-cover" />}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-[150ms]" />
-                          <p className="absolute bottom-1 left-1.5 right-1.5 text-[10px] text-white font-bold truncate opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-[150ms]">{f.name}</p>
-                          {!uploading && (
-                            <button onClick={(e) => { e.stopPropagation(); removeFile(f) }} aria-label={'Hapus ' + f.name} className="absolute top-1 right-1 w-7 h-7 rounded-full bg-bad/90 text-white text-[11px] grid place-items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-[150ms]">
-                              <i className="fa-solid fa-xmark" />
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {files.map(f => {
-                      const ext = f.name.split('.').pop().toUpperCase()
-                      return (
-                        <div key={f.name + f.size} className="flex items-center gap-2.5 py-2.5 px-3 rounded-[14px] bg-white/[.02] border border-white/[.05] group hover:border-white/[.10] transition-all duration-[150ms]">
-                          <span className="w-8 h-8 shrink-0 rounded-[10px] bg-[#3b82f6]/10 border border-[#3b82f6]/15 grid place-items-center">
-                            <i className="fa-solid fa-film text-[#67e8f9] text-[11px]" />
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-[11px] truncate">{f.name}</p>
-                            <span className="text-[var(--t-muted)] text-[9px] font-mono">{fmtSize(f.size)}</span>
-                          </div>
-                          <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded-[5px]" style={{ color: TAG_COLORS[ext.toLowerCase()], background: `${TAG_COLORS[ext.toLowerCase()]}12` }}>{ext}</span>
-                          {!uploading && (
-                            <button onClick={() => removeFile(f)} aria-label={'Hapus ' + f.name} className="w-10 h-10 shrink-0 rounded-full bg-bad/10 text-bad text-[12px] grid place-items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-[150ms]">
-                              <i className="fa-solid fa-xmark" />
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Progress */}
-            {uploading && (
-              <div className="mt-4 anim-fade">
-                {/* Stats row */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-[8px] bg-[#22d3ee]/10 border border-[#22d3ee]/20 grid place-items-center">
-                      <i className={`fa-solid ${encode ? 'fa-wand-magic-sparkles text-[#34d399]' : 'fa-cloud-arrow-up text-[#22d3ee] animate-bounce'} text-[10px]`} />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-bold text-[var(--t-ink)]">{encode ? encode.stage : 'Mengupload…'}</p>
-                      {encode
-                        ? <p className="text-[11px] font-mono text-[var(--t-muted)]">Menyiapkan agar lancar diunduh di WA</p>
-                        : <p className="text-[11px] font-mono text-[var(--t-muted)]">{fmtSize(progress.loaded)} / {fmtSize(progress.total)}</p>}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[16px] font-[family-name:var(--font-display)] font-extrabold grad-text tabular-nums">{totalPct}%</p>
-                    <p className="text-[9px] font-mono font-bold text-[#67e8f9]">
-                      {encode ? 'ffmpeg' : progress.speed > 0 ? `${(progress.speed * 8 / 1000000).toFixed(1)} Mbps` : '—'}
-                    </p>
-                  </div>
+                <div className="text-center">
+                  <p className="text-slate-400">Terkirim</p>
+                  <p className="font-mono font-bold text-white">{uploadStats.sent} / {uploadStats.total}</p>
                 </div>
-
-                {/* Progress bar */}
-                <div className="relative h-[6px] rounded-full bg-white/[.06] overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full transition-all duration-[250ms]"
-                    style={{
-                      width: totalPct + '%',
-                      background: 'linear-gradient(90deg, #22d3ee, #3b82f6, #34d399)',
-                      boxShadow: '0 0 16px rgba(34,211,238,.5), 0 0 4px rgba(34,211,238,.8)',
-                      transitionTimingFunction: 'var(--ease-out)',
-                    }}
-                  />
-                  {/* Shimmer overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[.15] to-transparent" style={{ animation: 'shimmer 1.2s linear infinite' }} />
+                <div className="text-right">
+                  <p className="text-slate-400">Estimasi</p>
+                  <p className="font-mono font-bold text-white">{uploadStats.eta}</p>
                 </div>
-
-                {/* ETA */}
-                {!encode && progress.speed > 0 && progress.pct < 100 && (
-                  <p className="text-[9px] text-[var(--t-muted)]/70 font-mono mt-1.5 text-right">
-                    ≈ {Math.ceil((progress.total - progress.loaded) / progress.speed)}s tersisa
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Upload / Cancel button */}
-            {files.length > 0 && (
-              <div className="mt-4">
-                {uploading ? (
-                  <button onClick={cancelUpload} className="w-full py-3.5 rounded-[14px] font-bold text-sm text-bad bg-bad/8 border border-bad/25 hover:bg-bad/15 btn-3d active:scale-[.97] transition-all duration-[150ms]">
-                    <i className="fa-solid fa-circle-stop mr-2" />Batalkan
-                  </button>
-                ) : (
-                  <button onClick={doUpload} className="btn-primary btn-3d w-full py-3.5 rounded-[14px] font-bold text-sm">
-                    <i className="fa-solid fa-cloud-arrow-up mr-2" />Upload {files.length} {tab === 'video' ? 'Video' : 'Foto'}
-                  </button>
-                )}
               </div>
             )}
           </div>
+        )}
+
+        {/* Action Button */}
+        <div className="mt-5">
+          {uploading ? (
+            <button
+              onClick={cancelUpload}
+              className="w-full py-3.5 rounded-[16px] bg-rose-500/10 border border-rose-500/30 text-rose-400 font-extrabold text-[13px] hover:bg-rose-500/20 active:scale-[0.98] transition-all"
+            >
+              Batalkan Pengunggahan
+            </button>
+          ) : (
+            <button
+              disabled={files.length === 0}
+              onClick={startUpload}
+              className={`w-full py-3.5 rounded-[16px] font-extrabold text-[13px] tracking-wide transition-all duration-200 flex items-center justify-center gap-2 ${
+                files.length > 0
+                  ? 'bg-gradient-to-r from-sky-400 via-blue-500 to-blue-600 text-white shadow-[0_10px_28px_-6px_rgba(0,98,255,0.45)] hover:brightness-110 active:scale-[0.98]'
+                  : 'bg-white/[0.04] border border-white/[0.06] text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              <i className="fa-solid fa-arrow-up-from-bracket text-xs" />
+              <span>Unggah {files.length ? `(${files.length} Berkas)` : 'Sekarang'}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Bypass Android / iOS Picker Toggle */}
+        <div className="mt-4 pt-3 border-t border-white/[0.04] flex items-center justify-between">
+          <label className="text-[11px] text-slate-400 cursor-pointer flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={semuaFile}
+              onChange={(e) => setSemuaFile(e.target.checked)}
+              className="rounded border-white/20 bg-white/5 text-sky-500 focus:ring-0"
+            />
+            <span>Mode Semua Berkas (Bypass Galeri HP)</span>
+          </label>
+          <span className="text-[10px] font-mono text-slate-400">v3.8h</span>
         </div>
       </div>
 
-      {result && <SuccessModal result={result} settings={settings} expireMinutes={result.expireMinutes} onClose={() => setResult(null)} />}
-    </>
+      {/* Success Result Modal */}
+      {result && (
+        <SuccessModal
+          result={result}
+          settings={settings}
+          expireMinutes={settings?.expireMinutes || 60}
+          onClose={() => setResult(null)}
+        />
+      )}
+    </div>
   )
 }
