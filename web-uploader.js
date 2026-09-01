@@ -951,6 +951,41 @@ async function handleRequest(req, res) {
     res.writeHead(404); res.end('Not found'); return;
   }
 
+  if (req.method === 'GET' && url === '/api/stats/public') {
+    try {
+      const stats = getStats();
+      const log = loadUploadLog();
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const ts0 = todayStart.getTime();
+
+      let successToday = 0;
+      let failedToday = 0;
+      let totalToday = 0;
+
+      for (const item of log) {
+        if (item.timestamp >= ts0) {
+          totalToday++;
+          if (item.code) successToday++;
+          else if (item.status === 'failed' || item.error) failedToday++;
+        }
+      }
+
+      jsonRes(res, 200, {
+        ok: true,
+        totalActive: stats.totalActive || 0,
+        totalToday: Math.max(stats.uploadsToday || 0, totalToday),
+        successToday: Math.max(stats.uploadsToday || 0, successToday),
+        failedToday: failedToday,
+        totalStorage: getTotalStorage(),
+        directReady: true,
+        serverTime: Date.now()
+      });
+    } catch (e) {
+      jsonRes(res, 500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   if (req.method === 'GET' && url === '/api/settings/public') {
     jsonRes(res, 200, {
       ownerWhatsapp: settings.ownerWhatsapp,
