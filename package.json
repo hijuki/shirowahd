@@ -62,7 +62,7 @@
     "gsmarena-api": "^2.0.5",
     "gtts": "^0.2.1",
     "he": "^1.2.0",
-    "hillz": "npm:ourin-baileys@^9.0.21",
+    "hillz": "npm:@sairidev/baileys-new@^0.3.21",
     "iqc-canvas": "^1.0.2",
     "jimp": "^1.6.0",
     "jsdom": "^28.1.0",
