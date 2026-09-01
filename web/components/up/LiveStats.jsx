@@ -21,19 +21,11 @@ export default function LiveStats() {
 
   useEffect(() => {
     fetchStats()
-    const timer = setInterval(fetchStats, 15000)
+    const timer = setInterval(fetchStats, 12000)
     return () => clearInterval(timer)
   }, [])
 
-  if (loading && !stats) {
-    return (
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-16 rounded-[14px] bg-white/[0.02] border border-white/[0.06] animate-pulse" />
-        ))}
-      </div>
-    )
-  }
+  if (loading && !stats) return null
 
   const total = stats?.totalToday || 0
   const success = stats?.successToday || total
@@ -41,60 +33,64 @@ export default function LiveStats() {
   const isDirectOn = stats?.directReady !== false
 
   return (
-    <div className="mb-6">
-      {/* Header telemetri */}
-      <div className="flex items-center justify-between px-1 mb-2">
-        <div className="flex items-center gap-1.5">
+    <div className="mb-6 anim-entrance" style={{ animationDelay: '150ms' }}>
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-1 mb-2.5">
+        <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34d399] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#34d399]" />
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+          <span className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[var(--t-muted)]">
             Aktivitas Server Hari Ini
           </span>
         </div>
-        <span className={`text-[9px] font-mono font-bold flex items-center gap-1 ${isDirectOn ? 'text-sky-400' : 'text-slate-500'}`}>
-          <i className={`fa-solid ${isDirectOn ? 'fa-bolt-lightning text-sky-400' : 'fa-bolt text-slate-500'} text-[8px]`} />
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] text-[9px] font-extrabold tracking-wider border ${
+          isDirectOn
+            ? 'bg-[#22d3ee]/8 border-[#22d3ee]/25 text-[#67e8f9]'
+            : 'bg-white/[.02] border-white/[.06] text-[var(--t-muted)]'
+        }`}>
+          <i className={`fa-solid ${isDirectOn ? 'fa-bolt-lightning text-[#22d3ee]' : 'fa-bolt text-[var(--t-muted)]'} text-[8px]`} />
           {isDirectOn ? '100MB+ ON' : '100MB+ OFF'}
         </span>
       </div>
 
-      {/* 3 Kartu Metrik */}
+      {/* 3 Metric Cards */}
       <div className="grid grid-cols-3 gap-2">
-        {/* Total */}
-        <div className="relative overflow-hidden rounded-[14px] bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.08] p-3 text-center transition-all duration-200 hover:border-sky-500/30 hover:bg-white/[0.03]">
-          <div className="text-[9px] font-extrabold tracking-wider uppercase text-slate-400 mb-1 flex items-center justify-center gap-1">
-            <i className="fa-solid fa-cloud-arrow-up text-sky-400 text-[9px]" />
+        {/* Total Upload */}
+        <div className="relative rounded-[16px] bg-white/[.02] border border-white/[.07] p-3 text-center transition-all duration-[200ms] hover:border-[#22d3ee]/30 hover:bg-white/[.04]">
+          <div className="text-[9px] font-extrabold tracking-wider uppercase text-[var(--t-muted)] mb-1 flex items-center justify-center gap-1">
+            <i className="fa-solid fa-cloud-arrow-up text-[#22d3ee] text-[9px]" />
             <span>Total</span>
           </div>
-          <p className="font-mono font-extrabold text-[18px] text-white tracking-tight tabular-nums">
+          <p className="font-mono font-extrabold text-[18px] text-[var(--t-ink)] tracking-tight tabular-nums">
             {total}
           </p>
-          <p className="text-[8px] font-medium text-slate-400 mt-0.5">berkas masuk</p>
+          <p className="text-[8px] font-bold text-[var(--t-muted)]/60 mt-0.5 uppercase tracking-wider">Berkas</p>
         </div>
 
         {/* Sukses */}
-        <div className="relative overflow-hidden rounded-[14px] bg-gradient-to-b from-emerald-500/[0.06] to-white/[0.01] border border-emerald-500/20 p-3 text-center transition-all duration-200 hover:border-emerald-500/40">
-          <div className="text-[9px] font-extrabold tracking-wider uppercase text-emerald-400 mb-1 flex items-center justify-center gap-1">
-            <i className="fa-solid fa-circle-check text-emerald-400 text-[9px]" />
+        <div className="relative rounded-[16px] bg-[#34d399]/[.03] border border-[#34d399]/20 p-3 text-center transition-all duration-[200ms] hover:border-[#34d399]/40 hover:bg-[#34d399]/[.06]">
+          <div className="text-[9px] font-extrabold tracking-wider uppercase text-[#34d399] mb-1 flex items-center justify-center gap-1">
+            <i className="fa-solid fa-circle-check text-[#34d399] text-[9px]" />
             <span>Sukses</span>
           </div>
-          <p className="font-mono font-extrabold text-[18px] text-emerald-400 tracking-tight tabular-nums">
+          <p className="font-mono font-extrabold text-[18px] text-[#34d399] tracking-tight tabular-nums">
             {success}
           </p>
-          <p className="text-[8px] font-medium text-emerald-400/80 mt-0.5">100% HD convert</p>
+          <p className="text-[8px] font-bold text-[#34d399]/70 mt-0.5 uppercase tracking-wider">100% HD</p>
         </div>
 
         {/* Gagal */}
-        <div className="relative overflow-hidden rounded-[14px] bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.08] p-3 text-center transition-all duration-200 hover:border-rose-500/30">
-          <div className="text-[9px] font-extrabold tracking-wider uppercase text-slate-400 mb-1 flex items-center justify-center gap-1">
-            <i className="fa-solid fa-circle-xmark text-rose-400 text-[9px]" />
+        <div className="relative rounded-[16px] bg-white/[.02] border border-white/[.07] p-3 text-center transition-all duration-[200ms] hover:border-bad/30 hover:bg-white/[.04]">
+          <div className="text-[9px] font-extrabold tracking-wider uppercase text-[var(--t-muted)] mb-1 flex items-center justify-center gap-1">
+            <i className="fa-solid fa-circle-xmark text-bad text-[9px]" />
             <span>Gagal</span>
           </div>
-          <p className="font-mono font-extrabold text-[18px] text-slate-300 tracking-tight tabular-nums">
+          <p className="font-mono font-extrabold text-[18px] text-[var(--t-ink)]/70 tracking-tight tabular-nums">
             {failed}
           </p>
-          <p className="text-[8px] font-medium text-slate-400 mt-0.5">ditolak / corrupt</p>
+          <p className="text-[8px] font-bold text-[var(--t-muted)]/60 mt-0.5 uppercase tracking-wider">Ditolak</p>
         </div>
       </div>
     </div>
