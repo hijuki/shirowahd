@@ -829,7 +829,7 @@ export default function Settings({ toast }) {
         )}
 
         {/* Floating Mobile/Desktop Sticky Save Bar */}
-        <div className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-8 z-40 max-w-xl ml-auto">
+        <div className="fixed bottom-20 inset-x-4 sm:bottom-6 sm:inset-x-auto sm:right-8 z-40 max-w-xl ml-auto anim-fade">
           <div className="p-2.5 rounded-2xl bg-[rgba(4,7,15,0.92)] backdrop-blur-2xl border border-white/[.15] shadow-[0_12px_40px_rgba(0,0,0,0.8)] flex items-center justify-between gap-3">
             <div className="hidden sm:flex items-center gap-2 pl-3">
               <span className="w-2 h-2 rounded-full bg-[#0062FF] animate-pulse" />

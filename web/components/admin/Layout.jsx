@@ -1,11 +1,11 @@
 'use client'
 
 const tabs = [
-  { id: 'dashboard', label: 'Dashboard', shortLabel: 'Dashboard', icon: 'fa-chart-pie' },
-  { id: 'files', label: 'Media Files', shortLabel: 'Files', icon: 'fa-folder-open' },
-  { id: 'settings', label: 'Pengaturan', shortLabel: 'Settings', icon: 'fa-sliders' },
-  { id: 'security', label: 'Keamanan', shortLabel: 'Security', icon: 'fa-shield-halved' },
-  { id: 'bot', label: 'Bot WhatsApp', shortLabel: 'Bot WA', icon: 'fa-robot' },
+  { id: 'dashboard', label: 'Overview', icon: 'fa-chart-pie' },
+  { id: 'files', label: 'Files', icon: 'fa-folder' },
+  { id: 'settings', label: 'Settings', icon: 'fa-sliders' },
+  { id: 'security', label: 'Security', icon: 'fa-shield-halved' },
+  { id: 'bot', label: 'Bot WA', icon: 'fa-robot' },
 ]
 
 export default function Layout({ active, setActive, children }) {
@@ -43,7 +43,7 @@ export default function Layout({ active, setActive, children }) {
         {/* Navigation Menu */}
         <nav className="flex-1 flex flex-col gap-1.5 p-4 overflow-y-auto">
           <div className="px-3 pb-2 pt-1 text-[10px] font-extrabold uppercase tracking-widest text-[#7e90ad]/60 font-mono">
-            Navigation Menu
+            Main Navigation
           </div>
           {tabs.map(t => {
             const isActive = active === t.id
@@ -85,7 +85,7 @@ export default function Layout({ active, setActive, children }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-64 relative z-10 pb-24 md:pb-12 min-h-dvh flex flex-col">
+      <main className="flex-1 md:ml-64 relative z-10 pb-28 md:pb-12 min-h-dvh flex flex-col">
         {/* Top Bar Mobile */}
         <header className="md:hidden flex items-center justify-between px-5 py-3.5 sticky top-0 z-30 bg-[rgba(4,7,15,0.88)] backdrop-blur-2xl border-b border-white/[.07]">
           <div className="flex items-center gap-2.5">
@@ -112,20 +112,20 @@ export default function Layout({ active, setActive, children }) {
       </main>
 
       {/* Bottom Bar Mobile Navigation */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[rgba(6,10,20,0.95)] backdrop-blur-2xl border-t border-white/[.08] px-1.5 py-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around gap-1">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-[rgba(6,10,20,0.95)] backdrop-blur-2xl border-t border-white/[.08] px-2 py-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around gap-1 shadow-[0_-8px_24px_rgba(0,0,0,0.6)]">
         {tabs.map(t => {
           const isActive = active === t.id
           return (
             <button
               key={t.id}
               onClick={() => setActive(t.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl transition-all duration-150 ${isActive
-                ? 'text-[#38bdf8] bg-[#0062FF]/15'
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-xl transition-all duration-200 ${isActive
+                ? 'text-[#38bdf8] bg-[#0062FF]/15 shadow-[inset_0_0_12px_rgba(0,98,255,0.2)]'
                 : 'text-[#7e90ad] hover:text-white'}`}
             >
-              <i className={`fa-solid ${t.icon} text-base`} />
+              <i className={`fa-solid ${t.icon} text-base ${isActive ? 'text-[#38bdf8]' : ''}`} />
               <span className="text-[10px] font-bold tracking-tight whitespace-nowrap text-center">
-                {t.shortLabel || t.label}
+                {t.label}
               </span>
             </button>
           )
