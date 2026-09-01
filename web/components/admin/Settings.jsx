@@ -311,17 +311,17 @@ export default function Settings({ toast }) {
           <p className="text-xs text-[#7e90ad] mt-1">Konfigurasi jaringan, tampilan uploader, kuota media, dan keamanan</p>
         </div>
 
-        {/* Global Save Button Desktop */}
-        <div className="hidden sm:flex items-center gap-2.5">
+        {/* Action Buttons Header (Mobile & Desktop) */}
+        <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0">
           <button type="button" onClick={doBackup} disabled={backupBusy}
-            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/[.04] hover:bg-white/[.08] text-white/90 border border-white/[.08] hover:border-white/[.15] transition-all flex items-center gap-2 active:scale-95">
+            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/[.04] hover:bg-white/[.08] text-white/90 border border-white/[.08] hover:border-white/[.15] transition-all flex items-center justify-center gap-2 active:scale-95">
             <i className={`fa-brands fa-github ${backupBusy ? 'fa-spin' : ''}`} />
-            {backupBusy ? 'Backup...' : 'Backup GitHub'}
+            <span className="hidden xs:inline">Backup</span>
           </button>
           <button type="button" onClick={save} disabled={busy}
-            className="px-6 py-2.5 rounded-xl text-xs font-extrabold bg-[#0062FF] hover:bg-[#0052D6] text-white shadow-[0_0_24px_-4px_rgba(0,98,255,0.5)] transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50">
+            className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl text-xs font-extrabold bg-[#0062FF] hover:bg-[#0052D6] text-white shadow-[0_0_24px_-4px_rgba(0,98,255,0.5)] transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
             <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
-            {busy ? 'Menyimpan…' : 'Simpan Semua'}
+            {busy ? 'Menyimpan…' : 'Simpan Perubahan'}
           </button>
         </div>
       </div>
@@ -828,25 +828,29 @@ export default function Settings({ toast }) {
           </div>
         )}
 
-        {/* Floating Mobile/Desktop Sticky Save Bar */}
-        <div className="fixed bottom-20 inset-x-4 sm:bottom-6 sm:inset-x-auto sm:right-8 z-40 max-w-xl ml-auto anim-fade">
-          <div className="p-2.5 rounded-2xl bg-[rgba(4,7,15,0.92)] backdrop-blur-2xl border border-white/[.15] shadow-[0_12px_40px_rgba(0,0,0,0.8)] flex items-center justify-between gap-3">
-            <div className="hidden sm:flex items-center gap-2 pl-3">
-              <span className="w-2 h-2 rounded-full bg-[#0062FF] animate-pulse" />
-              <span className="text-xs font-mono text-[#7e90ad]">Panel Pengaturan Siap Disimpan</span>
+        {/* In-Flow Save Action Card (Bottom of Form) */}
+        <div className="p-5 rounded-2xl bg-white/[.02] border border-white/[.08] flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <div className="w-9 h-9 rounded-xl bg-[#0062FF]/15 border border-[#0062FF]/30 grid place-items-center">
+              <i className="fa-solid fa-floppy-disk text-xs text-[#38bdf8]" />
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button type="button" onClick={doBackup} disabled={backupBusy}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/[.06] hover:bg-white/[.12] text-white/90 border border-white/[.08] transition-all flex items-center justify-center gap-2 active:scale-95">
-                <i className={`fa-brands fa-github ${backupBusy ? 'fa-spin' : ''}`} />
-                <span className="hidden sm:inline">Backup</span>
-              </button>
-              <button type="submit" disabled={busy}
-                className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl text-xs font-extrabold bg-[#0062FF] hover:bg-[#0052D6] text-white shadow-[0_0_20px_rgba(0,98,255,0.4)] transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
-                <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
-                {busy ? 'Menyimpan…' : 'Simpan Perubahan'}
-              </button>
+            <div>
+              <p className="text-xs font-bold text-white/90">Simpan Konfigurasi</p>
+              <p className="text-[11px] text-[#7e90ad]">Pastikan semua setelan sudah sesuai sebelum menyimpan</p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button type="button" onClick={doBackup} disabled={backupBusy}
+              className="px-4 py-3 rounded-xl text-xs font-bold bg-white/[.04] hover:bg-white/[.08] text-white/90 border border-white/[.08] hover:border-white/[.15] transition-all flex items-center justify-center gap-2 active:scale-95">
+              <i className={`fa-brands fa-github ${backupBusy ? 'fa-spin' : ''}`} />
+              <span>Backup GitHub</span>
+            </button>
+            <button type="submit" disabled={busy}
+              className="flex-1 sm:flex-initial px-8 py-3 rounded-xl text-xs font-extrabold bg-[#0062FF] hover:bg-[#0052D6] text-white shadow-[0_0_24px_-4px_rgba(0,98,255,0.5)] transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
+              <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
+              {busy ? 'Menyimpan…' : 'Simpan Perubahan'}
+            </button>
           </div>
         </div>
       </form>
