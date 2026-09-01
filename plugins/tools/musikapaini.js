@@ -113,24 +113,16 @@ async function handler(m, { sock }) {
 
   if (!downloadFn) {
     return m.reply(
-      `🎵 *ᴄᴀʀɪ ʟᴀɢᴜ (ᴍᴜsɪᴄ ʀᴇᴄᴏɢɴɪᴛɪᴏɴ)*
-
-` +
-        `> Identifikasi judul lagu dari audio/voice note/video WhatsApp
-
-` +
-        `*Cara Penggunaan:*
-` +
-        `> 1. Reply pesan audio, VN, atau video dengan \`${m.prefix}carilagu\`
-` +
+      `🎵 *ᴄᴀʀɪ ʟᴀɢᴜ (ᴍᴜsɪᴄ ʀᴇᴄᴏɢɴɪᴛɪᴏɴ)*\n\n` +
+        `> Identifikasi judul lagu dari audio/voice note/video WhatsApp\n\n` +
+        `*Cara Penggunaan:*\n` +
+        `> 1. Reply pesan audio, VN, atau video dengan \`${m.prefix}carilagu\`\n` +
         `> 2. Atau kirim audio/video dengan caption \`${m.prefix}carilagu\``
     );
   }
 
   m.react("🔍");
-  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ʟᴀɢᴜ...*
-
-> Sedang mengunduh audio & mencocokkan dengan database Shazam...`);
+  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ʟᴀɢᴜ...*\n\n> Sedang mengunduh audio & mencocokkan dengan database Shazam...`);
 
   const tempDir = path.join(process.cwd(), "temp");
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -145,9 +137,7 @@ async function handler(m, { sock }) {
 
     if (!audioBuffer || !audioBuffer.length) {
       m.react("❌");
-      return m.reply(`❌ *ɢᴀɢᴀʟ ᴍᴇɴɢᴜɴᴅᴜʜ ᴍᴇᴅɪᴀ*
-
-> Tidak dapat mengunduh audio dari WhatsApp. Pastikan media belum kadaluarsa.`);
+      return m.reply(`❌ *ɢᴀɢᴀʟ ᴍᴇɴɢᴜɴᴅᴜʜ ᴍᴇᴅɪᴀ*\n\n> Tidak dapat mengunduh audio dari WhatsApp. Pastikan media belum kadaluarsa.`);
     }
 
     fs.writeFileSync(inputPath, audioBuffer);
@@ -161,9 +151,7 @@ async function handler(m, { sock }) {
 
     if (!recogResult.status || !recogResult.title) {
       m.react("❌");
-      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*
-
-> Tidak dapat mengenali lagu dari audio tersebut. Pastikan sampel lagu terdengar jelas & minim noise.`);
+      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n> Tidak dapat mengenali lagu dari audio tersebut. Pastikan sampel lagu terdengar jelas & minim noise.`);
     }
 
     const songTitle = recogResult.title;
@@ -171,7 +159,7 @@ async function handler(m, { sock }) {
     const songAlbum = recogResult.album;
     const songRelease = recogResult.release;
 
-    // Cari versi audio di YouTube
+    // Cari versi audio di YouTube (ambil 3-5 opsi)
     const searchQuery = `${songArtist} - ${songTitle}`;
     const ytSearch = await yts(searchQuery);
     let videos = ytSearch?.videos?.slice(0, 5) || [];
@@ -183,44 +171,35 @@ async function handler(m, { sock }) {
       }
     }
 
-    let text = `🎵 *ʟᴀɢᴜ ᴅɪᴛᴇᴍᴜᴋᴀɴ!*
-
-`;
-    text += `╭┈┈⬡「 📋 *ɪɴꜰᴏ ʟᴀɢᴜ* 」
-`;
-    text += `┃ 🎶 *Judul:* ${songTitle}
-`;
-    text += `┃ 👤 *Artis:* ${songArtist}
-`;
-    text += `┃ 💿 *Album:* ${songAlbum}
-`;
-    text += `┃ 📅 *Rilis:* ${songRelease}
-`;
-    text += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡
-
-`;
+    let text = `🎵 *ʟᴀɢᴜ ᴅɪᴛᴇᴍᴜᴋᴀɴ!*\n\n`;
+    text += `╭┈┈⬡「 📋 *ɪɴꜰᴏ ʟᴀɢᴜ* 」\n`;
+    text += `┃ 🎶 *Judul:* ${songTitle}\n`;
+    text += `┃ 👤 *Artis:* ${songArtist}\n`;
+    text += `┃ 💿 *Album:* ${songAlbum}\n`;
+    text += `┃ 📅 *Rilis:* ${songRelease}\n`;
+    text += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
 
     if (videos.length > 0) {
-      text += `📋 *ᴘɪʟɪʜᴀɴ ᴠᴇʀsɪ ᴀᴜᴅɪᴏ (${videos.length} ᴛᴇʀsᴇᴅɪᴀ):*
-`;
+      text += `📋 *ᴘɪʟɪʜᴀɴ ᴠᴇʀsɪ ᴀᴜᴅɪᴏ (${videos.length} ᴛᴇʀsᴇᴅɪᴀ):*\n`;
       videos.forEach((v, idx) => {
-        text += `*[${idx + 1}]* ${v.title}
-`;
-        text += `   ⏱️ Durasi: \`${v.timestamp || "?"}\` · 👤 Channel: _${v.author?.name || "Unknown"}_
-
-`;
+        text += `*[${idx + 1}]* ${v.title}\n`;
+        text += `   ⏱️ Durasi: \`${v.timestamp || "?"}\` · 👤 Channel: _${v.author?.name || "Unknown"}_\n\n`;
       });
-      text += `💬 *Ketik/Balas angka (1-${videos.length}) untuk mengirim audio MP3 ke WhatsApp ini.*`;
+      text += `💬 *Ketik angka (1-${videos.length}) untuk langsung mengirim audio MP3 ke chat ini.*`;
 
-      // Simpan session selama 5 menit
-      const sessionKey = m.chat + "_" + m.sender;
-      global.carilaguSessions.set(sessionKey, {
+      // Simpan session aktif di berbagai key agar kompatibel grup & private chat
+      const senderJid = m.sender || m.key?.participant || m.chat;
+      const sessionData = {
         results: videos,
         chat: m.chat,
-        sender: m.sender,
+        sender: senderJid,
         songInfo: { title: songTitle, artist: songArtist },
         expiresAt: Date.now() + 5 * 60 * 1000,
-      });
+      };
+
+      global.carilaguSessions.set(m.chat + "_" + senderJid, sessionData);
+      global.carilaguSessions.set(m.chat, sessionData);
+      if (senderJid) global.carilaguSessions.set(senderJid, sessionData);
     } else {
       text += `_Tidak dapat menemukan link unduhan YouTube untuk lagu ini._`;
     }
@@ -237,69 +216,77 @@ async function handler(m, { sock }) {
     m.react("✅");
   } catch (error) {
     m.react("❌");
-    await m.reply(`❌ *ᴇʀʀᴏʀ*
-
-> Gagal mengenali lagu: _${error.message}_`);
+    await m.reply(`❌ *ᴇʀʀᴏʀ*\n\n> Gagal mengenali lagu: _${error.message}_`);
   } finally {
     try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath); } catch {}
     try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch {}
   }
 }
 
-// Answer handler untuk menangkap balasan nomor 1, 2, 3 dari user
+// Answer handler untuk menangkap balasan nomor 1-5 dari user
 export async function carilaguAnswerHandler(m, sock) {
-  if (!m.body) return false;
+  const rawBody = (m.body || m.text || "").trim();
+  if (!rawBody) return false;
 
-  const text = m.body.trim();
-  const sessionKey = m.chat + "_" + m.sender;
-  const session = global.carilaguSessions?.get(sessionKey);
+  // Cek apakah pesan berupa angka 1 sampai 5
+  const match = rawBody.match(/^#?\[?([1-5])\]?\.?$/i);
+  if (!match) return false;
+
+  const choiceNum = parseInt(match[1], 10);
+  const senderJid = m.sender || m.key?.participant || m.chat;
+
+  // Cari session aktif
+  let session = global.carilaguSessions?.get(m.chat + "_" + senderJid);
+  if (!session) session = global.carilaguSessions?.get(m.chat);
+  if (!session && senderJid) session = global.carilaguSessions?.get(senderJid);
 
   if (!session) return false;
 
   if (Date.now() > session.expiresAt) {
-    global.carilaguSessions.delete(sessionKey);
+    global.carilaguSessions.delete(m.chat + "_" + senderJid);
+    global.carilaguSessions.delete(m.chat);
+    if (senderJid) global.carilaguSessions.delete(senderJid);
     return false;
   }
 
-  const choiceNum = parseInt(text, 10);
-  if (isNaN(choiceNum) || choiceNum < 1 || choiceNum > session.results.length) {
+  if (choiceNum < 1 || choiceNum > session.results.length) {
     return false;
   }
 
   const selectedSong = session.results[choiceNum - 1];
-  global.carilaguSessions.delete(sessionKey);
+
+  // Hapus session agar tidak terpanggil ganda
+  global.carilaguSessions.delete(m.chat + "_" + senderJid);
+  global.carilaguSessions.delete(m.chat);
+  if (senderJid) global.carilaguSessions.delete(senderJid);
 
   m.react("⏳");
-  await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*
-
-> Mengunduh: *${selectedSong.title}*
-> Durasi: \`${selectedSong.timestamp}\`
-> Harap tunggu sebentar, file MP3 akan segera dikirim...`);
+  await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*\n\n> Judul: *${selectedSong.title}*\n> Durasi: \`${selectedSong.timestamp}\`\n> Harap tunggu, sedang mengonversi & mengirimkan MP3...`);
 
   try {
     let mp3Buffer = null;
 
-    // Coba download menggunakan ytdl internal
+    // Metode 1: Scraper API Azbry ytmp3
     try {
-      const dlRes = await ytdl(selectedSong.url, "mp3");
-      if (dlRes?.status && dlRes?.download) {
-        const { data } = await axios.get(dlRes.download, { responseType: "arraybuffer", timeout: 120000 });
+      const res = await axios.get(`https://api.azbry.com/api/download/ytmp3?url=${encodeURIComponent(selectedSong.url)}`, { timeout: 35000 });
+      if (res.data?.status && res.data?.result?.download) {
+        const { data } = await axios.get(res.data.result.download, { responseType: "arraybuffer", timeout: 90000 });
         mp3Buffer = Buffer.from(data);
       }
     } catch {}
 
-    // Fallback downloader via alternative API
+    // Metode 2: ytdl scraper internal
     if (!mp3Buffer) {
       try {
-        const res = await axios.get(`https://api.azbry.com/api/download/ytmp3?url=${encodeURIComponent(selectedSong.url)}`, { timeout: 30000 });
-        if (res.data?.status && res.data?.result?.download) {
-          const { data } = await axios.get(res.data.result.download, { responseType: "arraybuffer", timeout: 120000 });
+        const dlRes = await ytdl(selectedSong.url, "mp3");
+        if (dlRes?.status && dlRes?.download) {
+          const { data } = await axios.get(dlRes.download, { responseType: "arraybuffer", timeout: 90000 });
           mp3Buffer = Buffer.from(data);
         }
       } catch {}
     }
 
-    // Fallback ke yt-dlp jika direct link scraper dibatasi
+    // Metode 3: yt-dlp binary langsung di VPS
     if (!mp3Buffer) {
       const tmpAudio = path.join(process.cwd(), "temp", `dl_${Date.now()}.mp3`);
       try {
@@ -313,7 +300,7 @@ export async function carilaguAnswerHandler(m, sock) {
     }
 
     if (!mp3Buffer || !mp3Buffer.length) {
-      throw new Error("Gagal mengunduh audio. Silakan coba lagi atau pilih nomor lain.");
+      throw new Error("Gagal mengunduh audio dari server. Silakan coba pilih nomor lainnya.");
     }
 
     await sock.sendMessage(
@@ -332,9 +319,7 @@ export async function carilaguAnswerHandler(m, sock) {
     return true;
   } catch (err) {
     m.react("❌");
-    await m.reply(`❌ *ɢᴀɢᴀʟ ᴍᴇɴɢᴜɴᴅᴜʜ*
-
-> Terjadi kesalahan saat mengunduh MP3: _${err.message}_`);
+    await m.reply(`❌ *ɢᴀɢᴀʟ ᴍᴇɴɢᴜɴᴅᴜʜ*\n\n> Terjadi kesalahan saat mengunduh MP3: _${err.message}_`);
     return true;
   }
 }

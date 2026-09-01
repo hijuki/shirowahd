@@ -93,6 +93,7 @@ let FormData,
   dafontAnswerHandler,
   gantiAssetAnswerHandler,
   srtAnswerHandler,
+  carilaguAnswerHandler,
   checkAfk,
   isMuted,
   detectBot,
@@ -1309,6 +1310,15 @@ async function messageHandler(msg, sock, options = {}) {
       }
     } catch (e) {
       console.error("[Handler] GantiAsset answer error:", e.message);
+    }
+
+    try {
+      if (carilaguAnswerHandler) {
+        const handled = await carilaguAnswerHandler(m, sock);
+        if (handled) return;
+      }
+    } catch (e) {
+      console.error("[Handler] Carilagu answer error:", e.message);
     }
 
     try {
