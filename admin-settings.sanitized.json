@@ -69,7 +69,10 @@
   "rateCooldown": 0,
   "autoCleanup": true,
   "videoAsDocumentMB": 180,
-  "maxVideoLongSide": 3840,
+  "maxVideoLongSide": 2560,
+  "directUploadEnabled": true,
+  "directUploadHost": "up.swhdhlz.my.id",
+  "directUploadPort": 8443,
   "autoCleanupInterval": 30,
   "storageQuotaMB": 100000
 }
