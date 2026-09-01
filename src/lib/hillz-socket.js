@@ -1,3 +1,4 @@
+import { generateNativeTableMessage, getAiContextInfo } from "./hillz-rich-features.js";
 import axios from "axios";
 let _sharp = null;
 async function getSharp() {
@@ -880,6 +881,66 @@ async function extendSocket(sock) {
       },
       message: { conversation: fakeText },
       ...options,
+    });
+  };
+
+
+  /**
+   * Fitur 2: Kirim Tabel WhatsApp Native (Spreadsheet format)
+   */
+  sock.sendTable = async (jid, title, headers = [], rows = [], quoted, options = {}) => {
+    const rawMsg = generateNativeTableMessage(title, headers, rows, {
+      ...options,
+      contextInfo: options.contextInfo,
+    });
+    const msg = generateWAMessageFromContent(jid, rawMsg, {
+      userJid: sock.user?.id,
+      quoted: quoted || options.quoted,
+      ...options,
+    });
+    await sock.relayMessage(jid, msg.message, {
+      messageId: msg.key.id,
+      additionalAttributes: { ...options },
+    });
+    return msg;
+  };
+
+  /**
+   * Fitur 4: Kirim Pesan dengan Lencana AI Resmi Meta (@bot)
+   */
+  sock.sendAi = async (jid, textOrContent, quoted, options = {}) => {
+    let payload = {};
+    if (typeof textOrContent === "string") {
+      payload = {
+        text: textOrContent,
+        contextInfo: getAiContextInfo(options.contextInfo || {}),
+        mentions: sock.parseMention(textOrContent),
+      };
+    } else if (typeof textOrContent === "object") {
+      payload = {
+        ...textOrContent,
+        contextInfo: getAiContextInfo(textOrContent.contextInfo || options.contextInfo || {}),
+      };
+    }
+    return await sock.sendMessage(jid, payload, {
+      quoted: quoted || options.quoted,
+      ...options,
+    });
+  };
+
+  /**
+   * Fitur 6: Kirim Media Gambar/Video dengan Efek Spoiler (ViewOnce / Tap to Reveal)
+   */
+  sock.sendSpoiler = async (jid, input, caption = "", quoted, options = {}) => {
+    const buffer = await resolveInput(input);
+    const isVideo = buffer.slice(0, 8).toString("hex").includes("66747970") || (options.mimetype && options.mimetype.startsWith("video/"));
+    
+    const mediaContent = isVideo
+      ? { video: buffer, caption, viewOnce: true, mimetype: options.mimetype || "video/mp4", ...options }
+      : { image: buffer, caption, viewOnce: true, mimetype: options.mimetype || "image/jpeg", ...options };
+
+    return await sock.sendMessage(jid, mediaContent, {
+      quoted: quoted || options.quoted,
     });
   };
 
