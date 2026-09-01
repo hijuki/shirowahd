@@ -2,43 +2,28 @@ const LS_INTRO = 'sw_intro_seen_v2'
 const LS_HISTORY = 'sw_upload_history'
 
 export function loadSettings() {
-  return fetch('/api/settings/public').then(r => r.json())
+  return fetch('/api/settings/public?_t=' + Date.now(), {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+  }).then(r => r.json())
 }
 
-// Ambang pindah jalur: Cloudflare Free menolak body >100 MB (413) sebelum request
-// sampai ke server. Di atas ambang ini file dipecah jadi bagian kecil supaya tiap
-// request lolos proxy, lalu digabung utuh di server. File kecil tetap lewat
-// jalur lama yang sudah terbukti.
-// Ambang diturunkan dari 95 MB ke 80 MB: jalur single mengirim seluruh file
-// dalam SATU request, jadi file 85–95 MB pun bisa melewati batas waktu proxy
-// pada jaringan HP. Di atas 80 MB selalu dipecah.
 const CHUNK_THRESHOLD = 80 * 1024 * 1024
-// 5 MB, bukan 20 MB. Cloudflare memutus koneksi yang menahan satu request
-// terlalu lama (~100 detik); pada jaringan HP 1–2 Mbps satu bagian 20 MB butuh
-// 80–160 detik, jadi upload besar dari HP hampir selalu putus di tengah.
-// 5 MB selesai dalam ~20–40 detik di jaringan yang sama.
 const CHUNK_SIZE = 5 * 1024 * 1024
 
-// --- Jalur upload langsung (di luar Cloudflare) ---
-//
-// Kalau tuan menyalakan saklarnya di panel admin, `/api/settings/public`
-// mengirim `directUploadBase` (mis. "https://up.swhdhlz.my.id:8443"). Subdomain
-// itu grey-cloud, jadi request tidak lewat edge dan cap 100 MB tidak berlaku.
-// Kalau mati, nilainya null dan SEMUA jalur di berkas ini tetap memakai path
-// relatif seperti sekarang — tidak ada perubahan perilaku.
-//
-// Hanya request UPLOAD yang dialihkan. Halaman, gambar, dan panel tetap lewat
-// Cloudflare supaya tetap dapat cache dan perlindungan.
-let _basePromise = null
-function uploadBase() {
-  if (!_basePromise) {
-    _basePromise = fetch('/api/settings/public')
-      .then(r => r.json())
-      .then(s => s?.directUploadBase || '')
-      // Gagal ambil setelan tidak boleh menggagalkan upload: jatuh ke host biasa.
-      .catch(() => '')
+// Mengambil URL direct upload secara real-time dari server tanpa cache
+async function uploadBase() {
+  try {
+    const r = await fetch('/api/settings/public?_t=' + Date.now(), {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    })
+    if (!r.ok) return ''
+    const s = await r.json()
+    return s?.directUploadBase || ''
+  } catch {
+    return ''
   }
-  return _basePromise
 }
 
 async function uploadChunked(files, { onProgress, signal }) {
@@ -65,10 +50,6 @@ async function uploadChunked(files, { onProgress, signal }) {
       if (signal?.aborted) throw new Error('Upload dibatalkan')
       const blob = file.slice(ci * chunkSize, Math.min((ci + 1) * chunkSize, file.size))
       let lastErr = null
-      // Retry per bagian dengan 6 percobaan dan jeda bertambah (1s→16s):
-      // jaringan HP putus-nyambung selama menit-menit pertama, dan 3 percobaan
-      // dengan jeda pendek terlalu cepat menyerah pada file besar. Hanya bagian
-      // yang gagal diulang, bukan seluruh file.
       for (let attempt = 0; attempt < 6; attempt++) {
         try {
           const r = await fetch(`${base}/upload/chunk?sid=${encodeURIComponent(init.sessionId)}&fi=${fi}&ci=${ci}`, {
@@ -77,7 +58,6 @@ async function uploadChunked(files, { onProgress, signal }) {
             body: blob,
             signal,
           })
-          // 5xx dari proxy (524/522/502) tidak selalu punya body JSON.
           let d = {}
           try { d = await r.json() } catch { d = { ok: false, error: 'Jaringan terputus (kode ' + r.status + ')' } }
           if (!r.ok || !d.ok) throw new Error(d.error || 'Bagian gagal dikirim')
@@ -103,9 +83,6 @@ async function uploadChunked(files, { onProgress, signal }) {
     }
   }
 
-  // Penggabungan di server butuh waktu untuk file besar; kalau proxy memutus
-  // respons, coba lagi — bagian-bagiannya sudah ada di server, jadi mengulang
-  // finish aman dan tidak perlu mengunggah ulang.
   let fin = null, finErr = null
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -132,11 +109,6 @@ async function uploadChunked(files, { onProgress, signal }) {
 
 export function uploadFiles(files, opts) {
   const arr = Array.from(files)
-  // Ambang diperiksa terhadap TOTAL, bukan per file. Jalur single mengirim
-  // SEMUA file yang dipilih dalam satu request multipart, jadi 3 file @50 MB
-  // menghasilkan body 150 MB dan ditolak proxy dengan 413 walaupun tidak ada
-  // satu pun file yang melewati ambang. Ini penyebab upload gagal saat memilih
-  // beberapa video sekaligus.
   const totalSize = arr.reduce((n, f) => n + (f.size || 0), 0)
   const needsChunk = totalSize > CHUNK_THRESHOLD || arr.some(f => f.size > CHUNK_THRESHOLD)
   if (needsChunk) return uploadChunked(arr, opts)
@@ -146,10 +118,10 @@ export function uploadFiles(files, opts) {
 async function uploadSingle(files, { onProgress, field, signal }) {
   const base = await uploadBase()
   const fd = new FormData()
-  for (const f of files) fd.append(field, f, f.name)
+  for (const f of files) fd.append(field || 'files', f, f.name)
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', base + '/upload')
+    xhr.open('POST', (base || '') + '/upload')
     let lastLoaded = 0, lastTime = Date.now()
     xhr.upload.onprogress = e => {
       if (!e.lengthComputable || !onProgress) return
@@ -159,9 +131,6 @@ async function uploadSingle(files, { onProgress, field, signal }) {
       onProgress({ pct: Math.round((e.loaded / e.total) * 100), loaded: e.loaded, total: e.total, speed })
     }
     xhr.onload = () => {
-      // Penolakan proxy (413) membalas HTML, bukan JSON. Tanpa cabang ini
-      // pesannya jadi "Respons server tidak valid" yang tidak menjelaskan
-      // apa pun, padahal penyebabnya jelas: body terlalu besar.
       if (xhr.status === 413) {
         reject(new Error('File terlalu besar untuk dikirim sekaligus. Coba upload satu per satu.'))
         return
@@ -184,7 +153,9 @@ async function uploadSingle(files, { onProgress, field, signal }) {
 
 export async function pollJobStatus(jobId) {
   const base = await uploadBase()
-  return fetch((base || '') + '/upload/status?id=' + encodeURIComponent(jobId)).then(r => r.json())
+  return fetch((base || '') + '/upload/status?id=' + encodeURIComponent(jobId), {
+    cache: 'no-store'
+  }).then(r => r.json())
 }
 
 export function getHistory() {
