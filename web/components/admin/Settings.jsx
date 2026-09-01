@@ -311,18 +311,12 @@ export default function Settings({ toast }) {
           <p className="text-xs text-[#7e90ad] mt-1">Konfigurasi jaringan, tampilan uploader, kuota media, dan keamanan</p>
         </div>
 
-        {/* Action Buttons Header (Mobile & Desktop) */}
-        <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0">
-          <button type="button" onClick={doBackup} disabled={backupBusy}
-            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/[.04] hover:bg-white/[.08] text-white/90 border border-white/[.08] hover:border-white/[.15] transition-all flex items-center justify-center gap-2 active:scale-95">
-            <i className={`fa-brands fa-github ${backupBusy ? 'fa-spin' : ''}`} />
-            <span className="hidden xs:inline">Backup</span>
-          </button>
-          <button type="button" onClick={save} disabled={busy}
-            className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl text-xs font-extrabold bg-[#0062FF] hover:bg-[#0052D6] text-white shadow-[0_0_24px_-4px_rgba(0,98,255,0.5)] transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
-            <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
-            {busy ? 'Menyimpan…' : 'Simpan Perubahan'}
-          </button>
+        {/* Header Quick Status */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold bg-white/[.03] border border-white/[.08] text-[#7e90ad]">
+            <span className="w-2 h-2 rounded-full bg-[#34d399] animate-pulse" />
+            Config Active
+          </span>
         </div>
       </div>
 
