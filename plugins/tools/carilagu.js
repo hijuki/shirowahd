@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import axios from "axios";
+import FormData from "form-data";
 import yts from "yt-search";
 import { exec } from "child_process";
 import { promisify } from "util";
@@ -14,9 +15,9 @@ const pluginConfig = {
   name: "carilagu",
   alias: ["whatmusic", "shazam", "findsong", "kenallagu", "tebakmusik", "musikapaini", "getmusic", "dlcarilagu"],
   category: "tools",
-  description: "Pencarian universal lagu, DJ TikTok, & audio converter dengan engine Shazam & YouTube",
+  description: "Pencarian universal lagu & DJ TikTok dengan Dual Engine (AudD + Shazam + YouTube)",
   usage: ".carilagu <judul/lirik> atau reply audio/video",
-  example: ".carilagu dj dingin keringetan",
+  example: ".carilagu dj mengkane viral",
   cooldown: 3,
   energi: 1,
   isEnabled: true,
@@ -24,15 +25,47 @@ const pluginConfig = {
 
 global.carilaguSessions = global.carilaguSessions || new Map();
 
-// Helper untuk Shazam recognition yang akurat (tanpa false-positive tempo liar)
-async function recognizeAudioAccurate(filePath) {
+// Engine 1: AudD Music Recognition (Sangat akurat untuk TikTok & Sound Baru)
+async function recognizeWithAudD(filePath) {
+  try {
+    const form = new FormData();
+    form.append("file", fs.createReadStream(filePath));
+    form.append("api_token", "test");
+    form.append("return", "apple_music,spotify");
+
+    const res = await axios.post("https://api.audd.io/", form, {
+      headers: form.getHeaders(),
+      timeout: 25000,
+    });
+
+    if (res.data?.status === "success" && res.data?.result?.title) {
+      const r = res.data.result;
+      return {
+        status: true,
+        title: r.title,
+        artist: r.artist || "Unknown Artist",
+        album: r.album || "-",
+        release: r.release_date || "-",
+        cover: r.spotify?.album?.images?.[0]?.url || r.apple_music?.artwork?.url || "",
+        source: "AudD",
+      };
+    }
+  } catch {}
+  return null;
+}
+
+// Engine 2: Apple Shazam Recognition
+async function recognizeWithShazam(filePath) {
   const scriptContent = `
 import asyncio, json, sys, os, subprocess
 from shazamio import Shazam
 
-async def test_file(shazam, target_path):
+async def main():
+    shazam = Shazam()
+    input_file = sys.argv[1]
+    
     try:
-        res = await shazam.recognize(target_path)
+        res = await shazam.recognize(input_file)
         track = res.get("track", {})
         if track and track.get("title"):
             sections = track.get("sections", [])
@@ -45,51 +78,20 @@ async def test_file(shazam, target_path):
             images = track.get("images", {})
             coverArt = images.get("coverart", images.get("coverarthq", images.get("background", "")))
 
-            return {
+            print(json.dumps({
                 "status": True,
                 "title": track.get("title", "Unknown Title"),
                 "artist": track.get("subtitle", "Unknown Artist"),
                 "album": meta.get("Album", "-"),
                 "release": meta.get("Released", meta.get("Label", "-")),
                 "genre": track.get("genres", {}).get("primary", "-"),
-                "cover": coverArt
-            }
+                "cover": coverArt,
+                "source": "Shazam"
+            }))
+            return
     except:
         pass
-    return None
-
-async def main():
-    shazam = Shazam()
-    input_file = sys.argv[1]
-    
-    # 1. Coba scan audio normal (1.0x)
-    r = await test_file(shazam, input_file)
-    if r:
-        print(json.dumps(r))
-        return
-
-    # 2. Coba vocal filter (potong low bass jedag jedug tanpa merusak nada)
-    vocal_out = f"/tmp/voc_{os.getpid()}.mp3"
-    subprocess.run(f"ffmpeg -y -i {input_file} -af 'highpass=f=200,lowpass=f=4000' {vocal_out}", shell=True, capture_output=True)
-    r = await test_file(shazam, vocal_out)
-    try: os.unlink(vocal_out)
-    except: pass
-    if r:
-        print(json.dumps(r))
-        return
-
-    # 3. Coba toleransi tempo wajar (0.95x & 1.05x)
-    for sp in [0.95, 1.05]:
-        out_sp = f"/tmp/sp_{sp}_{os.getpid()}.mp3"
-        subprocess.run(f"ffmpeg -y -i {input_file} -filter:a 'atempo={sp}' {out_sp}", shell=True, capture_output=True)
-        r = await test_file(shazam, out_sp)
-        try: os.unlink(out_sp)
-        except: pass
-        if r:
-            print(json.dumps(r))
-            return
-
-    print(json.dumps({"status": False, "msg": "No track found"}))
+    print(json.dumps({"status": False}))
 
 asyncio.run(main())
 `;
@@ -100,11 +102,11 @@ asyncio.run(main())
   fs.writeFileSync(pyScriptPath, scriptContent);
 
   try {
-    const { stdout } = await execAsync(`python3 "${pyScriptPath}" "${filePath}"`, { timeout: 30000 });
+    const { stdout } = await execAsync(`python3 "${pyScriptPath}" "${filePath}"`, { timeout: 25000 });
     const parsed = JSON.parse(stdout.trim());
-    return parsed;
-  } catch (err) {
-    return { status: false, error: err.message };
+    return parsed?.status ? parsed : null;
+  } catch {
+    return null;
   } finally {
     try { if (fs.existsSync(pyScriptPath)) fs.unlinkSync(pyScriptPath); } catch {}
   }
@@ -217,7 +219,7 @@ async function searchUniversalMusic(title, artist = "") {
 
 // Handler utama saat user mengetik .carilagu
 async function handler(m, { sock, args, text, command }) {
-  // 1. Download handler dari tombol interaktif (.getmusic / .dlcarilagu <videoId>)
+  // 1. Tombol download MP3 (.getmusic <videoId>)
   if (command === "getmusic" || command === "dlcarilagu") {
     const videoId = args[0]?.trim();
     if (!videoId) return m.reply("❌ ID video tidak ditemukan.");
@@ -232,7 +234,7 @@ async function handler(m, { sock, args, text, command }) {
         throw new Error("Gagal mengunduh audio dari server.");
       }
 
-      // Kirim MP3 murni TANPA context saluran (audio reguler)
+      // Kirim MP3 murni TANPA context saluran
       await sock.sendMessage(
         m.chat,
         {
@@ -252,7 +254,7 @@ async function handler(m, { sock, args, text, command }) {
     }
   }
 
-  // 2. Jika user menyertakan teks langsung (contoh: .carilagu dj dingin keringetan / .carilagu steven gerrard)
+  // 2. Pencarian berbasis teks langsung
   if (text && text.trim().length > 0) {
     m.react("🔍");
     await m.reply(`🔍 *ᴍᴇɴᴄᴀʀɪ ᴍᴜsɪᴋ ᴜɴɪᴠᴇʀsᴀʟ...*\n\n> Kata Kunci: *${text.trim()}*\n> Memindai DJ TikTok, Jedag-Jedug, & Official Track...`);
@@ -426,7 +428,7 @@ async function handler(m, { sock, args, text, command }) {
   }
 
   m.react("🔍");
-  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ᴍᴜsɪᴋ...*\n\n> Memindai frekuensi audio & database musik...`);
+  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ᴍᴜsɪᴋ...*\n\n> Memindai database AudD & Apple Shazam...`);
 
   const tempDir = path.join(process.cwd(), "temp");
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -447,39 +449,47 @@ async function handler(m, { sock, args, text, command }) {
 
     fs.writeFileSync(inputPath, audioBuffer);
 
-    // Ekstraksi 15 detik pertama
-    await queueFFmpeg(`ffmpeg -y -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outSample1}"`);
+    // Ekstraksi 10 detik pertama untuk AudD & Shazam
+    await queueFFmpeg(`ffmpeg -y -i "${inputPath}" -t 10 -vn -ar 44100 -ac 2 -b:a 128k "${outSample1}"`);
     let fileToRecog = fs.existsSync(outSample1) ? outSample1 : inputPath;
-    let recogResult = await recognizeAudioAccurate(fileToRecog);
 
-    // Jika belum ketemu, coba detik 15-30
-    if (!recogResult.status || !recogResult.title) {
+    // Dual-Engine Recognition: Coba AudD dulu (terbaik untuk sound TikTok/baru), jika gagal coba Shazam
+    let recogResult = await recognizeWithAudD(fileToRecog);
+    if (!recogResult) {
+      recogResult = await recognizeWithShazam(fileToRecog);
+    }
+
+    // Jika belum ketemu di detik 0-10, coba potong detik 05-15
+    if (!recogResult) {
       try {
-        await queueFFmpeg(`ffmpeg -y -ss 00:00:15 -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outSample2}"`);
+        await queueFFmpeg(`ffmpeg -y -ss 00:00:05 -i "${inputPath}" -t 10 -vn -ar 44100 -ac 2 -b:a 128k "${outSample2}"`);
         if (fs.existsSync(outSample2)) {
-          recogResult = await recognizeAudioAccurate(outSample2);
+          recogResult = await recognizeWithAudD(outSample2);
+          if (!recogResult) {
+            recogResult = await recognizeWithShazam(outSample2);
+          }
         }
       } catch {}
     }
 
-    let songTitle = recogResult.title || "";
-    let songArtist = recogResult.artist || "";
-    let songAlbum = recogResult.album || "-";
-    let songRelease = recogResult.release || "-";
-    let coverUrl = recogResult.cover || "";
+    let songTitle = recogResult?.title || "";
+    let songArtist = recogResult?.artist || "";
+    let songAlbum = recogResult?.album || "-";
+    let songRelease = recogResult?.release || "-";
+    let coverUrl = recogResult?.cover || "";
+    let engineSource = recogResult?.source || "Shazam";
 
     if (!songTitle) {
       m.react("❌");
       return m.reply(
-        `❌ *ᴍᴜsɪᴋ ᴛɪᴅᴀᴋ ᴛᴇʀᴅᴀꜰᴛᴀʀ ᴅɪ ᴅᴀᴛᴀʙᴀsᴇ ʀᴇsᴍɪ*\n\n` +
-          `> Audio ini kemungkinan adalah *Sound DJ TikTok / Bootleg Remix / Suara Kreator* yang tidak terdaftar di database global.\n\n` +
-          `💡 *Solusi Akurat:* Ketik judul atau potongan lirik lagunya secara langsung:\n` +
-          `> \`${m.prefix}carilagu <judul atau potongan kata lirik>\`\n` +
-          `> Contoh: \`${m.prefix}carilagu dj dingin keringetan\``
+        `❌ *ᴍᴜsɪᴋ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n` +
+          `> Audio ini kemungkinan adalah *Sound DJ Bootleg / Suara Kreator TikTok* yang belum terdaftar di database audio fingerprint.\n\n` +
+          `💡 *Tips:* Ketik judul / potongan lirik lagunya langsung:\n` +
+          `> \`${m.prefix}carilagu <judul atau kata lirik>\``
       );
     }
 
-    // Pencarian Universal (Original + DJ TikTok + DJ Remix + Slowed)
+    // Pencarian Universal YouTube
     const uni = await searchUniversalMusic(songTitle, songArtist);
     const sections = [];
     const allList = uni.all;
@@ -534,6 +544,7 @@ async function handler(m, { sock, args, text, command }) {
     bodyText += `┃ 👤 *Artis:* ${songArtist}\n`;
     bodyText += `┃ 💿 *Album:* ${songAlbum}\n`;
     bodyText += `┃ 📅 *Rilis:* ${songRelease}\n`;
+    bodyText += `┃ 📡 *Engine:* ${engineSource}\n`;
     bodyText += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
 
     bodyText += `🔥 *Hasil Penelusuran Universal:*\n`;
