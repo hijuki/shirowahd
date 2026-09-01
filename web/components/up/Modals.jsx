@@ -20,16 +20,14 @@ export function ModalShell({ onClose, children }) {
         closing ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
-      {/* Dark Obsidian Backdrop */}
       <div
         className="fixed inset-0 bg-[#020408]/90 backdrop-blur-md transition-opacity"
         onClick={close}
       />
 
-      {/* Modal Container */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`relative z-10 w-full max-w-[460px] max-h-[90dvh] overflow-y-auto rounded-[24px] bg-[#060A14] border border-white/[0.08] p-5 sm:p-6 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.9)] transition-all duration-200 ${
+        className={`relative z-10 w-full max-w-[480px] max-h-[90dvh] overflow-y-auto rounded-[24px] bg-[#060A14] border border-white/[0.08] p-5 sm:p-6 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.9)] transition-all duration-200 ${
           closing ? 'scale-95 translate-y-2 opacity-0' : 'scale-100 translate-y-0 opacity-100'
         }`}
         style={{
@@ -54,18 +52,66 @@ function CloseBtn({ onClick }) {
   )
 }
 
+/* ─── Tombol Link Eksternal / Grup Admin ─── */
+export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], popupButtons = [], settings = {} }) {
+  const items = []
+  if (settings.showChannelsBtn !== false && channels?.length) {
+    channels.filter(c => c.visible !== false && c.link).slice(0, 2).forEach(ch => {
+      items.push({ i: 'fa-solid fa-tower-broadcast', t: ch.name || 'Saluran Resmi', s: 'Info & update', href: ch.link, c: '#38bdf8' })
+    })
+  }
+  if (settings.showClaimBtn !== false && claimGroups?.length) {
+    claimGroups.filter(g => g.visible !== false && g.link).slice(0, 2).forEach(g => {
+      items.push({ i: 'fa-solid fa-comments', t: g.name || 'Grup Klaim', s: 'Klaim file via bot', href: g.link, c: '#34d399' })
+    })
+  }
+  if (settings.showPopupBtns !== false && popupButtons?.length) {
+    popupButtons.filter(b => b.visible !== false && b.link).slice(0, 3).forEach(b => {
+      items.push({ i: 'fa-solid fa-link', t: b.name || 'Link Resmi', s: 'Kunjungi link', href: b.link, c: '#60a5fa' })
+    })
+  }
+
+  if (!items.length) return null
+
+  return (
+    <div className={items.length === 1 ? 'grid grid-cols-1 gap-2 mb-4' : 'grid grid-cols-2 gap-2 mb-4'}>
+      {items.map((it, idx) => (
+        <a
+          key={it.t + it.href + idx}
+          href={it.href}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2.5 p-3 rounded-[14px] bg-white/[0.025] border border-white/[0.08] hover:border-sky-500/40 hover:bg-white/[0.05] transition-all group text-left"
+        >
+          <div
+            className="w-9 h-9 shrink-0 rounded-[10px] grid place-items-center"
+            style={{ background: `${it.c}14`, border: `1px solid ${it.c}28` }}
+          >
+            <i className={`${it.i} text-[13px]`} style={{ color: it.c }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-[11px] text-white truncate">{it.t}</p>
+            <p className="text-slate-400 text-[9px] truncate font-medium">{it.s}</p>
+          </div>
+          <i className="fa-solid fa-arrow-up-right-from-square text-[9px] text-slate-500 group-hover:text-white transition-colors shrink-0" />
+        </a>
+      ))}
+    </div>
+  )
+}
+
 export function IntroModal({ onDone, settings }) {
   const steps = [
     {
       i: 'fa-cloud-arrow-up',
-      t: '1. Pilih Media',
+      t: '1. Pilih Media HD',
       d: 'Pilih video atau foto langsung dari galeri smartphone Anda.',
       c: '#38bdf8',
     },
     {
       i: 'fa-key',
-      t: '2. Terima Kode Klaim',
-      d: 'Dapatkan kode 2 karakter instan, misal: .claim A7',
+      t: '2. Dapatkan Kode Klaim',
+      d: 'Dapatkan kode unik 2 karakter instan, misal: .claim A7',
       c: '#60a5fa',
     },
     {
@@ -81,19 +127,25 @@ export function IntroModal({ onDone, settings }) {
       <CloseBtn onClick={onDone} />
 
       {/* Header Emblem */}
-      <div className="text-center mb-6 pt-2">
+      <div className="text-center mb-5 pt-2">
         <div className="relative inline-block mb-3.5">
           <div className="absolute inset-0 rounded-2xl bg-[#25D366]/20 blur-xl pointer-events-none" />
-          <div className="relative w-16 h-16 rounded-[18px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_10px_28px_-6px_rgba(37,211,102,0.5)] border border-white/20">
-            <i className="fa-brands fa-whatsapp text-white text-[28px] drop-shadow" />
-          </div>
+          {settings?.logoUrl ? (
+            <div className="relative w-16 h-16 rounded-[18px] overflow-hidden bg-[#080e1c] border border-white/20 p-1 shadow-[0_10px_28px_-6px_rgba(0,0,0,0.5)]">
+              <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+          ) : (
+            <div className="relative w-16 h-16 rounded-[18px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_10px_28px_-6px_rgba(37,211,102,0.5)] border border-white/20">
+              <i className="fa-brands fa-whatsapp text-white text-[28px] drop-shadow" />
+            </div>
+          )}
         </div>
 
         <h2 className="font-[family-name:var(--font-display)] font-extrabold text-[22px] tracking-tight text-white">
           Selamat Datang di {settings?.siteName || 'SHIROWAHD'}
         </h2>
         <p className="text-slate-400 text-[12px] mt-1 font-medium">
-          Platform uploader media Ultra HD tanpa kompresi WhatsApp
+          {settings?.siteSubtitle || 'Platform uploader media Ultra HD tanpa kompresi WhatsApp'}
         </p>
 
         {/* Developer Badge */}
@@ -108,7 +160,7 @@ export function IntroModal({ onDone, settings }) {
       </div>
 
       {/* 3 Step List */}
-      <div className="space-y-2.5 mb-6">
+      <div className="space-y-2.5 mb-4">
         {steps.map((s) => (
           <div
             key={s.t}
@@ -127,6 +179,15 @@ export function IntroModal({ onDone, settings }) {
           </div>
         ))}
       </div>
+
+      {/* LinkButtons jika ada konfigurasi grup/saluran dari admin */}
+      <LinkButtons
+        ownerWhatsapp={settings?.ownerWhatsapp}
+        channels={settings?.channels}
+        claimGroups={settings?.claimGroups}
+        popupButtons={settings?.popupButtons}
+        settings={settings || {}}
+      />
 
       {/* CTA Button */}
       <button
@@ -189,9 +250,9 @@ export function FaqModal({ onClose, settings }) {
             >
               <span className="font-bold text-[12px] text-white tracking-wide">{f.q}</span>
               <i
-                className={`fa-solid fa-chevron-down text-slate-400 text-[10px] transition-transform ${
-                  openIdx === idx ? 'rotate-180 text-sky-400' : ''
-                }`}
+                className={`fa-solid ${
+                  openIdx === idx ? 'fa-chevron-up text-sky-400' : 'fa-chevron-down text-slate-400'
+                } text-[10px]`}
               />
             </button>
             {openIdx === idx && (
@@ -234,8 +295,8 @@ export function AboutModal({ onClose }) {
           <span className="font-mono font-bold text-sky-400">Node.js + FFMPEG High-Profile</span>
         </div>
         <div className="flex items-center justify-between pb-2 border-b border-white/[0.04]">
-          <span className="text-slate-400 font-medium">Direct Port</span>
-          <span className="font-mono font-bold text-emerald-400">High-Speed Stream</span>
+          <span className="text-slate-400 font-medium">Direct Network</span>
+          <span className="font-mono font-bold text-emerald-400">High-Speed Direct Stream</span>
         </div>
         <div className="flex items-center justify-between pb-2 border-b border-white/[0.04]">
           <span className="text-slate-400 font-medium">Transcoding Profile</span>

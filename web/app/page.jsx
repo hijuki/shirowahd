@@ -61,14 +61,20 @@ export default function UploaderPage() {
   const heroDesc = settings?.heroDesc || 'Kirim video & foto ke grup WhatsApp\nlewat kode klaim — kualitas penuh tanpa kompresi'
   const footerText = settings?.footerText || ''
 
+  const expireMins = settings?.expireMinutes || 60
+  const expireLabel =
+    expireMins >= 1440
+      ? `${Math.floor(expireMins / 1440)} HARI`
+      : expireMins >= 60
+      ? `${Math.floor(expireMins / 60)} JAM`
+      : `${expireMins}m`
+
   return (
     <div className="relative min-h-dvh overflow-x-hidden bg-[#04070F] text-[#e8f1ff] antialiased selection:bg-sky-500/30 selection:text-white">
       {/* Background Atmosphere Layers */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Subtle radial glow */}
         <div className="absolute -top-[20%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-blue-600/[0.08] blur-[120px]" />
         <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] rounded-full bg-sky-500/[0.05] blur-[140px]" />
-        {/* Minimal Subtle Grid */}
         <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
@@ -112,23 +118,25 @@ export default function UploaderPage() {
             {/* Navbar Shell */}
             <Navbar settings={settings} onFaq={() => setFaqOpen(true)} onAbout={() => setAboutOpen(true)} />
 
-            {/* Hero Section with High-Contrast Typography & Depth */}
+            {/* Hero Section */}
             <header className="text-center mt-2 mb-7">
-              {/* Hero Image / Brand Emblem with Fluid Tilt & Micro-Ambient Halo */}
               <div className="relative inline-block mb-4 hero-3d-wrap">
-                <div className="hero-3d relative w-24 h-24 sm:w-28 sm:h-28 mx-auto" aria-hidden
-                  onPointerMove={e => {
-                    const el = e.currentTarget, r = el.getBoundingClientRect()
+                <div
+                  className="hero-3d relative w-24 h-24 sm:w-28 sm:h-28 mx-auto"
+                  aria-hidden
+                  onPointerMove={(e) => {
+                    const el = e.currentTarget,
+                      r = el.getBoundingClientRect()
                     const x = (e.clientX - r.left) / r.width - 0.5
                     const y = (e.clientY - r.top) / r.height - 0.5
                     el.style.setProperty('--rx', `${(-y * 16).toFixed(2)}deg`)
                     el.style.setProperty('--ry', `${(x * 16).toFixed(2)}deg`)
                   }}
-                  onPointerLeave={e => {
+                  onPointerLeave={(e) => {
                     e.currentTarget.style.setProperty('--rx', '0deg')
                     e.currentTarget.style.setProperty('--ry', '0deg')
-                  }}>
-                  {/* Outer glow ring */}
+                  }}
+                >
                   <div className="absolute -inset-2.5 rounded-full bg-gradient-to-tr from-sky-500/20 via-blue-600/10 to-transparent blur-md pointer-events-none" />
                   <div className="relative w-full h-full rounded-full p-[2px] bg-gradient-to-b from-white/20 via-sky-500/30 to-white/5 shadow-[0_12px_36px_-8px_rgba(0,98,255,0.35)] overflow-hidden">
                     <img
@@ -140,7 +148,6 @@ export default function UploaderPage() {
                 </div>
               </div>
 
-              {/* Title & Subtitle */}
               <h1 className="font-[family-name:var(--font-display)] font-extrabold text-[28px] sm:text-[32px] tracking-tight leading-tight">
                 {heroTitle}{' '}
                 <span className="bg-gradient-to-r from-sky-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent">
@@ -157,7 +164,8 @@ export default function UploaderPage() {
                   H
                 </span>
                 <span className="text-[10px] font-bold text-slate-400 tracking-wider">
-                  SWHDHLZ <span className="text-slate-600 font-normal">·</span> BY <span className="text-white font-extrabold">HILLZ</span>
+                  SWHDHLZ <span className="text-slate-600 font-normal">·</span> BY{' '}
+                  <span className="text-white font-extrabold">HILLZ</span>
                 </span>
               </div>
             </header>
@@ -188,7 +196,24 @@ export default function UploaderPage() {
             {/* Live Public Upload Telemetry / Logs */}
             <LiveStats />
 
-            {/* Announcement / Alert if any */}
+            {/* Status Chips Row (Live Online, Max Size, Expire TTL) */}
+            <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] text-[9px] font-extrabold tracking-wider bg-emerald-500/10 border border-emerald-500/25 text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  ONLINE
+                </span>
+                <span className="px-2.5 py-1 rounded-[10px] text-[9px] font-extrabold tracking-wider bg-blue-500/10 border border-blue-500/25 text-sky-400">
+                  {settings?.maxFileSizeMB > 0 ? `MAX ${settings.maxFileSizeMB}MB` : 'UNLIMITED'}
+                </span>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] text-[9px] font-extrabold tracking-wider bg-sky-500/10 border border-sky-500/25 text-sky-300">
+                <i className="fa-regular fa-clock text-[8px] opacity-75" />
+                {expireLabel}
+              </span>
+            </div>
+
+            {/* Announcement (Prioritas) */}
             {settings?.announcement && (
               <div className="rounded-[16px] px-4 py-3 mb-5 border border-amber-400/20 bg-amber-500/[0.05] flex items-start gap-2.5">
                 <i className="fa-solid fa-bullhorn text-amber-400 text-xs mt-0.5 shrink-0" />
@@ -200,6 +225,16 @@ export default function UploaderPage() {
                     {settings.announcement}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Banner Text (Jika tidak ada announcement) */}
+            {settings?.bannerText && !settings?.announcement && (
+              <div className="rounded-[16px] px-4 py-3 mb-5 border border-sky-500/20 bg-sky-500/[0.05] flex items-start gap-2.5">
+                <i className="fa-solid fa-bullhorn text-sky-400 text-xs mt-0.5 shrink-0" />
+                <span className="text-[11px] font-medium leading-relaxed text-slate-300">
+                  {settings.bannerText}
+                </span>
               </div>
             )}
 

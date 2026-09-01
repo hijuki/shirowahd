@@ -97,8 +97,9 @@ export default function SuccessModal({ result, settings, expireMinutes = 60, onC
   const pct = Math.max(0, (left / (expireMinutes * 60000)) * 100)
   const urgent = left < 5 * 60000
 
-  const popupBtns = (settings?.showPopupBtns !== false && settings?.popupButtons?.filter((b) => b.link)) || []
-  const claimGrps = (settings?.showClaimBtn !== false && settings?.claimGroups?.filter((g) => g.link)) || []
+  // Prioritas tombol klaim & link dari admin settings
+  const popupBtns = (settings?.showPopupBtns !== false && settings?.popupButtons?.filter((b) => b.visible !== false && b.link)) || []
+  const claimGrps = (settings?.showClaimBtn !== false && settings?.claimGroups?.filter((g) => g.visible !== false && g.link)) || []
   const linkBtns = popupBtns.length ? popupBtns : claimGrps
 
   if (!mounted) return null
@@ -107,7 +108,6 @@ export default function SuccessModal({ result, settings, expireMinutes = 60, onC
     <ModalShell onClose={onClose} accent="green">
       {/* Header Status & Icon */}
       <div className="relative text-center mb-5">
-        {/* Emerald Glow Circle with Specular Rim */}
         <div className="relative inline-block mb-3.5">
           <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl pointer-events-none" />
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 grid place-items-center shadow-[0_12px_32px_-6px_rgba(16,185,129,0.5)] border border-emerald-300/40">
@@ -178,7 +178,6 @@ export default function SuccessModal({ result, settings, expireMinutes = 60, onC
             {mins}
           </span>
         </div>
-        {/* Progress Bar */}
         <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-1000 ${
@@ -189,7 +188,7 @@ export default function SuccessModal({ result, settings, expireMinutes = 60, onC
         </div>
       </div>
 
-      {/* Direct WhatsApp Group Links if Available */}
+      {/* Tombol Grup Klaim WhatsApp Sesuai Admin Settings */}
       {linkBtns.length > 0 && (
         <div className="mb-4">
           <p className="text-[9px] font-extrabold tracking-[0.16em] uppercase text-slate-400 mb-2 flex items-center gap-2">
@@ -198,24 +197,24 @@ export default function SuccessModal({ result, settings, expireMinutes = 60, onC
             <span className="flex-1 h-px bg-white/[0.06]" />
           </p>
           <div className={linkBtns.length > 1 ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
-            {linkBtns.map((btn) => (
+            {linkBtns.map((btn, idx) => (
               <a
-                key={btn.name + btn.link}
+                key={btn.name + btn.link + idx}
                 href={btn.link}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-[14px] bg-emerald-500/[0.08] border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/[0.12] transition-all text-left"
+                className="flex items-center justify-between gap-2 px-3.5 py-3 rounded-[14px] bg-emerald-500/[0.08] border border-emerald-500/25 hover:border-emerald-500/50 hover:bg-emerald-500/[0.14] transition-all text-left group"
               >
-                <div className="min-w-0 flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 grid place-items-center shrink-0">
-                    <i className="fa-brands fa-whatsapp text-emerald-400 text-xs" />
+                <div className="min-w-0 flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 grid place-items-center shrink-0">
+                    <i className="fa-brands fa-whatsapp text-emerald-400 text-[14px]" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-white truncate">{btn.name || 'Grup Klaim'}</p>
-                    <p className="text-[9px] text-slate-400 truncate">Paste kode .claim</p>
+                    <p className="text-[12px] font-extrabold text-white truncate">{btn.name || 'Grup Klaim'}</p>
+                    <p className="text-[9px] text-slate-400 truncate font-medium">Buka grup &amp; paste kode</p>
                   </div>
                 </div>
-                <i className="fa-solid fa-arrow-up-right-from-square text-[10px] text-emerald-400 shrink-0" />
+                <i className="fa-solid fa-arrow-up-right-from-square text-[10px] text-emerald-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
               </a>
             ))}
           </div>
