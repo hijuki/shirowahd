@@ -3,7 +3,7 @@ import https from "https";
 
 const pluginConfig = {
   name: "searchthatsong",
-  alias: ["sts", "carilagu"],
+  alias: ["sts", "carilirik"],
   category: "search",
   description: "Mencari detail sebuah lagu dari lirik atau potongan kata",
   usage: ".searchthatsong <potongan lirik>",

@@ -1,166 +1,341 @@
+import fs from "fs";
+import path from "path";
 import axios from "axios";
-import FormData from "form-data";
-import config from "../../config.js";
-import { downloadMediaMessage } from "hillz";
-import te from "../../src/lib/hillz-error.js";
-import hillzApi from "../../src/lib/hillz-apimanager.js";
+import yts from "yt-search";
+import { exec } from "child_process";
+import { promisify } from "util";
+import { queueFFmpeg } from "../../src/lib/hillz-ffmpeg.js";
 import { saluranCtx } from "../../src/lib/hillz-context.js";
+import ytdl from "../../src/scraper/ytdl.js";
+
+const execAsync = promisify(exec);
 
 const pluginConfig = {
-  name: "musikapaini",
-  alias: ["whatmusic", "shazam", "recognizemusic", "mai"],
+  name: "carilagu",
+  alias: ["whatmusic", "shazam", "findsong", "kenallagu", "tebakmusik", "musikapaini"],
   category: "tools",
-  description: "Identifikasi lagu dari audio",
-  usage: ".musikapaini (reply audio)",
-  example: ".musikapaini",
-  cooldown: 20,
-  energi: 2,
+  description: "Kenali lagu dari reply audio/VN/video dan unduh MP3 pilihan ke WhatsApp",
+  usage: ".carilagu (reply audio/VN/video)",
+  example: ".carilagu",
+  cooldown: 5,
+  energi: 1,
   isEnabled: true,
 };
 
-async function uploadTo0x0(buffer, filename) {
-  const form = new FormData();
-  form.append("file", buffer, {
-    filename,
-    contentType: "application/octet-stream",
-  });
+global.carilaguSessions = global.carilaguSessions || new Map();
 
-  const res = await axios.post(
-    "https://c.termai.cc/api/upload?key=AIzaBj7z2z3xBjsk",
-    form,
-    {
-      headers: form.getHeaders(),
-      timeout: 60000,
-    },
-  );
+// Helper untuk mengenali lagu menggunakan Shazam engine lokal
+async function recognizeAudioFile(filePath) {
+  const scriptContent = `
+import asyncio, json, sys
+from shazamio import Shazam
 
-  if (!res.data?.status ? res.data.path : "") throw new Error("Upload gagal");
-  return res.data;
-}
+async def main():
+    try:
+        shazam = Shazam()
+        res = await shazam.recognize(sys.argv[1])
+        track = res.get("track", {})
+        if not track:
+            print(json.dumps({"status": False, "msg": "No track found"}))
+            return
 
-async function handler(m, { sock }) {
-  let audioBuffer = null;
-  let filename = "audio.mp3";
+        sections = track.get("sections", [])
+        meta = {}
+        for s in sections:
+            if s.get("type") == "SONG":
+                for m in s.get("metadata", []):
+                    meta[m.get("title")] = m.get("text")
 
-  if (m.quoted?.message) {
-    const quotedMsg = m.quoted.message;
-    const audioMsg = quotedMsg.audioMessage || quotedMsg.documentMessage;
+        result = {
+            "status": True,
+            "title": track.get("title", "Unknown Title"),
+            "artist": track.get("subtitle", "Unknown Artist"),
+            "album": meta.get("Album", "-"),
+            "release": meta.get("Released", meta.get("Label", "-")),
+            "genre": track.get("genres", {}).get("primary", "-")
+        }
+        print(json.dumps(result))
+    except Exception as e:
+        print(json.dumps({"status": False, "error": str(e)}))
 
-    if (audioMsg) {
-      try {
-        audioBuffer = await downloadMediaMessage(
-          { key: m.quoted.key, message: quotedMsg },
-          "buffer",
-          {},
-        );
-        filename = audioMsg.fileName || "audio.mp3";
-      } catch { /* ignored */ }
-    }
-  }
+asyncio.run(main())
+`;
 
-  if (!audioBuffer && m.message) {
-    const audioMsg = m.message.audioMessage || m.message.documentMessage;
-    if (audioMsg) {
-      try {
-        audioBuffer = await m.download();
-        filename = audioMsg.fileName || "audio.mp3";
-      } catch { /* download optional */ }
-    }
-  }
-
-  if (!audioBuffer) {
-    return m.reply(
-      `🎵 *ᴍᴜsɪᴋ ᴀᴘᴀ ɪɴɪ?*\n\n` +
-        `> Identifikasi lagu dari audio\n\n` +
-        `*Cara pakai:*\n` +
-        `> Reply audio dengan \`${m.prefix}musikapaini\`\n` +
-        `> Atau kirim audio + caption command`,
-    );
-  }
-
-  m.react("🎵");
+  const tempDir = path.join(process.cwd(), "temp");
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+  const pyScriptPath = path.join(tempDir, `shazam_${Date.now()}_${Math.random().toString(36).substring(7)}.py`);
+  fs.writeFileSync(pyScriptPath, scriptContent);
 
   try {
-    await m.reply("🕕 *ᴍᴇɴɢᴜᴘʟᴏᴀᴅ...*\n\n> Mengupload audio...");
+    const { stdout } = await execAsync(`python3 "${pyScriptPath}" "${filePath}"`, { timeout: 30000 });
+    const parsed = JSON.parse(stdout.trim());
+    return parsed;
+  } catch (err) {
+    return { status: false, error: err.message };
+  } finally {
+    try { if (fs.existsSync(pyScriptPath)) fs.unlinkSync(pyScriptPath); } catch {}
+  }
+}
 
-    const audioUrl = await uploadTo0x0(audioBuffer, filename);
+// Handler utama saat user mengetik .carilagu
+async function handler(m, { sock }) {
+  let downloadFn = null;
+  let isVideo = false;
 
-    await m.reply("🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ...*\n\n> Mencari info lagu...");
+  const selfIsVideo = m.isVideo || m.type === "videoMessage" || m.message?.videoMessage;
+  const selfIsAudio = m.isAudio || m.type === "audioMessage" || m.message?.audioMessage;
+  
+  const quotedIsVideo = m.quoted && (
+    m.quoted.isVideo || 
+    m.quoted.type === "videoMessage" || 
+    m.quoted.mtype === "videoMessage" ||
+    m.quoted.message?.videoMessage
+  );
+  const quotedIsAudio = m.quoted && (
+    m.quoted.isAudio || 
+    m.quoted.type === "audioMessage" || 
+    m.quoted.mtype === "audioMessage" ||
+    m.quoted.message?.audioMessage ||
+    m.quoted.message?.documentMessage
+  );
 
-    const data = await hillzApi.neoxr.whatMusic(
-      {
-        url: audioUrl,
-        apikey: config.APIkey?.neoxr || "Milik-Bot-OurinMD",
-      },
-      {
-        timeout: 60000,
-      },
+  if (quotedIsVideo) {
+    downloadFn = m.quoted.download.bind(m.quoted);
+    isVideo = true;
+  } else if (quotedIsAudio) {
+    downloadFn = m.quoted.download.bind(m.quoted);
+  } else if (selfIsVideo) {
+    downloadFn = m.download.bind(m);
+    isVideo = true;
+  } else if (selfIsAudio) {
+    downloadFn = m.download.bind(m);
+  }
+
+  if (!downloadFn) {
+    return m.reply(
+      `🎵 *ᴄᴀʀɪ ʟᴀɢᴜ (ᴍᴜsɪᴄ ʀᴇᴄᴏɢɴɪᴛɪᴏɴ)*
+
+` +
+        `> Identifikasi judul lagu dari audio/voice note/video WhatsApp
+
+` +
+        `*Cara Penggunaan:*
+` +
+        `> 1. Reply pesan audio, VN, atau video dengan \`${m.prefix}carilagu\`
+` +
+        `> 2. Atau kirim audio/video dengan caption \`${m.prefix}carilagu\``
     );
+  }
 
-    if (!data?.status || !data?.data) {
+  m.react("🔍");
+  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ʟᴀɢᴜ...*
+
+> Sedang mengunduh audio & mencocokkan dengan database Shazam...`);
+
+  const tempDir = path.join(process.cwd(), "temp");
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+  const tempId = Date.now() + "_" + Math.random().toString(36).substring(7);
+  const inputExt = isVideo ? "mp4" : "ogg";
+  const inputPath = path.join(tempDir, `input_${tempId}.${inputExt}`);
+  const outputPath = path.join(tempDir, `sample_${tempId}.mp3`);
+
+  try {
+    const audioBuffer = await downloadFn();
+
+    if (!audioBuffer || !audioBuffer.length) {
       m.react("❌");
-      return m.reply("❌ *ɢᴀɢᴀʟ*\n\n> Lagu tidak dikenali atau API error");
+      return m.reply(`❌ *ɢᴀɢᴀʟ ᴍᴇɴɢᴜɴᴅᴜʜ ᴍᴇᴅɪᴀ*
+
+> Tidak dapat mengunduh audio dari WhatsApp. Pastikan media belum kadaluarsa.`);
     }
 
-    const music = data.data;
-    const links = music.links || {};
+    fs.writeFileSync(inputPath, audioBuffer);
 
-    let text = `🎵 *ʟᴀɢᴜ ᴅɪᴛᴇᴍᴜᴋᴀɴ!*\n\n`;
-    text += `╭┈┈⬡「 📋 *ɪɴꜰᴏ* 」\n`;
-    text += `┃ 🎶 Title: ${music.title || "-"}\n`;
-    text += `┃ 👤 Artist: ${music.artist || "-"}\n`;
-    text += `┃ 💿 Album: ${music.album || "-"}\n`;
-    text += `┃ 📅 Release: ${music.release || "-"}\n`;
-    text += `╰┈┈┈┈┈┈┈┈⬡\n\n`;
+    // Konversi cuplikan audio 15 detik ke mp3 bersih
+    await queueFFmpeg(`ffmpeg -y -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outputPath}"`);
+    const fileToRecognize = fs.existsSync(outputPath) ? outputPath : inputPath;
 
-    const buttons = [];
+    // Jalankan Shazam Engine
+    const recogResult = await recognizeAudioFile(fileToRecognize);
 
-    if (links.spotify?.track?.id) {
-      buttons.push({
-        name: "cta_url",
-        buttonParamsJson: JSON.stringify({
-          display_text: "🎧 Spotify",
-          url: `https://open.spotify.com/track/${links.spotify.track.id}`,
-        }),
+    if (!recogResult.status || !recogResult.title) {
+      m.react("❌");
+      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*
+
+> Tidak dapat mengenali lagu dari audio tersebut. Pastikan sampel lagu terdengar jelas & minim noise.`);
+    }
+
+    const songTitle = recogResult.title;
+    const songArtist = recogResult.artist;
+    const songAlbum = recogResult.album;
+    const songRelease = recogResult.release;
+
+    // Cari versi audio di YouTube
+    const searchQuery = `${songArtist} - ${songTitle}`;
+    const ytSearch = await yts(searchQuery);
+    let videos = ytSearch?.videos?.slice(0, 5) || [];
+
+    if (!videos.length) {
+      const fbSearch = await yts(songTitle);
+      if (fbSearch?.videos?.length) {
+        videos = fbSearch.videos.slice(0, 5);
+      }
+    }
+
+    let text = `🎵 *ʟᴀɢᴜ ᴅɪᴛᴇᴍᴜᴋᴀɴ!*
+
+`;
+    text += `╭┈┈⬡「 📋 *ɪɴꜰᴏ ʟᴀɢᴜ* 」
+`;
+    text += `┃ 🎶 *Judul:* ${songTitle}
+`;
+    text += `┃ 👤 *Artis:* ${songArtist}
+`;
+    text += `┃ 💿 *Album:* ${songAlbum}
+`;
+    text += `┃ 📅 *Rilis:* ${songRelease}
+`;
+    text += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡
+
+`;
+
+    if (videos.length > 0) {
+      text += `📋 *ᴘɪʟɪʜᴀɴ ᴠᴇʀsɪ ᴀᴜᴅɪᴏ (${videos.length} ᴛᴇʀsᴇᴅɪᴀ):*
+`;
+      videos.forEach((v, idx) => {
+        text += `*[${idx + 1}]* ${v.title}
+`;
+        text += `   ⏱️ Durasi: \`${v.timestamp || "?"}\` · 👤 Channel: _${v.author?.name || "Unknown"}_
+
+`;
       });
-    }
+      text += `💬 *Ketik/Balas angka (1-${videos.length}) untuk mengirim audio MP3 ke WhatsApp ini.*`;
 
-    if (links.youtube?.vid) {
-      buttons.push({
-        name: "cta_url",
-        buttonParamsJson: JSON.stringify({
-          display_text: "▶️ YouTube",
-          url: `https://youtube.com/watch?v=${links.youtube.vid}`,
-        }),
+      // Simpan session selama 5 menit
+      const sessionKey = m.chat + "_" + m.sender;
+      global.carilaguSessions.set(sessionKey, {
+        results: videos,
+        chat: m.chat,
+        sender: m.sender,
+        songInfo: { title: songTitle, artist: songArtist },
+        expiresAt: Date.now() + 5 * 60 * 1000,
       });
+    } else {
+      text += `_Tidak dapat menemukan link unduhan YouTube untuk lagu ini._`;
     }
 
-    if (links.deezer?.track?.id) {
-      buttons.push({
-        name: "cta_url",
-        buttonParamsJson: JSON.stringify({
-          display_text: "🎵 Deezer",
-          url: `https://deezer.com/track/${links.deezer.track.id}`,
-        }),
-      });
-    }
-
-    const msgContent = {
-      text,
-      footer: "🎵 Music Recognition",
-      contextInfo: saluranCtx(),
-    };
-
-    if (buttons.length > 0) {
-      msgContent.interactiveButtons = buttons;
-    }
-
-    await sock.sendMessage(m.chat, msgContent, { quoted: m });
+    await sock.sendMessage(
+      m.chat,
+      {
+        text,
+        contextInfo: saluranCtx(),
+      },
+      { quoted: m }
+    );
 
     m.react("✅");
   } catch (error) {
-    m.react("☢");
-    m.reply(te(m.prefix, m.command, m.pushName));
+    m.react("❌");
+    await m.reply(`❌ *ᴇʀʀᴏʀ*
+
+> Gagal mengenali lagu: _${error.message}_`);
+  } finally {
+    try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath); } catch {}
+    try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch {}
+  }
+}
+
+// Answer handler untuk menangkap balasan nomor 1, 2, 3 dari user
+export async function carilaguAnswerHandler(m, sock) {
+  if (!m.body) return false;
+
+  const text = m.body.trim();
+  const sessionKey = m.chat + "_" + m.sender;
+  const session = global.carilaguSessions?.get(sessionKey);
+
+  if (!session) return false;
+
+  if (Date.now() > session.expiresAt) {
+    global.carilaguSessions.delete(sessionKey);
+    return false;
+  }
+
+  const choiceNum = parseInt(text, 10);
+  if (isNaN(choiceNum) || choiceNum < 1 || choiceNum > session.results.length) {
+    return false;
+  }
+
+  const selectedSong = session.results[choiceNum - 1];
+  global.carilaguSessions.delete(sessionKey);
+
+  m.react("⏳");
+  await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*
+
+> Mengunduh: *${selectedSong.title}*
+> Durasi: \`${selectedSong.timestamp}\`
+> Harap tunggu sebentar, file MP3 akan segera dikirim...`);
+
+  try {
+    let mp3Buffer = null;
+
+    // Coba download menggunakan ytdl internal
+    try {
+      const dlRes = await ytdl(selectedSong.url, "mp3");
+      if (dlRes?.status && dlRes?.download) {
+        const { data } = await axios.get(dlRes.download, { responseType: "arraybuffer", timeout: 120000 });
+        mp3Buffer = Buffer.from(data);
+      }
+    } catch {}
+
+    // Fallback downloader via alternative API
+    if (!mp3Buffer) {
+      try {
+        const res = await axios.get(`https://api.azbry.com/api/download/ytmp3?url=${encodeURIComponent(selectedSong.url)}`, { timeout: 30000 });
+        if (res.data?.status && res.data?.result?.download) {
+          const { data } = await axios.get(res.data.result.download, { responseType: "arraybuffer", timeout: 120000 });
+          mp3Buffer = Buffer.from(data);
+        }
+      } catch {}
+    }
+
+    // Fallback ke yt-dlp jika direct link scraper dibatasi
+    if (!mp3Buffer) {
+      const tmpAudio = path.join(process.cwd(), "temp", `dl_${Date.now()}.mp3`);
+      try {
+        await execAsync(`yt-dlp --extract-audio --audio-format mp3 -o "${tmpAudio}" "${selectedSong.url}"`, { timeout: 90000 });
+        if (fs.existsSync(tmpAudio)) {
+          mp3Buffer = fs.readFileSync(tmpAudio);
+        }
+      } catch {} finally {
+        try { if (fs.existsSync(tmpAudio)) fs.unlinkSync(tmpAudio); } catch {}
+      }
+    }
+
+    if (!mp3Buffer || !mp3Buffer.length) {
+      throw new Error("Gagal mengunduh audio. Silakan coba lagi atau pilih nomor lain.");
+    }
+
+    await sock.sendMessage(
+      m.chat,
+      {
+        audio: mp3Buffer,
+        mimetype: "audio/mpeg",
+        ptt: false,
+        fileName: `${selectedSong.title}.mp3`,
+        contextInfo: saluranCtx(),
+      },
+      { quoted: m }
+    );
+
+    m.react("🎶");
+    return true;
+  } catch (err) {
+    m.react("❌");
+    await m.reply(`❌ *ɢᴀɢᴀʟ ᴍᴇɴɢᴜɴᴅᴜʜ*
+
+> Terjadi kesalahan saat mengunduh MP3: _${err.message}_`);
+    return true;
   }
 }
 
