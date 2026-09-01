@@ -34,19 +34,19 @@ export default function LiveStats() {
 
   return (
     <div className="w-full mb-6">
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-3 gap-2">
         {/* Total Upload Hari Ini */}
-        <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.07] backdrop-blur-sm text-center shadow-sm">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+        <div className="p-3 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] backdrop-blur-md text-center">
+          <p className="text-[10px] font-bold text-[var(--t-muted)] uppercase tracking-wider mb-1">
             Total Hari Ini
           </p>
-          <p className="font-mono font-black text-[18px] text-white tracking-tight">
+          <p className="font-mono font-black text-[18px] text-[var(--t-ink)] tracking-tight">
             {total}
           </p>
         </div>
 
         {/* Berhasil HD */}
-        <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.07] backdrop-blur-sm text-center shadow-sm">
+        <div className="p-3 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] backdrop-blur-md text-center">
           <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">
             Berhasil HD
           </p>
@@ -56,8 +56,8 @@ export default function LiveStats() {
         </div>
 
         {/* Status Jalur 100MB+ ON / OFF */}
-        <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.07] backdrop-blur-sm text-center shadow-sm">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+        <div className="p-3 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] backdrop-blur-md text-center">
+          <p className="text-[10px] font-bold text-[var(--t-muted)] uppercase tracking-wider mb-1">
             Mode Jalur
           </p>
           <div className="inline-flex items-center gap-1.5 mt-0.5">
