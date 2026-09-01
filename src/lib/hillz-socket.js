@@ -187,9 +187,112 @@ async function simpleImageToWebp(buffer) {
   });
 }
 
+
+async function sendInteractiveMessageHelper(sock, jid, content, options = {}) {
+  let nativeFlowButtons = [];
+  if (Array.isArray(content.interactiveButtons)) {
+    nativeFlowButtons = content.interactiveButtons.map((btn) => {
+      return {
+        name: btn.name || "quick_reply",
+        buttonParamsJson: typeof btn.buttonParamsJson === "string" ? btn.buttonParamsJson : JSON.stringify(btn.buttonParamsJson || {}),
+      };
+    });
+  }
+
+  let header = {};
+  if (content.image) {
+    let imgBuf = content.image;
+    if (typeof imgBuf === "string" && imgBuf.startsWith("http")) {
+      const resp = await axios.get(imgBuf, { responseType: "arraybuffer", timeout: 15000 });
+      imgBuf = Buffer.from(resp.data);
+    } else if (typeof imgBuf === "string" && fs.existsSync(imgBuf)) {
+      imgBuf = fs.readFileSync(imgBuf);
+    }
+    const { imageMessage } = await prepareWAMessageMedia(
+      { image: imgBuf },
+      { upload: sock.waUploadToServer }
+    );
+    header = {
+      title: content.header || "",
+      hasMediaAttachment: true,
+      imageMessage,
+    };
+  } else if (content.video) {
+    let vidBuf = content.video;
+    if (typeof vidBuf === "string" && fs.existsSync(vidBuf)) {
+      vidBuf = fs.readFileSync(vidBuf);
+    }
+    const { videoMessage } = await prepareWAMessageMedia(
+      { video: vidBuf },
+      { upload: sock.waUploadToServer }
+    );
+    header = {
+      title: content.header || "",
+      hasMediaAttachment: true,
+      videoMessage,
+    };
+  } else if (content.header) {
+    header = {
+      title: content.header,
+      hasMediaAttachment: false,
+    };
+  }
+
+  let contextInfo = content.contextInfo || {};
+  if (options && options.quoted) {
+    const participant = options.quoted.key?.fromMe
+      ? (sock.user?.id || options.quoted.key?.participant)
+      : (options.quoted.participant || options.quoted.key?.participant || options.quoted.key?.remoteJid);
+    contextInfo = {
+      ...contextInfo,
+      stanzaId: options.quoted.key?.id,
+      participant,
+      quotedMessage: options.quoted.message,
+    };
+  }
+
+  const interactiveMessage = {
+    body: { text: content.caption || content.text || "" },
+    footer: { text: content.footer || "" },
+    header: Object.keys(header).length > 0 ? header : undefined,
+    nativeFlowMessage: {
+      buttons: nativeFlowButtons,
+    },
+    contextInfo,
+  };
+
+  const msg = generateWAMessageFromContent(
+    jid,
+    {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage,
+        },
+      },
+    },
+    {
+      userJid: sock.user?.id,
+      ...options,
+    }
+  );
+
+  await sock.relayMessage(jid, msg.message, {
+    messageId: msg.key.id,
+    additionalAttributes: { ...(options || {}) },
+  });
+  return msg;
+}
+
 async function extendSocket(sock) {
   const _originalSendMessage = sock.sendMessage.bind(sock);
-  sock.sendMessage = async (jid, content, options) => {
+    sock.sendMessage = async (jid, content, options) => {
+    if (content && content.interactiveButtons && Array.isArray(content.interactiveButtons)) {
+      try {
+        return await sendInteractiveMessageHelper(sock, jid, content, options);
+      } catch (e) {
+        console.error("[InteractiveButton] Error sending interactive buttons:", e.message);
+      }
+    }
     try {
       return await _originalSendMessage(jid, content, options);
     } catch (err) {
