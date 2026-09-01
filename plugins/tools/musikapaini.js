@@ -15,7 +15,7 @@ const pluginConfig = {
   name: "carilagu",
   alias: ["whatmusic", "shazam", "findsong", "kenallagu", "tebakmusik", "musikapaini", "getmusic", "dlcarilagu"],
   category: "tools",
-  description: "Kenali lagu dari reply audio/VN/video & pilih versi via menu interaktif MP3",
+  description: "Kenali lagu/DJ dari reply audio/VN & pilih versi Original/DJ/Jedag-Jedug via menu interaktif",
   usage: ".carilagu (reply audio/VN/video)",
   example: ".carilagu",
   cooldown: 3,
@@ -122,6 +122,65 @@ async function downloadMp3Buffer(videoUrl) {
   return mp3Buffer;
 }
 
+// Helper multi-pencarian YouTube (Original + DJ Remix + Slowed)
+async function searchWideMusic(title, artist) {
+  const seenIds = new Set();
+  const originalList = [];
+  const djList = [];
+  const otherList = [];
+
+  // Query 1: Original / Official
+  try {
+    const res1 = await yts(`${artist} - ${title}`);
+    (res1?.videos || []).slice(0, 5).forEach((v) => {
+      if (!seenIds.has(v.videoId)) {
+        seenIds.add(v.videoId);
+        originalList.push(v);
+      }
+    });
+  } catch {}
+
+  // Query 2: DJ Remix / Jedag Jedug / Breakbeat
+  try {
+    const res2 = await yts(`DJ ${title} remix full bass jedag jedug`);
+    (res2?.videos || []).slice(0, 5).forEach((v) => {
+      if (!seenIds.has(v.videoId)) {
+        seenIds.add(v.videoId);
+        djList.push(v);
+      }
+    });
+  } catch {}
+
+  // Query 3: DJ TikTok / Slowed / Speed Up
+  try {
+    const res3 = await yts(`DJ ${artist} ${title} tiktok viral`);
+    (res3?.videos || []).slice(0, 4).forEach((v) => {
+      if (!seenIds.has(v.videoId)) {
+        seenIds.add(v.videoId);
+        djList.push(v);
+      }
+    });
+  } catch {}
+
+  // Query 4: Slowed & Reverb
+  try {
+    const res4 = await yts(`${title} slowed reverb`);
+    (res4?.videos || []).slice(0, 3).forEach((v) => {
+      if (!seenIds.has(v.videoId)) {
+        seenIds.add(v.videoId);
+        otherList.push(v);
+      }
+    });
+  } catch {}
+
+  return {
+    original: originalList.slice(0, 4),
+    dj: djList.slice(0, 5),
+    other: otherList.slice(0, 3),
+    all: [...originalList, ...djList, ...otherList]
+  };
+}
+
 // Handler utama saat user mengetik .carilagu atau klik tombol getmusic
 async function handler(m, { sock, args, command }) {
   // Jika dipanggil dari tombol interaktif (.getmusic / .dlcarilagu <videoId>)
@@ -131,7 +190,7 @@ async function handler(m, { sock, args, command }) {
 
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     m.react("⏳");
-    await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*\n\n> Mengunduh MP3 dari server YouTube...\n> Harap tunggu sebentar, file akan segera dikirim.`);
+    await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*\n\n> Mengunduh MP3 dari YouTube...\n> Harap tunggu sebentar, file akan segera dikirim.`);
 
     try {
       const mp3Buffer = await downloadMp3Buffer(videoUrl);
@@ -194,8 +253,8 @@ async function handler(m, { sock, args, command }) {
 
   if (!downloadFn) {
     return m.reply(
-      `🎵 *ᴄᴀʀɪ ʟᴀɢᴜ (ᴍᴜsɪᴄ ʀᴇᴄᴏɢɴɪᴛɪᴏɴ)*\n\n` +
-        `> Identifikasi judul lagu dari audio/voice note/video WhatsApp\n\n` +
+      `🎵 *ᴄᴀʀɪ ʟᴀɢᴜ & ᴅᴊ ʀᴇᴍɪx (ᴍᴜsɪᴄ ʀᴇᴄᴏɢɴɪᴛɪᴏɴ)*\n\n` +
+        `> Identifikasi judul lagu & DJ Remix dari audio/voice note/video WhatsApp\n\n` +
         `*Cara Penggunaan:*\n` +
         `> 1. Reply pesan audio, VN, atau video dengan \`${m.prefix}carilagu\`\n` +
         `> 2. Atau kirim audio/video dengan caption \`${m.prefix}carilagu\``
@@ -203,7 +262,7 @@ async function handler(m, { sock, args, command }) {
   }
 
   m.react("🔍");
-  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ʟᴀɢᴜ...*\n\n> Sedang mengunduh audio & mencocokkan dengan database Shazam...`);
+  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ʟᴀɢᴜ...*\n\n> Sedang memindai sampel audio, vokal & beat remix...`);
 
   const tempDir = path.join(process.cwd(), "temp");
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -212,6 +271,7 @@ async function handler(m, { sock, args, command }) {
   const inputExt = isVideo ? "mp4" : "ogg";
   const inputPath = path.join(tempDir, `input_${tempId}.${inputExt}`);
   const outputPath = path.join(tempDir, `sample_${tempId}.mp3`);
+  const outputMidPath = path.join(tempDir, `sample_mid_${tempId}.mp3`);
 
   try {
     const audioBuffer = await downloadFn();
@@ -223,16 +283,24 @@ async function handler(m, { sock, args, command }) {
 
     fs.writeFileSync(inputPath, audioBuffer);
 
-    // Konversi cuplikan audio 15 detik ke mp3 bersih
+    // 1. Coba sampel awal 15 detik
     await queueFFmpeg(`ffmpeg -y -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outputPath}"`);
-    const fileToRecognize = fs.existsSync(outputPath) ? outputPath : inputPath;
+    let fileToRecognize = fs.existsSync(outputPath) ? outputPath : inputPath;
+    let recogResult = await recognizeAudioFile(fileToRecognize);
 
-    // Jalankan Shazam Engine
-    const recogResult = await recognizeAudioFile(fileToRecognize);
+    // 2. Jika sampel awal gagal (sering terjadi pada DJ yang intro-nya lama), coba potong dari detik 15-30
+    if (!recogResult.status || !recogResult.title) {
+      try {
+        await queueFFmpeg(`ffmpeg -y -ss 00:00:15 -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outputMidPath}"`);
+        if (fs.existsSync(outputMidPath)) {
+          recogResult = await recognizeAudioFile(outputMidPath);
+        }
+      } catch {}
+    }
 
     if (!recogResult.status || !recogResult.title) {
       m.react("❌");
-      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n> Tidak dapat mengenali lagu dari audio tersebut. Pastikan sampel lagu terdengar jelas & minim noise.`);
+      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n> Tidak dapat mengenali lagu dari audio tersebut. Pastikan vokal/melodi lagu terdengar cukup jelas.`);
     }
 
     const songTitle = recogResult.title;
@@ -241,19 +309,45 @@ async function handler(m, { sock, args, command }) {
     const songRelease = recogResult.release;
     const coverUrl = recogResult.cover;
 
-    // Cari versi audio di YouTube (ambil 5 opsi)
-    const searchQuery = `${songArtist} - ${songTitle}`;
-    const ytSearch = await yts(searchQuery);
-    let videos = ytSearch?.videos?.slice(0, 5) || [];
+    // Pencarian luas (Original + DJ Remix + Slowed)
+    const wideResults = await searchWideMusic(songTitle, songArtist);
+    const sections = [];
+    const allList = wideResults.all;
 
-    if (!videos.length) {
-      const fbSearch = await yts(songTitle);
-      if (fbSearch?.videos?.length) {
-        videos = fbSearch.videos.slice(0, 5);
-      }
+    if (wideResults.original.length > 0) {
+      sections.push({
+        title: "🎶 Versi Original & Official",
+        rows: wideResults.original.map((v, i) => ({
+          title: `[ORI ${i + 1}] ${v.title.substring(0, 42)}`,
+          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "YouTube"}`,
+          id: `${m.prefix}getmusic ${v.videoId}`,
+        })),
+      });
     }
 
-    let bodyText = `🎵 *ʟᴀɢᴜ ᴅɪᴛᴇᴍᴜᴋᴀɴ!*\n\n`;
+    if (wideResults.dj.length > 0) {
+      sections.push({
+        title: "🎧 Versi DJ Remix & Jedag-Jedug",
+        rows: wideResults.dj.map((v, i) => ({
+          title: `[DJ ${i + 1}] ${v.title.substring(0, 42)}`,
+          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "DJ Remix"}`,
+          id: `${m.prefix}getmusic ${v.videoId}`,
+        })),
+      });
+    }
+
+    if (wideResults.other.length > 0) {
+      sections.push({
+        title: "✨ Versi Slowed / Reverb / Speed Up",
+        rows: wideResults.other.map((v, i) => ({
+          title: `[VIBE ${i + 1}] ${v.title.substring(0, 42)}`,
+          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "Remix"}`,
+          id: `${m.prefix}getmusic ${v.videoId}`,
+        })),
+      });
+    }
+
+    let bodyText = `🎵 *ʟᴀɢᴜ & ᴅᴊ ʀᴇᴍɪx ᴅɪᴛᴇᴍᴜᴋᴀɴ!*\n\n`;
     bodyText += `╭┈┈⬡「 📋 *ɪɴꜰᴏ ʟᴀɢᴜ* 」\n`;
     bodyText += `┃ 🎶 *Judul:* ${songTitle}\n`;
     bodyText += `┃ 👤 *Artis:* ${songArtist}\n`;
@@ -261,90 +355,78 @@ async function handler(m, { sock, args, command }) {
     bodyText += `┃ 📅 *Rilis:* ${songRelease}\n`;
     bodyText += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
 
-    if (videos.length > 0) {
-      bodyText += `📋 *ᴘɪʟɪʜᴀɴ ᴠᴇʀsɪ ᴀᴜᴅɪᴏ (${videos.length} ᴛᴇʀsᴇᴅɪᴀ):*\n`;
-      videos.forEach((v, idx) => {
-        bodyText += `*[${idx + 1}]* ${v.title}\n`;
-        bodyText += `   ⏱️ Durasi: \`${v.timestamp || "?"}\` · 👤 Channel: _${v.author?.name || "Unknown"}_\n\n`;
+    bodyText += `🔥 *Koleksi Versi Tersedia:*\n`;
+    bodyText += `> 🎶 *Original:* ${wideResults.original.length} versi\n`;
+    bodyText += `> 🎧 *DJ Remix / JJ:* ${wideResults.dj.length} versi\n`;
+    bodyText += `> ✨ *Slowed / Vibe:* ${wideResults.other.length} versi\n\n`;
+    bodyText += `👇 *Klik tombol menu di bawah untuk memilih versi MP3:*`;
+
+    const buttons = [
+      {
+        name: "single_select",
+        buttonParamsJson: JSON.stringify({
+          title: "🎧 PILIH VERSI MP3 / DJ REMIX",
+          sections,
+        }),
+      },
+    ];
+
+    // Quick reply untuk DJ Remix terpopuler
+    if (wideResults.dj[0]) {
+      buttons.push({
+        name: "quick_reply",
+        buttonParamsJson: JSON.stringify({
+          display_text: `🎧 Unduh DJ Remix (${wideResults.dj[0].timestamp})`,
+          id: `${m.prefix}getmusic ${wideResults.dj[0].videoId}`,
+        }),
       });
-      bodyText += `👇 *Klik tombol menu interaktif di bawah untuk memilih & mengunduh MP3:*`;
+    } else if (wideResults.original[0]) {
+      buttons.push({
+        name: "quick_reply",
+        buttonParamsJson: JSON.stringify({
+          display_text: `🎶 Unduh Versi Original`,
+          id: `${m.prefix}getmusic ${wideResults.original[0].videoId}`,
+        }),
+      });
+    }
 
-      // Buat Baris untuk List Button Interaktif
-      const rows = videos.map((v, idx) => ({
-        title: `[${idx + 1}] ${v.title.substring(0, 45)}`,
-        description: `⏱️ ${v.timestamp || "?"} | 👤 ${v.author?.name || "YouTube"}`,
-        id: `${m.prefix}getmusic ${v.videoId}`,
-      }));
+    // Simpan session
+    const senderJid = m.sender || m.key?.participant || m.chat;
+    const sessionData = {
+      results: allList,
+      chat: m.chat,
+      sender: senderJid,
+      songInfo: { title: songTitle, artist: songArtist },
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    };
 
-      const buttons = [
+    global.carilaguSessions.set(m.chat + "_" + senderJid, sessionData);
+    global.carilaguSessions.set(m.chat, sessionData);
+    if (senderJid) global.carilaguSessions.set(senderJid, sessionData);
+
+    const headerSource = coverUrl && coverUrl.startsWith("http") ? coverUrl : getAssetBuffer("hillz");
+
+    try {
+      await sock.sendButton(
+        m.chat,
+        headerSource,
+        bodyText,
+        m,
         {
-          name: "single_select",
-          buttonParamsJson: JSON.stringify({
-            title: "🎵 PILIH & UNDUH MP3",
-            sections: [
-              {
-                title: `Hasil Pencarian: ${songTitle.substring(0, 30)}`,
-                rows,
-              },
-            ],
-          }),
+          buttons,
+          footer: "SHIROWAHD • DJ & Music Recognizer",
+          contextInfo: saluranCtx(),
+        }
+      );
+    } catch (e) {
+      await sock.sendMessage(
+        m.chat,
+        {
+          text: bodyText,
+          contextInfo: saluranCtx(),
         },
-      ];
-
-      // Tambahkan quick reply untuk versi utama jika didukung
-      if (videos[0]) {
-        buttons.push({
-          name: "quick_reply",
-          buttonParamsJson: JSON.stringify({
-            display_text: `🎶 Unduh Versi 1 (${videos[0].timestamp})`,
-            id: `${m.prefix}getmusic ${videos[0].videoId}`,
-          }),
-        });
-      }
-
-      // Simpan juga session ketik angka manual sebagai cadangan
-      const senderJid = m.sender || m.key?.participant || m.chat;
-      const sessionData = {
-        results: videos,
-        chat: m.chat,
-        sender: senderJid,
-        songInfo: { title: songTitle, artist: songArtist },
-        expiresAt: Date.now() + 5 * 60 * 1000,
-      };
-
-      global.carilaguSessions.set(m.chat + "_" + senderJid, sessionData);
-      global.carilaguSessions.set(m.chat, sessionData);
-      if (senderJid) global.carilaguSessions.set(senderJid, sessionData);
-
-      // Kirim pesan interaktif dengan cover art / default asset
-      const headerSource = coverUrl && coverUrl.startsWith("http") ? coverUrl : getAssetBuffer("hillz");
-
-      try {
-        await sock.sendButton(
-          m.chat,
-          headerSource,
-          bodyText,
-          m,
-          {
-            buttons,
-            footer: "SHIROWAHD • Music Recognizer",
-            contextInfo: saluranCtx(),
-          }
-        );
-      } catch (e) {
-        // Fallback jika sendButton gagal
-        await sock.sendMessage(
-          m.chat,
-          {
-            text: bodyText + "\n\n_(Ketik angka 1-5 untuk mengunduh)_",
-            contextInfo: saluranCtx(),
-          },
-          { quoted: m }
-        );
-      }
-    } else {
-      bodyText += `_Tidak dapat menemukan link unduhan YouTube untuk lagu ini._`;
-      await m.reply(bodyText);
+        { quoted: m }
+      );
     }
 
     m.react("✅");
@@ -354,15 +436,16 @@ async function handler(m, { sock, args, command }) {
   } finally {
     try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath); } catch {}
     try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch {}
+    try { if (fs.existsSync(outputMidPath)) fs.unlinkSync(outputMidPath); } catch {}
   }
 }
 
-// Answer handler untuk menangkap balasan nomor 1-5 (cadangan jika user mengetik angka manual)
+// Answer handler cadangan
 export async function carilaguAnswerHandler(m, sock) {
   const rawBody = (m.body || m.text || "").trim();
   if (!rawBody) return false;
 
-  const match = rawBody.match(/^#?\[?([1-5])\]?\.?$/i);
+  const match = rawBody.match(/^#?\[?([1-9]|1[0-2])\]?\.?$/i);
   if (!match) return false;
 
   const choiceNum = parseInt(match[1], 10);
@@ -398,7 +481,7 @@ export async function carilaguAnswerHandler(m, sock) {
     const mp3Buffer = await downloadMp3Buffer(selectedSong.url);
 
     if (!mp3Buffer || !mp3Buffer.length) {
-      throw new Error("Gagal mengunduh audio dari server. Silakan coba klik tombol atau pilih nomor lain.");
+      throw new Error("Gagal mengunduh audio dari server.");
     }
 
     await sock.sendMessage(
