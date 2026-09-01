@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import SuccessModal from './SuccessModal'
 import { uploadFiles, formatSize, pollJobStatus } from '@/lib/up-api'
 
@@ -21,10 +21,11 @@ export default function UploadPanel({ settings, onToast }) {
   const fileInputRef = useRef(null)
   const abortCtrlRef = useRef(null)
 
-  const maxMB = settings?.maxFileSizeMB || 100
-  const maxBytes = maxMB * 1024 * 1024
+  const maxMB = settings?.maxFileSizeMB || 0
+  const maxBytes = maxMB > 0 ? maxMB * 1024 * 1024 : 10 * 1024 * 1024 * 1024 // 10GB if 0
   const allowLarge = settings?.allowLargeUpload !== false
-  const largeMaxMB = settings?.largeUploadMaxMB || 1024
+  const largeMaxMB = settings?.largeUploadMaxMB || 0
+  const largeCapBytes = largeMaxMB > 0 ? largeMaxMB * 1024 * 1024 : 10 * 1024 * 1024 * 1024
 
   const handleDrag = useCallback((e) => {
     e.preventDefault()
@@ -50,12 +51,13 @@ export default function UploadPanel({ settings, onToast }) {
       const vid = newFiles[0]
       const ext = vid.name.split('.').pop().toLowerCase()
       if (!VIDEO_EXTS.includes(ext) && !vid.type.startsWith('video/') && !semuaFile) {
-        onToast?.('Hanya format video yang diperbolehkan di tab ini', 'error')
+        onToast?.('Hanya format video yang didukung di tab ini', 'error')
         return
       }
-      const cap = allowLarge ? largeMaxMB * 1024 * 1024 : maxBytes
-      if (vid.size > cap) {
-        onToast?.(`Ukuran video melebihi batas (${allowLarge ? largeMaxMB : maxMB}MB)`, 'error')
+      const cap = allowLarge ? largeCapBytes : maxBytes
+      if (cap > 0 && vid.size > cap) {
+        const limitStr = allowLarge && largeMaxMB > 0 ? `${largeMaxMB}MB` : `${maxMB}MB`
+        onToast?.(`Ukuran video melebihi batas (${limitStr})`, 'error')
         return
       }
       setFiles([vid])
@@ -64,10 +66,10 @@ export default function UploadPanel({ settings, onToast }) {
       for (const f of newFiles) {
         const ext = f.name.split('.').pop().toLowerCase()
         if (IMAGE_EXTS.includes(ext) || f.type.startsWith('image/') || semuaFile) {
-          if (f.size <= maxBytes) {
+          if (maxBytes === 0 || f.size <= maxBytes) {
             validImages.push(f)
           } else {
-            onToast?.(`File ${f.name} melebihi batas ${maxMB}MB`, 'error')
+            onToast?.(`File ${f.name} melebihi batas`, 'error')
           }
         }
       }
@@ -126,7 +128,7 @@ export default function UploadPanel({ settings, onToast }) {
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        onToast?.(err.message || 'Terjadi kesalahan jaringan', 'error')
+        onToast?.(err.message || 'Terjadi gangguan koneksi', 'error')
       }
     } finally {
       setUploading(false)
@@ -145,17 +147,15 @@ export default function UploadPanel({ settings, onToast }) {
   }
 
   return (
-    <div className="relative w-full">
-      {/* Outer Glow Container */}
-      <div className="relative rounded-[26px] bg-[#070C18] border border-white/[0.08] p-4 sm:p-6 shadow-[0_28px_80px_-16px_rgba(0,0,0,0.9)] overflow-hidden">
+    <div className="w-full">
+      {/* Outer Card Shell */}
+      <div className="relative rounded-3xl bg-[#080d1a] border border-white/[0.08] p-4 sm:p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)]">
         
-        {/* Animated Top Border Shimmer */}
-        <div className="absolute top-0 inset-x-0 h-[2px] overflow-hidden rounded-t-[26px]">
-          <div className="h-full w-[200%] bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" style={{ animation: 'modalShimmer 3.5s ease-in-out infinite' }} />
-        </div>
+        {/* Top Accent Line */}
+        <div className="absolute top-0 inset-x-8 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
 
         {/* Tab Segmented Control */}
-        <div className="flex items-center p-1 rounded-[16px] bg-white/[0.03] border border-white/[0.06] mb-5">
+        <div className="flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] mb-5">
           <button
             onClick={() => {
               if (!uploading) {
@@ -163,14 +163,14 @@ export default function UploadPanel({ settings, onToast }) {
                 setFiles([])
               }
             }}
-            className={`flex-1 py-2.5 rounded-[12px] font-extrabold text-[12px] tracking-wide flex items-center justify-center gap-2 transition-all duration-200 ${
+            className={`flex-1 py-2.5 rounded-xl font-extrabold text-[12px] tracking-wide flex items-center justify-center gap-2 transition-all duration-200 ${
               tab === 'video'
-                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(0,98,255,0.4)]'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+                ? 'bg-gradient-to-r from-sky-400 to-blue-600 text-white shadow-[0_4px_16px_rgba(0,98,255,0.4)]'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
-            <i className="fa-solid fa-video text-[13px]" />
-            <span>Video Ultra HD</span>
+            <i className="fa-solid fa-video text-xs" />
+            <span>Video HD</span>
           </button>
 
           <button
@@ -180,18 +180,18 @@ export default function UploadPanel({ settings, onToast }) {
                 setFiles([])
               }
             }}
-            className={`flex-1 py-2.5 rounded-[12px] font-extrabold text-[12px] tracking-wide flex items-center justify-center gap-2 transition-all duration-200 ${
+            className={`flex-1 py-2.5 rounded-xl font-extrabold text-[12px] tracking-wide flex items-center justify-center gap-2 transition-all duration-200 ${
               tab === 'image'
-                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(0,98,255,0.4)]'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+                ? 'bg-gradient-to-r from-sky-400 to-blue-600 text-white shadow-[0_4px_16px_rgba(0,98,255,0.4)]'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
-            <i className="fa-solid fa-image text-[13px]" />
+            <i className="fa-solid fa-image text-xs" />
             <span>Foto Original</span>
           </button>
         </div>
 
-        {/* Dropzone Area */}
+        {/* Dropzone Container */}
         <div
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -200,9 +200,9 @@ export default function UploadPanel({ settings, onToast }) {
           onClick={() => {
             if (!uploading && fileInputRef.current) fileInputRef.current.click()
           }}
-          className={`relative rounded-[20px] border-2 border-dashed transition-all duration-300 p-6 sm:p-8 text-center cursor-pointer overflow-hidden ${
+          className={`relative rounded-2xl border-2 border-dashed transition-all duration-200 p-6 sm:p-8 text-center cursor-pointer ${
             dragOver
-              ? 'border-sky-400 bg-sky-500/[0.08] shadow-[0_0_35px_rgba(56,189,248,0.25)] scale-[1.01]'
+              ? 'border-sky-400 bg-sky-500/[0.08] shadow-[0_0_30px_rgba(56,189,248,0.2)]'
               : 'border-white/[0.1] bg-white/[0.015] hover:border-sky-400/40 hover:bg-white/[0.03]'
           }`}
         >
@@ -223,53 +223,65 @@ export default function UploadPanel({ settings, onToast }) {
             }}
           />
 
-          {/* Floating Icon */}
-          <div className="relative w-16 h-16 sm:w-18 sm:h-18 mx-auto rounded-[20px] bg-gradient-to-br from-sky-400/15 to-blue-600/10 border border-sky-400/30 grid place-items-center mb-3.5 shadow-lg group-hover:scale-105 transition-transform">
-            <i className={`fa-solid ${tab === 'video' ? 'fa-cloud-arrow-up' : 'fa-images'} text-sky-400 text-[24px] sm:text-[28px]`} />
+          {/* Center Upload Icon */}
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-sky-400/15 to-blue-600/10 border border-sky-400/30 grid place-items-center mb-3 shadow-md">
+            <i
+              className={`fa-solid ${
+                tab === 'video' ? 'fa-cloud-arrow-up' : 'fa-images'
+              } text-sky-400 text-2xl`}
+            />
           </div>
 
-          <h3 className="font-extrabold text-[15px] sm:text-[16px] text-white tracking-tight mb-1">
+          <h3 className="font-extrabold text-[15px] text-white tracking-tight mb-1">
             {tab === 'video' ? 'Pilih atau Tarik Video HD ke Sini' : 'Pilih atau Tarik Foto ke Sini'}
           </h3>
-          <p className="text-slate-400 text-[11px] font-medium max-w-[280px] mx-auto mb-3.5">
+          <p className="text-slate-400 text-[11px] font-medium max-w-[280px] mx-auto mb-3">
             {tab === 'video'
-              ? `Maksimal 1 video (${allowLarge ? largeMaxMB : maxMB}MB) · Format MP4, MOV, MKV`
-              : `Hingga 20 foto per batch · Format JPG, PNG, WEBP, HEIC`}
+              ? `Maksimal 1 video (${maxMB === 0 ? 'Tanpa Batas' : `${maxMB}MB`}) · MP4, MOV, MKV`
+              : 'Hingga 20 foto per batch · JPG, PNG, WEBP, HEIC'}
           </p>
 
-          {/* Micro Specs Tags */}
+          {/* Micro Tags */}
           <div className="flex flex-wrap items-center justify-center gap-1.5 pointer-events-none">
-            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-slate-300">
+            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[9px] font-mono text-slate-300">
               100% Stream Copy
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-emerald-400">
+            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[9px] font-mono text-emerald-400">
               Zero Loss
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-sky-400">
-              Auto FastStart
+            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[9px] font-mono text-sky-400">
+              FastStart
             </span>
           </div>
         </div>
 
-        {/* Selected Files Preview List */}
+        {/* Selected File Details */}
         {files.length > 0 && (
           <div className="mt-4 space-y-2">
-            <p className="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-400 flex items-center justify-between px-1">
+            <div className="flex items-center justify-between text-[10px] font-extrabold tracking-wider uppercase text-slate-400 px-1">
               <span>Berkas Terpilih ({files.length})</span>
-              <span className="text-sky-400 font-mono">{formatSize(files.reduce((a, b) => a + b.size, 0))}</span>
-            </p>
+              <span className="text-sky-400 font-mono">
+                {formatSize(files.reduce((a, b) => a + b.size, 0))}
+              </span>
+            </div>
             <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
               {files.map((file, idx) => (
                 <div
                   key={file.name + idx}
-                  className="flex items-center justify-between gap-3 p-2.5 rounded-[12px] bg-white/[0.03] border border-white/[0.07]"
+                  className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.07]"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center shrink-0">
-                      <i className={`fa-solid ${tab === 'video' ? 'fa-film' : 'fa-image'} text-sky-400 text-[11px]`} />
+                      <i
+                        className={`fa-solid ${
+                          tab === 'video' ? 'fa-film' : 'fa-image'
+                        } text-sky-400 text-xs`}
+                      />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-white truncate max-w-[200px] sm:max-w-[280px]">{file.name}</p>
+                      <p className="text-[11px] font-bold text-white truncate max-w-[200px] sm:max-w-[280px]">
+                        {file.name}
+                      </p>
                       <p className="text-[9px] text-slate-400 font-mono">{formatSize(file.size)}</p>
                     </div>
                   </div>
@@ -290,21 +302,21 @@ export default function UploadPanel({ settings, onToast }) {
           </div>
         )}
 
-        {/* Upload Progress & Telemetry */}
+        {/* Upload Progress & Processing Status */}
         {(uploading || isProcessing) && (
-          <div className="mt-4 p-4 rounded-[16px] bg-white/[0.025] border border-white/[0.08] space-y-3">
+          <div className="mt-4 p-4 rounded-2xl bg-white/[0.025] border border-white/[0.08] space-y-3">
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-white font-bold flex items-center gap-2">
                 <i className="fa-solid fa-circle-notch fa-spin text-sky-400 text-xs" />
                 {isProcessing ? processStatus : 'Mengunggah Berkas...'}
               </span>
-              <span className="font-mono font-extrabold text-sky-400 text-sm">{progress}%</span>
+              <span className="font-mono font-black text-sky-400 text-sm">{progress}%</span>
             </div>
 
             {/* Progress Bar */}
             <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 transition-all duration-300"
+                className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-600 transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -318,7 +330,9 @@ export default function UploadPanel({ settings, onToast }) {
                 </div>
                 <div className="text-center">
                   <p className="text-slate-400">Terkirim</p>
-                  <p className="font-mono font-bold text-white">{uploadStats.sent} / {uploadStats.total}</p>
+                  <p className="font-mono font-bold text-white">
+                    {uploadStats.sent} / {uploadStats.total}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-slate-400">Estimasi</p>
@@ -329,12 +343,12 @@ export default function UploadPanel({ settings, onToast }) {
           </div>
         )}
 
-        {/* Action Button */}
+        {/* CTA Action Button */}
         <div className="mt-5">
           {uploading ? (
             <button
               onClick={cancelUpload}
-              className="w-full py-3.5 rounded-[16px] bg-rose-500/10 border border-rose-500/30 text-rose-400 font-extrabold text-[13px] hover:bg-rose-500/20 active:scale-[0.98] transition-all"
+              className="w-full py-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-extrabold text-[13px] hover:bg-rose-500/20 active:scale-[0.98] transition-all"
             >
               Batalkan Pengunggahan
             </button>
@@ -342,7 +356,7 @@ export default function UploadPanel({ settings, onToast }) {
             <button
               disabled={files.length === 0}
               onClick={startUpload}
-              className={`w-full py-3.5 rounded-[16px] font-extrabold text-[13px] tracking-wide transition-all duration-200 flex items-center justify-center gap-2 ${
+              className={`w-full py-3.5 rounded-2xl font-extrabold text-[13px] tracking-wide transition-all duration-200 flex items-center justify-center gap-2 ${
                 files.length > 0
                   ? 'bg-gradient-to-r from-sky-400 via-blue-500 to-blue-600 text-white shadow-[0_10px_28px_-6px_rgba(0,98,255,0.45)] hover:brightness-110 active:scale-[0.98]'
                   : 'bg-white/[0.04] border border-white/[0.06] text-slate-400 cursor-not-allowed'
@@ -354,7 +368,7 @@ export default function UploadPanel({ settings, onToast }) {
           )}
         </div>
 
-        {/* Bypass Android / iOS Picker Toggle */}
+        {/* Mode Bypass Galeri Checkbox */}
         <div className="mt-4 pt-3 border-t border-white/[0.04] flex items-center justify-between">
           <label className="text-[11px] text-slate-400 cursor-pointer flex items-center gap-2">
             <input
@@ -365,11 +379,11 @@ export default function UploadPanel({ settings, onToast }) {
             />
             <span>Mode Semua Berkas (Bypass Galeri HP)</span>
           </label>
-          <span className="text-[10px] font-mono text-slate-400">v3.8h</span>
+          <span className="text-[10px] font-mono text-slate-400">Ultra HD Engine</span>
         </div>
       </div>
 
-      {/* Success Result Modal */}
+      {/* Success Modal */}
       {result && (
         <SuccessModal
           result={result}
