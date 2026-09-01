@@ -182,8 +182,9 @@ async function uploadSingle(files, { onProgress, field, signal }) {
   })
 }
 
-export function pollJobStatus(jobId) {
-  return fetch('/upload/status?id=' + encodeURIComponent(jobId)).then(r => r.json())
+export async function pollJobStatus(jobId) {
+  const base = await uploadBase()
+  return fetch((base || '') + '/upload/status?id=' + encodeURIComponent(jobId)).then(r => r.json())
 }
 
 export function getHistory() {

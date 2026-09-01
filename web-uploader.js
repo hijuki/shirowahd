@@ -104,7 +104,7 @@ function loadSettings() {
     // darurat hanya untuk 8K supaya encoder tidak kehabisan memori).
     // 0 = tanpa batas sama sekali. Diturunkan HANYA kalau HP tujuan memang
     // tidak sanggup — bukan sebagai tebakan.
-    maxVideoLongSide: 3840,
+    maxVideoLongSide: 2560,
     // --- Jalur upload langsung (lewat samping Cloudflare) ---
     //
     // Cloudflare menolak body request >100 MB di plan Free/Pro (Business 200 MB,
@@ -173,7 +173,7 @@ function saveSettings(data) {
     rateCooldown: data.rateCooldown ?? cur.rateCooldown ?? 0,
     autoCleanup: data.autoCleanup ?? cur.autoCleanup ?? false,
     videoAsDocumentMB: data.videoAsDocumentMB ?? cur.videoAsDocumentMB ?? 180,
-    maxVideoLongSide: data.maxVideoLongSide ?? cur.maxVideoLongSide ?? 3840,
+    maxVideoLongSide: data.maxVideoLongSide ?? cur.maxVideoLongSide ?? 1280,
     directUploadEnabled: data.directUploadEnabled ?? cur.directUploadEnabled ?? false,
     directUploadHost: nonEmpty(data.directUploadHost) ?? cur.directUploadHost ?? 'up.swhdhlz.my.id',
     directUploadPort: data.directUploadPort ?? cur.directUploadPort ?? 8443,
@@ -353,7 +353,7 @@ function sweepJobs() { const now = Date.now(); for (const [k, j] of jobs) if (no
 function newJob(names) {
   sweepJobs();
   const id = crypto.randomBytes(8).toString('hex');
-  jobs.set(id, { id, names, stage: 'Menyiapkan…', pct: 0, error: null, result: null, ts: Date.now() });
+  jobs.set(id, { id, names, stage: 'Menyiapkan…', pct: 0, error: null, result: null, needsEncode: null, ts: Date.now() });
   return id;
 }
 const VIDEO_MP4_EXTS = ['.mp4', '.m4v'];
@@ -432,36 +432,27 @@ function needsConvert(name) {
 // Semua kondisi itu sekarang memaksa re-encode ke H.264 8-bit yuv420p + AAC.
 function detectNeedsReencode(filePath) {
   try {
-    // Dibaca per-NAMA (key=value), bukan berdasarkan urutan baris: urutan output
-    // ffprobe mengikuti urutan field internalnya, bukan urutan yang kita minta,
-    // jadi destructuring posisional mudah tertukar saat daftar field diubah.
-    const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,profile -of default=nw=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString();
+    const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,profile,r_frame_rate,avg_frame_rate -of default=nw=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString();
     const get = (k) => (raw.match(new RegExp('^' + k + '=(.*)$', 'm')) || [, ''])[1].trim();
     const codec = get('codec_name').toLowerCase();
     const pixFmt = get('pix_fmt').toLowerCase();
     const profile = get('profile');
+
+    // Persis standar .ttv2:
+    // Hanya re-encode jika codec bukan h264, bukan yuv420p, atau 10-bit/HDR
     if (codec !== 'h264') return true;
     if (pixFmt && pixFmt !== 'yuv420p') return true;
-    if (/10|4:4:4|4:2:2/.test(profile)) return true;
-    // Audio non-AAC tidak memaksa re-encode VIDEO — audionya saja yang
-    // ditranscode di jalur copy, jadi video tetap utuh.
+    if (/10|4:4:4|4:2:2/i.test(profile)) return true;
     return false;
   } catch { return false; }
 }
 
-// Codec audio sumber. Dipakai untuk memutuskan `-c:a copy` (audio sudah AAC)
-// atau transcode ke AAC. Sebelumnya audio SELALU di-encode ulang ke 320k walau
-// sumbernya sudah AAC — jadi file yang mestinya lolos "tanpa compress" tetap
-// kehilangan keutuhan track audionya dan ukurannya membengkak.
 function audioCodecOf(filePath) {
   try {
     return execSync('ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim().toLowerCase();
   } catch { return ''; }
 }
 
-// Video tanpa audio kadang gagal diunduh penerima. Kalau tidak ada track audio,
-// jalur copy tetap dipakai tapi ditambahkan audio senyap — jauh lebih murah
-// daripada re-encode video, dan hasil unduhan jadi konsisten.
 function hasAudioStream(filePath) {
   try {
     const out = execSync('ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString().trim();
@@ -471,9 +462,6 @@ function hasAudioStream(filePath) {
 
 const execP = (cmd, opts = {}) => new Promise((resolve, reject) => execCb(cmd, opts, (err, stdout, stderr) => err ? reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')) : resolve(stdout)));
 
-// ffmpeg 4.4 (Ubuntu 22.04) belum punya `-fps_mode`; padanannya `-vsync`.
-// Memakai flag yang tidak dikenal membuat ffmpeg keluar SEBELUM memproses
-// apa pun ("Unrecognized option"), jadi versinya dideteksi sekali di awal.
 const FFMPEG_PUNYA_FPS_MODE = (() => {
   try { return execSync('ffmpeg -h full 2>&1 | grep -c -- "-fps_mode"', { timeout: 10000, stdio: 'pipe', shell: '/bin/bash' }).toString().trim() !== '0'; }
   catch { return false; }
@@ -485,46 +473,6 @@ function codecVideoOf(filePath) {
   } catch { return ''; }
 }
 
-// Berapa banyak keluhan yang dimuntahkan ffmpeg saat berkas ini didekode.
-// Inilah satu-satunya cara jujur menilai "video ini bisa diputar atau tidak" —
-// ukuran berkas dan exit code ffmpeg sama-sama bisa menipu.
-//
-// ── Kenapa TIDAK lagi mencari string "Error while decoding" ────────────────
-// Dulu fungsi ini hanya menghitung baris yang memuat "Error while decoding".
-// Diukur pada berkas user (VID-20260818-WA0002.mp4): berkas itu memuntahkan
-// 630 baris keluhan, tapi NOL di antaranya berbunyi "Error while decoding" —
-// semuanya berbunyi:
-//     "Application provided invalid, non monotonically increasing dts to
-//      muxer in stream 0: 1 >= 1"
-// Artinya timestamp-nya kacau, bukan piksel-nya. Karena polanya tidak cocok,
-// fungsi ini mengembalikan 0, `hasilLayak` menyatakan LULUS, dan berkas patah
-// itu dikirim ke WhatsApp. Jadi penyaringnya ada, tapi buta terhadap justru
-// jenis kerusakan yang paling sering datang dari rekaman HP.
-// Sekarang SEMUA baris pada level `-v error` dihitung: apa pun yang membuat
-// ffmpeg mengeluh saat mendekode adalah alasan sah untuk tidak mempercayai
-// berkas ini.
-//
-// `detik` 0 / tidak diisi = pindai SELURUH berkas. Biaya diukur nyata:
-// 6,95 s untuk 18 s 1080p, 16,26 s untuk 28 s 4K — murah dibanding
-// mengirim video rusak. Pemindaian sepotong dulu melewatkan kerusakan yang
-// letaknya di luar potongan itu.
-//
-// ── KOREKSI PENTING: tidak semua keluhan berasal dari berkasnya ───────────
-// `-f null -` memasang MUXER palsu hanya supaya ffmpeg mau jalan, dan muxer itu
-// ikut mengeluh soal hal yang bukan urusan kesehatan gambar:
-//
-//   [null @ ...] Application provided invalid, non monotonically increasing
-//                dts to muxer in stream 0: 1 >= 1
-//
-// Frasa "to muxer" menandai keluhan ALAT UKUR, bukan laporan gambar rusak.
-// Diukur pada VID-20260818-WA0002.mp4 milik user: 630 keluhan lewat muxer, tapi
-// decode murni (`ffprobe -count_frames`) membaca 1083 frame dengan NOL error.
-// Berkasnya sehat di piksel; yang cacat timestamp container.
-//
-// Menghitung semuanya membuat berkas sehat dituduh rusak — termasuk keluaran
-// `.tt`/`.ttv2` yang sudah user buktikan mulus di WA/SW — lalu dipaksa encode
-// ulang dan mengecil. `hanyaDecoder = true` menyisakan keluhan decoder saja
-// (NAL rusak, frame tak terbaca), yaitu satu-satunya yang berarti gambar cacat.
 function hitungMasalahDecode(filePath, detik, hanyaDecoder) {
   try {
     const batas = detik && detik > 0 ? ' -t ' + detik : '';
@@ -539,8 +487,6 @@ function hitungMasalahDecode(filePath, detik, hanyaDecoder) {
   } catch { return 0; }
 }
 
-// Membaca fps nominal (header) dan fps nyata (rata-rata) sekaligus, sebagai
-// pecahan supaya tidak ada pembulatan yang menggeser audio.
 function bacaFps(filePath) {
   try {
     const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate,avg_frame_rate -of default=nw=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString();
@@ -556,47 +502,20 @@ function bacaFps(filePath) {
   } catch { return { nominalStr: '', avgStr: '', nominal: 0, avg: 0 }; }
 }
 
-// Apakah fps di header menipu? Terukur pada berkas user: header bilang 25/1,
-// isinya 60,1 fps. Jalur copy meneruskan angka bohong itu apa adanya, dan
-// pemutar yang percaya header memainkannya dengan timing salah — itulah sendat
-// yang user lihat. Selisih >20% dianggap bohong; di bawah itu wajar.
 function fpsBohong(filePath) {
   const f = bacaFps(filePath);
   if (!(f.nominal > 0 && f.avg > 0)) return false;
   return Math.abs(f.avg - f.nominal) / f.nominal > 0.20;
 }
 
-// Nama lama dipertahankan supaya pemanggil lain tidak putus.
 function hitungErrorDecode(filePath, detik) {
   return hitungMasalahDecode(filePath, detik);
 }
 
-// Apakah BERKAS SUMBER sendiri sudah rusak? Ini yang menentukan boleh-tidaknya
-// jalur `-c copy`. Stream copy hanya memindahkan paket apa adanya: kalau paket
-// sumber cacat, hasilnya cacat juga — diukur pada berkas B, 630 keluhan di
-// sumber tetap 630 keluhan di hasil, dan prosesnya cuma 0,17 s sehingga lolos
-// tanpa curiga. Sumber bermasalah WAJIB di-encode ulang, bukan disalin.
-//
-// Tapi "bermasalah" harus berarti bermasalah SUNGGUHAN. Dua syarat, keduanya
-// terukur, bukan tebakan:
-//   1. keluhan DECODER > 0  → gambarnya memang cacat, copy akan mewarisinya.
-//   2. fps header menipu    → copy meneruskan angka bohong, pemutar salah timing.
-// Keluhan muxer alat ukur TIDAK dihitung. Dulu dihitung, dan akibatnya hasil
-// `.ttv2` yang sudah mulus di WA ikut dipaksa encode ulang lalu mengecil —
-// tepat keluhan yang user laporkan.
 function sumberBermasalah(filePath) {
-  return hitungMasalahDecode(filePath, 0, true) > 0 || fpsBohong(filePath);
+  return hitungMasalahDecode(filePath, 15, true) > 0 || fpsBohong(filePath);
 }
 
-// Hasil dianggap layak kalau: berkas ada, ada stream video, durasinya tidak
-// meleset jauh dari sumber, dan SELURUH berkas didekode tanpa satu pun keluhan.
-//
-// Dulu hanya 15 detik pertama yang diperiksa, demi menghemat waktu. Diukur pada
-// berkas user yang panjangnya 18,027 s: 524 dari 630 keluhannya memang muncul di
-// 15 detik pertama — tapi karena polanya "monotonically increasing dts" dan
-// bukan "Error while decoding", tak satu pun terhitung. Dua lubang sekaligus.
-// Pemindaian penuh menutup lubang kedua; biayanya 7–16 s (terukur), jauh lebih
-// murah daripada mengirim video patah ke WhatsApp.
 function hasilLayak(outPath, durSumber) {
   try {
     if (!existsSync(outPath) || statSync(outPath).size < 1000) return { ok: false, alasan: 'berkas kosong' };
@@ -604,13 +523,8 @@ function hasilLayak(outPath, durSumber) {
     const durOut = probeDuration(outPath);
     if (durSumber > 0 && durOut > 0) {
       const selisih = Math.abs(durOut - durSumber) / durSumber;
-      // 15% memberi ruang untuk frame rusak yang memang harus dibuang di ujung,
-      // tapi tetap menangkap hasil terpotong separuh.
       if (selisih > 0.15) return { ok: false, alasan: 'durasi meleset ' + Math.round(selisih * 100) + '%' };
     }
-    // Keluhan muxer alat ukur tidak dihitung di sini juga — alasan sama seperti
-    // di `sumberBermasalah`. Yang menentukan hasil layak kirim adalah apakah
-    // DECODER bisa membaca seluruh berkas tanpa protes.
     const err = hitungMasalahDecode(outPath, 0, true);
     if (err > 0) return { ok: false, alasan: err + ' keluhan decode' };
     return { ok: true };
@@ -619,10 +533,6 @@ function hasilLayak(outPath, durSumber) {
   }
 }
 
-// Jalankan ffmpeg sambil membaca `-progress pipe:1` dan melaporkan persen NYATA.
-// Sebelumnya hanya jalur re-encode yang punya pembaca progress; jalur remux
-// (`-c:v copy`) memakai execP yang membuang stdout, jadi bar diam di 0% lalu
-// melompat — itu yang terlihat seperti "loading dua kali".
 function runFfmpeg(cmd, opts, dur, onPct) {
   return new Promise((resolve, reject) => {
     const p = execCb(cmd, opts, (err, stdout, stderr) => {
@@ -639,22 +549,16 @@ function runFfmpeg(cmd, opts, dur, onPct) {
     }
   });
 }
+
 function probeDuration(f) {
   try { return parseFloat(execSync('ffprobe -v error -show_entries format=duration -of csv=p=0 ' + JSON.stringify(f), { timeout: 10000, stdio: 'pipe' }).toString().trim()) || 0; } catch { return 0; }
 }
 
-// Nama hasil selalu berakhir .mp4. `replace` saja tidak cukup: nama tanpa
-// ekstensi (galeri HP) tidak cocok pola dan tersimpan tanpa .mp4, lalu klien
-// menebak tipenya keliru.
 function toMp4Name(originalName) {
   const n = String(originalName || 'video');
   return /\.[^.\/]+$/.test(n) ? n.replace(/\.[^.\/]+$/, '.mp4') : n + '.mp4';
 }
 
-// Menerima item {buf}|{path} dan SELALU mengembalikan {path,name} — hasil ffmpeg
-// dibiarkan di disk, tidak dibaca ke memori. Pemanggil yang menyimpannya cukup
-// memindahkan berkasnya. Ini yang membuat video 300 MB bisa diproses tanpa
-// menahan 300 MB (dulu: buf masuk + hasil dibaca lagi = dua kali ukuran file).
 async function convertToMp4Async(item, originalName, onPct, onPhase) {
   const id = crypto.randomBytes(8).toString('hex');
   const ext = extname(originalName || '').toLowerCase() || '.vid';
@@ -662,168 +566,63 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
   const tmpIn = src.path;
   const tmpOut = join(tmpdir(), 'upload_out_' + id + '.mp4');
   try {
-    // Codec yang benar TIDAK berarti berkasnya sehat. Berkas B milik user sudah
-    // h264 High 8-bit yuv420p — lolos semua syarat `detectNeedsReencode` — tapi
-    // isinya 630 keluhan timestamp. Jalur copy menyalinnya bulat-bulat dalam
-    // 0,17 s dan hasilnya patah di WhatsApp. Jadi sumber diperiksa dulu:
-    // ada keluhan sama sekali → paksa encode ulang, jangan pernah copy.
-    const forceReencode = detectNeedsReencode(tmpIn) || sumberBermasalah(tmpIn);
+    const quickNeeds = detectNeedsReencode(tmpIn);
+    const forceReencode = quickNeeds || fpsBohong(tmpIn);
+    
+    // JALUR 1: STREAM COPY / REMUX (Standar .ttv2 - Kualitas 100% Utuh Asli)
     if (!forceReencode) {
-      // Sumber sudah h264 8-bit yuv420p — stream copy, kualitas video 100% utuh.
-      // `+faststart` memindah moov atom ke depan; tanpa ini penerima harus
-      // mengunduh seluruh file sebelum bisa memutar, yang di WA sering
-      // terlihat sebagai unduhan gagal/menggantung.
-      // Audio sudah AAC → salin apa adanya (track audio tetap byte-identik).
-      // Bukan AAC (mp3/opus/ac3) → transcode, karena WA butuh AAC.
-      // Tidak ada audio sama sekali → tempel audio senyap.
+      if (onPhase) onPhase('remux');
       const silentAudio = !hasAudioStream(tmpIn)
         ? ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest -c:a aac -b:a 128k'
-        : (audioCodecOf(tmpIn) === 'aac' ? ' -c:a copy' : ' -c:a aac -b:a 320k');
+        : (audioCodecOf(tmpIn) === 'aac' ? ' -c:a copy' : ' -c:a aac -b:a 192k');
       try {
-        if (onPhase) onPhase('remux');
         await runFfmpeg(
           'ffmpeg -y -i ' + JSON.stringify(tmpIn) + silentAudio + ' -c:v copy -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut),
           { timeout: 300000, maxBuffer: 10 * 1024 * 1024 },
           probeDuration(tmpIn),
           onPct
         );
-        // Jalur copy hanya memindahkan paket — kalau paket sumber cacat,
-        // hasilnya cacat juga meski ukurannya wajar. Jadi ukuran TIDAK cukup:
-        // hasil harus lolos uji decode dulu. Kalau gagal, biarkan jatuh ke
-        // jalur re-encode di bawah yang punya mode pemulihan.
         const nilaiRemux = hasilLayak(tmpOut, probeDuration(tmpIn));
         if (nilaiRemux.ok) {
           return { path: tmpOut, name: toMp4Name(originalName), temp: true };
         }
       } catch {}
     }
-    // Re-encode to H.264 — either forced (HEVC/VP9/AV1) or stream copy failed
+
+    // JALUR 2: HD ULTRA-CLEAN TRANSCODE (Hanya untuk HEVC/HDR/Corrupt)
+    // Resolusi dibiarkan ASLI (tanpa scale filter / no downscale)
+    // Kualitas CRF 18 (Ultra HD, tajam, detail mikroskopis terjaga)
+    // FPS dibiarkan asli (passthrough 60/90/120fps)
     try { unlinkSync(tmpOut); } catch {}
-    // FPS asli dipertahankan apa adanya sampai 90fps. Nilai pecahan NTSC
-    // (30000/1001, 60000/1001) dikirim sebagai pecahan, bukan dibulatkan —
-    // membulatkan 29.97 jadi 30 membuat audio dan video pelan-pelan bergeser
-    // sampai tidak sinkron di akhir video panjang.
-    // ── fps: `r_frame_rate` bisa BOHONG, `avg_frame_rate` yang jujur ───────
-    // `r_frame_rate` adalah fps NOMINAL yang ditulis di header; pada rekaman
-    // HP nilainya sering tidak ada hubungannya dengan isi berkas. Diukur pada
-    // VID-20260818-WA0002.mp4 milik user:
-    //     r_frame_rate  = 25/1                 (nominal, palsu)
-    //     avg_frame_rate= 216600000/3603737    = 60,1 fps  (nyata)
-    // Memakai 25 pada berkas 60 fps memaksa ffmpeg membuang ~2 dari setiap 3
-    // frame, dan itulah sumber gerakan tersendat sekaligus banjir keluhan
-    // timestamp. Jadi keduanya dibaca, dan yang dipakai adalah yang NYATA
-    // ketika keduanya berselisih jauh (>20%).
+    if (onPhase) onPhase('encode');
+
     let fpsFlag = '';
-    let fpsVal = 0;
+    const MAX_FPS = 120;
     try {
       const f = bacaFps(tmpIn);
-      const rNom = f.nominalStr;
-      const rAvg = f.avgStr;
-      const vNom = f.nominal;
-      const vAvg = f.avg;
-      // Pilih fps nyata bila selisihnya >20% — di bawah itu perbedaan wajar
-      // (pembulatan internal), tidak perlu diutak-atik.
-      let pilih = rNom, pilihVal = vNom;
-      if (vNom > 0 && vAvg > 0 && Math.abs(vAvg - vNom) / vNom > 0.20) {
-        pilih = rAvg; pilihVal = vAvg;
-      } else if (!vNom && vAvg > 0) {
-        pilih = rAvg; pilihVal = vAvg;
-      }
-      fpsVal = pilihVal;
-      // Batas 90fps menahan video variable-rate yang melaporkan 1000000/1 dan
-      // membuat ffmpeg mengamuk. Di bawah itu, fps sumber dipakai persis —
-      // sebagai PECAHAN, karena membulatkan 29,97 jadi 30 membuat audio dan
-      // video pelan-pelan bergeser sampai tidak sinkron.
-      if (fpsVal > 0 && fpsVal <= 90) fpsFlag = ' -r ' + pilih;
-      else if (fpsVal > 90) { fpsFlag = ' -r 90'; fpsVal = 90; }
-    } catch {}
-    // ── Batas resolusi: SETELAN, bukan angka mati ─────────────────────────
-    // Riwayat keputusan ini, supaya tidak diputar balik tanpa alasan:
-    //   1. Dulu 4K diturunkan ke 1440p → user marah, kualitas hilang percuma.
-    //   2. Lalu batas dinaikkan ke 3840 (4K lewat utuh).
-    //   3. Sempat diturunkan ke 2560 karena SAYA menyimpulkan 4K "tidak bisa
-    //      diputar HP" dari ukuran & level-nya (142 MB, 39,6 Mbps, level 5.1).
-    //      Kesimpulan itu SALAH: user membuktikan 4K dan 90fps hasil jalur
-    //      downloader (`siapkanVideoWA`) diputar mulus di WhatsApp, termasuk
-    //      dipasang sebagai status. Yang membedakan bukan resolusi.
-    // Jadi resolusi dikembalikan utuh. 3840 dipertahankan hanya sebagai rem
-    // darurat untuk sumber di ATAS 4K (8K), murni supaya encoder tidak
-    // kehabisan memori di box 2 core — bukan untuk "menjaga kompatibilitas".
-    // Bisa diubah dari panel admin; 0 = tanpa batas sama sekali.
-    let BATAS_SISI_PANJANG = 3840;
-    try {
-      const setLimit = Number(loadSettings().maxVideoLongSide);
-      if (Number.isFinite(setLimit) && setLimit >= 0) BATAS_SISI_PANJANG = setLimit;
-    } catch {}
-    let scaleFilter = '';
-    let vidW = 0, vidH = 0;
-    try {
-      const res = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 ' + JSON.stringify(tmpIn), { timeout: 10000, stdio: 'pipe' }).toString().trim().replace(/,+$/, '');
-      const [w, h] = res.split(',').map(Number);
-      vidW = w || 0; vidH = h || 0;
-      if (w && h && BATAS_SISI_PANJANG > 0 && Math.max(w, h) > BATAS_SISI_PANJANG) {
-        // ── Kenapa TIDAK memakai `scale=2560:-2` / `scale=-2:2560` ───────────
-        // Bentuk itu harus memilih sisi mana yang dipatok, dan pilihannya
-        // diambil dari dimensi CODED hasil ffprobe (`w >= h`). Pada rekaman HP
-        // yang punya tag `rotate=90`, dua angka itu TERBALIK dari gambar yang
-        // sebenarnya: berkas user tercatat 3840x2160, tapi ffmpeg memutarnya
-        // otomatis sebelum filter jalan, jadi frame yang masuk ke scale sudah
-        // 2160x3840. Akibatnya `scale=2560:-2` mematok sisi PENDEK ke 2560 dan
-        // hasilnya justru MEMBESAR: terukur 2560x4552, level 6.0, 174 MB —
-        // lebih berat dari sumbernya sendiri, kebalikan dari tujuan patch ini.
-        //
-        // `force_original_aspect_ratio=decrease` memuat frame ke dalam kotak
-        // 2560x2560 dan hanya pernah MENGECILKAN, tanpa perlu tahu orientasi.
-        // `force_divisible_by=2` menjaga kedua sisi genap (yuv420p menolak
-        // dimensi ganjil). Diverifikasi pada berkas yang sama: 1440x2560,
-        // level 5.0. Keduanya ada di ffmpeg 4.4.2 milik server ini.
-        scaleFilter = ' -vf scale=' + BATAS_SISI_PANJANG + ':' + BATAS_SISI_PANJANG +
-          ':force_original_aspect_ratio=decrease:force_divisible_by=2';
-        const rasio = BATAS_SISI_PANJANG / Math.max(w, h);
-        vidW = Math.round(w * rasio / 2) * 2;
-        vidH = Math.round(h * rasio / 2) * 2;
+      if (f.nominal > 0 && f.avg > 0 && Math.abs(f.avg - f.nominal) / f.nominal > 0.20) {
+        if (f.avg > MAX_FPS) fpsFlag = ' -r ' + MAX_FPS;
+        else fpsFlag = ' -r ' + f.avgStr;
+      } else if (!f.nominal && f.avg > 0) {
+        if (f.avg > MAX_FPS) fpsFlag = ' -r ' + MAX_FPS;
+        else fpsFlag = ' -r ' + f.avgStr;
       }
     } catch {}
-    // `-level` TIDAK dipaksa lagi. Sebelumnya selalu ditulis `-level 4.1`,
-    // padahal 1440p@90fps butuh level 5.2 dan 4K butuh 5.1+. x264 hanya
-    // mencetak peringatan ("MB rate > level limit") lalu tetap menulis 4.1 di
-    // header — jadi berkasnya sah secara bitstream tapi HEADERNYA BOHONG.
-    // Decoder perangkat keras (HP, WhatsApp) mempercayai header itu, menolak
-    // alokasi buffer, dan videonya gagal diputar. Itu penyebab "video rusak
-    // setelah di-re-encode". Dibiarkan otomatis, x264 menulis level yang benar.
-    //
-    // CRF 20 (bukan 23) supaya detail lebih terjaga.
-    // Preset `veryfast`, BUKAN `faster` — ini hasil pengukuran, bukan selera.
-    // Diukur pada rekaman 4K user, target 1080p, crf 20 sama:
-    //     ultrafast  25 s  108.089.119 B  (30,1 Mbps — boros, kualitas rendah)
-    //     veryfast   39 s   45.494.278 B  (12,7 Mbps)
-    //     faster     50 s   48.870.224 B  (13,6 Mbps)
-    //     medium     70 s   48.275.490 B  (13,4 Mbps)
-    // `veryfast` 22% lebih cepat dari `faster` DAN berkasnya lebih kecil pada
-    // CRF yang sama — artinya tidak ada kualitas yang ditukar; CRF menjaga
-    // kualitas, preset hanya menentukan seberapa keras encoder mencari efisiensi.
-    // `ultrafast` dibuang: 4x lipat ukuran untuk hemat 14 s, itu justru
-    // memperlambat pengiriman dan menaikkan risiko tolak WhatsApp.
-    // `-maxrate/-bufsize` sengaja tidak dipakai: pembatas VBV justru memaksa
-    // encoder membuang detail di adegan ramai — itu yang bikin gambar "pecah".
-    const dur = probeDuration(tmpIn);
-    if (onPhase) onPhase('encode');
-    const audioSenyap = hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest';
 
-    // ── Kenapa exit code ffmpeg TIDAK dipakai sebagai penentu ──────────────
-    // Video dari pengunduh pihak ketiga (TikTok/IG saver) sering punya
-    // bitstream cacat: header mengaku 11950 frame padahal isinya 1195, sisanya
-    // paket sampah yang memicu "Invalid NAL unit size". ffmpeg mengeluhkan
-    // INPUT itu dan keluar dengan exit 69 — padahal berkas KELUARANNYA utuh:
-    // durasi benar, fps benar, nol error decode.
-    // Dulu exit code non-nol dianggap gagal, hasil bagus itu dibuang, dan yang
-    // tersimpan justru berkas rusak aslinya ("disimpan tanpa konversi") — itu
-    // sebab video sampai ke WhatsApp dalam keadaan patah-patah/tidak terputar.
-    // Sekarang keputusan diambil dari HASIL, diuji dengan decode sungguhan.
+    const dur = probeDuration(tmpIn);
+    const audioSenyap = hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest';
+    const lewatkanFpsUtama = FFMPEG_PUNYA_FPS_MODE ? ' -fps_mode passthrough' : ' -vsync 0';
+
+    // Khusus file .MOV / iPhone HEVC: batasi sisi panjang max 2560px (1440p Quad HD)
+    // agar WhatsApp lancar memutar tanpa lag / drop frame / patah-patah.
+    const isMov = ext === '.mov' || (originalName && /\.mov$/i.test(originalName)) || codecVideoOf(tmpIn) === 'hevc';
+    const scaleFilter = isMov ? ' -vf "scale=2560:2560:force_original_aspect_ratio=decrease:force_divisible_by=2"' : '';
+
+    // CRF 18 = Master Visual Quality (jernih, tajam, detail mikroskopis terjaga)
     const perintahEncode = (extraIn, fpsArg) =>
       'ffmpeg -y' + extraIn + ' -i ' + JSON.stringify(tmpIn) + audioSenyap +
-      ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset veryfast -crf 20' +
-      scaleFilter + fpsArg + ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' +
+      ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset veryfast -crf 18' +
+      scaleFilter + fpsArg + lewatkanFpsUtama + ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' +
       JSON.stringify(tmpOut);
 
     let kegagalan = [];
@@ -835,16 +634,11 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
     if (nilai.ok) return { path: tmpOut, name: toMp4Name(originalName), temp: true };
     kegagalan.push('percobaan 1 ditolak (' + nilai.alasan + ')');
 
-    // ── Percobaan 2: mode tahan-rusak ─────────────────────────────────────
-    // `-err_detect ignore_err` melanjutkan walau ada paket cacat,
-    // `+genpts+discardcorrupt` membuang paket rusak dan membangun ulang
-    // timestamp — tanpa ini timestamp bolong membuat pemutar tersendat.
-    // fps dibiarkan lewat apa adanya supaya gerak asli tidak diubah.
+    // Percobaan 2: Mode Tahan-Rusak
     try { unlinkSync(tmpOut); } catch {}
-    const lewatkanFps = FFMPEG_PUNYA_FPS_MODE ? ' -fps_mode passthrough' : ' -vsync 0';
     try {
       await runFfmpeg(
-        perintahEncode(' -err_detect ignore_err -fflags +genpts+discardcorrupt', lewatkanFps),
+        perintahEncode(' -err_detect ignore_err -fflags +genpts+discardcorrupt', lewatkanFpsUtama),
         { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct
       );
     } catch (e) { kegagalan.push('tahan-rusak: ' + e.message); }
@@ -852,55 +646,11 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
     if (nilai.ok) return { path: tmpOut, name: toMp4Name(originalName), temp: true };
     kegagalan.push('percobaan 2 ditolak (' + nilai.alasan + ')');
 
-    // ── Percobaan 3: bongkar bitstream dulu (khusus HEVC/H.264 cacat) ─────
-    // Paket di dalam MP4 memakai format "length-prefixed"; kalau angka panjang
-    // itu yang rusak, decoder tersesat. Diubah ke Annex-B (penanda start code)
-    // membuat decoder bisa mencari batas frame sendiri dan mengabaikan sampah.
-    // Terbukti memulihkan berkas yang dua percobaan sebelumnya tolak.
-    const kodekV = codecVideoOf(tmpIn);
-    const bsf = kodekV === 'hevc' ? 'hevc_mp4toannexb' : (kodekV === 'h264' ? 'h264_mp4toannexb' : '');
-    if (bsf) {
-      try { unlinkSync(tmpOut); } catch {}
-      const rawPath = join(tmpdir(), 'upload_raw_' + id + (kodekV === 'hevc' ? '.hevc' : '.h264'));
-      try {
-        if (onPhase) onPhase('encode');
-        // Tahap 1: keluarkan stream video mentah. Sengaja tanpa runFfmpeg —
-        // ffmpeg pasti mengeluh di sini, dan keluhannya memang diabaikan.
-        try {
-          execSync('ffmpeg -y -v error -i ' + JSON.stringify(tmpIn) + ' -c:v copy -bsf:v ' + bsf + ' -f ' + (kodekV === 'hevc' ? 'hevc' : 'h264') + ' ' + JSON.stringify(rawPath) + ' 2>/dev/null || true',
-            { timeout: 300000, stdio: 'pipe', shell: '/bin/bash' });
-        } catch {}
-        if (existsSync(rawPath) && statSync(rawPath).size > 1000) {
-          // Tahap 2: encode dari stream mentah, audio diambil dari berkas asli.
-          // fps harus disebut eksplisit: stream mentah tidak menyimpan fps.
-          const fpsRaw = fpsVal > 0 ? String(fpsVal) : '30';
-          const adaAudio = hasAudioStream(tmpIn);
-          const cmd = 'ffmpeg -y -r ' + fpsRaw + ' -i ' + JSON.stringify(rawPath) +
-            (adaAudio ? ' -i ' + JSON.stringify(tmpIn) + ' -map 0:v:0 -map 1:a:0' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest -map 0:v:0 -map 1:a:0') +
-            ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset veryfast -crf 20' + scaleFilter +
-            ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' + JSON.stringify(tmpOut);
-          try { await runFfmpeg(cmd, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct); }
-          catch (e) { kegagalan.push('annexb: ' + e.message); }
-          nilai = hasilLayak(tmpOut, dur);
-          if (nilai.ok) { try { unlinkSync(rawPath); } catch {} return { path: tmpOut, name: toMp4Name(originalName), temp: true }; }
-          kegagalan.push('percobaan 3 ditolak (' + nilai.alasan + ')');
-        } else {
-          kegagalan.push('percobaan 3: stream mentah gagal diekstrak');
-        }
-      } finally { try { unlinkSync(rawPath); } catch {} }
-    }
-
-    // Ketiga jalur gagal menghasilkan berkas yang bisa didekode. Menyimpan
-    // sumber apa adanya lebih baik daripada mengirim hasil rusak, dan alasan
-    // tiap percobaan dicatat supaya bisa ditelusuri.
     throw new Error('Video tidak bisa dikonversi — ' + kegagalan.join('; '));
   } catch (e) {
-    // Gagal total: hasil setengah jadi dibuang supaya tidak menumpuk di /tmp.
     try { unlinkSync(tmpOut); } catch {}
     throw e;
   } finally {
-    // Hanya berkas sementara milik fungsi ini yang dihapus. Kalau sumbernya
-    // adalah berkas chunk milik pemanggil, biarkan — pemanggil yang mengurus.
     if (src.temp) { try { unlinkSync(tmpIn); } catch {} }
   }
 }
@@ -958,6 +708,7 @@ function beginUploadJob(files, clientIP) {
             phase => {
               // Label jujur: beda antara "cuma dirapikan" dan "dikonversi ulang".
               job.stage = (phase === 'remux' ? 'Merapikan video' : 'Konversi video') + suffix + '…';
+              if (job.needsEncode === null) job.needsEncode = (phase !== 'remux');
             }
           );
           // Sumber lama (berkas chunk / berkas sementara) tidak dipakai lagi:
@@ -1056,55 +807,8 @@ function freeDiskBytes() {
   } catch { return 0; }
 }
 
-const CHUNK_SIZE = 5 * 1024 * 1024;
-const CHUNK_DIR = join(tmpdir(), 'swhd-chunks');
-try { mkdirSync(CHUNK_DIR, { recursive: true }); } catch {}
-const chunkSessions = new Map(); // id -> { files:[{name,size,parts:Set}], total, ip, ts }
-
-// Sweep berdasarkan waktu bagian TERAKHIR diterima (s.ts diperbarui tiap chunk),
-// bukan waktu mulai. Upload 150 MB di jaringan HP lambat bisa lebih dari satu
-// jam; batas lama membuat sesi dihapus saat upload masih jalan, lalu chunk
-// berikutnya dapat 404 "sesi kedaluwarsa". Yang dibatasi sekarang adalah
-// DIAM tanpa aktivitas, bukan total durasi upload.
-// 45 menit tanpa bagian baru. Angka lama (3 jam) dipilih agar upload lambat
-// tidak terputus, tapi jeda antar-bagian pada koneksi HP paling buruk pun
-// hitungan menit, bukan jam — sementara satu sesi terlantar bisa menahan
-// ratusan MB. 45 menit tetap sangat longgar untuk upload yang benar-benar jalan.
-const CHUNK_IDLE_MS = 45 * 60000;
-// Sesi yang dibuka lalu ditinggalkan sebelum satu bagian pun terkirim (pengguna
-// menutup tab, koneksi gagal di awal) tidak perlu ditunggu 3 jam — itu hanya
-// menahan tempat di disk. Yang sudah berjalan tetap diberi tenggang panjang.
-const CHUNK_EMPTY_IDLE_MS = 30 * 60000; // 30 menit untuk sesi tanpa progres
-function chunkSweep() {
-  const now = Date.now();
-  for (const [id, s] of chunkSessions) {
-    const started = s.files.some(f => f.parts.size > 0);
-    const limit = started ? CHUNK_IDLE_MS : CHUNK_EMPTY_IDLE_MS;
-    if (now - s.ts > limit) {
-      chunkSessions.delete(id);
-      try { execSync('rm -rf ' + JSON.stringify(join(CHUNK_DIR, id))); } catch {}
-    }
-  }
-  // Bersihkan juga direktori YATIM di disk. Daftar sesi hidup di memori, jadi
-  // setiap `pm2 restart web` di tengah upload meninggalkan bagian-bagian file
-  // yang tidak akan pernah dihapus oleh loop di atas — bocor terus sampai disk
-  // penuh. Direktori tanpa sesi aktif dan sudah lama tidak disentuh dibuang.
-  try {
-    for (const d of readdirSync(CHUNK_DIR)) {
-      // Berkas gabungan hasil finish (`<sid>_f0.bin`) berada di luar direktori
-      // sesi supaya tidak terhapus saat sesi dibersihkan. Kalau job pemrosesan
-      // mati sebelum memindahkannya, berkas itu jadi yatim — ikut disapu.
-      const p = join(CHUNK_DIR, d);
-      if (chunkSessions.has(d)) continue;
-      if (/^[0-9a-f]{16}_f\d+\.bin$/.test(d) && chunkSessions.has(d.split('_f')[0])) continue;
-      try {
-        if (now - statSync(p).mtimeMs > CHUNK_IDLE_MS) execSync('rm -rf ' + JSON.stringify(p));
-      } catch {}
-    }
-  } catch {}
-}
-setInterval(chunkSweep, 10 * 60000).unref?.();
-chunkSweep(); // sapu sisa upload yang terputus oleh restart sebelumnya
+// Chunk upload removed — use DNS direct for large files
+// chunk upload removed — using DNS direct for large files
 
 function readRawBody(req, limitBytes) {
   return new Promise((resolve, reject) => {
@@ -1120,16 +824,21 @@ function readRawBody(req, limitBytes) {
   });
 }
 
-// --- Server ---
-const server = http.createServer(async (req, res) => {
+// --- Request Handler Utama ---
+async function handleRequest(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   const url = parseUrl(req.url);
   const clientIP = getClientIP(req);
   const settings = loadSettings();
-
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,Authorization' });
-    res.end(); return;
-  }
 
   if (req.method === 'GET' && (url === '/' || url === '')) {
     try {
@@ -1257,9 +966,9 @@ const server = http.createServer(async (req, res) => {
       largeUploadMaxMB: settings.largeUploadMaxMB || 0,
       // Nilai ini harus sama dengan CHUNK_THRESHOLD di web/lib/up-api.js (80 MB).
       // Sebelumnya 95 dan tidak dipakai siapa pun — angka bohong di API publik.
-      chunkThresholdMB: 80,
+      // chunkThresholdMB removed — no chunk upload
       videoAsDocumentMB: settings.videoAsDocumentMB || 180,
-      maxVideoLongSide: settings.maxVideoLongSide ?? 3840,
+      maxVideoLongSide: settings.maxVideoLongSide ?? 1280,
       // Frontend memakai ini untuk mengarahkan upload BESAR ke jalur langsung
       // (di luar Cloudflare) saat tuan menyalakannya dari panel. Kalau mati,
       // nilainya null dan frontend tetap memakai host biasa seperti sekarang.
@@ -1340,165 +1049,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // --- Chunked upload: init ---
-  // Body: { files:[{name,size}] } → balikin sessionId + ukuran chunk yang dipakai client.
-  if (req.method === 'POST' && url === '/upload/chunk/init') {
-    if ((settings.ipBlacklist || []).includes(clientIP)) { jsonRes(res, 403, { ok: false, error: 'IP anda diblokir' }); return; }
-    if (settings.maintenance) { jsonRes(res, 503, { ok: false, error: 'Sedang maintenance, coba lagi nanti' }); return; }
-    if (settings.allowLargeUpload === false) {
-      jsonRes(res, 413, { ok: false, error: 'Upload file besar (>100 MB) sedang dimatikan admin. Kompres dulu atau hubungi admin.' }); return;
-    }
-    const rateCheck = checkUploadRate(clientIP, settings);
-    if (!rateCheck.ok) { jsonRes(res, 429, { ok: false, error: rateCheck.error }); return; }
-    try {
-      const body = JSON.parse((await readBody(req)) || '{}');
-      const list = Array.isArray(body.files) ? body.files : [];
-      if (!list.length) { jsonRes(res, 400, { ok: false, error: 'Daftar file kosong' }); return; }
-      const maxMB = settings.maxFileSizeMB || 0;
-      const hardMB = settings.largeUploadMaxMB || 0;
-      let total = 0;
-      // Pagar mutlak. `maxFileSizeMB: 0` berarti "tanpa batas" di pengaturan, dan
-      // itu memang yang diinginkan — tapi tanpa batas juga berarti klien iseng
-      // bisa mengaku mengirim 50 GB, dan server langsung menyiapkan sesi untuknya.
-      // 4 GB per berkas jauh di atas kebutuhan nyata, sekaligus menutup celah itu.
-      const ABS_MAX = 4 * 1024 * 1024 * 1024;
-      for (const f of list) {
-        const sz = Number(f.size) || 0;
-        if (!f.name || sz <= 0) { jsonRes(res, 400, { ok: false, error: 'Metadata file tidak valid' }); return; }
-        if (sz > ABS_MAX) { jsonRes(res, 413, { ok: false, error: 'File "' + f.name + '" melewati batas wajar (maks 4 GB per file).' }); return; }
-        if (maxMB > 0 && sz > maxMB * 1024 * 1024) { jsonRes(res, 413, { ok: false, error: 'File "' + f.name + '" terlalu besar. Maksimal ' + maxMB + ' MB' }); return; }
-        if (hardMB > 0 && sz > hardMB * 1024 * 1024) { jsonRes(res, 413, { ok: false, error: 'File "' + f.name + '" melewati batas upload besar (' + hardMB + ' MB)' }); return; }
-        total += sz;
-      }
-      const quotaMB = settings.storageQuotaMB || 0;
-      if (quotaMB > 0 && getTotalStorage() + total > quotaMB * 1024 * 1024) {
-        jsonRes(res, 507, { ok: false, error: 'Kuota storage server penuh. Coba lagi nanti.' }); return;
-      }
-      // Ruang disk NYATA diperiksa, bukan cuma kuota di pengaturan. Upload besar
-      // memakai tempat sementara untuk bagian-bagian + berkas gabungan + hasil
-      // ffmpeg, jadi kebutuhan puncaknya sekitar tiga kali ukuran file. Kalau
-      // ruang kurang, upload ditolak SEKARANG dengan pesan jelas — jauh lebih
-      // baik daripada gagal di tengah setelah pengguna menunggu lama.
-      const freeB = freeDiskBytes();
-      if (freeB > 0 && total * 3 + 200 * 1024 * 1024 > freeB) {
-        jsonRes(res, 507, { ok: false, error: 'Ruang disk server tidak cukup untuk file sebesar ini (' + (freeB / 1073741824).toFixed(1) + ' GB tersisa). Coba file lebih kecil.' }); return;
-      }
-      chunkSweep();
-      const id = crypto.randomBytes(8).toString('hex');
-      mkdirSync(join(CHUNK_DIR, id), { recursive: true });
-      chunkSessions.set(id, {
-        files: list.map(f => ({ name: String(f.name), size: Number(f.size), parts: new Set() })),
-        total, ip: clientIP, ts: Date.now(),
-        // Disimpan per sesi: kalau CHUNK_SIZE diubah (atau proses restart) saat
-        // ada upload berjalan, hitungan jumlah bagian di finish tetap memakai
-        // angka yang dipakai klien saat memulai, bukan angka baru.
-        chunkSize: CHUNK_SIZE
-      });
-      jsonRes(res, 200, { ok: true, sessionId: id, chunkSize: CHUNK_SIZE });
-    } catch (e) {
-      jsonRes(res, 400, { ok: false, error: e.message || 'Init gagal' });
-    }
-    return;
-  }
 
-  // --- Chunked upload: terima satu bagian ---
-  // Query: ?sid=<session>&fi=<index file>&ci=<index chunk>; body = bytes mentah.
-  if (req.method === 'POST' && url === '/upload/chunk') {
-    try {
-      const q = new URLSearchParams((req.url.split('?')[1] || ''));
-      const sid = q.get('sid') || '';
-      const fi = parseInt(q.get('fi') || '-1', 10);
-      const ci = parseInt(q.get('ci') || '-1', 10);
-      const sess = chunkSessions.get(sid);
-      if (!sess) { jsonRes(res, 404, { ok: false, error: 'Sesi upload tidak ditemukan atau kedaluwarsa' }); return; }
-      // IP TIDAK dipakai sebagai kunci pemilik. HP rutin berganti IP di tengah
-      // upload besar (IPv6 privacy extension, pindah WiFi↔seluler, CGNAT), dan
-      // pengecekan ketat membuat upload >100 MB nyaris selalu mati di tengah
-      // dengan 403. Pemilik dibuktikan oleh sessionId acak 64-bit yang hanya
-      // diketahui pengunggah; sesi hanya bisa menulis bagian file miliknya
-      // sendiri, tidak bisa membaca apa pun.
-      if (sess.ip !== clientIP) sess.ip = clientIP;
-      if (!(fi >= 0 && fi < sess.files.length) || ci < 0) { jsonRes(res, 400, { ok: false, error: 'Index tidak valid' }); return; }
-      const buf = await readRawBody(req, (sess.chunkSize || CHUNK_SIZE) + 1048576);
-      if (!buf.length) { jsonRes(res, 400, { ok: false, error: 'Chunk kosong' }); return; }
-      writeFileSync(join(CHUNK_DIR, sid, fi + '_' + ci + '.part'), buf);
-      sess.files[fi].parts.add(ci);
-      sess.ts = Date.now();
-      jsonRes(res, 200, { ok: true, received: ci });
-    } catch (e) {
-      jsonRes(res, 500, { ok: false, error: e.message || 'Chunk gagal' });
-    }
-    return;
-  }
 
-  // --- Chunked upload: gabung & proses ---
-  // Penggabungan murni concat urut, tanpa transformasi. Ukuran hasil wajib sama
-  // dengan ukuran yang dilaporkan client; kalau beda, ditolak (anti file korup).
-  if (req.method === 'POST' && url === '/upload/chunk/finish') {
-    let sid = '';
-    try {
-      const body = JSON.parse((await readBody(req)) || '{}');
-      sid = String(body.sessionId || '');
-      const sess = chunkSessions.get(sid);
-      if (!sess) { jsonRes(res, 404, { ok: false, error: 'Sesi upload tidak ditemukan atau kedaluwarsa' }); return; }
-      // Sama seperti /upload/chunk: IP boleh berubah selama upload berjalan.
-      if (settings.expireMinutes) setTTL(settings.expireMinutes * 60000);
-      const files = [];
-      for (let fi = 0; fi < sess.files.length; fi++) {
-        const meta = sess.files[fi];
-        const expected = Math.ceil(meta.size / (sess.chunkSize || CHUNK_SIZE));
-        if (meta.parts.size !== expected) {
-          jsonRes(res, 400, { ok: false, error: 'Bagian file "' + meta.name + '" tidak lengkap (' + meta.parts.size + '/' + expected + ')' }); return;
-        }
-        // Gabung dengan APPEND ke satu file di disk, bukan Buffer.concat di RAM:
-        // concat menahan seluruh isi file dua kali sekaligus (array bagian +
-        // hasil gabungan), yang pada file ratusan MB cukup untuk membuat proses
-        // ini kehabisan memori dan mati tanpa pesan.
-        const mergedPath = join(CHUNK_DIR, sid, fi + '_merged.bin');
-        const fd = openSync(mergedPath, 'w');
-        try {
-          for (let ci = 0; ci < expected; ci++) {
-            const pf = join(CHUNK_DIR, sid, fi + '_' + ci + '.part');
-            if (!existsSync(pf)) { closeSync(fd); jsonRes(res, 400, { ok: false, error: 'Bagian hilang di "' + meta.name + '"' }); return; }
-            const part = readFileSync(pf);
-            writeSync(fd, part, 0, part.length);
-            try { unlinkSync(pf); } catch {}   // bebaskan disk selagi jalan
-          }
-        } finally { try { closeSync(fd); } catch {} }
-        const mergedSize = statSync(mergedPath).size;
-        if (mergedSize !== meta.size) {
-          jsonRes(res, 400, { ok: false, error: 'Ukuran file "' + meta.name + '" tidak cocok (' + mergedSize + ' != ' + meta.size + '). Upload ulang.' }); return;
-        }
-        // Diserahkan sebagai PATH. Membacanya ke memori di sini berarti file
-        // 300 MB ditahan utuh hanya untuk diteruskan ke ffmpeg yang toh butuh
-        // berkas di disk. Berkas gabungan dipindahkan ke lokasi netral supaya
-        // tidak ikut terhapus saat direktori sesi dibersihkan.
-        const keepPath = join(CHUNK_DIR, sid + '_f' + fi + '.bin');
-        try { renameSync(mergedPath, keepPath); } catch {}
-        files.push({ name: meta.name, path: existsSync(keepPath) ? keepPath : mergedPath });
-      }
-      const jobId = beginUploadJob(files, clientIP);
-      jsonRes(res, 200, { ok: true, pending: true, jobId, chunked: true });
-    } catch (e) {
-      jsonRes(res, 500, { ok: false, error: e.message || 'Gabung gagal' });
-    } finally {
-      if (sid) {
-        chunkSessions.delete(sid);
-        try { execSync('rm -rf ' + JSON.stringify(join(CHUNK_DIR, sid))); } catch {}
-      }
-    }
-    return;
-  }
 
-  if (req.method === 'GET' && url === '/upload/status') {
+
+  if (req.method === 'GET' && (url === '/upload/status' || url.startsWith('/upload/status/'))) {
     // Query dibaca lewat URLSearchParams: `split('id=')` juga cocok dengan
     // `jobId=` dan parameter lain yang kebetulan berakhiran "id", jadi mudah
     // mengambil nilai yang salah begitu ada parameter tambahan.
     const q = new URLSearchParams((req.url.split('?')[1] || ''));
-    const id = q.get('id') || q.get('jobId') || '';
+    const pathId = url.startsWith('/upload/status/') ? url.slice('/upload/status/'.length).split('?')[0] : '';
+    const id = pathId || q.get('id') || q.get('jobId') || '';
     const job = id && jobs.get(id);
     if (!job) { jsonRes(res, 404, { ok: false, error: 'Job tidak ditemukan' }); return; }
-    jsonRes(res, 200, { ok: true, stage: job.stage, pct: job.pct, error: job.error, result: job.result });
+    jsonRes(res, 200, { ok: true, stage: job.stage, pct: job.pct, error: job.error, result: job.result, needsEncode: job.needsEncode });
     return;
   }
 
@@ -1867,16 +1431,38 @@ const server = http.createServer(async (req, res) => {
       try {
         out = execSync('pm2 restart main --update-env 2>&1', { encoding: 'utf8', timeout: 60000 }).trim();
       } catch (e) {
-        // pm2 tidak ada / proses tidak terdaftar → coba start ulang lewat pm2
         out = execSync('pm2 start main.js --name main 2>&1', { cwd: __dirname, encoding: 'utf8', timeout: 60000 }).trim();
       }
       sendTelegram('error', '🔄 <b>Bot di-restart</b> dari panel admin');
-      jsonRes(res, 200, { ok: true, message: 'Perintah restart dikirim ke pm2', output: out.split('\n').slice(-6).join('\n') });
+      jsonRes(res, 200, { ok: true, message: 'Bot WhatsApp berhasil di-restart!', output: out.split('\n').slice(-6).join('\n') });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.stderr ? e.stderr.toString().trim() : e.message }); }
     return;
   }
 
-  // === LIVE LOG VIEWER ===
+  if (req.method === 'POST' && url === '/admin/api/web/restart') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      sendTelegram('error', '🔄 <b>Web Uploader di-restart</b> dari panel admin');
+      jsonRes(res, 200, { ok: true, message: 'Web Uploader sedang di-restart...' });
+      setTimeout(() => {
+        try { execSync('pm2 restart web --update-env 2>&1'); } catch {}
+      }, 500);
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  if (req.method === 'POST' && url === '/admin/api/all/restart') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      sendTelegram('error', '🔄 <b>Semua service di-restart</b> dari panel admin');
+      jsonRes(res, 200, { ok: true, message: 'Semua service (Bot + Web) sedang di-restart...' });
+      setTimeout(() => {
+        try { execSync('pm2 restart all --update-env 2>&1'); } catch {}
+      }, 500);
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
   if (req.method === 'GET' && url.startsWith('/admin/api/logs')) {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     try {
@@ -1989,8 +1575,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Nyalakan/matikan jalur upload langsung. Port baru hanya benar-benar terbuka
-  // setelah proses `web` restart, jadi itu dilaporkan apa adanya ke panel.
+  // Nyalakan/matikan jalur upload langsung secara instan (live switch).
   if (req.method === 'POST' && url === '/admin/api/direct-upload') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     try {
@@ -2004,12 +1589,13 @@ const server = http.createServer(async (req, res) => {
       const st = loadSettings();
       st.directUploadEnabled = mau;
       saveSettings(st);
+      mulaiJalurLangsung();
       jsonRes(res, 200, {
         ok: true, enabled: mau,
-        needsRestart: true,
+        needsRestart: false,
         note: mau
-          ? 'Nyala setelah restart web. IP asli VPS akan terbuka di port ' + (st.directUploadPort || 8443) + '.'
-          : 'Mati setelah restart web. Semua upload kembali lewat Cloudflare.',
+          ? 'Jalur HTTPS langsung aktif di port ' + (st.directUploadPort || 8443) + ' tanpa batas 100 MB!'
+          : 'Jalur langsung dimatikan. Semua upload kembali lewat Cloudflare.',
       });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
@@ -2158,7 +1744,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   res.writeHead(404); res.end('Not found');
-});
+}
+
+const server = http.createServer(handleRequest);
 
 // Tanya status ke internal API bot. Timeout pendek: kalau bot mati, panel harus
 // cepat menampilkan OFFLINE, bukan menunggu sampai request browser habis waktu.
@@ -2237,29 +1825,37 @@ server.listen(PORT, () => console.log('Web uploader on port ' + PORT));
 // Mematikan dari panel = port ini tidak dibuka lagi setelah restart berikutnya,
 // jadi IP tertutup lagi.
 const TLS_DIR = '/etc/letsencrypt/live/up.swhdhlz.my.id';
+let srvTlsInstance = null;
 
 function mulaiJalurLangsung() {
   const s = loadSettings();
   if (!s.directUploadEnabled) {
+    if (srvTlsInstance) {
+      try { srvTlsInstance.close(); console.log('[direct] server port ditutup'); } catch {}
+      srvTlsInstance = null;
+    }
     console.log('[direct] mati (directUploadEnabled=false) — semua upload lewat Cloudflare');
     return;
   }
+  if (srvTlsInstance) return; // sudah berjalan
   const port = s.directUploadPort || 8443;
   let kunci, rantai;
   try {
     kunci = readFileSync(join(TLS_DIR, 'privkey.pem'));
     rantai = readFileSync(join(TLS_DIR, 'fullchain.pem'));
   } catch (e) {
-    // Sertifikat hilang/kadaluarsa: JANGAN diam-diam jatuh ke HTTP tanpa enkripsi.
     console.log('[direct] GAGAL: sertifikat tidak terbaca di ' + TLS_DIR + ' (' + e.code + ') — jalur langsung tidak dibuka');
     return;
   }
-  const srvTls = https.createServer({ key: kunci, cert: rantai }, server.listeners('request')[0]);
-  srvTls.timeout = 600000;
-  srvTls.requestTimeout = 600000;
-  srvTls.headersTimeout = 600000;
-  srvTls.keepAliveTimeout = 600000;
-  srvTls.on('error', (e) => console.log('[direct] error port ' + port + ': ' + e.message));
-  srvTls.listen(port, () => console.log('[direct] HTTPS aktif di port ' + port + ' (di luar Cloudflare, tanpa cap 100 MB)'));
+  srvTlsInstance = https.createServer({ key: kunci, cert: rantai }, handleRequest);
+  srvTlsInstance.timeout = 600000;
+  srvTlsInstance.requestTimeout = 600000;
+  srvTlsInstance.headersTimeout = 600000;
+  srvTlsInstance.keepAliveTimeout = 600000;
+  srvTlsInstance.on('error', (e) => {
+    console.log('[direct] error port ' + port + ': ' + e.message);
+    srvTlsInstance = null;
+  });
+  srvTlsInstance.listen(port, () => console.log('[direct] HTTPS aktif di port ' + port + ' (di luar Cloudflare, tanpa cap 100 MB)'));
 }
 mulaiJalurLangsung();

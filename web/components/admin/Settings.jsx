@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSettings, saveSettings, backupToGithub, getBackupHistory, getTunnelStatus, getGallery, uploadGalleryFile, deleteGalleryFile, getCfDns, setCfProxy, setDirectUpload } from '@/lib/admin-api'
+import { getSettings, saveSettings, backupToGithub, getBackupHistory, getTunnelStatus, getGallery, uploadGalleryFile, deleteGalleryFile, getCfDns, setCfProxy, setDirectUpload, restartBot, restartWeb, restartAll } from '@/lib/admin-api'
 
 const inputFields = [
   { key: 'siteName', label: 'Nama Situs', ph: 'ShiroWahd', icon: 'fa-globe' },
@@ -548,6 +548,60 @@ export default function Settings({ toast }) {
               </div>
             </>
           )}
+        </div>
+
+        {/* Quick Service Restarts */}
+        <div className="rounded-[14px] bg-white/[.03] border border-white/[.06] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#7e90ad]">
+              <i className="fa-solid fa-arrows-rotate mr-2 text-[#38bdf8]" />Kontrol Service &amp; Restart
+            </p>
+            <span className="text-[10px] text-[#7e90ad]">PM2 Process Manager</span>
+          </div>
+          <p className="text-xs text-[#7e90ad]">
+            Restart service secara instan jika ada perubahan setelan port, SSL, atau setelah update bot/web.
+          </p>
+          <div className="flex flex-wrap gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  toast('Sedang me-restart Web Service...', 'info')
+                  await restartWeb()
+                  setTimeout(() => { toast('Web Uploader berhasil di-restart!', 'success'); loadCf() }, 1500)
+                } catch (e) { toast('Gagal restart web: ' + e.message, 'error') }
+              }}
+              className="px-3.5 py-2 rounded-[10px] bg-[#38bdf8]/15 border border-[#38bdf8]/30 hover:bg-[#38bdf8]/25 text-[#38bdf8] text-xs font-bold transition flex items-center gap-1.5"
+            >
+              <i className="fa-solid fa-globe" />Restart Web Uploader
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  toast('Sedang me-restart Bot WhatsApp...', 'info')
+                  await restartBot()
+                  toast('Bot WhatsApp berhasil di-restart!', 'success')
+                } catch (e) { toast('Gagal restart bot: ' + e.message, 'error') }
+              }}
+              className="px-3.5 py-2 rounded-[10px] bg-[#34d399]/15 border border-[#34d399]/30 hover:bg-[#34d399]/25 text-[#34d399] text-xs font-bold transition flex items-center gap-1.5"
+            >
+              <i className="fa-brands fa-whatsapp" />Restart Bot WA
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  toast('Sedang me-restart SEMUA service...', 'info')
+                  await restartAll()
+                  setTimeout(() => { toast('Semua service (Bot + Web) berhasil di-restart!', 'success'); loadCf() }, 2000)
+                } catch (e) { toast('Gagal restart: ' + e.message, 'error') }
+              }}
+              className="px-3.5 py-2 rounded-[10px] bg-white/[.06] border border-white/[.12] hover:bg-white/[.10] text-[var(--t-ink)] text-xs font-bold transition flex items-center gap-1.5"
+            >
+              <i className="fa-solid fa-rotate" />Restart Semua (All)
+            </button>
+          </div>
         </div>
 
         {/* Status tunnel + riwayat backup */}

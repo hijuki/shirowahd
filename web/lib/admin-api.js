@@ -64,3 +64,6 @@ export async function uploadGalleryFile(file) {
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
   return data
 }
+
+export const restartWeb = () => api("/api/web/restart", { method: "POST" })
+export const restartAll = () => api("/api/all/restart", { method: "POST" })

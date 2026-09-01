@@ -51,7 +51,11 @@ export default function UploadPanel({ settings, toast }) {
   }, [files, isImg])
 
   const addFiles = useCallback((newFiles) => {
-    const arr = Array.from(newFiles)
+    let arr = Array.from(newFiles)
+    if (tab === 'video' && arr.length > 1) {
+      toast('Hanya 1 video per upload', 'info')
+      arr = arr.slice(0, 1)
+    }
     const validExts = tab === 'video' ? VIDEO_EXTS : IMAGE_EXTS
     const mimePrefix = tab === 'video' ? 'video/' : 'image/'
     // Terima kalau ekstensi cocok ATAU browser sudah melaporkan MIME yang benar.
@@ -141,8 +145,8 @@ export default function UploadPanel({ settings, toast }) {
   // Transfer jaringan mengisi 0–60%, pemrosesan server mengisi 60–100%.
   // Kalau server tidak perlu memproses (mis. foto), transfer langsung ke 100%.
   const totalPct = encode
-    ? Math.min(100, 60 + Math.round((encode.pct / 100) * 40))
-    : Math.round(progress.pct * (uploading ? 0.6 : 1))
+    ? (encode.pct >= 100 ? 100 : Math.max(1, Math.min(99, Math.round(encode.pct))))
+    : (uploading ? Math.min(99, Math.round(progress.pct || 0)) : (success ? 100 : 0))
 
   if (settings?.maintenance) {
     return (
@@ -200,7 +204,7 @@ export default function UploadPanel({ settings, toast }) {
               onDragLeave={() => setDrag(false)}
               className={`drop-luxe drop-3d py-9 px-6 text-center cursor-pointer transition-all duration-[250ms] ${drag ? 'dragging' : ''}`}
             >
-              <input ref={fileRef} type="file" accept={accept} multiple aria-label="Pilih file video atau foto untuk diupload" className="hidden" onChange={e => addFiles(e.target.files)} />
+              <input ref={fileRef} type="file" accept={accept} multiple={tab !== 'video'} aria-label="Pilih file video atau foto untuk diupload" className="hidden" onChange={e => addFiles(e.target.files)} />
               <div className="drop-halo">
                 <div className={`w-16 h-16 mx-auto rounded-[18px] grid place-items-center mb-4 transition-all duration-[250ms] floaty ${isImg
                   ? 'bg-[#34d399]/12 border border-[#34d399]/25 shadow-[0_0_36px_-8px_rgba(52,211,153,.4)]'
