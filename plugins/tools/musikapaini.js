@@ -5,7 +5,6 @@ import yts from "yt-search";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { queueFFmpeg } from "../../src/lib/hillz-ffmpeg.js";
-import { saluranCtx } from "../../src/lib/hillz-context.js";
 import { getAssetBuffer } from "../../src/lib/hillz-asset-manager.js";
 import ytdl from "../../src/scraper/ytdl.js";
 
@@ -15,7 +14,7 @@ const pluginConfig = {
   name: "carilagu",
   alias: ["whatmusic", "shazam", "findsong", "kenallagu", "tebakmusik", "musikapaini", "getmusic", "dlcarilagu"],
   category: "tools",
-  description: "Kenali lagu/DJ dari reply audio/VN & pilih versi Original/DJ/Jedag-Jedug via menu interaktif",
+  description: "Pencarian universal lagu, DJ TikTok & video converter MP3",
   usage: ".carilagu (reply audio/VN/video)",
   example: ".carilagu",
   cooldown: 3,
@@ -122,17 +121,21 @@ async function downloadMp3Buffer(videoUrl) {
   return mp3Buffer;
 }
 
-// Helper multi-pencarian YouTube (Original + DJ Remix + Slowed)
-async function searchWideMusic(title, artist) {
+// Helper Pencarian Universal YouTube (Original + DJ TikTok + Jedag Jedug + Breakbeat + Slowed)
+async function searchUniversalMusic(title, artist) {
   const seenIds = new Set();
   const originalList = [];
-  const djList = [];
-  const otherList = [];
+  const djTiktokList = [];
+  const djRemixList = [];
+  const slowedList = [];
 
-  // Query 1: Original / Official
+  const cleanTitle = title.replace(/[^\w\s]/gi, " ").trim();
+  const cleanArtist = artist.replace(/[^\w\s]/gi, " ").trim();
+
+  // Query 1: Original & Official Track
   try {
-    const res1 = await yts(`${artist} - ${title}`);
-    (res1?.videos || []).slice(0, 5).forEach((v) => {
+    const r1 = await yts(`${cleanArtist} - ${cleanTitle}`);
+    (r1?.videos || []).slice(0, 4).forEach((v) => {
       if (!seenIds.has(v.videoId)) {
         seenIds.add(v.videoId);
         originalList.push(v);
@@ -140,44 +143,45 @@ async function searchWideMusic(title, artist) {
     });
   } catch {}
 
-  // Query 2: DJ Remix / Jedag Jedug / Breakbeat
+  // Query 2: DJ TikTok Viral & Sound Kane
   try {
-    const res2 = await yts(`DJ ${title} remix full bass jedag jedug`);
-    (res2?.videos || []).slice(0, 5).forEach((v) => {
+    const r2 = await yts(`DJ ${cleanTitle} tiktok viral sound mengkane`);
+    (r2?.videos || []).slice(0, 5).forEach((v) => {
       if (!seenIds.has(v.videoId)) {
         seenIds.add(v.videoId);
-        djList.push(v);
+        djTiktokList.push(v);
       }
     });
   } catch {}
 
-  // Query 3: DJ TikTok / Slowed / Speed Up
+  // Query 3: DJ Remix Jedag Jedug / Breakbeat / Full Bass
   try {
-    const res3 = await yts(`DJ ${artist} ${title} tiktok viral`);
-    (res3?.videos || []).slice(0, 4).forEach((v) => {
+    const r3 = await yts(`DJ ${cleanTitle} jedag jedug remix breakbeat full bass`);
+    (r3?.videos || []).slice(0, 5).forEach((v) => {
       if (!seenIds.has(v.videoId)) {
         seenIds.add(v.videoId);
-        djList.push(v);
+        djRemixList.push(v);
       }
     });
   } catch {}
 
-  // Query 4: Slowed & Reverb
+  // Query 4: Slowed Reverb / Speed Up / Vibe
   try {
-    const res4 = await yts(`${title} slowed reverb`);
-    (res4?.videos || []).slice(0, 3).forEach((v) => {
+    const r4 = await yts(`${cleanTitle} slowed reverb speed up`);
+    (r4?.videos || []).slice(0, 3).forEach((v) => {
       if (!seenIds.has(v.videoId)) {
         seenIds.add(v.videoId);
-        otherList.push(v);
+        slowedList.push(v);
       }
     });
   } catch {}
 
   return {
     original: originalList.slice(0, 4),
-    dj: djList.slice(0, 5),
-    other: otherList.slice(0, 3),
-    all: [...originalList, ...djList, ...otherList]
+    djTiktok: djTiktokList.slice(0, 5),
+    djRemix: djRemixList.slice(0, 5),
+    slowed: slowedList.slice(0, 3),
+    all: [...originalList, ...djTiktokList, ...djRemixList, ...slowedList],
   };
 }
 
@@ -190,7 +194,7 @@ async function handler(m, { sock, args, command }) {
 
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     m.react("⏳");
-    await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*\n\n> Mengunduh MP3 dari YouTube...\n> Harap tunggu sebentar, file akan segera dikirim.`);
+    await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*\n\n> Mengunduh MP3 dari YouTube...\n> Harap tunggu sebentar, file MP3 akan dikirim murni.`);
 
     try {
       const mp3Buffer = await downloadMp3Buffer(videoUrl);
@@ -198,6 +202,7 @@ async function handler(m, { sock, args, command }) {
         throw new Error("Gagal mengunduh audio dari server.");
       }
 
+      // Kirim MP3 murni TANPA context saluran (audio reguler)
       await sock.sendMessage(
         m.chat,
         {
@@ -205,7 +210,6 @@ async function handler(m, { sock, args, command }) {
           mimetype: "audio/mpeg",
           ptt: false,
           fileName: `Audio_${videoId}.mp3`,
-          contextInfo: saluranCtx(),
         },
         { quoted: m }
       );
@@ -218,7 +222,7 @@ async function handler(m, { sock, args, command }) {
     }
   }
 
-  // Alur identifikasi lagu dari media
+  // Alur identifikasi lagu dari media (audio, VN, atau video)
   let downloadFn = null;
   let isVideo = false;
 
@@ -253,16 +257,16 @@ async function handler(m, { sock, args, command }) {
 
   if (!downloadFn) {
     return m.reply(
-      `🎵 *ᴄᴀʀɪ ʟᴀɢᴜ & ᴅᴊ ʀᴇᴍɪx (ᴍᴜsɪᴄ ʀᴇᴄᴏɢɴɪᴛɪᴏɴ)*\n\n` +
-        `> Identifikasi judul lagu & DJ Remix dari audio/voice note/video WhatsApp\n\n` +
+      `🌐 *ᴘᴇɴᴄᴀʀɪᴀɴ ᴜɴɪᴠᴇʀsᴀʟ ᴍᴜsɪᴋ & ᴅᴊ ᴛɪᴋᴛᴏᴋ*\n\n` +
+        `> Identifikasi lagu, DJ TikTok, remix & ekstrak audio video WhatsApp\n\n` +
         `*Cara Penggunaan:*\n` +
-        `> 1. Reply pesan audio, VN, atau video dengan \`${m.prefix}carilagu\`\n` +
+        `> 1. Reply pesan audio, VN, atau *video* dengan \`${m.prefix}carilagu\`\n` +
         `> 2. Atau kirim audio/video dengan caption \`${m.prefix}carilagu\``
     );
   }
 
   m.react("🔍");
-  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ʟᴀɢᴜ...*\n\n> Sedang memindai sampel audio, vokal & beat remix...`);
+  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ᴍᴜsɪᴋ (ᴘᴇɴᴄᴀʀɪᴀɴ ᴜɴɪᴠᴇʀsᴀʟ)...*\n\n> Memindai sampel gelombang vokal & beat musik...`);
 
   const tempDir = path.join(process.cwd(), "temp");
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -270,37 +274,49 @@ async function handler(m, { sock, args, command }) {
   const tempId = Date.now() + "_" + Math.random().toString(36).substring(7);
   const inputExt = isVideo ? "mp4" : "ogg";
   const inputPath = path.join(tempDir, `input_${tempId}.${inputExt}`);
-  const outputPath = path.join(tempDir, `sample_${tempId}.mp3`);
-  const outputMidPath = path.join(tempDir, `sample_mid_${tempId}.mp3`);
+  const outSample1 = path.join(tempDir, `s1_${tempId}.mp3`);
+  const outSample2 = path.join(tempDir, `s2_${tempId}.mp3`);
+  const outSample3 = path.join(tempDir, `s3_${tempId}.mp3`);
 
   try {
     const audioBuffer = await downloadFn();
 
     if (!audioBuffer || !audioBuffer.length) {
       m.react("❌");
-      return m.reply(`❌ *ɢᴀɢᴀʟ ᴍᴇɴɢᴜɴᴅᴜʜ ᴍᴇᴅɪᴀ*\n\n> Tidak dapat mengunduh audio dari WhatsApp. Pastikan media belum kadaluarsa.`);
+      return m.reply(`❌ *ɢᴀɢᴀʟ ᴍᴇɴɢᴜɴᴅᴜʜ ᴍᴇᴅɪᴀ*\n\n> Tidak dapat mengunduh media dari WhatsApp. Pastikan media belum kadaluarsa.`);
     }
 
     fs.writeFileSync(inputPath, audioBuffer);
 
-    // 1. Coba sampel awal 15 detik
-    await queueFFmpeg(`ffmpeg -y -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outputPath}"`);
-    let fileToRecognize = fs.existsSync(outputPath) ? outputPath : inputPath;
-    let recogResult = await recognizeAudioFile(fileToRecognize);
+    // Multi-pass extraction untuk video & audio DJ:
+    // Pass 1: 0 - 15 detik
+    await queueFFmpeg(`ffmpeg -y -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outSample1}"`);
+    let fileToRecog = fs.existsSync(outSample1) ? outSample1 : inputPath;
+    let recogResult = await recognizeAudioFile(fileToRecog);
 
-    // 2. Jika sampel awal gagal (sering terjadi pada DJ yang intro-nya lama), coba potong dari detik 15-30
+    // Pass 2: 15 - 35 detik (bagian drop/vokal DJ)
     if (!recogResult.status || !recogResult.title) {
       try {
-        await queueFFmpeg(`ffmpeg -y -ss 00:00:15 -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outputMidPath}"`);
-        if (fs.existsSync(outputMidPath)) {
-          recogResult = await recognizeAudioFile(outputMidPath);
+        await queueFFmpeg(`ffmpeg -y -ss 00:00:15 -i "${inputPath}" -t 18 -vn -ar 44100 -ac 2 -b:a 128k "${outSample2}"`);
+        if (fs.existsSync(outSample2)) {
+          recogResult = await recognizeAudioFile(outSample2);
+        }
+      } catch {}
+    }
+
+    // Pass 3: 35 - 55 detik
+    if (!recogResult.status || !recogResult.title) {
+      try {
+        await queueFFmpeg(`ffmpeg -y -ss 00:00:35 -i "${inputPath}" -t 18 -vn -ar 44100 -ac 2 -b:a 128k "${outSample3}"`);
+        if (fs.existsSync(outSample3)) {
+          recogResult = await recognizeAudioFile(outSample3);
         }
       } catch {}
     }
 
     if (!recogResult.status || !recogResult.title) {
       m.react("❌");
-      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n> Tidak dapat mengenali lagu dari audio tersebut. Pastikan vokal/melodi lagu terdengar cukup jelas.`);
+      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n> Tidak dapat mengenali lagu dari audio/video tersebut. Pastikan vokal atau nada lagu terdengar jelas.`);
     }
 
     const songTitle = recogResult.title;
@@ -309,45 +325,56 @@ async function handler(m, { sock, args, command }) {
     const songRelease = recogResult.release;
     const coverUrl = recogResult.cover;
 
-    // Pencarian luas (Original + DJ Remix + Slowed)
-    const wideResults = await searchWideMusic(songTitle, songArtist);
+    // Pencarian Universal (Original + DJ TikTok + DJ Remix + Slowed)
+    const uni = await searchUniversalMusic(songTitle, songArtist);
     const sections = [];
-    const allList = wideResults.all;
+    const allList = uni.all;
 
-    if (wideResults.original.length > 0) {
+    if (uni.djTiktok.length > 0) {
       sections.push({
-        title: "🎶 Versi Original & Official",
-        rows: wideResults.original.map((v, i) => ({
-          title: `[ORI ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "YouTube"}`,
+        title: "🔥 Versi DJ TikTok & Viral Mengkane",
+        rows: uni.djTiktok.map((v, i) => ({
+          title: `[TIKTOK ${i + 1}] ${v.title.substring(0, 42)}`,
+          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "TikTok DJ"}`,
           id: `${m.prefix}getmusic ${v.videoId}`,
         })),
       });
     }
 
-    if (wideResults.dj.length > 0) {
+    if (uni.djRemix.length > 0) {
       sections.push({
-        title: "🎧 Versi DJ Remix & Jedag-Jedug",
-        rows: wideResults.dj.map((v, i) => ({
-          title: `[DJ ${i + 1}] ${v.title.substring(0, 42)}`,
+        title: "🎧 Versi DJ Remix & Jedag-Jedug Full Bass",
+        rows: uni.djRemix.map((v, i) => ({
+          title: `[REMIX ${i + 1}] ${v.title.substring(0, 42)}`,
           description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "DJ Remix"}`,
           id: `${m.prefix}getmusic ${v.videoId}`,
         })),
       });
     }
 
-    if (wideResults.other.length > 0) {
+    if (uni.original.length > 0) {
       sections.push({
-        title: "✨ Versi Slowed / Reverb / Speed Up",
-        rows: wideResults.other.map((v, i) => ({
-          title: `[VIBE ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "Remix"}`,
+        title: "🎶 Versi Original & Official Track",
+        rows: uni.original.map((v, i) => ({
+          title: `[ORI ${i + 1}] ${v.title.substring(0, 42)}`,
+          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "Official"}`,
           id: `${m.prefix}getmusic ${v.videoId}`,
         })),
       });
     }
 
-    let bodyText = `🎵 *ʟᴀɢᴜ & ᴅᴊ ʀᴇᴍɪx ᴅɪᴛᴇᴍᴜᴋᴀɴ!*\n\n`;
+    if (uni.slowed.length > 0) {
+      sections.push({
+        title: "✨ Versi Slowed / Reverb / Speed Up",
+        rows: uni.slowed.map((v, i) => ({
+          title: `[VIBE ${i + 1}] ${v.title.substring(0, 42)}`,
+          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "Vibe"}`,
+          id: `${m.prefix}getmusic ${v.videoId}`,
+        })),
+      });
+    }
+
+    let bodyText = `🌐 *ᴘᴇɴᴄᴀʀɪᴀɴ ᴜɴɪᴠᴇʀsᴀʟ ᴍᴜsɪᴋ & ᴅᴊ*\n\n`;
     bodyText += `╭┈┈⬡「 📋 *ɪɴꜰᴏ ʟᴀɢᴜ* 」\n`;
     bodyText += `┃ 🎶 *Judul:* ${songTitle}\n`;
     bodyText += `┃ 👤 *Artis:* ${songArtist}\n`;
@@ -355,37 +382,46 @@ async function handler(m, { sock, args, command }) {
     bodyText += `┃ 📅 *Rilis:* ${songRelease}\n`;
     bodyText += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
 
-    bodyText += `🔥 *Koleksi Versi Tersedia:*\n`;
-    bodyText += `> 🎶 *Original:* ${wideResults.original.length} versi\n`;
-    bodyText += `> 🎧 *DJ Remix / JJ:* ${wideResults.dj.length} versi\n`;
-    bodyText += `> ✨ *Slowed / Vibe:* ${wideResults.other.length} versi\n\n`;
-    bodyText += `👇 *Klik tombol menu di bawah untuk memilih versi MP3:*`;
+    bodyText += `🔥 *Hasil Penelusuran Universal:*\n`;
+    if (uni.djTiktok.length) bodyText += `> 📱 *DJ TikTok Viral:* ${uni.djTiktok.length} versi\n`;
+    if (uni.djRemix.length) bodyText += `> 🎧 *DJ Remix / JJ:* ${uni.djRemix.length} versi\n`;
+    if (uni.original.length) bodyText += `> 🎶 *Original Track:* ${uni.original.length} versi\n`;
+    if (uni.slowed.length) bodyText += `> ✨ *Slowed / Vibe:* ${uni.slowed.length} versi\n\n`;
+    bodyText += `👇 *Klik tombol menu di bawah untuk memilih & mengunduh MP3:*`;
 
     const buttons = [
       {
         name: "single_select",
         buttonParamsJson: JSON.stringify({
-          title: "🎧 PILIH VERSI MP3 / DJ REMIX",
+          title: "🌐 PILIH VERSI MP3 / DJ TIKTOK",
           sections,
         }),
       },
     ];
 
-    // Quick reply untuk DJ Remix terpopuler
-    if (wideResults.dj[0]) {
+    // Quick reply untuk DJ TikTok / Remix terpopuler
+    if (uni.djTiktok[0]) {
       buttons.push({
         name: "quick_reply",
         buttonParamsJson: JSON.stringify({
-          display_text: `🎧 Unduh DJ Remix (${wideResults.dj[0].timestamp})`,
-          id: `${m.prefix}getmusic ${wideResults.dj[0].videoId}`,
+          display_text: `📱 Unduh DJ TikTok (${uni.djTiktok[0].timestamp})`,
+          id: `${m.prefix}getmusic ${uni.djTiktok[0].videoId}`,
         }),
       });
-    } else if (wideResults.original[0]) {
+    } else if (uni.djRemix[0]) {
       buttons.push({
         name: "quick_reply",
         buttonParamsJson: JSON.stringify({
-          display_text: `🎶 Unduh Versi Original`,
-          id: `${m.prefix}getmusic ${wideResults.original[0].videoId}`,
+          display_text: `🎧 Unduh DJ Remix (${uni.djRemix[0].timestamp})`,
+          id: `${m.prefix}getmusic ${uni.djRemix[0].videoId}`,
+        }),
+      });
+    } else if (uni.original[0]) {
+      buttons.push({
+        name: "quick_reply",
+        buttonParamsJson: JSON.stringify({
+          display_text: `🎶 Unduh Original (${uni.original[0].timestamp})`,
+          id: `${m.prefix}getmusic ${uni.original[0].videoId}`,
         }),
       });
     }
@@ -414,8 +450,7 @@ async function handler(m, { sock, args, command }) {
         m,
         {
           buttons,
-          footer: "SHIROWAHD • DJ & Music Recognizer",
-          contextInfo: saluranCtx(),
+          footer: "SHIROWAHD • Pencarian Universal",
         }
       );
     } catch (e) {
@@ -423,7 +458,6 @@ async function handler(m, { sock, args, command }) {
         m.chat,
         {
           text: bodyText,
-          contextInfo: saluranCtx(),
         },
         { quoted: m }
       );
@@ -435,8 +469,9 @@ async function handler(m, { sock, args, command }) {
     await m.reply(`❌ *ᴇʀʀᴏʀ*\n\n> Gagal mengenali lagu: _${error.message}_`);
   } finally {
     try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath); } catch {}
-    try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch {}
-    try { if (fs.existsSync(outputMidPath)) fs.unlinkSync(outputMidPath); } catch {}
+    try { if (fs.existsSync(outSample1)) fs.unlinkSync(outSample1); } catch {}
+    try { if (fs.existsSync(outSample2)) fs.unlinkSync(outSample2); } catch {}
+    try { if (fs.existsSync(outSample3)) fs.unlinkSync(outSample3); } catch {}
   }
 }
 
@@ -445,7 +480,7 @@ export async function carilaguAnswerHandler(m, sock) {
   const rawBody = (m.body || m.text || "").trim();
   if (!rawBody) return false;
 
-  const match = rawBody.match(/^#?\[?([1-9]|1[0-2])\]?\.?$/i);
+  const match = rawBody.match(/^#?\[?([1-9]|1[0-7])\]?\.?$/i);
   if (!match) return false;
 
   const choiceNum = parseInt(match[1], 10);
@@ -475,7 +510,7 @@ export async function carilaguAnswerHandler(m, sock) {
   if (senderJid) global.carilaguSessions.delete(senderJid);
 
   m.react("⏳");
-  await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*\n\n> Judul: *${selectedSong.title}*\n> Durasi: \`${selectedSong.timestamp}\`\n> Harap tunggu, sedang mengonversi & mengirimkan MP3...`);
+  await m.reply(`⏳ *ᴍᴇɴɢᴜɴᴅᴜʜ ᴀᴜᴅɪᴏ...*\n\n> Judul: *${selectedSong.title}*\n> Durasi: \`${selectedSong.timestamp}\`\n> Harap tunggu, mengirimkan berkas MP3...`);
 
   try {
     const mp3Buffer = await downloadMp3Buffer(selectedSong.url);
@@ -484,6 +519,7 @@ export async function carilaguAnswerHandler(m, sock) {
       throw new Error("Gagal mengunduh audio dari server.");
     }
 
+    // Kirim MP3 murni TANPA context saluran
     await sock.sendMessage(
       m.chat,
       {
@@ -491,7 +527,6 @@ export async function carilaguAnswerHandler(m, sock) {
         mimetype: "audio/mpeg",
         ptt: false,
         fileName: `${selectedSong.title}.mp3`,
-        contextInfo: saluranCtx(),
       },
       { quoted: m }
     );
