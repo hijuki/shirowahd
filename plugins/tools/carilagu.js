@@ -14,7 +14,7 @@ const pluginConfig = {
   name: "carilagu",
   alias: ["whatmusic", "shazam", "findsong", "kenallagu", "tebakmusik", "musikapaini", "getmusic", "dlcarilagu"],
   category: "tools",
-  description: "Pencarian universal lagu, DJ TikTok & video converter MP3",
+  description: "Pencarian universal lagu, DJ TikTok & video converter MP3 dengan Multi-Tempo Scanning",
   usage: ".carilagu (reply audio/VN/video)",
   example: ".carilagu",
   cooldown: 3,
@@ -24,43 +24,95 @@ const pluginConfig = {
 
 global.carilaguSessions = global.carilaguSessions || new Map();
 
-// Helper untuk mengenali lagu menggunakan Shazam engine lokal
+// Helper untuk mengenali lagu dengan multi-tempo & pitch scanning
 async function recognizeAudioFile(filePath) {
   const scriptContent = `
-import asyncio, json, sys
+import asyncio, json, sys, os, subprocess
 from shazamio import Shazam
 
-async def main():
+async def test_file(shazam, target_path):
     try:
-        shazam = Shazam()
-        res = await shazam.recognize(sys.argv[1])
+        res = await shazam.recognize(target_path)
         track = res.get("track", {})
-        if not track:
-            print(json.dumps({"status": False, "msg": "No track found"}))
+        if track and track.get("title"):
+            sections = track.get("sections", [])
+            meta = {}
+            for s in sections:
+                if s.get("type") == "SONG":
+                    for m in s.get("metadata", []):
+                        meta[m.get("title")] = m.get("text")
+
+            images = track.get("images", {})
+            coverArt = images.get("coverart", images.get("coverarthq", images.get("background", "")))
+
+            return {
+                "status": True,
+                "title": track.get("title", "Unknown Title"),
+                "artist": track.get("subtitle", "Unknown Artist"),
+                "album": meta.get("Album", "-"),
+                "release": meta.get("Released", meta.get("Label", "-")),
+                "genre": track.get("genres", {}).get("primary", "-"),
+                "cover": coverArt
+            }
+    except:
+        pass
+    return None
+
+async def main():
+    shazam = Shazam()
+    input_file = sys.argv[1]
+    
+    # 1. Coba scan audio langsung (1.0x)
+    r = await test_file(shazam, input_file)
+    if r:
+        print(json.dumps(r))
+        return
+
+    # 2. Coba variasi tempo DJ Slowed (1.15x, 1.2x, 1.25x)
+    for sp in [1.2, 1.15, 1.25]:
+        out_sp = f"/tmp/sp_{sp}_{os.getpid()}.mp3"
+        subprocess.run(f"ffmpeg -y -i {input_file} -filter:a 'atempo={sp}' {out_sp}", shell=True, capture_output=True)
+        r = await test_file(shazam, out_sp)
+        try: os.unlink(out_sp)
+        except: pass
+        if r:
+            print(json.dumps(r))
             return
 
-        sections = track.get("sections", [])
-        meta = {}
-        for s in sections:
-            if s.get("type") == "SONG":
-                for m in s.get("metadata", []):
-                    meta[m.get("title")] = m.get("text")
+    # 3. Coba variasi tempo Nightcore / Speed Up (0.85x, 0.9x)
+    for sp in [0.85, 0.9]:
+        out_sp = f"/tmp/sp_{sp}_{os.getpid()}.mp3"
+        subprocess.run(f"ffmpeg -y -i {input_file} -filter:a 'atempo={sp}' {out_sp}", shell=True, capture_output=True)
+        r = await test_file(shazam, out_sp)
+        try: os.unlink(out_sp)
+        except: pass
+        if r:
+            print(json.dumps(r))
+            return
 
-        images = track.get("images", {})
-        coverArt = images.get("coverart", images.get("coverarthq", images.get("background", "")))
+    # 4. Vocal isolation (potong sub-bass jedag-jedug)
+    vocal_out = f"/tmp/voc_{os.getpid()}.mp3"
+    subprocess.run(f"ffmpeg -y -i {input_file} -af 'highpass=f=250,lowpass=f=3500' {vocal_out}", shell=True, capture_output=True)
+    r = await test_file(shazam, vocal_out)
+    try: os.unlink(vocal_out)
+    except: pass
+    if r:
+        print(json.dumps(r))
+        return
 
-        result = {
-            "status": True,
-            "title": track.get("title", "Unknown Title"),
-            "artist": track.get("subtitle", "Unknown Artist"),
-            "album": meta.get("Album", "-"),
-            "release": meta.get("Released", meta.get("Label", "-")),
-            "genre": track.get("genres", {}).get("primary", "-"),
-            "cover": coverArt
-        }
-        print(json.dumps(result))
-    except Exception as e:
-        print(json.dumps({"status": False, "error": str(e)}))
+    # 5. Fallback Whisper AI Transcription
+    try:
+        import whisper
+        w_model = whisper.load_model("tiny")
+        w_res = w_model.transcribe(input_file, fp16=False)
+        lyrics_text = (w_res.get("text") or "").strip()
+        if len(lyrics_text) > 10:
+            print(json.dumps({"status": True, "by_lyrics": True, "lyrics": lyrics_text}))
+            return
+    except:
+        pass
+
+    print(json.dumps({"status": False, "msg": "No track found"}))
 
 asyncio.run(main())
 `;
@@ -71,7 +123,7 @@ asyncio.run(main())
   fs.writeFileSync(pyScriptPath, scriptContent);
 
   try {
-    const { stdout } = await execAsync(`python3 "${pyScriptPath}" "${filePath}"`, { timeout: 30000 });
+    const { stdout } = await execAsync(`python3 "${pyScriptPath}" "${filePath}"`, { timeout: 45000 });
     const parsed = JSON.parse(stdout.trim());
     return parsed;
   } catch (err) {
@@ -129,8 +181,8 @@ async function searchUniversalMusic(title, artist) {
   const djRemixList = [];
   const slowedList = [];
 
-  const cleanTitle = title.replace(/[^\w\s]/gi, " ").trim();
-  const cleanArtist = artist.replace(/[^\w\s]/gi, " ").trim();
+  const cleanTitle = (title || "").replace(/[^\w\s]/gi, " ").trim();
+  const cleanArtist = (artist || "").replace(/[^\w\s]/gi, " ").trim();
 
   // Query 1: Original & Official Track
   try {
@@ -266,7 +318,7 @@ async function handler(m, { sock, args, command }) {
   }
 
   m.react("🔍");
-  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ᴍᴜsɪᴋ (ᴘᴇɴᴄᴀʀɪᴀɴ ᴜɴɪᴠᴇʀsᴀʟ)...*\n\n> Memindai sampel gelombang vokal & beat musik...`);
+  await m.reply(`🔍 *ᴍᴇɴɢɪᴅᴇɴᴛɪꜰɪᴋᴀsɪ ᴍᴜsɪᴋ (ᴘᴇɴᴄᴀʀɪᴀɴ ᴜɴɪᴠᴇʀsᴀʟ)...*\n\n> Memindai tempo normal, slowed DJ & vokal audio...`);
 
   const tempDir = path.join(process.cwd(), "temp");
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -276,7 +328,6 @@ async function handler(m, { sock, args, command }) {
   const inputPath = path.join(tempDir, `input_${tempId}.${inputExt}`);
   const outSample1 = path.join(tempDir, `s1_${tempId}.mp3`);
   const outSample2 = path.join(tempDir, `s2_${tempId}.mp3`);
-  const outSample3 = path.join(tempDir, `s3_${tempId}.mp3`);
 
   try {
     const audioBuffer = await downloadFn();
@@ -288,42 +339,42 @@ async function handler(m, { sock, args, command }) {
 
     fs.writeFileSync(inputPath, audioBuffer);
 
-    // Multi-pass extraction untuk video & audio DJ:
-    // Pass 1: 0 - 15 detik
-    await queueFFmpeg(`ffmpeg -y -i "${inputPath}" -t 15 -vn -ar 44100 -ac 2 -b:a 128k "${outSample1}"`);
+    // Multi-pass extraction
+    await queueFFmpeg(`ffmpeg -y -i "${inputPath}" -t 20 -vn -ar 44100 -ac 2 -b:a 128k "${outSample1}"`);
     let fileToRecog = fs.existsSync(outSample1) ? outSample1 : inputPath;
     let recogResult = await recognizeAudioFile(fileToRecog);
 
-    // Pass 2: 15 - 35 detik (bagian drop/vokal DJ)
-    if (!recogResult.status || !recogResult.title) {
+    // Jika belum ketemu, coba potongan detik 10-30
+    if (!recogResult.status || (!recogResult.title && !recogResult.by_lyrics)) {
       try {
-        await queueFFmpeg(`ffmpeg -y -ss 00:00:15 -i "${inputPath}" -t 18 -vn -ar 44100 -ac 2 -b:a 128k "${outSample2}"`);
+        await queueFFmpeg(`ffmpeg -y -ss 00:00:10 -i "${inputPath}" -t 20 -vn -ar 44100 -ac 2 -b:a 128k "${outSample2}"`);
         if (fs.existsSync(outSample2)) {
           recogResult = await recognizeAudioFile(outSample2);
         }
       } catch {}
     }
 
-    // Pass 3: 35 - 55 detik
-    if (!recogResult.status || !recogResult.title) {
-      try {
-        await queueFFmpeg(`ffmpeg -y -ss 00:00:35 -i "${inputPath}" -t 18 -vn -ar 44100 -ac 2 -b:a 128k "${outSample3}"`);
-        if (fs.existsSync(outSample3)) {
-          recogResult = await recognizeAudioFile(outSample3);
-        }
-      } catch {}
+    let songTitle = recogResult.title || "";
+    let songArtist = recogResult.artist || "";
+    let songAlbum = recogResult.album || "-";
+    let songRelease = recogResult.release || "-";
+    let coverUrl = recogResult.cover || "";
+
+    // Jika hasil didapat dari transkripsi lirik Whisper
+    if (recogResult.by_lyrics && recogResult.lyrics) {
+      const ytL = await yts(recogResult.lyrics);
+      if (ytL?.videos?.length) {
+        const topV = ytL.videos[0];
+        songTitle = topV.title;
+        songArtist = topV.author?.name || "YouTube";
+        coverUrl = topV.thumbnail;
+      }
     }
 
-    if (!recogResult.status || !recogResult.title) {
+    if (!songTitle) {
       m.react("❌");
       return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n> Tidak dapat mengenali lagu dari audio/video tersebut. Pastikan vokal atau nada lagu terdengar jelas.`);
     }
-
-    const songTitle = recogResult.title;
-    const songArtist = recogResult.artist;
-    const songAlbum = recogResult.album;
-    const songRelease = recogResult.release;
-    const coverUrl = recogResult.cover;
 
     // Pencarian Universal (Original + DJ TikTok + DJ Remix + Slowed)
     const uni = await searchUniversalMusic(songTitle, songArtist);
@@ -471,7 +522,6 @@ async function handler(m, { sock, args, command }) {
     try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath); } catch {}
     try { if (fs.existsSync(outSample1)) fs.unlinkSync(outSample1); } catch {}
     try { if (fs.existsSync(outSample2)) fs.unlinkSync(outSample2); } catch {}
-    try { if (fs.existsSync(outSample3)) fs.unlinkSync(outSample3); } catch {}
   }
 }
 
