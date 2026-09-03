@@ -1,10 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { useTilt, useThemeName } from '@/lib/motion'
-import WaMark from './WaMark'
+import { useThemeName } from '@/lib/motion'
 
 /* ══════════════════════════════════════════════════════════════
-   HERO — logo ekstrusi + rangka media dua-mode.
+   HERO — baris meta + judul + rangka media dua-mode.
 
    Aset hero punya PASANGAN: terang & gelap, diatur dari admin. Kalau
    pasangan gelap kosong, aset terang dipakai di kedua mode — jadi fitur
@@ -17,7 +16,6 @@ import WaMark from './WaMark'
    ══════════════════════════════════════════════════════════════ */
 
 export default function Hero({ settings }) {
-  const tilt = useTilt(9)
   const theme = useThemeName()
   const isDark = theme === 'dark'
 
@@ -32,6 +30,18 @@ export default function Hero({ settings }) {
   const title = settings?.heroTitle || 'KIRIM MEDIA'
   const highlight = settings?.heroSubtitle || 'TANPA TURUN MUTU'
   const desc = settings?.heroDesc || 'Upload video atau foto, ambil kode klaim, tempel di grup WhatsApp. Bot yang mengirim filenya.'
+
+  /* Sel kanan baris meta membawa ANGKA NYATA dari settings, bukan hiasan.
+     Sebelumnya di sini ada plat WhatsApp 72px — dan itu mark hijau KETIGA
+     di layar (tile navbar 36px pada y=13, plat ini pada y=119, tombol chat
+     di sudut bawah). Simbol yang sama tiga kali membuatnya berhenti
+     menandakan apa pun; yang dua sudah cukup. */
+  const maxMB = Number(settings?.maxFileSizeMB || 0)
+  const sisiPanjang = Number(settings?.maxVideoLongSide || 0)
+  const spesifikasi = [
+    maxMB > 0 ? `MAKS ${maxMB}MB` : 'UKURAN BEBAS',
+    sisiPanjang > 0 ? `HINGGA ${sisiPanjang}px` : 'RESOLUSI ASLI',
+  ]
 
   /* Saat aset benar-benar bertukar, rangka diberi kelas pemicu sekali pakai
      supaya ada kilas halus — dibersihkan di onAnimationEnd, tidak lewat
@@ -48,26 +58,28 @@ export default function Hero({ settings }) {
 
   return (
     <header className="relative">
-      {/* ── Baris atas: penanda + logo 3D ── */}
-      <div className="flex items-start justify-between gap-4 pt-7 pb-5">
-        <div className="min-w-0">
-          {/* Dulu di sini "KODE KLAIM SEKALI PAKAI / HAPUS OTOMATIS" — terukur
-              PERSIS sama dengan 2 dari 5 item ticker yang berjalan di navbar
-              tepat di atasnya. Mengulang kalimat yang sama dua kali dalam 40px
-              membuat hero terbaca berantakan. Eyebrow sekarang menyebut apa
-              yang TIDAK dikatakan ticker. */}
-          <p className="kicker mt-3 max-w-[190px] leading-[1.55]">
-            UNTUK STATUS &amp; STORY
-            <span className="block opacity-60">KUALITAS ASLI</span>
-          </p>
-        </div>
+      {/* ── Baris meta ──
+          Dulu: penanda di kiri (berakhir x=180) dan plat logo di kanan
+          (mulai x=296) — 116px kosong di antaranya, 29.7% lebar layar,
+          dengan puncak yang tidak sejajar (beda 12.5px). Dua benda di ujung
+          berlawanan tanpa apa pun yang menghubungkan terbaca sebagai dua
+          yatim, bukan satu baris.
 
-        <div className="stage-3d shrink-0" style={{ paddingBottom: 10 }}>
-          <div className="logo3d" ref={tilt.ref} onPointerMove={tilt.onPointerMove} onPointerLeave={tilt.onPointerLeave}>
-            <span className="logo3d-face"><WaMark className="logo3d-glyph" /></span>
-            <span className="logo3d-shadow" />
-          </div>
-        </div>
+          Sekarang garis putus-putus MENGISI jaraknya: celah yang sama
+          berubah dari kelalaian menjadi interval yang terukur, dan kedua
+          sel duduk di garis yang sama. */}
+      <div className="flex items-start gap-3 pt-7 pb-4">
+        <p className="kicker shrink-0 leading-[1.55]">
+          UNTUK STATUS &amp; STORY
+          <span className="block opacity-60">KUALITAS ASLI</span>
+        </p>
+
+        <span className="rule-dash flex-1 mt-[7px]" aria-hidden="true" />
+
+        <p className="kicker data shrink-0 text-right leading-[1.55]">
+          {spesifikasi[0]}
+          <span className="block opacity-60">{spesifikasi[1]}</span>
+        </p>
       </div>
 
       {/* ── Judul ── */}

@@ -834,14 +834,25 @@ h3 {
 .mark {
   position: relative;
   display: inline-block;
-  padding: 0.02em 0.18em;
-  border-radius: 0.1em;
+  /* Tinggi blok terukur 1.02x satu baris H1 dengan isi hitam pekat — itu
+     proporsi BAR SENSOR, bukan penekanan. Padding vertikal dipangkas supaya
+     plat memeluk tinggi huruf, bukan seluruh kotak baris. */
+  padding: 0.06em 0.16em 0.1em;
+  border-radius: var(--r-xs);
   color: var(--paper);
   background: var(--ink);
+  /* Hijau merek dulu hanya hadir sebagai plat MENGAPUNG di sudut hero — objek
+     terpisah yang tidak menyentuh apa pun. Sekarang ia jadi ofset di balik
+     kata kuncinya sendiri: warna itu memegang tipografi, bukan mengorbitnya.
+     Ofset ini juga bahasa yang sama dengan kartu, tombol, dan tile navbar. */
+  box-shadow: var(--bw-thick) var(--bw-thick) 0 var(--accent);
 }
 [data-theme="dark"] .mark {
   background: var(--accent);
   color: #06180d;
+  /* Isi sudah hijau, jadi ofsetnya balik ke warna tepi — kalau dibiarkan
+     hijau-di-atas-hijau, ofsetnya hilang dan platnya kembali jadi bar. */
+  box-shadow: var(--bw-thick) var(--bw-thick) 0 var(--edge);
 }
 /* kompat: grad-text lama → jadi aksen padat */
 .grad-text {
@@ -986,113 +997,13 @@ h3 {
   transform: rotate(45deg);
 }
 
-/* ═══════════════ HERO 3D ═══════════════ */
-.stage-3d {
-  perspective: 900px;
-  perspective-origin: 50% 45%;
-}
-.logo3d {
-  /* Ruang untuk ofset (kini 4px, dulu 29px lalu 11px). */
-  margin: 0 6px 6px 0;
-  /* 104px pada viewport 390px = 26.7% lebar, dan tingginya SAMA dengan H1
-     (rasio 1.00) sehingga mark bersaing dengan judul. Di hero, judul harus
-     menang: 88px = 22.6% lebar, rasio tinggi vs H1 turun ke ~0.85. */
-  /* EKSTRUSI SATU BADAN (bukan tumpukan translateZ).
-     Alasan pindah teknik: 6-11 lapisan datar sejajar TIDAK BISA menyambung
-     di sudut membulat — selalu muncul notch/tangga di sudut, dan kedalaman
-     sisi kanan vs bawah tak pernah sama. Rantai box-shadow 45° mengikuti
-     border-radius muka secara matematis, jadi dinding kanan DAN bawah sama
-     tebal, sudutnya menyambung sempurna, nol seam. */
-  position: relative;
-  /* 88px = 22.6% lebar viewport 390px dan masih terbaca "gede" di sebelah H1.
-     72px = 18.5%: mark hadir sebagai tanda, bukan sebagai objek kedua yang
-     menyaingi judul. */
-  width: 72px;
-  height: 72px;
-  transform: translateY(var(--ty, 0px));
-  transition: transform 420ms var(--ease);
-  animation: logoIdle 11s ease-in-out infinite;
-}
-@keyframes logoIdle {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-.logo3d-face {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  border-radius: var(--r);
-  border: var(--bw-thick) solid var(--edge);
-  background: var(--wa-plate);
-  /* EKSTRUSI PALSU DIBUANG SELURUHNYA — bukan dikecilkan lagi.
-     Riwayatnya: 29px (24.6%) → 11px (10.6%) → 9px (10.2%), dan tetap dinilai
-     "3D-nya jelek". Rasionya bukan masalahnya; tekniknya yang salah untuk
-     tempat ini. Rantai box-shadow 45° meniru benda padat, jadi di sebelah
-     tipografi datar ia selalu terbaca seperti tempelan render.
-
-     Gantinya bukan kotak polos: satu ofset tegas 4px dalam warna tepi (bahasa
-     yang SAMA dengan kartu & tombol di halaman ini) + bayangan ambient halus.
-     Volumenya datang dari gradien muka dan kilau atas, bukan dari dinding.
-     Hasilnya menyatu dengan sistem desain, bukan bersaing dengannya. */
-  box-shadow:
-    4px 4px 0 var(--edge),
-    0 10px 18px -10px rgba(0, 0, 0, 0.28);
-}
-.logo3d-face::after {
-  border-radius: inherit;
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 52%);
-  pointer-events: none;
-}
-.logo3d-glyph {
-  position: relative;
-  z-index: 2;
-  /* Muka mengecil 88→72px, jadi porsi glyph dinaikkan supaya mark tetap tegas
-     dan tidak jadi titik kecil di tengah plat: 58%→62% (44.6px pada 72px). */
-  width: 62%;
-  height: 62%;
-  /* PUTIH, bukan hitam-kehijauan. Glyph WhatsApp resmi selalu solid putih di
-     atas plat hijau; versi gelap membuatnya terbaca sebagai line-art dan
-     hilang di ukuran kecil. */
-  fill: #ffffff;
-  /* Dulu drop-shadow keras 2px — bayangan cetak timbul pada glyph yang
-     seharusnya rata dengan platnya. Diganti bayangan lembut tipis. */
-  filter: drop-shadow(0 1px 2px rgba(3, 32, 22, 0.34));
-}
-.logo3d-shadow {
-  /* Ekstrusi sudah dibuang, jadi elips lantai tidak perlu lagi menggantung
-     jauh ke kanan mengejar ujung dinding. Sekarang ia sekadar mendudukkan
-     mark: selebar badan, sedikit bergeser searah ofset. */
-  position: absolute;
-  left: 8%;
-  right: -4%;
-  bottom: -7px;
-  height: 9px;
-  border-radius: 999px;
-  background: var(--ink);
-  opacity: 0.15;
-  filter: blur(6px);
-  animation: shadowPulse 9s ease-in-out infinite;
-}
-@keyframes shadowPulse {
-  0%,
-  100% {
-    transform: scaleX(1);
-    opacity: 0.16;
-  }
-  50% {
-    transform: scaleX(0.9);
-    opacity: 0.1;
-  }
-}
+/* ═══════════════ HERO ═══════════════ */
+/* Blok `.logo3d` / `.stage-3d` / `logoIdle` / `shadowPulse` (3.709 chars)
+   DIBUANG. Plat WhatsApp 72px yang mengapung di sudut hero adalah mark hijau
+   KETIGA di layar yang sama — tile navbar 36px (y=13), plat ini (y=119), dan
+   tombol chat di sudut bawah. Simbol yang sama tiga kali berhenti menandakan
+   apa pun. Hijau merek sekarang muncul sebagai ofset di balik kata kunci judul
+   (`.mark`), jadi warnanya memegang tipografi bukan mengorbitnya. */
 
 /* rangka hero untuk gambar / GIF */
 .media-frame {
