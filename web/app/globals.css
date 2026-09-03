@@ -2207,9 +2207,6 @@ html[data-vt-theme] ::view-transition-new(root) {
   outline-offset: 2px;
 }
 @media (max-width: 640px) {
-  .logo3d {
-    animation-duration: 11s;
-  }
   .code-plate::before {
     display: none;
   }
