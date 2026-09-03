@@ -48,7 +48,7 @@ export function Sheet({ onClose, title, kicker, children, foot, wide = false }) 
                 </span>
               </span>
               <button onClick={close} aria-label="Tutup"
-                className="w-9 h-9 shrink-0 grid place-items-center border-2 border-current rounded-[10px] hover:bg-current/10 transition-colors">
+                className="w-9 h-9 shrink-0 grid place-items-center border-2 border-current/45 rounded-[10px] hover:border-current hover:bg-current/10 transition-colors">
                 <i className="fa-solid fa-xmark text-[12px]" />
               </button>
             </div>
@@ -103,7 +103,7 @@ export function LinkButtons({ channels = [], claimGroups = [], popupButtons = []
    WELCOME — bertahap (stagger), logo WA hijau + badge H (brand,
    wajib ada). Transisi masuk pakai clip-path + rise, bukan slide.
    ══════════════════════════════════════════════════════════════ */
-export function IntroModal({ onDone, settings }) {
+export function IntroModal({ onDone, onStart, settings }) {
   const [p, setP] = useState(0)
   useEffect(() => {
     const t = [
@@ -174,7 +174,8 @@ export function IntroModal({ onDone, settings }) {
       </div>
 
       <div style={st(4)} className="mt-4">
-        <button onClick={onDone} className="btn btn-primary w-full">
+        {/* CTA mengantar ke panel upload, bukan sekadar menutup popup. */}
+        <button onClick={onStart || onDone} className="btn btn-primary w-full">
           <span className="btn-cap"><i className="fa-solid fa-arrow-right text-[10px]" /></span>
           {settings?.welcomeCta || 'MULAI UPLOAD'}
         </button>

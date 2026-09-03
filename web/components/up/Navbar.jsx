@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useTheme } from '@/lib/motion'
+import { useTheme, useVelocityMarquee } from '@/lib/motion'
 
 /* ══════════════════════════════════════════════════════════════
    NAVBAR — bilah plat, bukan pil melayang.
@@ -24,9 +24,10 @@ function MoonGlyph() {
   )
 }
 
-export default function Navbar({ settings, onFaq, onAbout, onStats }) {
+export default function Navbar({ settings, onFaq, onAbout, onStats, onUpload }) {
   const [open, setOpen] = useState(false)
   const [closing, setClosing] = useState(false)
+  const tickRef = useVelocityMarquee(26, 90)
   const { isDark, toggle } = useTheme(settings?.themeDefault)
   const logoUrl = settings?.logoUrl || ''
 
@@ -124,7 +125,7 @@ export default function Navbar({ settings, onFaq, onAbout, onStats }) {
         {/* ── Tick rail: marquee tipis kecepatan-reaktif ── */}
         {settings?.showTicker !== false && (
           <div className="nav-tick">
-            <div className="vel-track" style={{ '--dur': '30s' }}>
+            <div className="vel-track" ref={tickRef}>
               {[0, 1].map(dup => (
                 <div key={dup} className="flex items-center" aria-hidden={dup === 1}>
                   {(settings?.tickerText
@@ -154,7 +155,12 @@ export default function Navbar({ settings, onFaq, onAbout, onStats }) {
 
           <div className="flex flex-col">
             {[
-              { t: 'Upload', d: '0ms', i: 'fa-cloud-arrow-up', fn: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+              /* BUG LAMA: ini `window.scrollTo({top:0})` — mengembalikan user ke
+                 PUNCAK HALAMAN (hero), padahal panel upload ada di y≈1467.
+                 Terukur setelah klik: scrollY=0, panel masih 1467px di bawah,
+                 `panelTerlihat: false`. Jadi tombol "Upload" tidak pernah
+                 membawa siapa pun ke uploader. Sekarang menuju #upload. */
+              { t: 'Upload', d: '0ms', i: 'fa-cloud-arrow-up', fn: onUpload },
               { t: 'Statistik', d: '60ms', i: 'fa-chart-column', fn: onStats },
               { t: 'FAQ', d: '120ms', i: 'fa-circle-question', fn: onFaq },
               { t: 'Tentang', d: '180ms', i: 'fa-circle-info', fn: onAbout },

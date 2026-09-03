@@ -27,8 +27,11 @@ function Toggle({ on, onChange, label, desc, icon, color }) {
     <div onClick={onChange} className="flex items-center justify-between gap-4 py-3.5 px-4 rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] hover:border-[var(--edge)] hover:bg-[var(--paper-2)] transition-all duration-150 cursor-pointer group">
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
         {icon && (
-          <div className="w-9 h-9 shrink-0 rounded-[var(--r-xs)] grid place-items-center transition-transform group-hover:scale-105" style={{ background: `${color || '#38bdf8'}15`, border: `1px solid ${color || '#38bdf8'}30` }}>
-            <i className={`fa-solid ${icon} text-xs`} style={{ color: color || '#38bdf8' }} />
+          /* Satu perlakuan untuk semua tile: netral tenggelam + ikon tinta.
+             Warna pastel per-baris (biru/hijau/ungu acak) tidak menandakan
+             apa pun — ia hanya membuat daftar terlihat seperti tempelan. */
+          <div className="w-9 h-9 shrink-0 rounded-[var(--r-xs)] grid place-items-center bg-[var(--sunk)] border border-[color-mix(in_srgb,var(--edge)_18%,transparent)] transition-transform group-hover:scale-105">
+            <i className={`fa-solid ${icon} text-xs text-[var(--ink-2)]`} />
           </div>
         )}
         <div className="min-w-0">
@@ -36,9 +39,18 @@ function Toggle({ on, onChange, label, desc, icon, color }) {
           {desc && <p className="text-[11px] text-[var(--ink-2)] mt-0.5 leading-relaxed">{desc}</p>}
         </div>
       </div>
+      {/* Track MATI wajib beda dari latar barisnya. Sebelumnya keduanya
+          `--paper-2`, jadi tracknya lenyap dan yang tersisa hanya bulatan putih
+          menggantung — terbaca rusak, bukan mati. Sekarang: track tenggelam
+          (`--sunk`) + garis tepi, knob memakai warna tinta saat mati sehingga
+          statusnya terbaca dari bentuk DAN warna, bukan warna saja. */}
       <button type="button" role="switch" aria-checked={!!on} aria-label={label}
-        className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-200 ${on ? 'bg-[var(--accent)]' : 'bg-[var(--paper-2)]'}`}>
-        <span className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white shadow-md transition-all duration-200 ${on ? 'left-[22px]' : 'left-[3px]'}`} />
+        className={`relative w-11 h-6 rounded-full shrink-0 border transition-colors duration-200 ${on
+          ? 'bg-[var(--accent)] border-[var(--accent)]'
+          : 'bg-[var(--sunk)] border-[color-mix(in_srgb,var(--edge)_28%,transparent)]'}`}>
+        <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full transition-all duration-200 ${on
+          ? 'left-[23px] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)]'
+          : 'left-[2px] bg-[var(--ink-3)]'}`} />
       </button>
     </div>
   )
@@ -889,12 +901,12 @@ export default function Settings({ toast }) {
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Toggle on={data.showWelcome !== false} onChange={() => toggle('showWelcome', true)} label="Welcome Intro Popup" desc="Popup sambutan saat web pertama dibuka" icon="fa-door-open" color="#38bdf8" />
+                <Toggle on={data.showWelcome !== false} onChange={() => toggle('showWelcome', true)} label="Popup Sambutan" desc="Popup sambutan saat web pertama dibuka" icon="fa-door-open" color="#38bdf8" />
                 <Toggle on={data.showOwnerBtn !== false} onChange={() => toggle('showOwnerBtn', true)} label="Tombol Chat Developer" desc="Tampilkan tombol WhatsApp owner di popup" icon="fa-brands fa-whatsapp" color="#25D366" />
                 <Toggle on={data.showChannelsBtn !== false} onChange={() => toggle('showChannelsBtn', true)} label="Tombol Saluran WA" desc="Tampilkan link saluran di popup" icon="fa-tower-broadcast" color="#38bdf8" />
                 <Toggle on={data.showClaimBtn !== false} onChange={() => toggle('showClaimBtn', true)} label="Tombol Grup Klaim" desc="Tampilkan link grup klaim di web & modal sukses" icon="fa-comments" color="#34d399" />
-                <Toggle on={data.showPopupBtns !== false} onChange={() => toggle('showPopupBtns', true)} label="Extra Popup Buttons" desc="Tampilkan tombol custom tambahan di popup" icon="fa-link" color="#818cf8" />
-                <Toggle on={data.allowLargeUpload !== false} onChange={() => toggle('allowLargeUpload', true)} label="Mode Upload Besar (>95MB)" desc="Ijinkan pengiriman file besar di web" icon="fa-cloud-arrow-up" color="#38bdf8" />
+                <Toggle on={data.showPopupBtns !== false} onChange={() => toggle('showPopupBtns', true)} label="Tombol Tambahan Popup" desc="Tampilkan tombol custom tambahan di popup" icon="fa-link" color="#818cf8" />
+                <Toggle on={data.allowLargeUpload !== false} onChange={() => toggle('allowLargeUpload', true)} label="Mode Upload Besar (>95MB)" desc="Izinkan pengiriman file besar di web" icon="fa-cloud-arrow-up" color="#38bdf8" />
               </div>
             </div>
 

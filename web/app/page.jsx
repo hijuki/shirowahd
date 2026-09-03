@@ -8,14 +8,19 @@ import LiveStats from '@/components/up/LiveStats'
 import Toasts, { useToasts } from '@/components/up/Toasts'
 import { IntroModal, FaqModal, AboutModal } from '@/components/up/Modals'
 import { loadSettings } from '@/lib/up-api'
-import { useVelocityScroll, useReveal } from '@/lib/motion'
+import { useVelocityScroll, useReveal, useVelocityMarquee } from '@/lib/motion'
+import WaMark from '@/components/up/WaMark'
 
-/* ── Velocity band: kecepatan animasi & skew ikut kecepatan scroll ── */
-function VelocityBand({ items, invert, dur = 22, rev }) {
+/* ── Velocity band ──
+   Posisi digerakkan rAF (useVelocityMarquee), BUKAN animation-duration.
+   Versi lama memodulasi durasi via `calc(24s / (1 + var(--vel)*0.5))`; karena
+   progres animasi CSS = waktu/durasi, tiap perubahan durasi memindahkan posisi
+   seketika. Terukur: lompatan 243px dalam satu frame. */
+function VelocityBand({ items, invert, speed = 42, rev }) {
+  const ref = useVelocityMarquee(speed)
   return (
     <div className={`vel-band ${invert ? 'vel-band-invert' : ''}`}>
-      <div className="vel-track" data-dir={rev ? 'rev' : undefined}
-        style={{ '--dur': `calc(${dur}s / (1 + var(--vel) * 0.5))` }}>
+      <div className="vel-track" data-dir={rev ? 'rev' : undefined} ref={ref}>
         {[0, 1].map(dup => (
           <div key={dup} className="flex items-center" aria-hidden={dup === 1}>
             {items.map((t, i) => (
@@ -56,6 +61,14 @@ export default function UploaderPage() {
   useVelocityScroll()
   useReveal([settings])
 
+  /* Satu jalan menuju satu bagian. `scroll-padding-top: 96px` di <html> yang
+     memberi jarak dari navbar sticky, jadi tidak perlu offset manual. */
+  const goto = useCallback((id) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
   const reload = useCallback(() => {
     loadSettings().then(setSettings).catch(e => toast('Gagal memuat pengaturan: ' + e.message, 'error'))
   }, [toast])
@@ -77,15 +90,30 @@ export default function UploaderPage() {
       <div className="bg-vignette" />
 
       <Toasts toasts={toasts} />
-      {showWelcome && <IntroModal onDone={() => setShowWelcome(false)} settings={settings} />}
+      {showWelcome && (
+        <IntroModal settings={settings}
+          onDone={() => setShowWelcome(false)}
+          /* CTA popup harus MENGANTAR ke panel upload. Sebelumnya hanya
+             menutup popup, jadi user ditinggal di hero dan harus mencari
+             sendiri panel yang ada 1467px di bawah. */
+          onStart={() => { setShowWelcome(false); setTimeout(() => goto('upload'), 380) }} />
+      )}
       {faqOpen && <FaqModal onClose={() => setFaqOpen(false)} settings={settings} />}
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} settings={settings} />}
 
       {settings?.ownerWhatsapp && settings?.showOwnerBtn !== false && (
+        /* Tombol chat: kapsul, bukan kotak 54px dengan cincin ping.
+           Yang lama jelek karena tiga hal sekaligus — ikon font `fa-whatsapp`
+           menggambar handset sebagai GARIS (kurus dan pucat di atas hijau),
+           border 3px + shadow 4px pada kotak 54px membuatnya seberat kartu
+           utama, dan cincin `fab-ping` berdenyut tanpa henti di sudut mata.
+           Sekarang: mark SVG resmi yang solid, kapsul dengan label yang
+           muncul saat disentuh, satu bayangan. */
         <a href={`https://wa.me/${String(settings.ownerWhatsapp).replace(/[^0-9]/g, '')}`}
-          target="_blank" rel="noreferrer" className="fab" title="Chat Developer" aria-label="Chat Developer">
-          <span className="fab-ping" />
-          <i className="fa-brands fa-whatsapp text-[24px] relative" />
+          target="_blank" rel="noreferrer" className="fab group" title="Chat developer"
+          aria-label="Chat developer lewat WhatsApp">
+          <WaMark className="fab-mark" />
+          <span className="fab-label">CHAT</span>
         </a>
       )}
 
@@ -94,7 +122,8 @@ export default function UploaderPage() {
           <Navbar settings={settings}
             onFaq={() => setFaqOpen(true)}
             onAbout={() => setAboutOpen(true)}
-            onStats={() => document.getElementById('statistik')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
+            onUpload={() => goto('upload')}
+            onStats={() => goto('statistik')} />
 
           <main className="wrap px-4 flex-1 max-w-[720px]">
             <Hero settings={settings} />
@@ -102,7 +131,7 @@ export default function UploaderPage() {
 
           {/* Velocity band #1 */}
           <div className="mt-8">
-            <VelocityBand items={ticker} dur={24} />
+            <VelocityBand items={ticker} speed={38} />
           </div>
 
           <main className="wrap px-4 max-w-[720px] pb-16">
@@ -139,14 +168,16 @@ export default function UploaderPage() {
               </div>
             )}
 
-            {/* Panel upload */}
-            <div className="mt-5">
+            {/* Panel upload — `id` WAJIB ada: navbar & drawer memanggil
+                goto('upload') yang memakai getElementById. Tanpa id, handler
+                keluar diam-diam dan tombol terasa mati. */}
+            <div id="upload" className="mt-5 scroll-mt-[96px]">
               <UploadPanel settings={settings} toast={toast} />
             </div>
 
             {/* Statistik */}
             {settings.showStats !== false && (
-              <div className="mt-5">
+              <div id="statistik" className="mt-5 scroll-mt-[96px]">
                 <LiveStats />
               </div>
             )}
@@ -156,7 +187,7 @@ export default function UploaderPage() {
           </main>
 
           {/* Velocity band #2 — arah berlawanan, memberi rasa kedalaman */}
-          <VelocityBand items={['SWHDHLZ', 'BY HILLZ', 'WHATSAPP UPLOADER', 'SWHDHLZ', 'BY HILLZ']} invert dur={30} rev />
+          <VelocityBand items={['SWHDHLZ', 'BY HILLZ', 'WHATSAPP UPLOADER', 'SWHDHLZ', 'BY HILLZ']} invert speed={30} rev />
 
           <footer className="wrap px-4 max-w-[720px] py-8 text-center">
             <p className="kicker !text-[9px] opacity-55">

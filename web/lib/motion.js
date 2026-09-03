@@ -60,6 +60,60 @@ export function useVelocityScroll() {
   }, [])
 }
 
+/* ── 1b. MARQUEE REAKTIF-KECEPATAN (posisi, bukan durasi) ────────
+   JANGAN memodulasi `animation-duration` untuk membuat marquee ikut scroll.
+   Progres animasi CSS = waktu-lokal / durasi, jadi begitu durasinya berubah
+   di tengah jalan, posisinya dihitung ulang dan MELOMPAT. Itu terukur:
+   durasi berayun antara 16s dan 48s, lompatan posisi sampai 243px dalam satu
+   frame padahal laju normalnya ~6px.
+
+   Di sini posisi digeser sendiri tiap frame. Kecepatan = laju dasar +
+   kontribusi kecepatan scroll, dijepit dan dihaluskan. Karena yang berubah
+   cuma laju (bukan fase), tidak ada satu pun lompatan yang mungkin terjadi. */
+export function useVelocityMarquee(speed = 42, boost = 150) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (prefersReduced()) { el.style.transform = 'translate3d(0,0,0)'; return }
+
+    const root = document.documentElement
+    let pos = 0
+    let half = 0
+    let raf = 0
+    let prev = performance.now()
+    let smooth = 0
+
+    const measure = () => { half = el.scrollWidth / 2 }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+
+    const dir = el.dataset.dir === 'rev' ? -1 : 1
+
+    const loop = (now) => {
+      const dt = Math.min(0.05, (now - prev) / 1000) // jepit lonjakan saat tab kembali aktif
+      prev = now
+      const vel = parseFloat(root.style.getPropertyValue('--vel') || '0') || 0
+      // haluskan supaya perubahan laju terasa seperti inersia, bukan sentakan
+      smooth += (vel - smooth) * 0.08
+      const px = (speed + Math.abs(smooth) * boost) * dt
+      pos -= dir * px
+      if (half > 0) {
+        // modulo dua arah: aman untuk arah maju maupun balik
+        if (pos <= -half) pos += half
+        else if (pos >= 0) pos -= half
+      }
+      el.style.transform = `translate3d(${pos.toFixed(2)}px,0,0)`
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+
+    return () => { cancelAnimationFrame(raf); ro.disconnect() }
+  }, [speed, boost])
+  return ref
+}
+
 /* ── 2. REVEAL SAAT MASUK VIEWPORT ───────────────────────────────
    Elemen ber-atribut [data-reveal] dapat data-reveal="in" sekali,
    tidak diputar ulang saat scroll balik.                          */
@@ -180,23 +234,72 @@ export function useTheme(serverDefault) {
       document.documentElement.setAttribute('data-theme', saved)
       return
     }
-    let next = document.documentElement.getAttribute('data-theme') || 'light'
-    if (serverDefault === 'light' || serverDefault === 'dark') next = serverDefault
-    else if (serverDefault === 'system') {
-      next = window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
+    // Belum pernah memilih → TERANG, titik. `system` sengaja tidak lagi
+    // dipetakan ke prefers-color-scheme: itu yang dulu membuat pengunjung
+    // ber-HP dark mode mendarat di versi gelap tanpa pernah memilihnya.
+    // Hanya admin yang eksplisit memilih 'dark' bisa menggeser default.
+    let next = serverDefault === 'dark' ? 'dark' : 'light'
     setTheme(next)
     document.documentElement.setAttribute('data-theme', next)
   }, [serverDefault])
 
-  const toggle = useCallback(() => {
-    setTheme(prev => {
-      const next = prev === 'dark' ? 'light' : 'dark'
+  /* Transisi tema: lingkaran yang menyapu keluar dari tombol yang diklik.
+     Dipakai View Transitions API kalau ada (Chrome/Edge/Safari 18) — di
+     situlah snapshot lama & baru bisa di-clip-path tanpa merender dua kali.
+     Kalau tidak didukung, jatuh ke cross-fade selubung: satu lapis warna
+     tema baru dikembangkan lalu dilepas. Keduanya menghormati
+     prefers-reduced-motion: ganti seketika, tanpa animasi. */
+  const toggle = useCallback((ev) => {
+    const next = (theme === 'dark') ? 'light' : 'dark'
+    const apply = () => {
       document.documentElement.setAttribute('data-theme', next)
       try { localStorage.setItem(LS_THEME, next) } catch {}
-      return next
-    })
-  }, [])
+      setTheme(next)
+    }
+
+    if (prefersReduced()) { apply(); return }
+
+    // Titik pusat = tombol yang diklik; fallback ke sudut kanan-atas navbar.
+    const src = ev?.currentTarget?.getBoundingClientRect?.()
+    const cx = src ? src.left + src.width / 2 : window.innerWidth - 40
+    const cy = src ? src.top + src.height / 2 : 40
+    const r = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy))
+
+    const root = document.documentElement
+
+    if (typeof document.startViewTransition === 'function') {
+      root.dataset.vtTheme = '1'
+      const vt = document.startViewTransition(() => { apply() })
+      vt.ready.then(() => {
+        root.animate(
+          { clipPath: [`circle(0px at ${cx}px ${cy}px)`, `circle(${r}px at ${cx}px ${cy}px)`] },
+          { duration: 620, easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            pseudoElement: '::view-transition-new(root)' }
+        )
+      }).catch(() => {})
+      vt.finished.then(() => { delete root.dataset.vtTheme }).catch(() => { delete root.dataset.vtTheme })
+      return
+    }
+
+    // Fallback: selubung warna tema tujuan mengembang dari tombol, tema
+    // ditukar di puncak animasi, lalu selubung memudar.
+    const veil = document.createElement('div')
+    veil.className = 'theme-veil'
+    veil.style.setProperty('--vx', cx + 'px')
+    veil.style.setProperty('--vy', cy + 'px')
+    veil.style.setProperty('--vr', r + 'px')
+    veil.dataset.to = next
+    document.body.appendChild(veil)
+    const grow = veil.animate(
+      { clipPath: [`circle(0px at ${cx}px ${cy}px)`, `circle(${r}px at ${cx}px ${cy}px)`] },
+      { duration: 460, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' }
+    )
+    grow.finished.then(() => {
+      apply()
+      return veil.animate({ opacity: [1, 0] },
+        { duration: 300, easing: 'ease-out', fill: 'forwards' }).finished
+    }).then(() => veil.remove()).catch(() => veil.remove())
+  }, [theme])
 
   return { theme, toggle, isDark: theme === 'dark' }
 }

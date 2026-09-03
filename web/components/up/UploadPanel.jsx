@@ -272,7 +272,7 @@ export default function UploadPanel({ settings, toast }) {
           {[['video', 'fa-film', 'VIDEO'], ['image', 'fa-images', 'FOTO']].map(([t, icon, label], i) => (
             <button key={t} onClick={() => { if (!uploading) { setTab(t); clearAll() } }}
               disabled={uploading}
-              className={`relative flex items-center justify-center gap-2.5 py-3.5 font-[family-name:var(--font-display)] text-[13px] uppercase transition-[background-color,color] duration-200 disabled:opacity-50 ${i === 0 ? 'border-r-2 border-[var(--edge)]' : ''} ${tab === t ? 'bg-[var(--ink)] text-[var(--paper)]' : 'bg-transparent text-[var(--ink-2)] hover:bg-[var(--paper-2)]'}`}>
+              className={`relative flex items-center justify-center gap-2.5 py-3.5 font-[family-name:var(--font-display)] text-[13px] uppercase transition-[background-color,color] duration-200 disabled:opacity-50 ${i === 0 ? 'border-r-2 border-[var(--edge)]' : ''} ${tab === t ? 'bg-[var(--fill-strong)] text-[var(--on-fill-strong)]' : 'bg-transparent text-[var(--ink-2)] hover:bg-[var(--paper-2)]'}`}>
               <i className={`fa-solid ${icon} text-[12px]`} />{label}
               {tab === t && <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-[var(--accent)]" />}
             </button>
@@ -344,7 +344,7 @@ export default function UploadPanel({ settings, toast }) {
                     return (
                       <div key={key} className="relative aspect-square border-2 border-[var(--edge)] overflow-hidden bg-[var(--paper-2)]">
                         {thumbs[key] && <img src={thumbs[key]} alt="" className="w-full h-full object-cover" />}
-                        <span className="absolute bottom-0 left-0 right-0 px-1.5 py-1 bg-[var(--ink)] text-[var(--paper)] font-[family-name:var(--font-mono)] text-[8px] truncate">
+                        <span className="absolute bottom-0 left-0 right-0 px-1.5 py-1 bg-[var(--fill-strong)] text-[var(--on-fill-strong)] font-[family-name:var(--font-mono)] text-[8px] truncate">
                           {fmtSize(f.size)}
                         </span>
                         {!uploading && (

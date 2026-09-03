@@ -34,12 +34,16 @@
 
 /* ─────────── TOKEN: MODE TERANG (default) ─────────── */
 :root {
+  /* PUTIH BERSIH — bukan gading. Sebelumnya paper-2 `#f4f2ec` dan sunk
+     `#e9e6dd` punya bias kuning-coklat, jadi setiap plat terbaca kusam di
+     sebelah `--paper` yang putih murni. Sekarang semua netral dingin-halus:
+     satu keluarga warna, jadi putihnya terbaca bersih, bukan pudar. */
   --paper: #ffffff;
-  --paper-2: #f4f2ec;
-  --sunk: #e9e6dd;
+  --paper-2: #f5f6f8;
+  --sunk: #eceef2;
   --ink: #0b0b0c;
   --ink-2: #5d5d64;
-  --ink-3: #9a9aa2;
+  --ink-3: #b6bac1;
   --edge: #0b0b0c;
   --accent: #25d366;
   --acid: #16a34a;
@@ -64,28 +68,48 @@
   --r-pill: 999px;
 
   /* shadow offset padat — tinta */
-  --sh-1: 3px 3px 0 var(--edge);
-  --sh-2: 5px 5px 0 var(--edge);
-  --sh-3: 8px 8px 0 var(--edge);
+  /* Offset tinta dikecilkan: 5px→4px, 8px→6px. Di layar 390px, shadow 8px
+     pada kartu selebar 358px terbaca sebagai kartu kedua yang bertumpuk,
+     bukan sebagai bayangan. Karakter brutalis tetap ada di 4px. */
+  --sh-1: 2px 2px 0 var(--edge);
+  --sh-2: 4px 4px 0 var(--edge);
+  --sh-3: 6px 6px 0 var(--edge);
   --sh-press: 1px 1px 0 var(--edge);
   /* TERANG: dulu tanpa bevel sama sekali (`0 0 0 0 transparent`) — itu sebabnya
      permukaan terasa datar seperti kertas potong, bukan benda. Sekarang bevel
      = sorotan tipis di tepi atas + gelap halus di tepi bawah, jadi setiap plat
      punya ketebalan. Tetap harus shadow VALID (bukan `none`), kalau tidak
      seluruh `box-shadow: var(--sh-2), var(--bevel)` dibuang browser. */
-  --bevel: inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -2px 3px rgba(11, 11, 12, 0.055);
+  /* BEVEL HALUS. Sebelumnya `inset 0 1.5px 0 rgba(255,255,255,0.95)` — garis
+     putih hampir opak di tepi atas SETIAP plat, chip, dan tombol (21 tempat).
+     Di atas kertas putih garis itu tidak membaca sebagai "ketebalan", tapi
+     sebagai emboss plastik: inilah yang membuat border terasa 3D-dipaksa.
+     Sekarang tinggal sorotan tipis + gelap sangat halus di bawah. */
+  --bevel: inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 2px rgba(11, 11, 12, 0.03);
   /* Bayangan ambient lembut. Dipakai BERLAPIS di bawah shadow tinta yang keras:
      tinta memberi karakter brutalis, ambient memberi jarak dari kertas. */
-  --sh-amb: 0 10px 22px -12px rgba(11, 11, 12, 0.22);
-  --sh-amb-lg: 0 20px 40px -20px rgba(11, 11, 12, 0.28);
+  --sh-amb: 0 6px 14px -10px rgba(11, 11, 12, 0.12);
+  --sh-amb-lg: 0 12px 26px -18px rgba(11, 11, 12, 0.14);
   --plate-fill: var(--paper);
   --overlay: rgba(11, 11, 12, 0.58);
-  --grain-op: 0.035;
+  /* GRAIN DIMATIKAN DI MODE TERANG. Noise fraktal di atas #ffffff tidak
+     terbaca sebagai "tekstur kertas", ia terbaca sebagai putih kotor — itu
+     sebagian dari kesan "putihnya bukan putih bersih". Di mode gelap grain
+     tetap dipakai tipis karena di sana ia menyembunyikan banding gradien. */
+  --grain-op: 0;
   --ease: cubic-bezier(0.2, 0.9, 0.1, 1);
   --ease-snap: cubic-bezier(0.34, 1.4, 0.64, 1);
   --ease-out: cubic-bezier(0.2, 0.9, 0.1, 1);
   --vel: 0;
+
+  /* Permukaan "terpilih/aktif". WAJIB dipakai sebagai ganti `--ink` kalau
+     warna itu jadi LATAR blok besar (tab aktif, label di atas thumbnail).
+     Sebab: `--ink` di mode gelap adalah #e7e9ee, jadi blok yang di mode
+     terang hitam akan berubah jadi blok nyaris putih seluas ribuan piksel —
+     terukur luminance 0.814 di tengah layar gelap. */
+  --fill-strong: var(--ink);
+  --on-fill-strong: var(--paper);
 
   /* alias lama (dipakai panel admin & beberapa komponen) */
   --t-ink: var(--ink);
@@ -97,32 +121,54 @@
 
 /* ─────────── TOKEN: MODE GELAP (mekanik beda) ─────────── */
 [data-theme="dark"] {
-  --paper: #0a0a0c;
-  --paper-2: #141418;
-  --sunk: #050506;
-  --ink: #f6f4ee;
-  --ink-2: #9d9da8;
-  --ink-3: #6a6a75;
-  --edge: #f6f4ee;
-  --accent: #2bff7d;
-  --acid: #2bff7d;
-  --hot: #ff6a3d;
-  --volt: #7c8bff;
+  /* ── KALIBRASI ULANG (keluhan: "pengambilan warnanya sangat jelek malah
+     bikin sakit mata"). Yang salah bukan selera, tapi angka:
 
-  /* GELAP: shadow bukan tinta lagi — jadi jejak aksen + bevel atas */
-  --sh-1: 3px 3px 0 rgba(43, 255, 125, 0.22);
-  --sh-2: 5px 5px 0 rgba(43, 255, 125, 0.2);
-  --sh-3: 8px 8px 0 rgba(43, 255, 125, 0.16);
-  --sh-press: 1px 1px 0 rgba(43, 255, 125, 0.3);
-  --bevel: inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.35);
-  /* Di mode gelap bayangan ambient tidak boleh hitam (tidak terlihat di latar
-     gelap) — pakai halo aksen yang sangat redup supaya benda tetap terangkat. */
-  --sh-amb: 0 12px 26px -14px rgba(43, 255, 125, 0.14);
-  --sh-amb-lg: 0 22px 46px -22px rgba(43, 255, 125, 0.16);
-  --plate-fill: #101014;
-  --overlay: rgba(3, 3, 4, 0.82);
-  --grain-op: 0.07;
+     SEBELUM: --edge #f6f4ee di atas --paper #0a0a0c = kontras 18.0:1.
+     Itu warna BORDER 2-3px yang menempel di setiap plat, chip, tombol, dan
+     divider. Garis struktur dipakai dengan kontras setara headline → seluruh
+     layar jadi jaring garis menyala. Ditambah --accent #2bff7d: saturasi
+     100%, luminance 0.735 — hijau neon paling menyilaukan yang mungkin.
+
+     SESUDAH: hierarki dipisah. Teks tetap tinggi (15:1), garis struktur
+     turun ke 2.3:1 (kelihatan, tidak menyerang), aksen diturunkan
+     saturasinya 100%→69% dan luminance 0.735→0.538. Latar diangkat dari
+     hitam-pekat #0a0a0c ke #101216: hitam pekat memaksa pupil melebar lalu
+     tiap garis putih menusuk. ── */
+  --paper: #101216;
+  --paper-2: #171a20;
+  --sunk: #0b0d10;
+  --ink: #e7e9ee;
+  --ink-2: #9aa0ad;
+  --ink-3: #666d7c;
+  /* border TIDAK lagi seputih teks — ini perbaikan utamanya */
+  --edge: #4a5060;
+  --accent: #3ddc84;
+  --acid: #3ddc84;
+  --hot: #ff7a52;
+  --volt: #8b98ff;
+
+  /* GELAP: shadow bukan tinta lagi — jadi kedalaman gelap + jejak aksen tipis.
+     Sebelumnya shadow = hijau neon 5px di segala arah: tiap kartu punya
+     "aura" hijau, dan 20 kartu di satu halaman jadi kabut hijau. */
+  --sh-1: 3px 3px 0 rgba(0, 0, 0, 0.55);
+  --sh-2: 5px 5px 0 rgba(0, 0, 0, 0.5);
+  --sh-3: 8px 8px 0 rgba(0, 0, 0, 0.45);
+  --sh-press: 1px 1px 0 rgba(0, 0, 0, 0.6);
+  --bevel: inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+  /* Ambient di mode gelap: hitam lebih dalam + halo aksen SANGAT tipis (0.05,
+     dulu 0.14-0.16). Halo hijau yang terlalu kuat membuat setiap kartu
+     bercahaya sendiri; efeknya layar terasa berdenyut. */
+  --sh-amb: 0 12px 26px -14px rgba(0, 0, 0, 0.7);
+  --sh-amb-lg: 0 22px 46px -22px rgba(0, 0, 0, 0.75);
+  /* Di gelap, "terpilih" = permukaan yang DIANGKAT + aksen, bukan warna teks.
+     Tidak ada blok terang besar sama sekali. */
+  --fill-strong: #262b34;
+  --on-fill-strong: #f2f4f8;
+  --plate-fill: #171a20;
+  --overlay: rgba(6, 8, 11, 0.86);
+  --grain-op: 0.045;
 }
 
 /* ═══════════════ BASE ═══════════════ */
@@ -197,16 +243,21 @@ h3 {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: radial-gradient(var(--ink-3) 1.1px, transparent 1.2px);
-  background-size: 18px 18px;
-  opacity: 0.28;
+  background-image: radial-gradient(var(--ink-3) 1px, transparent 1.1px);
+  background-size: 20px 20px;
+  /* 0.28 → 0.16: titiknya harus terbaca sebagai kertas bergaris, bukan
+     sebagai lapisan abu di atas putih. */
+  opacity: 0.16;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 78%);
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 78%);
   transition: opacity 420ms var(--ease);
 }
 [data-theme="dark"] .bg-field {
-  background-image: linear-gradient(rgba(246, 244, 238, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(246, 244, 238, 0.07) 1px, transparent 1px);
+  /* Garis grid diturunkan 0.07 → 0.045 dan warnanya digeser ke abu-biru
+     dingin, bukan putih hangat: garis putih di atas latar gelap adalah salah
+     satu sumber "sakit mata" — ia berkilau di penglihatan tepi. */
+  background-image: linear-gradient(rgba(154, 160, 173, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(154, 160, 173, 0.045) 1px, transparent 1px);
   background-size: 56px 56px;
   opacity: 1;
   mask-image: radial-gradient(ellipse 95% 70% at 50% 8%, #000 25%, transparent 80%);
@@ -218,7 +269,7 @@ h3 {
   z-index: 0;
   pointer-events: none;
   opacity: 0;
-  background: radial-gradient(ellipse 70% 55% at 50% 40%, transparent 40%, rgba(0, 0, 0, 0.55) 100%);
+  background: radial-gradient(ellipse 78% 62% at 50% 40%, transparent 45%, rgba(0, 0, 0, 0.3) 100%);
   transition: opacity 420ms var(--ease);
 }
 [data-theme="dark"] .bg-vignette {
@@ -323,8 +374,10 @@ h3 {
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  background: var(--ink);
-  color: var(--paper);
+  /* --fill-strong, bukan --ink: di mode gelap --ink nyaris putih dan stiker
+     jadi kepingan menyala. */
+  background: var(--fill-strong);
+  color: var(--on-fill-strong);
   border: var(--bw) solid var(--edge);
   font-family: var(--font-mono);
   font-size: 9px;
@@ -351,14 +404,17 @@ h3 {
   color: var(--ink-2);
 }
 
+/* Chip = keterangan pendukung, jadi ia TIDAK boleh sekuat kalimat utama.
+   Border 2px hitam penuh membuat tiga chip kecil berbobot sama dengan judul;
+   diturunkan ke 1px abu dengan latar tenggelam. */
 .chip {
   border-radius: var(--r-pill);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 9px;
-  background: var(--paper-2);
-  border: var(--bw) solid var(--edge);
+  padding: 5px 10px;
+  background: var(--sunk);
+  border: 1px solid color-mix(in srgb, var(--edge) 22%, transparent);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
@@ -415,8 +471,8 @@ h3 {
   opacity: 0.55;
 }
 .nav-slab-on {
-  color: var(--paper);
-  background: var(--ink);
+  color: var(--on-fill-strong);
+  background: var(--fill-strong);
   border-color: var(--edge);
   box-shadow: var(--sh-press);
 }
@@ -424,8 +480,8 @@ h3 {
   opacity: 0.75;
 }
 .nav-slab-on:hover {
-  color: var(--paper);
-  background: var(--ink);
+  color: var(--on-fill-strong);
+  background: var(--fill-strong);
   transform: none;
 }
 .nav-slab-tip {
@@ -862,8 +918,15 @@ h3 {
   background: var(--ink);
   color: var(--paper);
   overflow: hidden;
-  transform: skewY(calc(var(--vel) * -0.32deg));
-  transition: transform 320ms var(--ease);
+  /* Tepi memudar. Tanpa ini pita hanya `overflow: hidden` dan huruf terpangkas
+     tepat di tengah kata ("HINGGA 1", "TANPA KOMPRESI") — terbaca sebagai
+     layout rusak, bukan sebagai teks yang sedang bergulir keluar. */
+  mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
+  /* Skew dikurangi 0.32deg→0.14deg dan transisinya diperlambat: pita tidak
+     lagi ikut gemetar setiap kali jempol menggeser layar. */
+  transform: skewY(calc(var(--vel) * -0.14deg));
+  transition: transform 620ms var(--ease);
 }
 [data-theme="dark"] .vel-band {
   background: var(--accent);
@@ -877,17 +940,21 @@ h3 {
   background: var(--paper-2);
   color: var(--ink);
 }
+/* Posisi track digerakkan JS per-frame (useVelocityMarquee), bukan
+   `animation-duration`. Lihat komentar di lib/motion.js: memodulasi durasi
+   animasi CSS yang sedang berjalan membuat progresnya dihitung ulang → teleport.
+   Tanpa animasi CSS di sini, fase tidak pernah bisa ter-reset. */
 .vel-track {
   display: flex;
   align-items: center;
   gap: 0;
   width: max-content;
-  animation: velRun var(--dur, 26s) linear infinite;
-  animation-play-state: running;
   will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
-.vel-track[data-dir="rev"] {
-  animation-direction: reverse;
+/* Fallback kalau JS mati: tetap bergerak dengan laju tetap. */
+.no-js .vel-track {
+  animation: velRun 26s linear infinite;
 }
 @keyframes velRun {
   from {
@@ -923,9 +990,8 @@ h3 {
   perspective-origin: 50% 45%;
 }
 .logo3d {
-  /* margin kanan/bawah = ruang untuk ekstrusi box-shadow (29px) agar tidak
-     menabrak tepi viewport dan tidak memicu overflow horizontal. */
-  margin: 0 30px 22px 0;
+  /* Ruang untuk ekstrusi (kini 13px, dulu 29px). */
+  margin: 0 15px 12px 0;
   /* EKSTRUSI SATU BADAN (bukan tumpukan translateZ).
      Alasan pindah teknik: 6-11 lapisan datar sejajar TIDAK BISA menyambung
      di sudut membulat — selalu muncul notch/tangga di sudut, dan kedalaman
@@ -933,11 +999,11 @@ h3 {
      border-radius muka secara matematis, jadi dinding kanan DAN bawah sama
      tebal, sudutnya menyambung sempurna, nol seam. */
   position: relative;
-  width: 118px;
-  height: 118px;
+  width: 104px;
+  height: 104px;
   transform: translateY(var(--ty, 0px));
   transition: transform 420ms var(--ease);
-  animation: logoIdle 9s ease-in-out infinite;
+  animation: logoIdle 11s ease-in-out infinite;
 }
 @keyframes logoIdle {
   0%,
@@ -945,7 +1011,7 @@ h3 {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-6px);
+    transform: translateY(-4px);
   }
 }
 .logo3d-face {
@@ -959,42 +1025,32 @@ h3 {
   /* Rantai dimulai dari #0b644a — LEBIH GELAP dari titik tergelap gradien
      muka (#0e7a5f). Kalau dinding lebih terang dari ujung muka, lipatan
      muka→dinding terbaca terbalik dan blok kehilangan volume. */
+  /* EKSTRUSI DIPROPORSIKAN. Sebelumnya 29px pada muka 118px = 24.6% dari
+     lebar objek — itu bukan "benda tebal", itu menara isometrik, dan ia makan
+     41% lebar baris hero sampai judul terhimpit. Sekarang 11px pada muka
+     104px = 10.6%: ketebalan yang wajar untuk ikon, tetap punya volume, tapi
+     tidak lagi menjadi pusat perhatian yang memaksa. */
   box-shadow:
     1px 1px 0 rgb(11 98 72),
-    2px 2px 0 rgb(10 96 71),
-    3px 3px 0 rgb(10 94 69),
-    4px 4px 0 rgb(10 91 68),
-    5px 5px 0 rgb(9 89 66),
-    6px 6px 0 rgb(9 87 65),
-    7px 7px 0 rgb(9 85 63),
-    8px 8px 0 rgb(9 83 61),
-    9px 9px 0 rgb(8 81 60),
-    10px 10px 0 rgb(8 78 58),
-    11px 11px 0 rgb(8 76 57),
-    12px 12px 0 rgb(7 74 55),
-    13px 13px 0 rgb(7 72 54),
-    14px 14px 0 rgb(7 70 52),
-    15px 15px 0 rgb(6 68 50),
-    16px 16px 0 rgb(6 66 49),
-    17px 17px 0 rgb(6 63 47),
-    18px 18px 0 rgb(5 61 46),
-    19px 19px 0 rgb(5 59 44),
-    20px 20px 0 rgb(5 57 42),
-    21px 21px 0 rgb(5 55 41),
-    22px 22px 0 rgb(4 53 39),
-    23px 23px 0 rgb(4 50 38),
-    24px 24px 0 rgb(4 48 36),
-    25px 25px 0 rgb(3 46 35),
-    26px 26px 0 rgb(3 44 33),
-    29px 29px 0 var(--edge),
-    0 34px 30px -14px rgba(0,0,0,0.35);
+    2px 2px 0 rgb(10 93 68),
+    3px 3px 0 rgb(10 88 65),
+    4px 4px 0 rgb(9 83 61),
+    5px 5px 0 rgb(8 78 58),
+    6px 6px 0 rgb(8 73 54),
+    7px 7px 0 rgb(7 68 50),
+    8px 8px 0 rgb(6 63 47),
+    9px 9px 0 rgb(5 58 43),
+    10px 10px 0 rgb(5 53 40),
+    11px 11px 0 rgb(4 48 36),
+    13px 13px 0 var(--edge),
+    0 16px 16px -10px rgba(0, 0, 0, 0.22);
 }
 .logo3d-face::after {
   border-radius: inherit;
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent 55%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 52%);
   pointer-events: none;
 }
 .logo3d-glyph {
@@ -1013,10 +1069,10 @@ h3 {
      searah cahaya kiri-atas. Sebelumnya elips ini masih menggantung ke kiri
      sehingga arah bayangan bertentangan dgn arah ekstrusi. */
   position: absolute;
-  left: 26%;
-  right: -26%;
-  bottom: -14px;
-  height: 14px;
+  left: 20%;
+  right: -14%;
+  bottom: -10px;
+  height: 11px;
   border-radius: 999px;
   background: var(--ink);
   opacity: 0.15;
@@ -1068,14 +1124,35 @@ h3 {
 [data-theme="dark"] .media-frame::after {
   opacity: 1;
 }
+/* Tanda sudut = KURUNG, bukan kotak isi. Versi lama: 12px persegi hijau
+   dengan border hitam di empat sudut kartu media — pada foto apa pun ia
+   terbaca sebagai artefak render / piksel rusak. Kurung tipis melakukan
+   pekerjaan yang sama (menandai bingkai) tanpa menaruh empat benda asing di
+   atas gambar. */
 .corner-mark {
-  border-radius: 3px;
   position: absolute;
-  width: 12px;
-  height: 12px;
-  border: var(--bw) solid var(--edge);
-  background: var(--accent);
+  width: 13px;
+  height: 13px;
+  border: 0 solid var(--edge);
+  background: none;
   z-index: 2;
+  pointer-events: none;
+}
+.corner-mark[data-c="tl"] {
+  border-top-width: var(--bw);
+  border-left-width: var(--bw);
+}
+.corner-mark[data-c="tr"] {
+  border-top-width: var(--bw);
+  border-right-width: var(--bw);
+}
+.corner-mark[data-c="bl"] {
+  border-bottom-width: var(--bw);
+  border-left-width: var(--bw);
+}
+.corner-mark[data-c="br"] {
+  border-bottom-width: var(--bw);
+  border-right-width: var(--bw);
 }
 
 /* ═══════════════ LOADER: REACTOR ORB ═══════════════
@@ -1372,16 +1449,23 @@ h3 {
 .bars {
   display: flex;
   align-items: stretch;
-  gap: 5px;
+  gap: 4px;
   height: 78px;
+  /* Garis dasar tunggal menggantikan 24 border individual: satu garis yang
+     memberi grafik pijakan, bukan 24 kotak yang saling bersaing. */
+  border-bottom: var(--bw) solid var(--edge);
+  padding-bottom: 0;
 }
 .bar {
   border-radius: 4px 4px 0 0;
   position: relative;
   flex: 1;
   min-width: 0;
-  border: var(--bw) solid var(--edge);
-  background: var(--paper-2);
+  /* BORDER PER BATANG DIHAPUS. Pada lebar batang 8,6px, border 2px = 23% dari
+     batang itu sendiri; 24 batang berjajar jadi terbaca sebagai jaring garis
+     (moiré), bukan sebagai data. Sekarang jejak batang = blok abu tipis, isian
+     = tinta. Bentuknya yang membawa informasi, bukan garisnya. */
+  background: var(--sunk);
   overflow: hidden;
   animation: barPop 480ms var(--ease) both;
 }
@@ -2022,51 +2106,67 @@ h3 {
   height: 12px;
 }
 
-/* FAB developer */
+/* ── Tombol chat developer ──
+   Versi lama: kotak 54px, border 3px, shadow 4px, plus cincin `fab-ping`
+   berdenyut selamanya, dan ikon font `fa-whatsapp` yang menggambar handset
+   sebagai garis kurus. Tiga masalah: sebobot kartu utama, berdenyut di sudut
+   mata terus-menerus, dan logonya sendiri terbaca pucat.
+   Sekarang: kapsul dengan mark SVG solid + label yang melebar saat disentuh.
+   Denyutnya dihapus — tidak ada yang perlu diumumkan tiap 2,4 detik. */
 .fab {
-  border-radius: var(--r);
+  border-radius: var(--r-pill);
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 14px;
+  bottom: 14px;
   z-index: 70;
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  background: #25d366;
-  color: #06180d;
-  border: var(--bw-thick) solid var(--edge);
-  box-shadow: var(--sh-2);
-  transition: transform 180ms var(--ease-snap), box-shadow 180ms var(--ease);
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  height: 48px;
+  padding: 0 14px;
+  background: #1fb457;
+  color: #ffffff;
+  border: var(--bw) solid var(--edge);
+  box-shadow: var(--sh-1), var(--sh-amb);
+  transition: gap 260ms var(--ease), padding 260ms var(--ease),
+    transform 180ms var(--ease-snap), box-shadow 180ms var(--ease);
 }
-.fab:hover {
-  transform: translate(-3px, -3px) rotate(-4deg);
-  box-shadow: var(--sh-3);
+.fab-mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  fill: currentColor;
+}
+.fab-label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition: max-width 300ms var(--ease), opacity 220ms var(--ease);
+}
+.fab:hover,
+.fab:focus-visible {
+  gap: 8px;
+  transform: translateY(-2px);
+  box-shadow: var(--sh-2), var(--sh-amb-lg);
+}
+.fab:hover .fab-label,
+.fab:focus-visible .fab-label {
+  max-width: 56px;
+  opacity: 1;
 }
 .fab:active {
-  transform: translate(2px, 2px);
+  transform: translateY(1px);
   box-shadow: var(--sh-press);
 }
-.fab-ping {
-  border-radius: var(--r);
-  position: absolute;
-  inset: -6px;
-  border: var(--bw) solid #25d366;
-  animation: ping 2.4s var(--ease) infinite;
-  pointer-events: none;
+[data-theme="dark"] .fab {
+  background: #1a9c4b;
+  border-color: #2f7a4c;
 }
-@keyframes ping {
-  0% {
-    opacity: 0.8;
-    transform: scale(0.85);
-  }
-  70%,
-  100% {
-    opacity: 0;
-    transform: scale(1.3);
-  }
-}
-
 /* divider tegas */
 .rule {
   height: var(--bw);
@@ -2104,6 +2204,34 @@ h3 {
   box-shadow: var(--sh-2), var(--bevel);
 }
 
+/* ═══════════════ TRANSISI GANTI TEMA ═══════════════
+   Dua jalur, satu hasil: lingkaran menyapu dari tombol yang diklik.
+   1) View Transitions API — snapshot lama tetap diam, snapshot BARU di-clip
+      melingkar. Snapshot lama tidak boleh ikut memudar, kalau tidak yang
+      terlihat cuma crossfade biasa.
+   2) Fallback selubung warna untuk browser tanpa API itu. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-vt-theme] ::view-transition-old(root) {
+  z-index: 0;
+}
+html[data-vt-theme] ::view-transition-new(root) {
+  z-index: 1;
+}
+.theme-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: #fbfbfa;
+}
+.theme-veil[data-to="dark"] {
+  background: #0e1013;
+}
+
 /* ═══════════════ AKSESIBILITAS & PERFORMA ═══════════════ */
 :where(a, button, [role="button"], input, select, textarea):focus-visible {
   outline: 3px solid var(--volt);
@@ -2138,5 +2266,10 @@ h3 {
   }
   .vel-band {
     transform: none;
+  }
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
   }
 }

@@ -7,9 +7,14 @@ export const metadata = {
 
 /* Mode dibaca SEBELUM paint pertama supaya tidak ada kedipan putih→gelap.
    Kalau belum pernah memilih, ikut preferensi sistem. */
+/* PENTING: pengunjung BARU selalu dapat mode TERANG.
+   Sebelumnya skrip ini ikut `prefers-color-scheme`, jadi siapa pun yang HP-nya
+   diset dark mode langsung mendarat di situs versi gelap — padahal terang
+   adalah tampilan utama yang dirancang. Hanya pilihan EKSPLISIT user
+   (localStorage) yang boleh menang. */
 const THEME_BOOT = `(function(){try{
-var k='sw_theme',v=localStorage.getItem(k);
-if(!v){v=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+var v=localStorage.getItem('sw_theme');
+if(v!=='dark'&&v!=='light'){v='light';}
 document.documentElement.setAttribute('data-theme',v);
 }catch(e){document.documentElement.setAttribute('data-theme','light');}})();`
 

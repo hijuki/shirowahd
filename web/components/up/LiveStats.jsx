@@ -90,8 +90,6 @@ export default function LiveStats() {
   }
 
   const peak = Math.max(1, ...d.buckets)
-  const quotaBytes = (d.storageQuotaMB || 0) * 1024 * 1024
-  const usedPct = quotaBytes > 0 ? Math.min(100, (d.totalStorage / quotaBytes) * 100) : 0
   const now = new Date()
   const hourLabel = h => String((now.getHours() - (23 - h) + 24) % 24).padStart(2, '0')
 
@@ -160,16 +158,12 @@ export default function LiveStats() {
         </div>
       </div>
 
-      {/* ── Gauge kuota (hanya kalau admin memasangnya) ── */}
-      {quotaBytes > 0 && (
-        <div className="px-4 pt-4">
-          <div className="flex items-baseline justify-between mb-1.5">
-            <span className="kicker">PENYIMPANAN</span>
-            <span className="data text-[11px]">{fmtSize(d.totalStorage)} / {d.storageQuotaMB} MB</span>
-          </div>
-          <div className="gauge"><span style={{ width: usedPct + '%' }} /></div>
-        </div>
-      )}
+      {/* Gauge PENYIMPANAN dihapus dari halaman publik.
+          Alasan: itu metrik kapasitas server (dulu tampil "0 B / 100000 MB"),
+          bukan informasi yang berguna bagi pengunjung, dan membocorkan ukuran
+          infrastruktur. Angkanya juga menyesatkan — file dihapus otomatis, jadi
+          meter selalu ~0 sementara feed menunjukkan puluhan MB. Tetap ada di
+          panel admin. */}
 
       {/* ── Feed aktivitas ── */}
       {d.events?.length > 0 && (

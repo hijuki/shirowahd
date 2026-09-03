@@ -999,7 +999,8 @@ async function handleRequest(req, res) {
         totalToday: Math.max(stats.uploadsToday || 0, totalToday),
         successToday: Math.max(stats.uploadsToday || 0, successToday),
         failedToday: failedToday,
-        totalStorage: getTotalStorage(),
+        // totalStorage dihapus dari respons publik (lihat catatan di
+        // /api/activity/public).
         directReady: !!settings.directUploadEnabled,
         serverTime: Date.now()
       });
@@ -1049,8 +1050,9 @@ async function handleRequest(req, res) {
         events,
         totalActive: stats.totalActive || 0,
         uploadsToday: stats.uploadsToday || 0,
-        totalStorage: getTotalStorage(),
-        storageQuotaMB: settings.storageQuotaMB || 0,
+        // totalStorage & storageQuotaMB DIHAPUS dari respons publik: itu
+        // kapasitas infrastruktur, bukan info pengunjung. Tetap tersedia di
+        // route admin.
         peak: Math.max(1, ...buckets),
         serverTime: now
       });
