@@ -178,7 +178,22 @@ function saveSettings(data) {
     directUploadHost: nonEmpty(data.directUploadHost) ?? cur.directUploadHost ?? 'up.swhdhlz.my.id',
     directUploadPort: data.directUploadPort ?? cur.directUploadPort ?? 8443,
     autoCleanupInterval: data.autoCleanupInterval ?? cur.autoCleanupInterval ?? 30,
-    storageQuotaMB: data.storageQuotaMB ?? cur.storageQuotaMB ?? 0
+    storageQuotaMB: data.storageQuotaMB ?? cur.storageQuotaMB ?? 0,
+    // ── Tampilan situs (dulu hanya ada di frontend, tidak bisa diatur admin) ──
+    // themeDefault: mode awal untuk pengunjung BARU. Pilihan pengunjung yang
+    // sudah pernah menekan tombol mode tetap menang (disimpan di localStorage).
+    themeDefault: ['light', 'dark', 'system'].includes(data.themeDefault)
+      ? data.themeDefault
+      : (cur.themeDefault ?? 'light'),
+    showStats: data.showStats ?? cur.showStats ?? true,
+    showSteps: data.showSteps ?? cur.showSteps ?? true,
+    showTicker: data.showTicker ?? cur.showTicker ?? true,
+    tickerText: data.tickerText ?? cur.tickerText ?? '',
+    showHistory: data.showHistory ?? cur.showHistory ?? true,
+    heroGifUrl: data.heroGifUrl ?? cur.heroGifUrl ?? '',
+    welcomeTitle: data.welcomeTitle ?? cur.welcomeTitle ?? '',
+    welcomeText: data.welcomeText ?? cur.welcomeText ?? '',
+    welcomeCta: data.welcomeCta ?? cur.welcomeCta ?? ''
   };
   writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2), 'utf8');
   return s;
@@ -994,6 +1009,57 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // Log aktivitas publik untuk visual statistik di halaman uploader.
+  // Sengaja TIDAK membocorkan IP, nama file utuh, atau kode klaim: hanya
+  // bentuk aktivitas (jenis, ukuran, waktu) supaya grafik & feed bisa hidup
+  // tanpa mengorbankan privasi pengupload.
+  if (req.method === 'GET' && url === '/api/activity/public') {
+    try {
+      const log = loadUploadLog();
+      const now = Date.now();
+      const HOUR = 3600000;
+      // 24 keranjang jam ke belakang; indeks 23 = jam berjalan.
+      const buckets = new Array(24).fill(0);
+      const bytes = new Array(24).fill(0);
+      for (const it of log) {
+        const age = now - (it.timestamp || 0);
+        if (age < 0 || age >= 24 * HOUR) continue;
+        const idx = 23 - Math.floor(age / HOUR);
+        if (idx < 0 || idx > 23) continue;
+        buckets[idx]++;
+        bytes[idx] += it.filesize || 0;
+      }
+      const VID = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.3gp', '.flv', '.wmv', '.ts', '.m4v'];
+      const events = log.slice(0, 14).map(it => {
+        const first = String(it.filename || '').split(',')[0].trim();
+        const ext = (first.match(/\.[a-z0-9]+$/i) || [''])[0].toLowerCase();
+        return {
+          t: it.timestamp || 0,
+          kind: it.bundle ? 'bundle' : (VID.includes(ext) ? 'video' : 'image'),
+          ext: ext.replace('.', '').toUpperCase() || 'FILE',
+          size: it.filesize || 0,
+          count: it.count || 1
+        };
+      });
+      const stats = getStats();
+      jsonRes(res, 200, {
+        ok: true,
+        buckets,
+        bytes,
+        events,
+        totalActive: stats.totalActive || 0,
+        uploadsToday: stats.uploadsToday || 0,
+        totalStorage: getTotalStorage(),
+        storageQuotaMB: settings.storageQuotaMB || 0,
+        peak: Math.max(1, ...buckets),
+        serverTime: now
+      });
+    } catch (e) {
+      jsonRes(res, 500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   if (req.method === 'GET' && url === '/api/settings/public') {
     jsonRes(res, 200, {
       ownerWhatsapp: settings.ownerWhatsapp,
@@ -1031,7 +1097,18 @@ async function handleRequest(req, res) {
       showChannelsBtn: settings.showChannelsBtn !== false,
       showClaimBtn: settings.showClaimBtn !== false,
       showPopupBtns: settings.showPopupBtns !== false,
-      expireMinutes: settings.expireMinutes || 60
+      expireMinutes: settings.expireMinutes || 60,
+      // ── Tampilan (dipakai halaman uploader) ──
+      themeDefault: settings.themeDefault || 'light',
+      showStats: settings.showStats !== false,
+      showSteps: settings.showSteps !== false,
+      showTicker: settings.showTicker !== false,
+      tickerText: settings.tickerText || '',
+      showHistory: settings.showHistory !== false,
+      heroGifUrl: settings.heroGifUrl || '',
+      welcomeTitle: settings.welcomeTitle || '',
+      welcomeText: settings.welcomeText || '',
+      welcomeCta: settings.welcomeCta || ''
     });
     return;
   }

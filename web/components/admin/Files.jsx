@@ -91,7 +91,7 @@ export default function Files({ toast }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-[family-name:var(--font-display)] font-bold text-2xl md:text-3xl grad-text">Files</h1>
-          <p className="text-[#7e90ad] text-sm mt-1">{videos.length} file tersimpan</p>
+          <p className="text-[var(--ink-2)] text-sm mt-1">{videos.length} file tersimpan</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => confirm('Hapus semua file kedaluwarsa?') && act(cleanupExpired, 'Cleanup selesai')}
@@ -100,7 +100,7 @@ export default function Files({ toast }) {
           </button>
           <button onClick={doCleanOrphans}
             disabled={busy} title="Hapus file di disk yang tidak tercatat di index (sisa index reset)"
-            className="rounded-[12px] px-4 py-2.5 text-sm font-bold bg-white/5 border border-white/[.07] hover:bg-white/[.09] transition-all duration-[150ms] active:scale-[.97]">
+            className="rounded-[12px] px-4 py-2.5 text-sm font-bold bg-[var(--paper-2)] border border-[var(--edge)] hover:bg-[var(--paper-2)] transition-all duration-[150ms] active:scale-[.97]">
             <i className="fa-solid fa-ghost mr-2" />Hapus File Orphan
           </button>
         </div>
@@ -109,14 +109,14 @@ export default function Files({ toast }) {
       {/* Search + bulk actions */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
-          <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-[#7e90ad] text-sm" />
+          <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-2)] text-sm" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Cari nama atau kode…"
-            className="w-full rounded-[12px] pl-10 pr-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm transition-colors duration-[150ms]" />
+            className="w-full rounded-[12px] pl-10 pr-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm transition-colors duration-[150ms]" />
         </div>
         {selected.size > 0 && (
           <div className="flex gap-2 anim-fade">
-            <span className="text-xs text-[#7e90ad] self-center mr-1">{selected.size} dipilih</span>
-            <button onClick={bulkExtend} disabled={busy} className="rounded-[12px] px-3 py-2.5 text-sm bg-[#22d3ee]/15 border border-[#22d3ee]/30 text-[#67e8f9] hover:bg-[#22d3ee]/25 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1.5" />+1 Jam</button>
+            <span className="text-xs text-[var(--ink-2)] self-center mr-1">{selected.size} dipilih</span>
+            <button onClick={bulkExtend} disabled={busy} className="rounded-[12px] px-3 py-2.5 text-sm bg-[#22d3ee]/15 border border-[var(--edge)] text-[var(--volt)] hover:bg-[#22d3ee]/25 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1.5" />+1 Jam</button>
             <button onClick={bulkDelete} disabled={busy} className="rounded-[12px] px-3 py-2.5 text-sm bg-bad/15 border border-bad/30 text-bad hover:bg-bad/25 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-trash mr-1.5" />Hapus</button>
           </div>
         )}
@@ -130,15 +130,15 @@ export default function Files({ toast }) {
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <i className={`fa-solid ${q ? 'fa-magnifying-glass' : 'fa-folder-open'} text-4xl text-[#7e90ad]/40 mb-3`} />
-            <p className="text-[#7e90ad] text-sm">Tidak ada file{q ? ' yang cocok' : ''}.</p>
+            <i className={`fa-solid ${q ? 'fa-magnifying-glass' : 'fa-folder-open'} text-4xl text-[var(--ink-3)] mb-3`} />
+            <p className="text-[var(--ink-2)] text-sm">Tidak ada file{q ? ' yang cocok' : ''}.</p>
           </div>
         ) : (
           <>
             {/* desktop table */}
             <table className="hidden md:table w-full text-sm">
               <thead>
-                <tr className="text-[#7e90ad] text-xs uppercase tracking-wider border-b border-white/[.07]">
+                <tr className="text-[var(--ink-2)] text-xs uppercase tracking-wider border-b border-[var(--edge)]">
                   <th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Pilih semua file" checked={allSelected} onChange={e => e.target.checked ? setSelected(new Set(filtered.map(v => v.code))) : setSelected(new Set())} /></th>
                   <th className="px-4 py-3 text-left">Nama</th>
                   <th className="px-4 py-3 text-left">Kode</th>
@@ -151,16 +151,16 @@ export default function Files({ toast }) {
               </thead>
               <tbody>
                 {filtered.map(v => (
-                  <tr key={v.code} className="border-b border-white/[.04] hover:bg-white/[.03] transition-colors duration-[150ms]">
+                  <tr key={v.code} className="border-b border-[var(--edge)] hover:bg-[var(--paper-2)] transition-colors duration-[150ms]">
                     <td className="px-4 py-3"><input type="checkbox" aria-label={`Pilih ${v.code}`} checked={selected.has(v.code)} onChange={() => toggleSel(v.code)} /></td>
                     <td className="px-4 py-3 max-w-[220px] truncate font-medium" title={v.name}>{v.name}</td>
-                    <td className="px-4 py-3 font-mono text-[#67e8f9]">{v.code}</td>
+                    <td className="px-4 py-3 font-mono text-[var(--volt)]">{v.code}</td>
                     <td className="px-4 py-3">{fmtBytes(v.size)}</td>
                     <td className="px-4 py-3"><span className={`chip px-2.5 py-1 text-[11px] ${v.type === 'video' ? 'bg-[#3b82f6]/15 text-[#93c5fd]' : 'bg-emerald-500/15 text-emerald-300'}`}>{v.type}</span></td>
                     <td className="px-4 py-3">{remainingLabel(v)}</td>
-                    <td className="px-4 py-3 text-[#7e90ad]">{fmtTime(v.ts || v.timestamp)}</td>
+                    <td className="px-4 py-3 text-[var(--ink-2)]">{fmtTime(v.ts || v.timestamp)}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <button onClick={() => extOne(v.code)} disabled={busy} title="Perpanjang 1 jam" className="text-[#22d3ee] hover:text-[#a5f3fc] px-2 transition-all duration-[150ms]"><i className="fa-solid fa-clock-rotate-left" /></button>
+                      <button onClick={() => extOne(v.code)} disabled={busy} title="Perpanjang 1 jam" className="text-[var(--volt)] hover:text-[#a5f3fc] px-2 transition-all duration-[150ms]"><i className="fa-solid fa-clock-rotate-left" /></button>
                       <button onClick={() => delOne(v.code)} disabled={busy} title="Hapus" className="text-bad hover:text-bad/70 px-2 transition-all duration-[150ms]"><i className="fa-solid fa-trash" /></button>
                     </td>
                   </tr>
@@ -168,7 +168,7 @@ export default function Files({ toast }) {
               </tbody>
             </table>
             {/* mobile cards */}
-            <div className="md:hidden divide-y divide-white/[.05]">
+            <div className="md:hidden divide-y divide-[var(--edge)]">
               {filtered.map(v => (
                 <div key={v.code} className="p-4 flex gap-3 items-start">
                   {/* Kotak centang bawaan 13x13px tidak bisa dipencet akurat di HP. */}
@@ -179,11 +179,11 @@ export default function Files({ toast }) {
                   </label>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">{v.name}</p>
-                    <p className="text-xs text-[#7e90ad] mt-0.5 font-mono text-[#67e8f9]">{v.code} · {fmtBytes(v.size)} · {v.type}</p>
-                    <p className="text-xs text-[#7e90ad] mt-0.5"><i className="fa-solid fa-clock mr-1" />Sisa {remainingLabel(v)} · {fmtTime(v.ts || v.timestamp)}</p>
+                    <p className="text-xs text-[var(--ink-2)] mt-0.5 font-mono text-[var(--volt)]">{v.code} · {fmtBytes(v.size)} · {v.type}</p>
+                    <p className="text-xs text-[var(--ink-2)] mt-0.5"><i className="fa-solid fa-clock mr-1" />Sisa {remainingLabel(v)} · {fmtTime(v.ts || v.timestamp)}</p>
                     <div className="mt-2 flex gap-2">
                       {/* min-h-10 (40px): tinggi 30px membuat tombol Hapus mudah tersalah-pencet. */}
-                      <button onClick={() => extOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-3 min-h-10 inline-flex items-center bg-[#22d3ee]/15 text-[#67e8f9] border border-[#22d3ee]/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1" />+1 Jam</button>
+                      <button onClick={() => extOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-3 min-h-10 inline-flex items-center bg-[#22d3ee]/15 text-[var(--volt)] border border-[var(--edge)] transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1" />+1 Jam</button>
                       <button onClick={() => delOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-3 min-h-10 inline-flex items-center bg-bad/15 text-bad border border-bad/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-trash mr-1" />Hapus</button>
                     </div>
                   </div>
@@ -196,21 +196,21 @@ export default function Files({ toast }) {
 
       {/* Upload log */}
       <div>
-        <h2 className="font-[family-name:var(--font-display)] font-bold text-lg mb-3"><i className="fa-solid fa-clock-rotate-left text-[#67e8f9] mr-2" />Log Upload</h2>
+        <h2 className="font-[family-name:var(--font-display)] font-bold text-lg mb-3"><i className="fa-solid fa-clock-rotate-left text-[var(--volt)] mr-2" />Log Upload</h2>
         <div className="card max-h-96 overflow-y-auto">
           {!log.length ? (
             <div className="p-12 text-center">
-              <i className="fa-solid fa-scroll text-4xl text-[#7e90ad]/40 mb-3" />
-              <p className="text-[#7e90ad] text-sm">Belum ada log.</p>
+              <i className="fa-solid fa-scroll text-4xl text-[var(--ink-3)] mb-3" />
+              <p className="text-[var(--ink-2)] text-sm">Belum ada log.</p>
             </div>
           ) : log.map((l, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3 text-sm border-b border-white/[.04] last:border-0 hover:bg-white/[.03] transition-colors duration-[150ms]">
-              <i className={`fa-solid ${l.type === 'video' ? 'fa-film text-[#67e8f9]' : 'fa-image text-emerald-300'} shrink-0`} />
+            <div key={i} className="flex items-center gap-3 px-4 py-3 text-sm border-b border-[var(--edge)] last:border-0 hover:bg-[var(--paper-2)] transition-colors duration-[150ms]">
+              <i className={`fa-solid ${l.type === 'video' ? 'fa-film text-[var(--volt)]' : 'fa-image text-emerald-300'} shrink-0`} />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{l.filename}</p>
-                <p className="text-xs text-[#7e90ad]">{fmtTime(l.ts || l.timestamp)} · IP {l.ip} · {fmtBytes(l.size)}</p>
+                <p className="text-xs text-[var(--ink-2)]">{fmtTime(l.ts || l.timestamp)} · IP {l.ip} · {fmtBytes(l.size)}</p>
               </div>
-              <span className="font-mono text-xs text-[#67e8f9] shrink-0">{l.code}</span>
+              <span className="font-mono text-xs text-[var(--volt)] shrink-0">{l.code}</span>
             </div>
           ))}
         </div>

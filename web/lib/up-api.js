@@ -8,115 +8,57 @@ export function loadSettings() {
   }).then(r => r.json())
 }
 
-const CHUNK_THRESHOLD = 80 * 1024 * 1024
-const CHUNK_SIZE = 5 * 1024 * 1024
 
-// Mengambil URL direct upload secara real-time dari server tanpa cache
+// Base jalur langsung. Di-cache 15 detik: pollJobStatus dipanggil tiap 400 ms,
+// dan versi lama mem-fetch /api/settings/public di SETIAP poll — konversi video
+// 2 menit berarti ~300 request setting yang tidak perlu.
+let baseCache = { v: '', at: 0 }
+
 async function uploadBase() {
+  if (Date.now() - baseCache.at < 15000) return baseCache.v
   try {
     const r = await fetch('/api/settings/public?_t=' + Date.now(), {
       cache: 'no-store',
       headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
     })
-    if (!r.ok) return ''
+    if (!r.ok) return baseCache.v
     const s = await r.json()
-    return s?.directUploadBase || ''
+    baseCache = { v: s?.directUploadBase || '', at: Date.now() }
+    return baseCache.v
   } catch {
-    return ''
+    return baseCache.v
   }
 }
 
-async function uploadChunked(files, { onProgress, signal }) {
-  const base = await uploadBase()
-  const meta = files.map(f => ({ name: f.name, size: f.size }))
-  const initRes = await fetch(base + '/upload/chunk/init', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ files: meta }),
-    signal,
-  })
-  const init = await initRes.json()
-  if (!initRes.ok || !init.ok) throw new Error(init.error || 'Gagal memulai upload besar')
+// Batas nyata Cloudflare Free = 100 MB pada UKURAN BODY (bukan durasi).
+// 95 MB memberi ruang untuk overhead multipart supaya tidak kena 413 di tepi.
+const CF_BODY_LIMIT = 95 * 1024 * 1024
 
-  const chunkSize = init.chunkSize || CHUNK_SIZE
-  const total = files.reduce((s, f) => s + f.size, 0)
-  let sent = 0
-  const startedAt = Date.now()
-
-  for (let fi = 0; fi < files.length; fi++) {
-    const file = files[fi]
-    const parts = Math.ceil(file.size / chunkSize)
-    for (let ci = 0; ci < parts; ci++) {
-      if (signal?.aborted) throw new Error('Upload dibatalkan')
-      const blob = file.slice(ci * chunkSize, Math.min((ci + 1) * chunkSize, file.size))
-      let lastErr = null
-      for (let attempt = 0; attempt < 6; attempt++) {
-        try {
-          const r = await fetch(`${base}/upload/chunk?sid=${encodeURIComponent(init.sessionId)}&fi=${fi}&ci=${ci}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/octet-stream' },
-            body: blob,
-            signal,
-          })
-          let d = {}
-          try { d = await r.json() } catch { d = { ok: false, error: 'Jaringan terputus (kode ' + r.status + ')' } }
-          if (!r.ok || !d.ok) throw new Error(d.error || 'Bagian gagal dikirim')
-          lastErr = null
-          break
-        } catch (e) {
-          if (signal?.aborted) throw new Error('Upload dibatalkan')
-          lastErr = e
-          await new Promise(r => setTimeout(r, Math.min(16000, 1000 * Math.pow(2, attempt))))
-        }
-      }
-      if (lastErr) throw new Error('Bagian ' + (ci + 1) + ' gagal setelah 6 percobaan: ' + lastErr.message)
-      sent += blob.size
-      if (onProgress) {
-        const elapsed = (Date.now() - startedAt) / 1000
-        onProgress({
-          pct: Math.round((sent / total) * 100),
-          loaded: sent,
-          total,
-          speed: elapsed > 0.5 ? sent / elapsed : 0,
-        })
-      }
-    }
-  }
-
-  let fin = null, finErr = null
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const finRes = await fetch(base + '/upload/chunk/finish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: init.sessionId }),
-        signal,
-      })
-      let d = {}
-      try { d = await finRes.json() } catch { d = { ok: false, error: 'Server tidak merespons saat menggabung (kode ' + finRes.status + ')' } }
-      if (!finRes.ok || !d.ok) throw new Error(d.error || 'Gagal menggabung file')
-      fin = d
-      break
-    } catch (e) {
-      if (signal?.aborted) throw new Error('Upload dibatalkan')
-      finErr = e
-      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
-    }
-  }
-  if (!fin) throw finErr || new Error('Gagal menggabung file')
-  return fin
-}
-
-export function uploadFiles(files, opts) {
+export async function uploadFiles(files, opts) {
   const arr = Array.from(files)
+  // Penting: body multipart menampung SEMUA file terpilih, jadi yang menentukan
+  // adalah TOTAL, bukan file terbesar. Dulu pakai some() → 3x50 MB lolos
+  // pemeriksaan lalu ditolak edge sebagai 413.
   const totalSize = arr.reduce((n, f) => n + (f.size || 0), 0)
-  const needsChunk = totalSize > CHUNK_THRESHOLD || arr.some(f => f.size > CHUNK_THRESHOLD)
-  if (needsChunk) return uploadChunked(arr, opts)
-  return uploadSingle(arr, opts)
+  const base = await uploadBase()
+
+  // Tanpa jalur langsung, apa pun di atas batas edge dipastikan gagal. Tolak di
+  // sisi klien dengan pesan yang bisa ditindaklanjuti, bukan menunggu 413 HTML
+  // dari Cloudflare yang muncul ke user sebagai "respons server tidak valid".
+  if (!base && totalSize > CF_BODY_LIMIT) {
+    throw new Error(
+      'Total ' + fmtSize(totalSize) + ' melebihi batas 95 MB jalur biasa. ' +
+      'Aktifkan "Upload Langsung" di dashboard admin untuk file besar.'
+    )
+  }
+  const res = await uploadSingle(arr, { ...opts, base })
+  // Sematkan base yang dipakai: kalau admin mematikan "Upload Langsung" saat
+  // upload masih jalan, poll berikutnya akan menembak host yang berbeda dan
+  // dapat 404 "Job tidak ditemukan" — loader gagal padahal file sudah masuk.
+  return { ...res, base }
 }
 
-async function uploadSingle(files, { onProgress, field, signal }) {
-  const base = await uploadBase()
+async function uploadSingle(files, { onProgress, field, signal, base }) {
   const fd = new FormData()
   for (const f of files) fd.append(field || 'files', f, f.name)
   return new Promise((resolve, reject) => {
@@ -132,7 +74,7 @@ async function uploadSingle(files, { onProgress, field, signal }) {
     }
     xhr.onload = () => {
       if (xhr.status === 413) {
-        reject(new Error('File terlalu besar untuk dikirim sekaligus. Coba upload satu per satu.'))
+        reject(new Error('Ditolak jaringan karena melebihi 100 MB. Aktifkan "Upload Langsung" di dashboard admin untuk file besar.'))
         return
       }
       if (xhr.status === 0) { reject(new Error('Koneksi terputus saat mengirim')); return }
@@ -151,8 +93,8 @@ async function uploadSingle(files, { onProgress, field, signal }) {
   })
 }
 
-export async function pollJobStatus(jobId) {
-  const base = await uploadBase()
+export async function pollJobStatus(jobId, pinnedBase) {
+  const base = pinnedBase !== undefined ? pinnedBase : await uploadBase()
   return fetch((base || '') + '/upload/status?id=' + encodeURIComponent(jobId), {
     cache: 'no-store'
   }).then(r => r.json())

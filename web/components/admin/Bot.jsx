@@ -161,7 +161,7 @@ export default function Bot({ toast }) {
     <div className="space-y-6">
       <div>
         <h1 className="font-[family-name:var(--font-display)] font-bold text-2xl md:text-3xl grad-text">Bot</h1>
-        <p className="text-[#7e90ad] text-sm mt-1">Kelola koneksi &amp; operasi WhatsApp bot</p>
+        <p className="text-[var(--ink-2)] text-sm mt-1">Kelola koneksi &amp; operasi WhatsApp bot</p>
       </div>
 
       {/* Status card */}
@@ -177,20 +177,20 @@ export default function Bot({ toast }) {
               {status ? (status.botOnline ? 'ONLINE' : 'OFFLINE') : '…'}
             </span>
           </h2>
-          <p className="text-[#7e90ad] text-sm mt-0.5 font-mono text-xs">
+          <p className="text-[var(--ink-2)] text-sm mt-0.5 font-mono text-xs">
             Session: {status?.hasSession ? 'ada' : 'tidak ada'} · PID: {status?.pid ?? '—'} · Uptime: {fmtUptime(status?.uptime)} · Restart: {status?.restarts ?? 0}
           </p>
         </div>
-        <button onClick={load} disabled={busy} className="ml-auto rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] hover:border-[#22d3ee]/40 transition-all duration-[150ms] active:scale-[.97] text-sm"><i className="fa-solid fa-arrows-rotate mr-1.5" />Refresh</button>
+        <button onClick={load} disabled={busy} className="ml-auto rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] hover:border-[var(--edge)] transition-all duration-[150ms] active:scale-[.97] text-sm"><i className="fa-solid fa-arrows-rotate mr-1.5" />Refresh</button>
       </div>
 
       {/* Plugin registry — angka dari registry bot, bukan hitungan baris log */}
       <div className="card p-6 md:p-8">
         <h2 className="font-[family-name:var(--font-display)] font-bold mb-4 text-base">
-          <i className="fa-solid fa-puzzle-piece text-[#a78bfa] mr-2" />Plugin
+          <i className="fa-solid fa-puzzle-piece text-[var(--volt)] mr-2" />Plugin
         </h2>
         {!plug?.ok ? (
-          <p className="text-[#7e90ad] text-sm">Data plugin belum tersedia. Bot mungkin sedang booting.</p>
+          <p className="text-[var(--ink-2)] text-sm">Data plugin belum tersedia. Bot mungkin sedang booting.</p>
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -200,8 +200,8 @@ export default function Bot({ toast }) {
                 { l: 'Kategori', v: plug.categories, c: '#93c5fd' },
                 { l: 'Nama tabrakan', v: plug.duplicateCount, c: plug.duplicateCount ? '#fbbf24' : '#7e90ad' },
               ].map(s => (
-                <div key={s.l} className="rounded-[14px] px-4 py-3 bg-white/[.03] border border-white/[.06]">
-                  <p className="text-[10px] font-bold tracking-wider uppercase text-[#7e90ad]">{s.l}</p>
+                <div key={s.l} className="rounded-[14px] px-4 py-3 bg-[var(--paper-2)] border border-[var(--edge)]">
+                  <p className="text-[10px] font-bold tracking-wider uppercase text-[var(--ink-2)]">{s.l}</p>
                   <p className="text-xl font-bold tabular-nums" style={{ color: s.c }}>{s.v}</p>
                 </div>
               ))}
@@ -209,21 +209,21 @@ export default function Bot({ toast }) {
             {plug.duplicateCount > 0 && (
               <div className="mt-4">
                 <button onClick={() => setShowDups(v => !v)}
-                  className="min-h-10 rounded-[12px] px-4 py-2.5 bg-[#fbbf24]/[.08] border border-[#fbbf24]/25 text-[#fbbf24] text-sm font-bold transition-all duration-[150ms] active:scale-[.97]">
+                  className="min-h-10 rounded-[12px] px-4 py-2.5 bg-[#fbbf24]/[.08] border border-[#fbbf24]/25 text-[#b45309] text-sm font-bold transition-all duration-[150ms] active:scale-[.97]">
                   <i className={`fa-solid fa-chevron-${showDups ? 'up' : 'down'} mr-1.5`} />
                   {showDups ? 'Sembunyikan' : 'Lihat'} {plug.duplicateCount} command yang saling menimpa
                 </button>
                 {showDups && (
                   <div className="mt-3 space-y-2">
-                    <p className="text-[#7e90ad] text-xs">
+                    <p className="text-[var(--ink-2)] text-xs">
                       Dua plugin memakai nama command yang sama; yang dimuat terakhir menang, yang lain tidak pernah jalan.
                       Ini bukan error — hanya perlu diketahui agar tidak bingung saat sebuah command terasa &quot;salah fungsi&quot;.
                     </p>
                     {plug.duplicates.map((d, i) => (
-                      <div key={d.command + i} className="rounded-[12px] px-3 py-2.5 bg-white/[.02] border border-white/[.06] text-xs">
-                        <p className="font-mono font-bold text-[#fbbf24]">.{d.command}</p>
-                        <p className="text-[#34d399] mt-1 break-all"><i className="fa-solid fa-check mr-1" />aktif: {d.kept}</p>
-                        <p className="text-[#7e90ad] break-all"><i className="fa-solid fa-xmark mr-1" />mati: {d.shadowed}</p>
+                      <div key={d.command + i} className="rounded-[12px] px-3 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] text-xs">
+                        <p className="font-mono font-bold text-[#b45309]">.{d.command}</p>
+                        <p className="text-[var(--acid)] mt-1 break-all"><i className="fa-solid fa-check mr-1" />aktif: {d.kept}</p>
+                        <p className="text-[var(--ink-2)] break-all"><i className="fa-solid fa-xmark mr-1" />mati: {d.shadowed}</p>
                       </div>
                     ))}
                   </div>
@@ -236,24 +236,24 @@ export default function Bot({ toast }) {
 
       {/* Pairing */}
       <div className="card p-6 md:p-8 max-w-xl space-y-3">
-        <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-mobile-screen text-[#22d3ee] mr-2" />Pairing Perangkat</h2>
-        <p className="text-[#7e90ad] text-sm">Masukkan nomor WhatsApp bot (format internasional, tanpa +)</p>
+        <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-mobile-screen text-[var(--volt)] mr-2" />Pairing Perangkat</h2>
+        <p className="text-[var(--ink-2)] text-sm">Masukkan nomor WhatsApp bot (format internasional, tanpa +)</p>
         <div className="flex gap-2">
           <input value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="628xxxxxxxxxx"
             onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), doPair())}
-            className="flex-1 rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm font-mono transition-colors duration-[150ms]" />
+            className="flex-1 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
           <button onClick={doPair} disabled={busy || !phone.trim()} className="btn-primary rounded-[12px] px-4 py-2.5 text-sm font-bold"><i className="fa-solid fa-link mr-1.5" />Pair</button>
         </div>
-        {pairMsg && <p className="text-sm anim-fade text-[#67e8f9]"><i className="fa-solid fa-circle-info mr-1.5" />{pairMsg}</p>}
+        {pairMsg && <p className="text-sm anim-fade text-[var(--volt)]"><i className="fa-solid fa-circle-info mr-1.5" />{pairMsg}</p>}
       </div>
 
       {/* Groups */}
       <div className="card p-6 md:p-8">
-        <h2 className="font-[family-name:var(--font-display)] font-bold mb-4 text-base"><i className="fa-solid fa-users text-[#67e8f9] mr-2" />Grup ({groups.length})</h2>
+        <h2 className="font-[family-name:var(--font-display)] font-bold mb-4 text-base"><i className="fa-solid fa-users text-[var(--volt)] mr-2" />Grup ({groups.length})</h2>
         {!groups.length ? (
           <div className="py-10 text-center">
-            <i className="fa-solid fa-users-slash text-4xl text-[#7e90ad]/40 mb-3" />
-            <p className="text-[#7e90ad] text-sm">Tidak ada grup / bot belum terhubung.</p>
+            <i className="fa-solid fa-users-slash text-4xl text-[var(--ink-3)] mb-3" />
+            <p className="text-[var(--ink-2)] text-sm">Tidak ada grup / bot belum terhubung.</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-2.5">
@@ -261,17 +261,17 @@ export default function Bot({ toast }) {
               const jid = groupJid(g)
               const enabled = !g.disabled && g.enabled !== false
               return (
-                <div key={jid} className="hist-item rounded-[12px] bg-white/[.04] border border-white/[.05] px-4 py-3 flex items-center gap-3">
+                <div key={jid} className="hist-item rounded-[12px] bg-[var(--paper-2)] border border-[var(--edge)] px-4 py-3 flex items-center gap-3">
                   {/* area sentuh 40px lewat <label>; padding pada checkbox diabaikan browser */}
                   <label aria-label="Pilih grup untuk broadcast" title="Pilih untuk broadcast" className="shrink-0 -m-2.5 p-2.5 cursor-pointer inline-flex items-center">
                     <input type="checkbox" checked={selJids.has(jid)} onChange={() => toggleSel(jid)} className="w-5 h-5 accent-[#22d3ee]" />
                   </label>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{groupName(g)}</p>
-                    <p className="text-xs text-[#7e90ad] font-mono truncate">{jid}</p>
+                    <p className="text-xs text-[var(--ink-2)] font-mono truncate">{jid}</p>
                   </div>
                   <button onClick={() => run(toggleGroup, null, jid)} disabled={busy}
-                    className={`chip px-3 min-h-10 inline-flex items-center text-[11px] transition-all duration-[150ms] active:scale-[.97] ${enabled ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-[#7e90ad]'}`}>
+                    className={`chip px-3 min-h-10 inline-flex items-center text-[11px] transition-all duration-[150ms] active:scale-[.97] ${enabled ? 'bg-emerald-500/15 text-emerald-300' : 'bg-[var(--paper-2)] text-[var(--ink-2)]'}`}>
                     {enabled ? 'AKTIF' : 'NONAKTIF'}
                   </button>
                   {/* Keluar grup tidak bisa dibatalkan — targetnya jangan 23x23px. */}
@@ -288,15 +288,15 @@ export default function Bot({ toast }) {
       <div className="card p-6 md:p-8 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-bullhorn text-emerald-300 mr-2" />Broadcast</h2>
-          <span className="text-xs text-[#7e90ad]">{selJids.size} grup dipilih {bcRunning && <span className="chip px-2 py-0.5 ml-1 bg-emerald-500/15 text-emerald-300">BERJALAN</span>}</span>
+          <span className="text-xs text-[var(--ink-2)]">{selJids.size} grup dipilih {bcRunning && <span className="chip px-2 py-0.5 ml-1 bg-emerald-500/15 text-emerald-300">BERJALAN</span>}</span>
         </div>
         <textarea value={bcText} onChange={e => setBcText(e.target.value)} rows={3} placeholder="Tulis pesan broadcast…"
-          className="w-full rounded-[12px] px-4 py-3 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm resize-y transition-colors duration-[150ms]" />
+          className="w-full rounded-[12px] px-4 py-3 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm resize-y transition-colors duration-[150ms]" />
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-[#7e90ad] mb-1.5 block">Delay per grup (detik)</label>
+            <label className="text-xs font-bold uppercase tracking-wider text-[var(--ink-2)] mb-1.5 block">Delay per grup (detik)</label>
             <input type="number" min="1" value={bcDelay} onChange={e => setBcDelay(e.target.value)}
-              className="w-24 rounded-[12px] px-3 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm transition-colors duration-[150ms]" />
+              className="w-24 rounded-[12px] px-3 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm transition-colors duration-[150ms]" />
           </div>
           {!bcRunning ? (
             <button onClick={doBroadcast} disabled={busy} className="btn-primary rounded-[12px] px-6 py-2.5 font-[family-name:var(--font-display)] font-bold text-sm"><i className="fa-solid fa-paper-plane mr-2" />Kirim Broadcast</button>
@@ -305,24 +305,24 @@ export default function Bot({ toast }) {
           )}
         </div>
         {internal && typeof internal.broadcastProgress !== 'undefined' && (
-          <p className="text-xs text-[#7e90ad] font-mono">Progres: {JSON.stringify(internal.broadcastProgress)}</p>
+          <p className="text-xs text-[var(--ink-2)] font-mono">Progres: {JSON.stringify(internal.broadcastProgress)}</p>
         )}
       </div>
 
       {/* Send message */}
       <div className="card p-6 md:p-8 space-y-3 max-w-xl">
-        <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-comment-dots text-[#67e8f9] mr-2" />Kirim Pesan</h2>
+        <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-comment-dots text-[var(--volt)] mr-2" />Kirim Pesan</h2>
         <input value={sendJid} onChange={e => setSendJid(e.target.value)} placeholder="JID tujuan (628xxx@s.whatsapp.net atau grup)"
-          className="w-full rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm font-mono transition-colors duration-[150ms]" />
+          className="w-full rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
         <textarea value={sendText} onChange={e => setSendText(e.target.value)} rows={2} placeholder="Isi pesan…"
-          className="w-full rounded-[12px] px-4 py-3 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm resize-y transition-colors duration-[150ms]" />
+          className="w-full rounded-[12px] px-4 py-3 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm resize-y transition-colors duration-[150ms]" />
         <button onClick={doSend} disabled={busy} className="btn-primary rounded-[12px] px-6 py-2.5 font-[family-name:var(--font-display)] font-bold text-sm"><i className="fa-solid fa-paper-plane mr-2" />Kirim</button>
       </div>
 
       {/* Exec command */}
       <div className="card p-6 md:p-8 space-y-3">
-        <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-terminal text-[#22d3ee] mr-2" />Eksekusi Perintah</h2>
-        <p className="text-xs text-[#7e90ad]">Kode dieksekusi di konteks bot dengan variabel <code className="font-mono">sock</code> dan <code className="font-mono">target</code>. Nilai kembalian &amp; <code className="font-mono">console.log</code> ikut ditampilkan. JID hanya wajib kalau kode memakai <code className="font-mono">target</code>.</p>
+        <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-terminal text-[var(--volt)] mr-2" />Eksekusi Perintah</h2>
+        <p className="text-xs text-[var(--ink-2)]">Kode dieksekusi di konteks bot dengan variabel <code className="font-mono">sock</code> dan <code className="font-mono">target</code>. Nilai kembalian &amp; <code className="font-mono">console.log</code> ikut ditampilkan. JID hanya wajib kalau kode memakai <code className="font-mono">target</code>.</p>
         <div className="flex flex-wrap gap-2">
           {[
             ['Cek koneksi', 'sock.user'],
@@ -330,50 +330,50 @@ export default function Bot({ toast }) {
             ['Pakai RAM', 'process.memoryUsage()'],
           ].map(([label, kode]) => (
             <button key={label} type="button" onClick={() => setCmd(kode)}
-              className="min-h-10 rounded-[10px] px-3 text-[11px] font-bold bg-white/[.05] border border-white/[.07] text-[#7e90ad] hover:text-white transition-colors duration-[150ms]">
+              className="min-h-10 rounded-[10px] px-3 text-[11px] font-bold bg-[var(--paper-2)] border border-[var(--edge)] text-[var(--ink-2)] hover:text-[var(--ink)] transition-colors duration-[150ms]">
               {label}
             </button>
           ))}
         </div>
         <input value={execTarget} onChange={e => setExecTarget(e.target.value)} placeholder="JID target (opsional — hanya bila kode memakai `target`)"
-          className="w-full rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm font-mono transition-colors duration-[150ms]" />
+          className="w-full rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
         <form onSubmit={doExec} className="flex gap-2">
           <input value={cmd} onChange={e => setCmd(e.target.value)} placeholder="Contoh: await sock.sendMessage(target, { text: 'hai' })"
-            className="flex-1 rounded-[12px] px-4 py-2.5 bg-white/5 border border-white/[.07] focus:border-[#22d3ee]/50 outline-none text-sm font-mono transition-colors duration-[150ms]" />
+            className="flex-1 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
           <button type="submit" disabled={busy} className="btn-primary min-h-10 rounded-[12px] px-5 py-2.5 text-sm font-bold"><i className="fa-solid fa-play mr-1.5" />Run</button>
         </form>
         {out && (
-          <pre className="rounded-[12px] bg-black/40 border border-white/[.07] p-4 text-xs font-mono overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap anim-fade">{out}</pre>
+          <pre className="rounded-[12px] bg-black/40 border border-[var(--edge)] p-4 text-xs font-mono overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap anim-fade">{out}</pre>
         )}
       </div>
 
       {/* Kontrol proses + live log */}
       <div className="card p-6 md:p-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-scroll text-[#22d3ee] mr-2" />Log &amp; Kontrol Proses</h2>
+          <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-scroll text-[var(--volt)] mr-2" />Log &amp; Kontrol Proses</h2>
           <button onClick={doRestart} disabled={busy}
-            className="rounded-[12px] px-4 py-2.5 text-sm font-bold bg-white/5 border border-white/[.07] hover:bg-white/[.09] transition-all duration-[150ms] active:scale-[.97]">
+            className="rounded-[12px] px-4 py-2.5 text-sm font-bold bg-[var(--paper-2)] border border-[var(--edge)] hover:bg-[var(--paper-2)] transition-all duration-[150ms] active:scale-[.97]">
             <i className="fa-solid fa-rotate-right mr-2" />Restart Bot
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select value={logType} onChange={e => { setLogType(e.target.value); loadLogs(e.target.value) }}
-            className="rounded-[12px] px-3 py-2 bg-white/5 border border-white/[.07] outline-none text-sm">
+            className="rounded-[12px] px-3 py-2 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm">
             <option value="out">stdout</option>
             <option value="error">stderr</option>
           </select>
           <button onClick={() => loadLogs()} disabled={logBusy}
-            className="rounded-[12px] px-4 py-2 text-sm font-bold bg-white/5 border border-white/[.07] hover:bg-white/[.09] transition-all duration-[150ms] active:scale-[.97]">
+            className="rounded-[12px] px-4 py-2 text-sm font-bold bg-[var(--paper-2)] border border-[var(--edge)] hover:bg-[var(--paper-2)] transition-all duration-[150ms] active:scale-[.97]">
             <i className={`fa-solid fa-arrows-rotate mr-2 ${logBusy ? 'fa-spin' : ''}`} />Muat Log
           </button>
-          <label className="flex items-center gap-2 text-xs text-[#7e90ad] cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-xs text-[var(--ink-2)] cursor-pointer select-none">
             <span className="-m-2.5 p-2.5 inline-flex items-center">
               <input type="checkbox" aria-label="Auto refresh log" checked={logAuto} onChange={e => setLogAuto(e.target.checked)} className="w-5 h-5 accent-[#22d3ee]" />
             </span>
             Auto-refresh 5s
           </label>
         </div>
-        <pre className="rounded-[12px] bg-black/40 border border-white/[.07] p-4 text-[11px] leading-relaxed font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
+        <pre className="rounded-[12px] bg-black/40 border border-[var(--edge)] p-4 text-[11px] leading-relaxed font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
           {logLines.length ? logLines.join('\n') : 'Belum ada log dimuat.'}
         </pre>
       </div>
