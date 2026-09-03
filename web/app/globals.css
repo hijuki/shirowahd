@@ -834,24 +834,27 @@ h3 {
 .mark {
   position: relative;
   display: inline-block;
-  /* Tinggi blok terukur 1.02x satu baris H1 dengan isi hitam pekat — itu
-     proporsi BAR SENSOR, bukan penekanan. Padding vertikal dipangkas supaya
-     plat memeluk tinggi huruf, bukan seluruh kotak baris. */
-  padding: 0.06em 0.16em 0.1em;
+  /* TINGGI PLAT DIKENDALIKAN line-height, BUKAN padding.
+     Terukur 113.7x53.2px hitam pekat = rasio 1.02 terhadap satu baris H1:
+     proporsi bar sensor. Memangkas padding malah menaikkannya ke 1.09, karena
+     tinggi inline-block = line-height + padding, dan line-height H1 (0.84 =
+     50.8px pada font 60.5px) sendiri sudah lebih tinggi dari huruf sebenarnya
+     (~43.5px cap-height). Jadi line-height plat dirapatkan ke huruf dulu, baru
+     padding kecil di atasnya. Turunan tetap tidak terpotong: overflow visible,
+     yang mengecil hanya latarnya. */
+  line-height: 0.62;
+  padding: 0.05em 0.15em 0.1em;
   border-radius: var(--r-xs);
-  color: var(--paper);
-  background: var(--ink);
-  /* Hijau merek dulu hanya hadir sebagai plat MENGAPUNG di sudut hero — objek
-     terpisah yang tidak menyentuh apa pun. Sekarang ia jadi ofset di balik
-     kata kuncinya sendiri: warna itu memegang tipografi, bukan mengorbitnya.
-     Ofset ini juga bahasa yang sama dengan kartu, tombol, dan tile navbar. */
-  box-shadow: var(--bw-thick) var(--bw-thick) 0 var(--accent);
-}
-[data-theme="dark"] .mark {
-  background: var(--accent);
+  /* Isi HIJAU MEREK di kedua mode, bukan hitam di terang dan hijau di gelap.
+     Elemen yang sama berganti makna antar mode adalah inkonsistensi, dan hitam
+     pekat sebesar itu memang bar sensor.
+
+     Ini juga jawaban untuk plat WhatsApp yang dulu mengapung di sudut hero
+     tanpa menyentuh apa pun: hijau merek sekarang MEMEGANG tipografi. Satu
+     ofset dalam warna tepi menahannya, bahasa yang sama dengan kartu, tombol,
+     dan tile navbar. */
   color: #06180d;
-  /* Isi sudah hijau, jadi ofsetnya balik ke warna tepi — kalau dibiarkan
-     hijau-di-atas-hijau, ofsetnya hilang dan platnya kembali jadi bar. */
+  background: var(--accent);
   box-shadow: var(--bw-thick) var(--bw-thick) 0 var(--edge);
 }
 /* kompat: grad-text lama → jadi aksen padat */
