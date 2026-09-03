@@ -843,7 +843,15 @@ h3 {
      padding kecil di atasnya. Turunan tetap tidak terpotong: overflow visible,
      yang mengecil hanya latarnya. */
   line-height: 0.62;
-  padding: 0.05em 0.15em 0.1em;
+  /* Padding disetel dari TINTA, bukan dari kotak baris. Dengan pad 0.05/0.1em
+     margin tinta terukur cuma 0.5px atas / 1.0px bawah (canvas
+     actualBoundingBox): huruf praktis rata dengan tepi plat dan terbaca
+     terjepit, walau overflow visible jadi tidak benar-benar terpotong.
+     0.11/0.15em memberi margin 4.1/4.0px. Tinggi plat kembali ke 53.2px —
+     SAMA dengan versi hitam yang ditolak — tapi isinya hijau merek, radius
+     7px, dan ofset tepi, jadi bacanya penanda bukan sensor. Yang membuatnya
+     bar sensor tadi memang isinya, bukan ukurannya. */
+  padding: 0.11em 0.15em 0.15em;
   border-radius: var(--r-xs);
   /* Isi HIJAU MEREK di kedua mode, bukan hitam di terang dan hijau di gelap.
      Elemen yang sama berganti makna antar mode adalah inkonsistensi, dan hitam
