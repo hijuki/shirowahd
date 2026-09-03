@@ -111,7 +111,11 @@ export default function Hero({ settings }) {
                 ter-dekode sebelum dibutuhkan; hanya opacity yang berubah.
                 Tidak ada filter/transform di <img> — iOS menghentikan animasi
                 GIF pada elemen yang dipromosikan jadi lapisan komposit. */}
-            <img className="media-layer" data-on={isDark ? '0' : '1'}
+            {/* Lapisan terang hanya boleh dimatikan kalau ADA lapisan gelap yang
+                menggantikannya. Tanpa penjaga `punyaPasangan`, mode gelap tanpa
+                aset pasangan membuat satu-satunya lapisan ber-opacity 0 dan
+                hero jadi kotak kosong. */}
+            <img className="media-layer" data-on={(isDark && punyaPasangan) ? '0' : '1'}
               src={lightSrc} alt={(settings?.siteName || 'SWHDHLZ') + ' — pratinjau'}
               loading="eager" decoding="async" />
             {punyaPasangan && (
