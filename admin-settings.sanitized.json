@@ -11,7 +11,7 @@
     {
       "name": "SALURAN",
       "link": "https://whatsapp.com/channel/0029Vb9EUEx30LKYoGYqwg0u",
-      "visible": true
+      "visible": false
     }
   ],
   "claimGroups": [
@@ -34,6 +34,16 @@
       "name": "hilmi cinta mati sama zahra",
       "link": "https://chat.whatsapp.com/DC4EhdyLSiz9DONlfLEsY5",
       "visible": false
+    },
+    {
+      "name": "SHIROHD2.0",
+      "link": "https://chat.whatsapp.com/KpOvoWsbPNA6p3dig9ijTW",
+      "visible": false
+    },
+    {
+      "name": "alok",
+      "link": "https://chat.whatsapp.com/Jfj9CBd1HObAN1YHUiIOtJ",
+      "visible": false
     }
   ],
   "popupButtons": [],
@@ -42,7 +52,7 @@
   "ipBlacklist": [],
   "siteName": "STATUSHD",
   "siteSubtitle": "no watermark",
-  "expireMinutes": 1440,
+  "expireMinutes": 10,
   "maxFileSizeMB": 0,
   "allowLargeUpload": true,
   "largeUploadMaxMB": 0,
@@ -52,8 +62,8 @@
   "heroSubtitle": "HD",
   "heroDesc": "ALAT UNTUK MEMBUAT STATUS WA KAMU TANPA COMPRES",
   "footerText": "Dibuat dengan hati",
-  "logoUrl": "/brand/1000550318.jpg",
-  "heroImageUrl": "/brand/1000550317.jpg",
+  "logoUrl": "",
+  "heroImageUrl": "/brand/1000553398.jpg",
   "showWelcome": true,
   "showOwnerBtn": true,
   "showChannelsBtn": false,
@@ -68,11 +78,21 @@
   "rateLimit": 0,
   "rateCooldown": 0,
   "autoCleanup": true,
-  "videoAsDocumentMB": 180,
+  "videoAsDocumentMB": "200",
   "maxVideoLongSide": 2560,
-  "directUploadEnabled": true,
+  "directUploadEnabled": false,
   "directUploadHost": "up.swhdhlz.my.id",
   "directUploadPort": 8443,
   "autoCleanupInterval": 30,
-  "storageQuotaMB": 100000
+  "storageQuotaMB": 100000,
+  "themeDefault": "light",
+  "showStats": true,
+  "showSteps": true,
+  "showTicker": true,
+  "tickerText": "",
+  "showHistory": true,
+  "heroGifUrl": "",
+  "welcomeTitle": "",
+  "welcomeText": "",
+  "welcomeCta": ""
 }
