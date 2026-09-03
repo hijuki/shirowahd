@@ -140,7 +140,9 @@
   --sunk: #0b0d10;
   --ink: #e7e9ee;
   --ink-2: #9aa0ad;
-  --ink-3: #666d7c;
+  /* 3.36:1 di atas --plate-fill → teks 11px (angka statistik admin) gagal
+     AA. Dinaikkan: 4.63:1 di atas plate, 4.99:1 di atas paper. */
+  --ink-3: #7c8494;
   /* border TIDAK lagi seputih teks — ini perbaikan utamanya */
   --edge: #4a5060;
   --accent: #3ddc84;
