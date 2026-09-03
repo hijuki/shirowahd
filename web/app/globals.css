@@ -54,7 +54,13 @@
   --wa: #25d366;
   --wa-deep: #0e7a5f;
   --wa-plate: linear-gradient(150deg, #4ff08c 0%, #25d366 42%, #0e7a5f 100%);
-  --h-plate: linear-gradient(135deg, #2b3bff 0%, #22d3ee 55%, #25d366 100%);
+  /* Huruf H putih 8-9px di atas plat ini terukur 1.81:1 pada titik cyan
+     tercerah (#22d3ee) — gagal jauh dari 4.5:1. Yang salah bukan hurufnya
+     tapi platnya: gradien ini dibuat untuk dekorasi besar, bukan untuk
+     memikul teks kecil. Setiap perhentian digelapkan sampai titik paling
+     terang pun >= 4.5:1 terhadap putih, dengan urutan rona (biru → cyan →
+     hijau) dipertahankan supaya identitasnya tetap sama. */
+  --h-plate: linear-gradient(135deg, #1f2bc4 0%, #17788f 55%, #14804a 100%);
 
   --bw: 2px;
   --bw-thick: 3px;
@@ -609,7 +615,7 @@ h3 {
      saja membuat badge ini dilaporkan 1.0:1 di atas putih body — padahal
      nyatanya putih di atas biru-hijau. Warna dasar mengambil titik tengah
      gradien supaya angka yang terukur = yang terlihat. */
-  background-color: #22a5c4;
+  background-color: #17788f;
   background-image: var(--h-plate);
   color: #fff;
   border: var(--bw) solid var(--edge);
@@ -1649,6 +1655,15 @@ h3 {
 [data-theme="dark"] .sheet-head {
   background: var(--paper-2);
   color: var(--ink);
+}
+/* `.kicker` memaksa color: var(--ink-2) — abu gelap yang benar di atas kertas
+   putih, tapi kepala sheet latarnya --ink (nyaris hitam). Abu gelap di atas
+   hitam terukur 3.01:1, gagal untuk teks 8px. Di dalam kepala sheet, kicker
+   harus MEWARISI warna kepala; peredupannya lewat opacity terhadap warna yang
+   sudah kontras (0.78 → 11.9:1 di terang, 9.1:1 di gelap). */
+.sheet-head .kicker {
+  color: inherit;
+  opacity: 0.78;
 }
 .scroll-hide {
   scrollbar-width: none;
