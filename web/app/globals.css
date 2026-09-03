@@ -544,6 +544,8 @@ h3 {
   border-radius: var(--r-xs);
   display: grid;
   place-items: center;
+  /* huruf duduk di atas gradient terang -> perlu jejak gelap agar terbaca */
+  text-shadow: 0 1px 1.5px rgba(3, 10, 6, 0.62), 0 0 1px rgba(3, 10, 6, 0.5);
   background: var(--h-plate);
   color: #fff;
   border: var(--bw) solid var(--edge);
@@ -557,7 +559,7 @@ h3 {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent 60%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), transparent 52%);
   pointer-events: none;
 }
 /* sapuan spekular tipis, jalan sekali saat masuk — bukan animasi loop */
@@ -819,6 +821,18 @@ h3 {
 }
 .anim-entrance {
   animation: riseIn 620ms var(--ease) both;
+}
+/* Dorongan singkat untuk penolakan input (login gagal). Dipakai lewat kelas,
+   BUKAN dengan remount React (`key=`) — remount membuang seluruh DOM kartu,
+   memutar ulang animasi masuk, dan melepas fokus dari kolom input. */
+.nudge {
+  animation: nudge 300ms var(--ease-snap) both;
+}
+@keyframes nudge {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  22% { transform: translate3d(-7px, 0, 0); }
+  48% { transform: translate3d(6px, 0, 0); }
+  74% { transform: translate3d(-3px, 0, 0); }
 }
 @keyframes fadeIn {
   from {
@@ -1947,7 +1961,7 @@ h3 {
 .stamp-ring {
   border-radius: var(--r-pill);
   position: absolute;
-  inset: -10px;
+  inset: var(--ring-inset, -10px);
   border: var(--bw) solid var(--edge);
   opacity: 0;
   animation: stampRing 900ms var(--ease) both;
@@ -1961,7 +1975,7 @@ h3 {
   }
   100% {
     opacity: 0;
-    transform: scale(1.35);
+    transform: scale(var(--ring-max, 1.35));
   }
 }
 

@@ -7,9 +7,20 @@ async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...opts.headers }
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(`${BASE}${path}`, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
-  if (res.status === 401) { localStorage.removeItem('admin_token'); window.location.reload(); return null }
+  // 401 pada endpoint ber-token = sesi mati -> paksa balik ke login.
+  // TAPI /login sendiri memakai 401 untuk "password salah"; kalau ikut
+  // di-reload, halaman cuma berkedip dan pesan error tidak pernah terlihat.
+  if (res.status === 401 && path !== '/login') {
+    localStorage.removeItem('admin_token'); window.location.reload(); return null
+  }
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+  if (!res.ok) {
+    // status ikut dibawa: halaman login perlu membedakan 401 (password salah)
+    // dari 429 (IP diblokir 15 menit setelah 5 kali gagal).
+    const err = new Error(data.error || `HTTP ${res.status}`)
+    err.status = res.status
+    throw err
+  }
   return data
 }
 
@@ -61,7 +72,13 @@ export async function uploadGalleryFile(file) {
     body: file,
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+  if (!res.ok) {
+    // status ikut dibawa: halaman login perlu membedakan 401 (password salah)
+    // dari 429 (IP diblokir 15 menit setelah 5 kali gagal).
+    const err = new Error(data.error || `HTTP ${res.status}`)
+    err.status = res.status
+    throw err
+  }
   return data
 }
 
