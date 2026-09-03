@@ -121,7 +121,7 @@ export default function LiveStats() {
           <div key={c.k} className="px-3 py-3">
             <p className="kicker !text-[8px]">{c.k}</p>
             <p className={`data font-[family-name:var(--font-display)] mt-1 leading-none ${c.wide ? 'text-[15px]' : 'text-[26px]'}`}>{c.v}</p>
-            <p className="kicker !text-[8px] !tracking-[0.1em] mt-[3px] opacity-60">{c.s}</p>
+            <p className="kicker !text-[8px] !tracking-[0.1em] mt-[3px]">{c.s}</p>
           </div>
         ))}
       </div>
@@ -130,7 +130,7 @@ export default function LiveStats() {
       <div className="px-4 pt-4">
         <div className="flex items-baseline justify-between mb-2">
           <span className="kicker">UPLOAD / JAM</span>
-          <span className="kicker !text-[9px] opacity-60">PUNCAK {peak}</span>
+          <span className="kicker !text-[9px]">PUNCAK {peak}</span>
         </div>
         <div className="bars">
           {d.buckets.map((v, i) => (
@@ -142,7 +142,7 @@ export default function LiveStats() {
         </div>
         <div className="flex justify-between mt-1.5">
           {[0, 6, 12, 18, 23].map(h => (
-            <span key={h} className="kicker !text-[8px] opacity-45">{hourLabel(h)}</span>
+            <span key={h} className="kicker !text-[8px]">{hourLabel(h)}</span>
           ))}
         </div>
       </div>
@@ -170,7 +170,7 @@ export default function LiveStats() {
         <div className="mt-4 border-t-2 border-[var(--edge)] rounded-b-[14px] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--paper-2)] border-b-2 border-[var(--edge)]">
             <span className="kicker">ALIRAN AKTIVITAS</span>
-            <span className="kicker !text-[8px] opacity-55">ANONIM</span>
+            <span className="kicker !text-[8px]">ANONIM</span>
           </div>
           <div className="max-h-[196px] overflow-y-auto scroll-hide">
             {d.events.map((e, i) => {

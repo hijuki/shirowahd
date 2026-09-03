@@ -193,7 +193,7 @@ export default function UploaderPage() {
               pada viewport 390px). Tanpa ruang bawah, ia menindih teks footer
               — terukur 821px² tumpang. `pb` menyediakan jalur bebas. */}
           <footer className="wrap px-4 max-w-[720px] pt-8 pb-[104px] sm:pb-10 text-center">
-            <p className="kicker !text-[9px] opacity-55 max-w-[260px] mx-auto leading-relaxed">
+            <p className="kicker !text-[9px] max-w-[260px] mx-auto leading-relaxed">
               {footerText || `${settings.siteName || 'SHIROWAHD'} · SWHDHLZ BY HILLZ`}
             </p>
           </footer>

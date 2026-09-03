@@ -103,9 +103,9 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
             {c.name && <p className="kicker !text-[8px] mb-1 truncate">{c.name}</p>}
             <button onClick={() => copy(c.code)} className="code-plate w-full block"
               aria-label={'Salin perintah klaim ' + c.code}>
-              <span className="kicker !text-[8px] block mb-1.5 opacity-70">TEMPEL DI GRUP WHATSAPP</span>
+              <span className="kicker !text-[8px] block mb-1.5">TEMPEL DI GRUP WHATSAPP</span>
               <span className="code-text block">.claim {c.code}</span>
-              <span className="kicker !text-[8px] block mt-2 opacity-70">
+              <span className="kicker !text-[8px] block mt-2">
                 {copied === c.code ? '✓ TERSALIN' : 'TAP UNTUK MENYALIN'}
               </span>
             </button>

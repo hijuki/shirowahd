@@ -42,7 +42,11 @@ export function Sheet({ onClose, title, kicker, children, foot, wide = false }) 
             role="dialog" aria-modal="true" aria-label={title || 'Dialog'}>
             <div className="sheet-head">
               <span className="min-w-0">
-                {kicker && <span className="block kicker !text-[8px] opacity-70">{kicker}</span>}
+                {/* JANGAN tambah opacity-* di sini. `.kicker` sudah memakai
+                    --ink-2 (#5d5d64 = 6.53:1 di atas putih) — itu SUDAH warna
+                    teredup. Menumpuk opacity-70 mengalikan peredupan jadi
+                    3.26:1, di bawah 4.5:1 yang dibutuhkan teks 8px. */}
+                {kicker && <span className="block kicker !text-[8px]">{kicker}</span>}
                 <span className="block font-[family-name:var(--font-display)] text-[15px] uppercase leading-none mt-[3px] truncate">
                   {title}
                 </span>
@@ -90,7 +94,7 @@ export function LinkButtons({ channels = [], claimGroups = [], popupButtons = []
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-bold text-[12px] truncate">{it.t}</span>
-            <span className="kicker !text-[8px] block mt-[2px] opacity-65">{it.s}</span>
+            <span className="kicker !text-[8px] block mt-[2px]">{it.s}</span>
           </span>
           <i className="fa-solid fa-arrow-right text-[10px] opacity-45 shrink-0" />
         </a>
@@ -284,7 +288,7 @@ export function AboutModal({ onClose, settings }) {
       </div>
 
       {settings?.footerText && (
-        <p className="kicker !text-[8px] text-center mt-4 opacity-60">{settings.footerText}</p>
+        <p className="kicker !text-[8px] text-center mt-4">{settings.footerText}</p>
       )}
     </Sheet>
   )

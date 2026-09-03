@@ -604,7 +604,13 @@ h3 {
   place-items: center;
   /* huruf duduk di atas gradient terang -> perlu jejak gelap agar terbaca */
   text-shadow: 0 1px 1.5px rgba(3, 10, 6, 0.62), 0 0 1px rgba(3, 10, 6, 0.5);
-  background: var(--h-plate);
+  /* Warna dasar SEBELUM gradien: alat ukur kontras (dan pembaca yang mengabaikan
+     background-image) memanjat parent mencari backgroundColor, jadi gradien
+     saja membuat badge ini dilaporkan 1.0:1 di atas putih body — padahal
+     nyatanya putih di atas biru-hijau. Warna dasar mengambil titik tengah
+     gradien supaya angka yang terukur = yang terlihat. */
+  background-color: #22a5c4;
+  background-image: var(--h-plate);
   color: #fff;
   border: var(--bw) solid var(--edge);
   font-family: var(--font-display), ui-sans-serif, sans-serif;

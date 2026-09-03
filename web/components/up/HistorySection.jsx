@@ -86,7 +86,7 @@ export default function HistorySection() {
                   </div>
                   <div className="mt-2.5">
                     <div className="gauge !h-[10px]"><span style={{ width: (100 - pct) + '%' }} /></div>
-                    <p className="kicker !text-[8px] mt-1.5 opacity-65">SISA ± {remaining} MENIT</p>
+                    <p className="kicker !text-[8px] mt-1.5">SISA ± {remaining} MENIT</p>
                   </div>
                 </div>
               )
@@ -96,7 +96,7 @@ export default function HistorySection() {
               <>
                 <div className="flex items-center gap-2.5 pt-2">
                   <span className="flex-1 rule-dash" />
-                  <span className="kicker !text-[8px] opacity-55">KEDALUWARSA</span>
+                  <span className="kicker !text-[8px]">KEDALUWARSA</span>
                   <span className="flex-1 rule-dash" />
                 </div>
                 {expired.map(h => (

@@ -105,7 +105,7 @@ export default function Hero({ settings }) {
 
           <div className="flex items-center gap-2 mt-3">
             <span className="badge-h w-[17px] h-[17px] !border text-[9px]">H</span>
-            <span className="kicker !text-[9px] opacity-70">BY HILLZ</span>
+            <span className="kicker !text-[9px]">BY HILLZ</span>
           </div>
         </div>
 
