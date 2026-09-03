@@ -80,6 +80,10 @@ function loadSettings() {
     footerText: '',
     logoUrl: '',
     heroImageUrl: '',
+    // Aset hero versi GELAP. Kalau kosong, mode gelap memakai aset terang —
+    // jadi fitur ini opsional dan tidak memaksa admin mengisi dua-duanya.
+    heroImageUrlDark: '',
+    heroGifUrlDark: '',
     showWelcome: true,
     showOwnerBtn: true,
     showChannelsBtn: true,
@@ -158,6 +162,8 @@ function saveSettings(data) {
     footerText: data.footerText ?? cur.footerText ?? '',
     logoUrl: data.logoUrl ?? cur.logoUrl ?? '',
     heroImageUrl: data.heroImageUrl ?? cur.heroImageUrl ?? '',
+    heroImageUrlDark: data.heroImageUrlDark ?? cur.heroImageUrlDark ?? '',
+    heroGifUrlDark: data.heroGifUrlDark ?? cur.heroGifUrlDark ?? '',
     showWelcome: data.showWelcome ?? cur.showWelcome ?? true,
     showOwnerBtn: data.showOwnerBtn ?? cur.showOwnerBtn ?? true,
     showChannelsBtn: data.showChannelsBtn ?? cur.showChannelsBtn ?? true,
@@ -1108,6 +1114,10 @@ async function handleRequest(req, res) {
       tickerText: settings.tickerText || '',
       showHistory: settings.showHistory !== false,
       heroGifUrl: settings.heroGifUrl || '',
+      // Pasangan gelap ikut dikirim supaya hero bisa menukar aset saat tema
+      // berubah TANPA memanggil API lagi (pertukaran harus instan & mulus).
+      heroImageUrlDark: settings.heroImageUrlDark || '',
+      heroGifUrlDark: settings.heroGifUrlDark || '',
       welcomeTitle: settings.welcomeTitle || '',
       welcomeText: settings.welcomeText || '',
       welcomeCta: settings.welcomeCta || ''

@@ -110,10 +110,10 @@ export default function UploaderPage() {
            Sekarang: mark SVG resmi yang solid, kapsul dengan label yang
            muncul saat disentuh, satu bayangan. */
         <a href={`https://wa.me/${String(settings.ownerWhatsapp).replace(/[^0-9]/g, '')}`}
-          target="_blank" rel="noreferrer" className="fab group" title="Chat developer"
+          target="_blank" rel="noreferrer" className="wa-dock group" title="Chat developer"
           aria-label="Chat developer lewat WhatsApp">
-          <WaMark className="fab-mark" />
-          <span className="fab-label">CHAT</span>
+          <WaMark className="wa-dock-mark" />
+          <span className="wa-dock-label">CHAT</span>
         </a>
       )}
 
@@ -189,8 +189,11 @@ export default function UploaderPage() {
           {/* Velocity band #2 — arah berlawanan, memberi rasa kedalaman */}
           <VelocityBand items={['SWHDHLZ', 'BY HILLZ', 'WHATSAPP UPLOADER', 'SWHDHLZ', 'BY HILLZ']} invert speed={30} rev />
 
-          <footer className="wrap px-4 max-w-[720px] py-8 text-center">
-            <p className="kicker !text-[9px] opacity-55">
+          {/* FAB itu `position: fixed` di kanan-bawah (kiri 313px, lebar 63px
+              pada viewport 390px). Tanpa ruang bawah, ia menindih teks footer
+              — terukur 821px² tumpang. `pb` menyediakan jalur bebas. */}
+          <footer className="wrap px-4 max-w-[720px] pt-8 pb-[104px] sm:pb-10 text-center">
+            <p className="kicker !text-[9px] opacity-55 max-w-[260px] mx-auto leading-relaxed">
               {footerText || `${settings.siteName || 'SHIROWAHD'} · SWHDHLZ BY HILLZ`}
             </p>
           </footer>

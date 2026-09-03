@@ -224,6 +224,24 @@ export function useTilt(max = 15) {
    memilih sendiri — pilihan user selalu menang.                    */
 const LS_THEME = 'sw_theme'
 
+/* Nama tema saat ini, dibaca dari atribut `data-theme` di <html> dan
+   diperbarui lewat MutationObserver. Kenapa observer dan bukan prop dari
+   Navbar: tema ditukar di dalam callback View Transition, dan komponen lain
+   (hero) harus ikut berubah tepat pada momen itu tanpa prop-drilling melewati
+   page.jsx. Observer juga menangkap perubahan dari skrip boot di <head>. */
+export function useThemeName() {
+  const [name, setName] = useState('light')
+  useEffect(() => {
+    const root = document.documentElement
+    const baca = () => setName(root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light')
+    baca()
+    const mo = new MutationObserver(baca)
+    mo.observe(root, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => mo.disconnect()
+  }, [])
+  return name
+}
+
 export function useTheme(serverDefault) {
   const [theme, setTheme] = useState('light')
 

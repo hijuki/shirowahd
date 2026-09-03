@@ -126,7 +126,11 @@ function BrandGallery({ data, set }) {
     setBusy(true); setMsg('')
     try {
       const res = await uploadGalleryFile(f)
-      if (res.ok) { setMsg('File terupload: ' + res.file.name); load() }
+      /* Backend membalas { ok, url, name } — TIDAK ada objek `file`.
+         Kode lama membaca res.file.name, jadi setiap upload logo hero
+         memunculkan "Cannot read properties of undefined (reading 'name')"
+         padahal filenya sebenarnya BERHASIL tersimpan. */
+      if (res.ok) { setMsg('File terupload: ' + (res.name || res.url || 'OK')); load() }
       else { setMsg('Gagal: ' + (res.error || 'unknown')) }
     } catch (err) { setMsg('Error: ' + err.message) }
     finally { setBusy(false); e.target.value = '' }
@@ -139,14 +143,31 @@ function BrandGallery({ data, set }) {
       if (data.logoUrl?.includes(name)) set('logoUrl', '')
       if (data.heroImageUrl?.includes(name)) set('heroImageUrl', '')
       if (data.heroGifUrl?.includes(name)) set('heroGifUrl', '')
+      /* Pasangan gelap ikut dibersihkan, kalau tidak hero mode gelap akan
+         menunjuk file yang sudah tidak ada (gambar rusak). */
+      if (data.heroImageUrlDark?.includes(name)) set('heroImageUrlDark', '')
+      if (data.heroGifUrlDark?.includes(name)) set('heroGifUrlDark', '')
       load()
     } catch (e) { alert('Gagal hapus: ' + e.message) }
   }
 
-  const LABEL = { logoUrl: 'Logo', heroImageUrl: 'Foto Hero', heroGifUrl: 'GIF Hero' }
+  const LABEL = {
+    logoUrl: 'Logo', heroImageUrl: 'Foto Hero', heroGifUrl: 'GIF Hero',
+    heroImageUrlDark: 'Foto Hero (gelap)', heroGifUrlDark: 'GIF Hero (gelap)',
+  }
   const applyTo = (key, url) => {
     set(key, url)
     setMsg(`Dipakai sebagai ${LABEL[key] || key} — klik Simpan di bawah`)
+  }
+  /* Satu tombol per MODE, bukan per jenis file. Admin tidak perlu tahu bahwa
+     GIF dan foto disimpan di field berbeda — sistem yang memilih field
+     berdasarkan ekstensi. Yang dipilih admin cuma: aset ini untuk mode mana. */
+  const pasangMode = (f, mode) => {
+    const gif = /\.gif$/i.test(f.name)
+    const key = mode === 'dark'
+      ? (gif ? 'heroGifUrlDark' : 'heroImageUrlDark')
+      : (gif ? 'heroGifUrl' : 'heroImageUrl')
+    applyTo(key, f.url)
   }
 
   return (
@@ -173,28 +194,36 @@ function BrandGallery({ data, set }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {files.map(f => {
             const isLogo = data.logoUrl === f.url
-            const isHero = data.heroImageUrl === f.url
-            const isGif = data.heroGifUrl === f.url
-            const gifOk = /\.gif$/i.test(f.name)
+            /* Aset hero kini punya PASANGAN mode. Satu file bisa jadi aset
+               terang, gelap, atau dua-duanya — jadi statusnya dua boolean,
+               bukan satu badge "HERO". */
+            const isTerang = data.heroImageUrl === f.url || data.heroGifUrl === f.url
+            const isGelap = data.heroImageUrlDark === f.url || data.heroGifUrlDark === f.url
             return (
               <div key={f.name} className="group relative rounded-[var(--r-soft)] overflow-hidden bg-[var(--paper-2)] border border-[var(--edge)] hover:border-[var(--edge)] transition-all flex flex-col">
                 <div className="aspect-video w-full bg-black/40 relative overflow-hidden flex items-center justify-center">
                   <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
                   <div className="absolute top-1.5 right-1.5 flex gap-1">
                     {isLogo && <span className="px-1.5 py-0.5 text-[9px] font-extrabold bg-[var(--accent)] text-[#06180d] border border-[var(--edge)]">LOGO</span>}
-                    {isHero && <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-[#34d399] text-black">HERO</span>}
-                    {isGif && <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-[#a78bfa] text-black">GIF</span>}
+                    {isTerang && <span className="px-1.5 py-0.5 rounded-[var(--r-xs)] text-[9px] font-extrabold bg-[var(--paper)] text-[var(--ink)] border border-[var(--edge)]">TERANG</span>}
+                    {isGelap && <span className="px-1.5 py-0.5 rounded-[var(--r-xs)] text-[9px] font-extrabold bg-[#111318] text-[#e7e9ee] border border-[var(--edge)]">GELAP</span>}
                   </div>
                 </div>
                 <div className="p-2.5 flex-1 flex flex-col justify-between gap-2">
                   <p className="text-[11px] font-mono text-[var(--ink-2)] truncate" title={f.name}>{f.name}</p>
                   <div className="flex items-center justify-between gap-1 pt-1 border-t border-[var(--edge)]">
                     <div className="flex gap-1">
-                      <button type="button" onClick={() => applyTo('logoUrl', f.url)} className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${isLogo ? 'bg-[var(--paper-2)] text-[var(--volt)] border border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink)] hover:bg-[var(--paper-2)]'}`}>Logo</button>
-                      <button type="button" onClick={() => applyTo('heroImageUrl', f.url)} className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${isHero ? 'bg-[var(--paper-2)] text-[var(--acid)] border border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink)] hover:bg-[var(--paper-2)]'}`}>Hero</button>
-                      {gifOk && (
-                        <button type="button" onClick={() => applyTo('heroGifUrl', f.url)} className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${isGif ? 'bg-[#a78bfa]/20 text-[var(--volt)] border border-[#a78bfa]/40' : 'bg-[var(--paper-2)] text-[var(--ink)] hover:bg-[var(--paper-2)]'}`}>GIF</button>
-                      )}
+                      <button type="button" onClick={() => applyTo('logoUrl', f.url)}
+                        className={`px-2 py-1 rounded-[var(--r-xs)] text-[10px] font-bold transition-all border ${isLogo ? 'bg-[var(--sunk)] text-[var(--ink)] border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border-transparent hover:border-[var(--edge)]'}`}>Logo</button>
+                      {/* Dua tombol MODE, bukan "Hero" + "GIF". Jenis file dipilih
+                          sistem dari ekstensi; admin cuma menentukan aset ini
+                          tampil di mode terang atau gelap. */}
+                      <button type="button" onClick={() => pasangMode(f, 'light')} title="Pakai sebagai hero mode terang"
+                        className={`px-2 py-1 rounded-[var(--r-xs)] text-[10px] font-bold transition-all border ${isTerang ? 'bg-[var(--sunk)] text-[var(--ink)] border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border-transparent hover:border-[var(--edge)]'}`}>
+                        <i className="fa-solid fa-sun text-[9px] mr-1" />Terang</button>
+                      <button type="button" onClick={() => pasangMode(f, 'dark')} title="Pakai sebagai hero mode gelap"
+                        className={`px-2 py-1 rounded-[var(--r-xs)] text-[10px] font-bold transition-all border ${isGelap ? 'bg-[var(--sunk)] text-[var(--ink)] border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border-transparent hover:border-[var(--edge)]'}`}>
+                        <i className="fa-solid fa-moon text-[9px] mr-1" />Gelap</button>
                     </div>
                     <button type="button" onClick={() => onDelete(f.name)} className="w-6 h-6 rounded text-bad/60 hover:text-bad hover:bg-bad/10 grid place-items-center text-[10px] transition-colors"><i className="fa-solid fa-trash" /></button>
                   </div>
