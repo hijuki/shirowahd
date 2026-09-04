@@ -14,12 +14,14 @@ import config from '../../config.js';
 import { buatToken, bacaSkor, papanSkor, peringkat, rahasiaArena, BERKAS_SKOR } from '../../src/lib/hillz-arena.js';
 
 const pluginConfig = {
-  name: 'arena',
-  alias: ['2048', 'game2048'],
+  name: '2048',
+  // top2048/2048top WAJIB ada di alias — kalau tidak, `.top2048` tidak akan
+  // pernah sampai ke handler ini (router memakai name+alias, bukan isi kode).
+  alias: ['tile2048', 'arena2048', 'top2048', '2048top'],
   category: 'game',
   description: 'Main 2048 di website, skor masuk papan skor WhatsApp',
-  usage: '.arena',
-  example: '.arena',
+  usage: '.2048',
+  example: '.2048',
   isOwner: false,
   isPremium: false,
   isGroup: false,
@@ -40,11 +42,11 @@ async function handler(m, { sock }) {
     const cmd = String(m.command || '').toLowerCase();
 
     /* ── Papan skor: dibaca dari berkas, tanpa jaringan ── */
-    if (cmd === 'arenatop' || cmd === 'toparena') {
+    if (cmd === 'top2048' || cmd === '2048top') {
       const daftar = bacaSkor(BERKAS_SKOR);
       const top = papanSkor(daftar, 10);
       if (!top.length) {
-        await m.reply(`🎮 *ARENA 2048*\n\nPapan skor masih kosong. Ketik *${m.prefix}arena* buat jadi yang pertama.`);
+        await m.reply(`🎮 *ARENA 2048*\n\nPapan skor masih kosong. Ketik *${m.prefix}2048* buat jadi yang pertama.`);
         return;
       }
       const aku = peringkat(daftar, m.sender);
@@ -55,7 +57,7 @@ async function handler(m, { sock }) {
       });
       teks += `\n👥 Total pemain: *${papanSkor(daftar, 9999).length}*`;
       if (aku && aku.posisi > 10) teks += `\n📍 Posisimu: *#${aku.posisi}* dengan skor *${aku.skor}*`;
-      teks += `\n\nMain lagi: *${m.prefix}arena*`;
+      teks += `\n\nMain lagi: *${m.prefix}2048*`;
       await m.reply(teks);
       return;
     }
@@ -75,7 +77,7 @@ async function handler(m, { sock }) {
     teks += '⏳ Tautan berlaku *30 menit* dan terikat ke nomormu.\n';
     if (aku) teks += `📍 Rekormu: *${aku.skor}* (peringkat *#${aku.posisi}* dari ${aku.dari})\n`;
     else if (jml) teks += `👥 Sudah ada *${jml}* pemain di papan skor.\n`;
-    teks += `\n🏆 Lihat papan skor: *${m.prefix}arenatop*`;
+    teks += `\n🏆 Lihat papan skor: *${m.prefix}top2048*`;
 
     await m.reply(teks);
     await m.react('🎮');

@@ -18,7 +18,7 @@ process.env.ARENA_SCORES = join(KERJA, 'skor.json');
 process.env.ARENA_SECRET_FILE = join(KERJA, 'rahasia');
 process.env.DOMAIN = 'swhdhlz.my.id';
 
-const { config, handler } = await import('../../plugins/game/arena.js');
+const { config, handler } = await import('../../plugins/game/tile2048.js');
 const A = await import('./hillz-arena.js');
 
 let lulus = 0, gagal = 0;
@@ -49,25 +49,26 @@ const AKU = '628111000111@s.whatsapp.net';
 const DIA = '628999888777@s.whatsapp.net';
 
 console.log('══ Bentuk plugin ══');
-cek('nama plugin', config.name, 'arena');
+cek('nama plugin', config.name, '2048');
 cek('kategori', config.category, 'game');
-cekBenar('alias memuat 2048', config.alias.includes('2048'));
+cekBenar('nama utama 2048 (tidak bentrok rpg/arena.js)', config.name === '2048');
+cekBenar('alias tile2048', config.alias.includes('tile2048'));
 cekBenar('bisa dipakai di private DAN grup', config.isGroup === false && config.isPrivate === false);
 cekBenar('bukan khusus owner', config.isOwner === false);
 
-console.log('\n══ .arenatop saat papan kosong ══');
+console.log('\n══ .top2048 saat papan kosong ══');
 {
-  const { m, keluar } = mTiruan('arenatop', AKU, 'Aku');
+  const { m, keluar } = mTiruan('top2048', AKU, 'Aku');
   await handler(m, { sock: null });
   cek('membalas 1 pesan', keluar.balasan.length, 1);
   cekBenar('bilang masih kosong', /kosong/i.test(keluar.balasan[0]), keluar.balasan[0]);
   cekBenar('tidak error', keluar.reaksi.indexOf('❌') === -1);
 }
 
-console.log('\n══ .arena mengeluarkan tautan bertoken ══');
+console.log('\n══ .2048 mengeluarkan tautan bertoken ══');
 let tokenDitangkap = null;
 {
-  const { m, keluar } = mTiruan('arena', AKU, 'Aku Pemain');
+  const { m, keluar } = mTiruan('2048', AKU, 'Aku Pemain');
   await handler(m, { sock: null });
   cek('membalas 1 pesan', keluar.balasan.length, 1);
   const teks = keluar.balasan[0];
@@ -86,12 +87,12 @@ let tokenDitangkap = null;
   cekBenar('tidak menyebut nomor sendiri mentah', !teks.includes('628111000111@'), teks.slice(0, 120));
 }
 
-console.log('\n══ .arenatop dengan isi ══');
+console.log('\n══ .top2048 dengan isi ══');
 {
   A.tambahSkor(A.BERKAS_SKOR, { jid: DIA, nama: 'Dia', skor: 5000, ubin: 512, langkah: 300, waktu: Date.now() });
   A.tambahSkor(A.BERKAS_SKOR, { jid: AKU, nama: 'Aku Pemain', skor: 1200, ubin: 128, langkah: 90, waktu: Date.now() });
 
-  const { m, keluar } = mTiruan('arenatop', AKU, 'Aku Pemain');
+  const { m, keluar } = mTiruan('top2048', AKU, 'Aku Pemain');
   await handler(m, { sock: null });
   const teks = keluar.balasan[0];
   cekBenar('peringkat 1 = skor tertinggi', teks.indexOf('5000') < teks.indexOf('1200'), teks);
@@ -103,9 +104,9 @@ console.log('\n══ .arenatop dengan isi ══');
 
 console.log('\n══ Tautan tiap pemain berbeda ══');
 {
-  const a = mTiruan('arena', AKU, 'Aku');
+  const a = mTiruan('2048', AKU, 'Aku');
   await handler(a.m, { sock: null });
-  const b = mTiruan('arena', DIA, 'Dia');
+  const b = mTiruan('2048', DIA, 'Dia');
   await handler(b.m, { sock: null });
   const tA = a.keluar.balasan[0].match(/t=([A-Za-z0-9_\-.%]+)/)[1];
   const tB = b.keluar.balasan[0].match(/t=([A-Za-z0-9_\-.%]+)/)[1];
