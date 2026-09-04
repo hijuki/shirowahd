@@ -41,3 +41,16 @@ brand-assets/
 
 # Cadangan sementara hasil audit
 *.bak-audit
+
+# ── Sampah yang pernah ikut ter-commit; jangan sampai kembali ─────────────
+# Biner cloudflared (38 MB) diunduh otomatis oleh main.js saat ENABLE_TUNNEL=1,
+# jadi tidak perlu ada di repo.
+cloudflared
+# Cadangan settings hasil operasi manual.
+admin-settings.json.bak.*
+# Skrip uji/migrasi sekali pakai.
+uji-*.mjs
+recover-cf.mjs
+rename-ourin.sh
+# Catatan rilis lokal (juga ada di daftar kecuali auto-backup).
+UPDATE.txt

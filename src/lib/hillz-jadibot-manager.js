@@ -11,6 +11,7 @@ import { logger } from "./hillz-logger.js";
 import { addJadibotOwner } from "./hillz-jadibot-database.js";
 import { extendSocket } from "./hillz-socket.js";
 import { getAssetBuffer } from "./hillz-asset-manager.js";
+import { simpanKodeSub, tandaiSub } from "./hillz-pairing.js";
 const JADIBOT_AUTH_FOLDER = path.join(process.cwd(), "session", "jadibot");
 const jadibotSessions = new Map();
 const reconnectAttempts = new Map();
@@ -434,6 +435,7 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
       logger.info("Jadibot", `Connected: ${id}`);
 
       reconnectAttempts.delete(id);
+      try { tandaiSub(id, "tersambung", "Perangkat tertaut"); } catch { }
 
       jadibotSessions.set(id, {
         sock: childSock,
@@ -652,6 +654,10 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
       await delay(3000);
       pairingCode = await childSock.requestPairingCode(id);
       pairingCode = pairingCode.match(/.{1,4}/g)?.join("-") || pairingCode;
+
+      // Kode juga dipublikasikan ke papan status supaya bot tambahan bisa
+      // ditautkan dari panel admin, bukan hanya lewat chat WhatsApp.
+      try { simpanKodeSub(id, pairingCode.replace(/-/g, "")); } catch { }
 
       if (m && m.chat) {
         let thumbnail = null;

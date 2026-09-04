@@ -1,5 +1,5 @@
 import http from 'http';
-import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync, openSync, closeSync, writeSync, renameSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync, openSync, closeSync, writeSync, renameSync, rmSync } from 'fs';
 import { storeVideo, storeBundle, storeVideoFile, storeBundleFiles, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL, cleanOrphans } from './src/lib/vid-store.js';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
@@ -145,7 +145,7 @@ function saveSettings(data) {
     // menyaring null/undefined, jadi payload berisi "" dulu bisa mengosongkan
     // password admin (risiko terkunci) atau menghapus nama situs (judul & og
     // jadi kosong). Field non-kritis seperti bannerText tetap boleh dikosongkan.
-    adminPassword: nonEmpty(data.adminPassword) ?? cur.adminPassword ?? '@Hillz126',
+    adminPassword: nonEmpty(data.adminPassword) ?? cur.adminPassword ?? process.env.ADMIN_PASSWORD ?? '@Hillz126',
     maintenance: data.maintenance ?? cur.maintenance ?? false,
     ipBlacklist: data.ipBlacklist ?? cur.ipBlacklist ?? [],
     siteName: nonEmpty(data.siteName) ?? cur.siteName ?? 'SHIROWAHD',
@@ -205,11 +205,25 @@ function saveSettings(data) {
   return s;
 }
 
-// Password admin: admin-settings.json menang (supaya tombol "Ubah Password" di
-// panel benar-benar berefek), ADMIN_PASSWORD di .env hanya fallback kalau file
-// settings kosong/hilang. Default lama tetap ada agar tidak terkunci sendiri.
+// Password admin, urutan menang:
+//   1. adminPassword di admin-settings.json  → tombol "Ubah Password" di panel
+//      benar-benar berefek
+//   2. ADMIN_PASSWORD di .env                → dipakai VPS baru (install.sh
+//      men-generate acak), berlaku selama panel belum pernah set password
+//   3. default bawaan                        → jaring terakhir agar tidak
+//      terkunci sendiri
+//
+// Urutan ini harus memeriksa KEBERADAAN berkas, bukan hasil loadSettings():
+// loadSettings() mengembalikan objek default (berisi password bawaan) ketika
+// berkasnya belum ada, sehingga password acak dari .env akan tertimpa dan
+// setiap VPS baru memakai password yang sama. Itu lubang keamanan, bukan
+// ketidaknyamanan.
 function getAdminPassword() {
-  return loadSettings().adminPassword || process.env.ADMIN_PASSWORD || '@Hillz126';
+  if (existsSync(SETTINGS_FILE)) {
+    const dariBerkas = loadSettings().adminPassword;
+    if (dariBerkas) return dariBerkas;
+  }
+  return process.env.ADMIN_PASSWORD || '@Hillz126';
 }
 
 (function initTTL() {
@@ -1512,8 +1526,9 @@ async function handleRequest(req, res) {
 
       // Stage semua perubahan yang relevan. config.js ikut karena isinya sekarang
       // hanya referensi process.env (tanpa secret). File state runtime sudah
-      // di-untrack lewat .gitignore.
-      run('git add -A config.js admin-settings.sanitized.json .gitignore .env.example main.js web-uploader.js install.sh migrate.sh README.md package.json index.js rename-ourin.sh 2>/dev/null || true');
+      // di-untrack lewat .gitignore. `rename-ourin.sh` dibuang dari daftar ini
+      // (skrip migrasi sekali-pakai yang sudah dihapus dari repo).
+      run('git add -A config.js admin-settings.sanitized.json .gitignore .env.example main.js web-uploader.js install.sh migrate.sh README.md package.json index.js 2>/dev/null || true');
       try { run('git add -A plugins/ src/ case/ database/ web/ 2>/dev/null || true'); } catch {}
 
       let status = '';
@@ -1778,20 +1793,124 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ── PAIRING LEWAT PANEL ADMIN ───────────────────────────────────────────
+  // Alur: panel kirim nomor → ditulis ke papan status + `.pair-number` →
+  // proses bot dinyalakan → bot meminta kode ke WhatsApp dan menulis kodenya
+  // ke papan status → panel polling `/admin/api/bot/pair/state`.
+  //
+  // Catatan penting soal versi sebelumnya: rute ini memanggil
+  // `rm -rf "<dir>/*"` dengan glob DI DALAM tanda kutip, jadi shell tidak
+  // pernah mengekspansinya dan sesi lama TIDAK ikut terhapus. Akibatnya bot
+  // tetap memakai sesi lama dan pairing "berhasil" tanpa efek apa pun.
   if (req.method === 'POST' && url === '/admin/api/bot/pair') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     try {
       const body = await readBody(req);
-      const { number } = JSON.parse(body.toString());
-      if (!number || !/^\d{10,15}$/.test(number)) {
-        jsonRes(res, 400, { ok: false, error: 'Nomor tidak valid (10-15 digit)' }); return;
+      const { number, force } = JSON.parse(body.toString() || '{}');
+      if (!number || !/^\d{10,15}$/.test(String(number))) {
+        jsonRes(res, 400, { ok: false, error: 'Nomor tidak valid (10-15 digit, contoh 6281234567890)' }); return;
       }
-      // ponytail: on Pterodactyl, no pm2. Clear session + set env for next restart.
+
+      const live = await botInternalStatus();
+      if (live?.connected === true && !force) {
+        jsonRes(res, 409, {
+          ok: false,
+          error: 'Bot sudah tersambung. Pakai "Ganti Nomor" (hapus sesi) bila memang ingin pairing ulang.',
+        });
+        return;
+      }
+
+      // Sesi lama harus benar-benar hilang sebelum pairing nomor lain, kalau
+      // tidak WhatsApp memakai kredensial lama dan kode tidak pernah diminta.
       const sessionDir = join(__dirname, 'storage', 'session');
-      try { execSync('rm -rf ' + JSON.stringify(sessionDir + '/*') + ' 2>/dev/null; true', { timeout: 5000 }); } catch {}
-      // Write pair number to env file so bot picks it up
-      writeFileSync(join(__dirname, '.pair-number'), number);
-      jsonRes(res, 200, { ok: true, message: 'Session dihapus. Restart server dari Pterodactyl panel, bot akan pairing dengan nomor ' + number + '.' });
+      try { execSync('pm2 stop main 2>/dev/null; true', { timeout: 30000 }); } catch { }
+      try { rmSync(sessionDir, { recursive: true, force: true }); } catch { }
+      try { mkdirSync(sessionDir, { recursive: true }); } catch { }
+
+      writeFileSync(join(__dirname, '.pair-number'), String(number));
+      // Papan status: bot membaca ini saat boot dan langsung meminta kode
+      // tanpa menunggu input terminal.
+      tulisPapanPairing({
+        tahap: 'diminta',
+        nomor: String(number),
+        kode: '',
+        kodeRapi: '',
+        pesan: 'Menyalakan bot dan meminta kode ke WhatsApp',
+        diminta: Date.now(),
+        diperbarui: Date.now(),
+      });
+
+      // Nyalakan proses bot. `restart` dipakai bila entri pm2 sudah ada,
+      // `start` untuk VPS baru yang belum pernah menjalankan bot.
+      let out = '';
+      try {
+        out = execSync('pm2 restart main --update-env 2>&1', { encoding: 'utf8', timeout: 60000 }).trim();
+      } catch {
+        try {
+          out = execSync('pm2 start main.js --name main 2>&1', { cwd: __dirname, encoding: 'utf8', timeout: 60000 }).trim();
+        } catch (e2) {
+          out = 'pm2 tidak tersedia: ' + (e2.message || '');
+        }
+      }
+
+      jsonRes(res, 200, {
+        ok: true,
+        message: 'Bot dinyalakan untuk nomor ' + number + '. Kode pairing akan muncul di panel dalam ~15 detik.',
+        output: out.split('\n').slice(-4).join('\n'),
+      });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // Papan status pairing. Dibaca LANGSUNG dari berkas, bukan diproksikan ke
+  // bot: saat VPS baru (bot belum pernah hidup) proksi akan 502 dan panel tidak
+  // bisa menampilkan apa pun. Berkas selalu terbaca.
+  if (req.method === 'GET' && url === '/admin/api/bot/pair/state') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const papan = bacaPapanPairing();
+      const live = await botInternalStatus();
+      const sessionDir = join(__dirname, 'storage', 'session');
+      jsonRes(res, 200, {
+        ok: true,
+        utama: papan,
+        tambahan: papan.sub || {},
+        botReachable: !!live,
+        terhubung: live?.connected === true,
+        user: live?.user || null,
+        hasSession: existsSync(join(sessionDir, 'creds.json')),
+        pm2: statusPm2('main'),
+      });
+    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // Hapus sesi = "ganti nomor". Dipisah dari /pair supaya penghapusan sesi
+  // selalu tindakan sadar, bukan efek samping klik tombol pair.
+  if (req.method === 'POST' && url === '/admin/api/bot/session/reset') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const sessionDir = join(__dirname, 'storage', 'session');
+      // Cadangan sesi disimpan, bukan dibuang: kalau admin salah klik, sesi
+      // yang sehat masih bisa dikembalikan lewat SSH.
+      const cadangan = join(__dirname, 'storage', 'session-lama-' + Date.now());
+      let dicadangkan = false;
+      try {
+        if (existsSync(join(sessionDir, 'creds.json'))) {
+          renameSync(sessionDir, cadangan);
+          dicadangkan = true;
+        }
+      } catch { }
+      try { execSync('pm2 stop main 2>/dev/null; true', { timeout: 30000 }); } catch { }
+      try { rmSync(sessionDir, { recursive: true, force: true }); } catch { }
+      try { mkdirSync(sessionDir, { recursive: true }); } catch { }
+      try { unlinkSync(join(__dirname, '.pair-number')); } catch { }
+      tulisPapanPairing({ tahap: 'idle', nomor: '', kode: '', kodeRapi: '', pesan: 'Sesi dihapus, siap pairing nomor baru', diperbarui: Date.now() });
+      sendTelegram('error', '⚠️ <b>Sesi bot dihapus</b> dari panel admin');
+      jsonRes(res, 200, {
+        ok: true,
+        message: 'Sesi dihapus' + (dicadangkan ? ' (cadangan disimpan di storage/)' : '') + '. Masukkan nomor lalu tekan Pair.',
+      });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
   }
@@ -1876,10 +1995,111 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ── REGISTRY MULTI-BOT (diproksikan ke bot; sumber kebenaran ada di sana) ──
+  // Semua rute ini butuh bot hidup. Kalau bot mati, proxy balas 502 dan panel
+  // menampilkan "bot belum jalan" — itu jawaban yang benar, bukan menyembunyikan
+  // keadaan dengan data dari berkas yang mungkin basi.
+  if (url === '/admin/api/bots' && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'GET', '/bots');
+    return;
+  }
+
+  if (url === '/admin/api/bots/save' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/bots/save');
+    return;
+  }
+
+  if (url === '/admin/api/bots/delete' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/bots/delete');
+    return;
+  }
+
+  if (url === '/admin/api/bots/pair' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/bots/pair');
+    return;
+  }
+
+  if (url === '/admin/api/bots/stop' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/bots/stop');
+    return;
+  }
+
+  if (url === '/admin/api/bots/role/save' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/bots/role/save');
+    return;
+  }
+
+  if (url === '/admin/api/bots/role/delete' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/bots/role/delete');
+    return;
+  }
+
+  // Ulangi pengumuman "BOT ON" tanpa restart.
+  if (url === '/admin/api/bot/announce' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/announce');
+    return;
+  }
+
   res.writeHead(404); res.end('Not found');
 }
 
 const server = http.createServer(handleRequest);
+
+// ── Papan status pairing (dipakai bersama proses bot) ───────────────────────
+// Proses `web` dan `main` adalah dua proses terpisah, jadi kode pairing tidak
+// bisa lewat variabel. Berkas ini papan tulis bersamanya; sisi bot menulisnya
+// lewat `src/lib/hillz-pairing.js` dengan bentuk yang sama.
+const PAIR_STATE_FILE = join(__dirname, 'storage', 'pairing-state.json');
+
+function bacaPapanPairing() {
+  try {
+    const d = JSON.parse(readFileSync(PAIR_STATE_FILE, 'utf8'));
+    // Permintaan yang lewat 15 menit dianggap basi supaya panel tidak
+    // menampilkan kode mati (kode WA sendiri hanya hidup 2-3 menit).
+    if ((d.tahap === 'diminta' || d.tahap === 'kode-siap') && d.diminta && Date.now() - d.diminta > 15 * 60 * 1000) {
+      return { ...d, tahap: 'kadaluarsa', kode: '', kodeRapi: '' };
+    }
+    return d;
+  } catch {
+    return { tahap: 'idle', nomor: '', kode: '', kodeRapi: '', pesan: '' };
+  }
+}
+
+function tulisPapanPairing(patch) {
+  try {
+    mkdirSync(dirname(PAIR_STATE_FILE), { recursive: true });
+    const lama = (() => { try { return JSON.parse(readFileSync(PAIR_STATE_FILE, 'utf8')); } catch { return {}; } })();
+    writeFileSync(PAIR_STATE_FILE, JSON.stringify({ ...lama, ...patch }, null, 1));
+  } catch { /* pairing lewat panel gagal, jalur terminal tetap ada */ }
+}
+
+// Status proses pm2 apa adanya. Dipakai panel untuk membedakan "bot mati" dari
+// "bot hidup tapi belum tersambung ke WhatsApp" — dua keadaan yang butuh
+// tindakan berbeda dari admin.
+function statusPm2(nama) {
+  try {
+    const out = execSync('pm2 jlist 2>/dev/null', { encoding: 'utf8', timeout: 15000 });
+    const list = JSON.parse(out);
+    const p = list.find(x => x.name === nama);
+    if (!p) return { ada: false, status: 'belum-terdaftar', restarts: 0, uptime: 0 };
+    return {
+      ada: true,
+      status: p.pm2_env?.status || 'unknown',
+      restarts: p.pm2_env?.restart_time || 0,
+      uptime: p.pm2_env?.pm_uptime || 0,
+    };
+  } catch {
+    return { ada: false, status: 'pm2-tidak-tersedia', restarts: 0, uptime: 0 };
+  }
+}
 
 // Tanya status ke internal API bot. Timeout pendek: kalau bot mati, panel harus
 // cepat menampilkan OFFLINE, bukan menunggu sampai request browser habis waktu.

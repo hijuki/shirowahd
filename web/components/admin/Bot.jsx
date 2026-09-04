@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getBotStatus, getBotInternalStatus, getBotPlugins, pairBot, getBotGroups, leaveGroup, toggleGroup, broadcast, cancelBroadcast, sendMessage, execCommand, restartBot, getLogs } from '@/lib/admin-api'
+import { getBotStatus, getBotInternalStatus, getBotPlugins, getBotGroups, leaveGroup, toggleGroup, broadcast, cancelBroadcast, sendMessage, execCommand, restartBot, getLogs } from '@/lib/admin-api'
+import Pairing from './Pairing'
+import Bots from './Bots'
 
 export default function Bot({ toast }) {
   const [status, setStatus] = useState(null)
@@ -10,9 +12,7 @@ export default function Bot({ toast }) {
   const [groups, setGroups] = useState([])
   const [busy, setBusy] = useState(false)
 
-  // pairing
-  const [phone, setPhone] = useState('')
-  const [pairMsg, setPairMsg] = useState('')
+  // pairing dipindah ke komponen Pairing.jsx (papan status + polling kode)
 
   // broadcast
   const [selJids, setSelJids] = useState(new Set())
@@ -87,18 +87,6 @@ export default function Bot({ toast }) {
     const iv = setInterval(() => loadLogs(), 5000)
     return () => clearInterval(iv)
   }, [logAuto, logType])
-
-  const doPair = async () => {
-    if (!phone.trim()) return
-    setBusy(true); setPairMsg('Mengirim permintaan pairing…')
-    try {
-      await pairBot(phone.trim())
-      setPairMsg('Kode pairing dikirim. Cek WhatsApp di HP untuk konfirmasi.')
-      toast('Permintaan pairing dikirim', 'success')
-      load()
-    } catch (e) { setPairMsg(`Error: ${e.message}`); toast(`Error: ${e.message}`, 'error') }
-    setBusy(false)
-  }
 
   const toggleSel = (jid) => setSelJids(prev => { const n = new Set(prev); n.has(jid) ? n.delete(jid) : n.add(jid); return n })
 
@@ -234,18 +222,10 @@ export default function Bot({ toast }) {
         )}
       </div>
 
-      {/* Pairing */}
-      <div className="card p-6 md:p-8 max-w-xl space-y-3">
-        <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-mobile-screen text-[var(--volt)] mr-2" />Pairing Perangkat</h2>
-        <p className="text-[var(--ink-2)] text-sm">Masukkan nomor WhatsApp bot (format internasional, tanpa +)</p>
-        <div className="flex gap-2">
-          <input value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="628xxxxxxxxxx"
-            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), doPair())}
-            className="flex-1 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
-          <button onClick={doPair} disabled={busy || !phone.trim()} className="btn-primary rounded-[12px] px-4 py-2.5 text-sm font-bold"><i className="fa-solid fa-link mr-1.5" />Pair</button>
-        </div>
-        {pairMsg && <p className="text-sm anim-fade text-[var(--volt)]"><i className="fa-solid fa-circle-info mr-1.5" />{pairMsg}</p>}
-      </div>
+      {/* Pairing + registry multi-bot: dua kartu terpisah, keduanya menjaga
+          state sendiri lewat polling papan status. */}
+      <Pairing toast={toast} />
+      <Bots toast={toast} />
 
       {/* Groups */}
       <div className="card p-6 md:p-8">

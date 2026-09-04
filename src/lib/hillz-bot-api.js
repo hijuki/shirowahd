@@ -6,6 +6,18 @@ import {
   getDuplicateCommands,
   getCategories,
 } from './hillz-plugins.js';
+import { daftarGrupMati, toggleGrup } from './hillz-group-state.js';
+import { statusPairing, statusSub, mintaPairing } from './hillz-pairing.js';
+import {
+  daftarBot,
+  simpanBot,
+  hapusBot,
+  semuaRole,
+  kategoriTersedia,
+  simpanRoleKustom,
+  hapusRoleKustom,
+} from './hillz-bot-registry.js';
+import { umumkanBotOn } from './hillz-announce.js';
 
 const BOT_API_PORT = 8081;
 let server = null;
@@ -100,7 +112,7 @@ export function startBotApi() {
           id: g.id,
           subject: g.subject,
           size: g.size || g.participants?.length || 0,
-          disabled: global.disabledGroups?.has(g.id) || false
+          disabled: daftarGrupMati().has(g.id)
         }));
         json(res, 200, { groups });
       } catch (e) {
@@ -243,15 +255,11 @@ ${execCode}
       try {
         const body = await parseBody(req);
         if (!body.jid) { json(res, 400, { error: 'Missing jid' }); return; }
-        // Store disabled groups in a Set
-        if (!global.disabledGroups) global.disabledGroups = new Set();
-        const wasDisabled = global.disabledGroups.has(body.jid);
-        if (wasDisabled) {
-          global.disabledGroups.delete(body.jid);
-        } else {
-          global.disabledGroups.add(body.jid);
-        }
-        json(res, 200, { ok: true, disabled: !wasDisabled });
+        // Status disimpan ke disk lewat hillz-group-state supaya (a) bertahan
+        // setelah restart dan (b) benar-benar dibaca handler untuk menolak
+        // perintah. Sebelumnya hanya Set di memori yang tidak pernah dibaca.
+        const mati = toggleGrup(body.jid);
+        json(res, 200, { ok: true, disabled: mati });
       } catch (e) { json(res, 500, { error: e.message }); }
       return;
     }
@@ -263,6 +271,157 @@ ${execCode}
       } else {
         json(res, 200, { ok: true, message: 'No active broadcast' });
       }
+      return;
+    }
+
+    // ── PAIRING dari panel admin ─────────────────────────────────────────────
+    // Kode pairing lahir di proses ini (bot). Panel tidak bisa membacanya dari
+    // log, jadi dipublikasikan lewat papan status dan dibaca di sini.
+    if (req.method === 'GET' && url === '/pair/state') {
+      try {
+        const sock = getSocket();
+        json(res, 200, {
+          ok: true,
+          utama: statusPairing(),
+          tambahan: statusSub(),
+          terhubung: isConnected(),
+          user: sock?.user || null,
+        });
+      } catch (e) { json(res, 500, { error: e.message }); }
+      return;
+    }
+
+    // Minta kode untuk nomor UTAMA. Kalau bot sudah punya sesi, permintaan ini
+    // ditolak: menimpa sesi hidup harus lewat langkah sadar (hapus sesi dulu)
+    // supaya tidak ada admin yang kehilangan bot karena satu klik.
+    if (req.method === 'POST' && url === '/pair/request') {
+      try {
+        const body = await parseBody(req);
+        if (!body.number) { json(res, 400, { error: 'Missing number' }); return; }
+        if (isConnected() && !body.force) {
+          json(res, 409, {
+            error: 'Bot sudah tersambung. Hapus sesi dulu bila ingin ganti nomor.',
+          });
+          return;
+        }
+        const st = mintaPairing(body.number);
+        json(res, 200, { ok: true, state: st });
+      } catch (e) { json(res, 400, { error: e.message }); }
+      return;
+    }
+
+    // Pengumuman "BOT ON" manual — dipakai admin untuk mengulang tanpa restart.
+    if (req.method === 'POST' && url === '/announce') {
+      const sock = getSocket();
+      if (!sock || !isConnected()) { json(res, 503, { error: 'Bot not connected' }); return; }
+      try {
+        const hasil = await umumkanBotOn(sock, { paksa: true });
+        json(res, 200, { ok: true, ...hasil });
+      } catch (e) { json(res, 500, { error: e.message }); }
+      return;
+    }
+
+    // ── REGISTRY BOT (multi-nomor, on/off, role) ─────────────────────────────
+    if (req.method === 'GET' && url === '/bots') {
+      try {
+        const sock = getSocket();
+        const bots = daftarBot();
+        // Nomor bot utama dilaporkan dari socket hidup, bukan dari berkas:
+        // berkas bisa basi kalau nomor diganti lewat swap sesi manual.
+        if (bots.main) {
+          bots.main.nomorAktif = sock?.user?.id?.split(':')[0] || '';
+          bots.main.terhubung = isConnected();
+          bots.main.nama = sock?.user?.name || '';
+        }
+        json(res, 200, {
+          ok: true,
+          bots,
+          roles: semuaRole(),
+          kategori: kategoriTersedia(),
+        });
+      } catch (e) { json(res, 500, { error: e.message }); }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/bots/save') {
+      try {
+        const body = await parseBody(req);
+        if (!body.id) { json(res, 400, { error: 'Missing id' }); return; }
+        const hasil = simpanBot(body.id, {
+          nomor: body.nomor,
+          label: body.label,
+          role: body.role,
+          aktif: body.aktif,
+        });
+        json(res, 200, { ok: true, bot: hasil });
+      } catch (e) { json(res, 400, { error: e.message }); }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/bots/delete') {
+      try {
+        const body = await parseBody(req);
+        hapusBot(body.id);
+        json(res, 200, { ok: true });
+      } catch (e) { json(res, 400, { error: e.message }); }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/bots/role/save') {
+      try {
+        const body = await parseBody(req);
+        const r = simpanRoleKustom(body.id, {
+          label: body.label,
+          deskripsi: body.deskripsi,
+          kategori: body.kategori,
+        });
+        json(res, 200, { ok: true, role: r });
+      } catch (e) { json(res, 400, { error: e.message }); }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/bots/role/delete') {
+      try {
+        const body = await parseBody(req);
+        hapusRoleKustom(body.id);
+        json(res, 200, { ok: true });
+      } catch (e) { json(res, 400, { error: e.message }); }
+      return;
+    }
+
+    // Menautkan bot TAMBAHAN. Memakai mesin jadibot yang sudah ada supaya tidak
+    // ada implementasi socket kedua; `m` = null berarti kodenya tidak dikirim ke
+    // chat WhatsApp mana pun, hanya ke papan status untuk panel.
+    if (req.method === 'POST' && url === '/bots/pair') {
+      const sock = getSocket();
+      if (!sock || !isConnected()) {
+        json(res, 503, { error: 'Bot utama harus tersambung dulu' });
+        return;
+      }
+      try {
+        const body = await parseBody(req);
+        const nomor = String(body.nomor || '').replace(/[^0-9]/g, '');
+        if (nomor.length < 10 || nomor.length > 15) {
+          json(res, 400, { error: 'Nomor tidak valid (10-15 digit)' }); return;
+        }
+        const { startJadibot } = await import('./hillz-jadibot-manager.js');
+        // Slot didaftarkan dulu supaya panel bisa langsung menampilkan barisnya
+        // walau pairing masih berjalan.
+        simpanBot(nomor, { nomor, label: body.label || nomor, role: body.role || 'full', aktif: true });
+        startJadibot(sock, null, nomor + '@s.whatsapp.net', true).catch(() => { });
+        json(res, 202, { ok: true, message: 'Pairing dimulai, tunggu kode di panel' });
+      } catch (e) { json(res, 500, { error: e.message }); }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/bots/stop') {
+      try {
+        const body = await parseBody(req);
+        const nomor = String(body.nomor || '').replace(/[^0-9]/g, '');
+        const { stopJadibot } = await import('./hillz-jadibot-manager.js');
+        await stopJadibot(nomor + '@s.whatsapp.net');
+        json(res, 200, { ok: true });
+      } catch (e) { json(res, 500, { error: e.message }); }
       return;
     }
 

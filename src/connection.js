@@ -25,6 +25,12 @@ import {
   isLidConverted,
 } from "./lib/hillz-lid.js";
 import { initAutoBackup } from "./lib/hillz-auto-backup.js";
+import {
+  nomorTertunda,
+  simpanKode,
+  tandaiTersambung,
+  tandaiGagal,
+} from "./lib/hillz-pairing.js";
 // ── Penyaring kebocoran kunci privat ────────────────────────────────────────
 // libsignal (node_modules/libsignal/src/session_record.js:301) memanggil
 // `console.info("Removing old closed session:", oldestSession)` dan objek itu
@@ -258,6 +264,38 @@ function askQuestion(question) {
 }
 
 /**
+ * Menunggu admin mengisi nomor lewat panel web.
+ *
+ * Dipakai ketika bot jalan tanpa TTY (pm2) dan belum ada nomor sama sekali —
+ * kondisi normal di VPS yang baru dipasang. Bot tidak boleh mati atau menebak
+ * nomor; ia menunggu papan status berubah. Panel yang menulis papan itu lewat
+ * `POST /admin/api/bot/pair`.
+ *
+ * Tidak ada batas waktu keras: bot memang seharusnya sabar menunggu admin,
+ * karena tanpa nomor ia tidak punya pekerjaan lain. Log diberi jarak supaya
+ * tidak membanjiri berkas log.
+ */
+async function tungguNomorDariPanel() {
+  let putaran = 0;
+  for (;;) {
+    let nomor = "";
+    try { nomor = nomorTertunda(); } catch { }
+    if (nomor) {
+      colors.logger.success("pairing", `nomor dari panel: ${nomor}`);
+      return nomor;
+    }
+    putaran++;
+    if (putaran % 60 === 0) {
+      colors.logger.info(
+        "pairing",
+        `masih menunggu nomor dari panel admin (${Math.round(putaran * 2 / 60)} menit)`,
+      );
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
+/**
  * Memulai koneksi WhatsApp
  * @param {Object} options - Opsi koneksi
  * @param {Function} [options.onMessage] - Callback untuk pesan baru
@@ -298,6 +336,9 @@ async function startConnection(options = {}) {
   // .pair-number, tapi sebelumnya file itu tidak pernah dibaca — jadi di VPS
   // baru bot tetap minta kode untuk nomor yang ter-hardcode di config.js,
   // bukan nomor yang diisi user di wizard. Fallback tetap ke config.js.
+  // Nomor pairing, urutan menang: permintaan dari panel admin (papan status)
+  // > berkas .pair-number > config.js. Panel didahulukan supaya penautan bisa
+  // dikendalikan dari web tanpa menyentuh berkas apa pun lewat SSH.
   let pairingNumber = config.session?.pairingNumber || "";
   try {
     const pairFile = path.join(process.cwd(), ".pair-number");
@@ -305,6 +346,10 @@ async function startConnection(options = {}) {
       const fromFile = fs.readFileSync(pairFile, "utf8").replace(/[^0-9]/g, "");
       if (fromFile.length >= 10) pairingNumber = fromFile;
     }
+  } catch { }
+  try {
+    const dariPanel = nomorTertunda();
+    if (dariPanel) pairingNumber = dariPanel;
   } catch { }
   const sock = makeWASocket({
     version: version,
@@ -350,15 +395,27 @@ async function startConnection(options = {}) {
   if (usePairingCode && !sock.authState.creds.registered) {
     let phoneNumber = pairingNumber;
 
+    // Di bawah pm2 tidak ada TTY, jadi prompt stdin menggantung selamanya dan
+    // bot tampak "hidup tapi diam". Kalau nomor belum ada, bot MENUNGGU
+    // permintaan dari panel admin — itulah inti alur baru: web dulu, pairing
+    // lewat dashboard. Prompt terminal hanya dipakai kalau benar-benar ada TTY.
     if (!phoneNumber || phoneNumber === "") {
-      console.log("");
-      colors.logger.warn("pairing", "nomor pairing belum diatur di config");
-      console.log("");
-      phoneNumber = await askQuestion(
-        colors.chalk.cyan(
-          "📱 Masukkan nomor WhatsApp (contoh: 6281234567890): ",
-        ),
-      );
+      if (process.stdin.isTTY) {
+        console.log("");
+        colors.logger.warn("pairing", "nomor pairing belum diatur di config");
+        console.log("");
+        phoneNumber = await askQuestion(
+          colors.chalk.cyan(
+            "📱 Masukkan nomor WhatsApp (contoh: 6281234567890): ",
+          ),
+        );
+      } else {
+        colors.logger.info(
+          "pairing",
+          "menunggu nomor dari panel admin — buka /admin > Bot > Pairing",
+        );
+        phoneNumber = await tungguNomorDariPanel();
+      }
     }
 
     phoneNumber = phoneNumber.replace(/[^0-9]/g, "");
@@ -368,6 +425,9 @@ async function startConnection(options = {}) {
     try {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       const code = await sock.requestPairingCode(phoneNumber);
+      // Publikasikan ke papan status supaya panel admin bisa menampilkannya.
+      // Tanpa ini kode hanya ada di `pm2 logs main`.
+      try { simpanKode(phoneNumber, code); } catch { }
       console.log("");
       console.log(
         colors.createBanner(
@@ -387,6 +447,7 @@ async function startConnection(options = {}) {
       console.log("");
     } catch (error) {
       colors.logger.error("pairing", `gagal: ${error.message}`);
+      try { tandaiGagal(error.message); } catch { }
     }
   }
 
@@ -446,6 +507,9 @@ async function startConnection(options = {}) {
           "whatsapp",
           "sesi habis — hapus folder storage lalu restart",
         );
+        // Panel admin harus tahu ini, bukan cuma log terminal: dari dashboard
+        // sesi bisa dihapus dan pairing diulang tanpa menyentuh SSH.
+        try { tandaiGagal("Sesi ditolak WhatsApp (401) — pairing ulang dari panel"); } catch { }
         connectionState.reconnectAttempts = 0;
         return;
       }
@@ -508,6 +572,10 @@ async function startConnection(options = {}) {
 
       n && setBotNumber(n);
 
+      // Papan status pairing ikut dimutakhirkan supaya panel admin berhenti
+      // menampilkan kode dan langsung memperlihatkan perangkat yang tertaut.
+      try { tandaiTersambung(sock.user); } catch { }
+
       colors.logger.info(
         "bot",
         `Tersambung ke: ${config.bot?.name || "SHIROWAHD"} (${n || "?"}) · WA v${version.join(".")}`,
@@ -522,6 +590,19 @@ async function startConnection(options = {}) {
       }, 100);
 
       startWatchdog(startConnection, options);
+
+      // Pengumuman "BOT ON" ke grup. Ditunda 8 detik supaya daftar grup sudah
+      // tersinkron; kalau langsung, `groupFetchAllParticipating` sering balik
+      // kosong. Penanda per-perangkat di dalam fungsinya mencegah pengumuman
+      // terulang pada restart biasa — hanya sesi/nomor baru yang mengumumkan.
+      setTimeout(async () => {
+        try {
+          const { umumkanBotOn } = await import("./lib/hillz-announce.js");
+          await umumkanBotOn(sock, { namaBot: config.bot?.name || "BOT SWHD" });
+        } catch (e) {
+          colors.logger.warn("announce", `gagal: ${e.message}`);
+        }
+      }, 8000);
 
       if (config.fake_call?.active && !global.voipClient) {
         try {

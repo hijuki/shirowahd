@@ -64,6 +64,8 @@ import {
   loadJadibotDb,
 } from "./lib/hillz-jadibot-database.js";
 import { getActiveJadibots } from "./lib/hillz-jadibot-manager.js";
+import { grupMati } from "./lib/hillz-group-state.js";
+import { bolehJalan } from "./lib/hillz-bot-registry.js";
 import { handleCommand as handleCaseCommand } from "../case/hillz.js";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import { games as hillzGames } from "./lib/hillz-games.js";
@@ -1808,6 +1810,29 @@ async function messageHandler(msg, sock, options = {}) {
       jadibotId: jadibotId,
       isJadibot: isJadibot,
     };
+
+    // ── GERBANG: grup dimatikan admin + role bot ────────────────────────────
+    // Diletakkan di sini, satu langkah sebelum plugin dijalankan, supaya
+    // berlaku untuk SEMUA 3000+ plugin tanpa menyentuh satu berkas plugin pun.
+    //
+    // Sebelum ini, tombol "matikan bot di grup" di panel hanya mengisi Set di
+    // memori yang tidak pernah dibaca siapa pun — jadi bot tetap menjawab.
+    if (m.isGroup && grupMati(m.chat)) {
+      // Sengaja diam: mengirim "bot dimatikan" ke grup yang sengaja dimatikan
+      // admin justru membuat bot bicara di tempat yang seharusnya sunyi.
+      // Owner tetap bisa memakai bot untuk menyalakannya kembali.
+      if (!m.isOwner) return;
+    }
+    {
+      const idBot = isJadibot && jadibotId ? jadibotId : "main";
+      const gerbang = bolehJalan(idBot, plugin.config?.category);
+      if (!gerbang.izin) {
+        // Balasan hanya untuk perintah yang JELAS dipanggil user (ada prefix),
+        // supaya bot tidak berkicau pada pemicu tak sengaja.
+        if (m.isCommand) await m.reply(`🚫 ${gerbang.alasan}`);
+        return;
+      }
+    }
 
     await plugin.handler(m, context);
 

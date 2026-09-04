@@ -1,56 +1,56 @@
 #!/bin/bash
-# ============================================================
-#  SHIROWAHD migrate — pindah VPS tanpa pairing ulang.
+# ════════════════════════════════════════════════════════════════════════
+#  SHIROWAHD — buat bundle migrasi untuk pindah VPS.
 #
-#  VPS LAMA : bash migrate.sh export
-#             → /root/shirowahd-migrate.tar.gz (semua identitas)
-#  VPS BARU : taruh file itu di /root/, lalu jalankan installer:
-#             bash install.sh   (auto-detect & restore)
-#  Manual   : bash migrate.sh import /path/ke/file.tar.gz
-# ============================================================
+#  Jalankan di VPS LAMA. Hasilnya satu berkas .tar.gz berisi semua yang
+#  TIDAK ada di git: sesi WhatsApp, .env, database, aset brand.
+#
+#  Di VPS BARU:
+#    scp shirowahd-migrate.tar.gz root@vps-baru:/root/
+#    bash install.sh          ← bundle otomatis terdeteksi & dipulihkan
+#
+#  Kenapa perlu bundle: `git clone` hanya membawa kode. Sesi WhatsApp,
+#  aktivasi user, sewa, dan .env sengaja gitignored (kredensial + data
+#  hidup). Tanpa bundle, VPS baru harus pairing ulang dari nol dan
+#  kehilangan aktivasi.
+# ════════════════════════════════════════════════════════════════════════
 set -euo pipefail
+
 SW_DIR="${SW_DIR:-/root/shirowahd}"
-BUNDLE="${2:-/root/shirowahd-migrate.tar.gz}"
+# Argumen pertama boleh berupa path keluaran, atau kata `export` (kompatibel
+# dengan README lama). Tanpa penanganan ini `bash migrate.sh export` akan
+# membuat berkas bernama "export" di direktori kerja.
+ARG1="${1:-}"
+[ "$ARG1" = "export" ] && ARG1=""
+OUT="${ARG1:-/root/shirowahd-migrate.tar.gz}"
 
-# Semua yang membuat instalasi "dikenali": sesi WA, secret, settings,
-# nomor pairing, database user/RPG, file video aktif.
-ITEMS=(storage/session session .env admin-settings.json .pair-number database vids backup-history.json upload-log.json)
+say() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
+ok()  { printf '\033[1;32m  ✓\033[0m %s\n' "$*"; }
 
-case "${1:-}" in
-  export)
-    cd "$SW_DIR"
-    EX=(); for i in "${ITEMS[@]}"; do [ -e "$i" ] && EX+=("$i"); done
-    tar -czf "$BUNDLE" "${EX[@]}"
-    chmod 600 "$BUNDLE"
-    echo "✔ Export: $BUNDLE ($(du -h "$BUNDLE" | cut -f1))"
-    echo "  Isi: ${EX[*]}"
-    echo "  Salin ke VPS baru: scp $BUNDLE root@IP_BARU:/root/"
-    ;;
-  import)
-    [ -f "$BUNDLE" ] || { echo "ERROR: $BUNDLE tidak ada"; exit 1; }
-    [ -d "$SW_DIR" ]  || { echo "ERROR: $SW_DIR tidak ada — jalankan install.sh dulu"; exit 1; }
-    # jangan timpa identitas hidup tanpa backup
-    TS=$(date +%s)
-    cd "$SW_DIR"
-    for i in "${ITEMS[@]}"; do [ -e "$i" ] && mv "$i" "$i.pre-import.$TS" 2>/dev/null || true; done
-    tar -xzf "$BUNDLE" -C "$SW_DIR"
-    chmod 600 .env 2>/dev/null || true
-    echo "✔ Import selesai (backup lama: *.pre-import.$TS)"
-    # Hanya restart pm2 kalau proses main/web memang menunjuk ke $SW_DIR.
-    # Sebelumnya `pm2 restart main web` jalan tanpa syarat, jadi import ke
-    # direktori lain (mis. sandbox atau instalasi kedua) ikut me-restart
-    # instalasi produksi yang tidak ada hubungannya.
-    if command -v pm2 >/dev/null; then
-      PM_CWD=$(pm2 jlist 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const p=JSON.parse(d).find(x=>x.name==="main");process.stdout.write(p?p.pm2_env.pm_cwd:"")}catch{process.stdout.write("")}})' 2>/dev/null || echo "")
-      if [ -n "$PM_CWD" ] && [ "$PM_CWD" = "$(pwd)" ]; then
-        pm2 restart main web --update-env 2>/dev/null || true
-      else
-        echo "  (pm2 tidak di-restart: proses 'main' menunjuk ke '${PM_CWD:-tidak ada}', bukan $(pwd))"
-        echo "  Restart manual kalau ini instalasi utama: pm2 restart main web --update-env"
-      fi
-    fi
-    echo "  Bot akan konek pakai sesi lama — tidak perlu pairing ulang."
-    ;;
-  *)
-    echo "Pakai: bash migrate.sh export | import [file.tar.gz]"; exit 1 ;;
-esac
+cd "$SW_DIR" || { echo "ERROR: $SW_DIR tidak ada"; exit 1; }
+
+# Hanya yang benar-benar tidak bisa diambil dari git.
+ISI=()
+for p in .env storage/session database admin-settings.json brand-assets .pair-number; do
+  [ -e "$p" ] && ISI+=("$p")
+done
+[ ${#ISI[@]} -gt 0 ] || { echo "ERROR: tidak ada yang bisa dibundel"; exit 1; }
+
+say "Isi bundle:"
+for p in "${ISI[@]}"; do
+  printf '    %-24s %s\n' "$p" "$(du -sh "$p" 2>/dev/null | cut -f1)"
+done
+
+# Sesi WA berisi kunci enkripsi perangkat. Bundle wajib 600 dan JANGAN
+# pernah dimasukkan ke git atau dikirim lewat kanal terbuka.
+tar -czf "$OUT" "${ISI[@]}"
+chmod 600 "$OUT"
+
+ok "Bundle: $OUT ($(du -sh "$OUT" | cut -f1))"
+echo
+echo "  Kirim ke VPS baru:"
+echo "    scp -P <port> $OUT root@<ip-baru>:/root/"
+echo "  Lalu di VPS baru:"
+echo "    bash install.sh"
+echo
+printf '\033[1;33m  !\033[0m Bundle ini berisi sesi WhatsApp + .env. Hapus setelah dipakai.\n'
