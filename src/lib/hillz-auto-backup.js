@@ -5,6 +5,15 @@ import { CronJob } from "cron";
 import config from "../../config.js";
 import * as timeHelper from "./hillz-time.js";
 import { logger } from "./hillz-logger.js";
+// Aturan isi backup dipakai BERSAMA dengan plugins/owner/backupsc.js.
+// Dulu modul ini punya daftar exclude sendiri yang sudah melenceng dari daftar
+// plugin (mis. `storage/` dikecualikan di sini tapi tidak di plugin), sehingga
+// dua tombol "backup" menghasilkan isi berbeda tanpa ada yang tahu.
+import {
+  kumpulkanBerkas,
+  pengaturanTersanitasi,
+  ringkas,
+} from "./hillz-backup-rules.js";
 
 const BACKUP_STATE_FILE = path.join(
   process.cwd(),
@@ -14,104 +23,10 @@ const BACKUP_STATE_FILE = path.join(
 let sockInstance = null;
 let activeCronJob = null;
 
-const EXCLUDE_DIRS = new Set([
-  "node_modules",
-  ".git",
-  "storage",
-  "storages",
-  "tmp",
-  "temp",
-  ".cache",
-  "logs",
-  "sessions",
-  "session",
-  "auth",
-  ".npm",
-  ".yarn",
-  "dist",
-  "coverage",
-  "__pycache__",
-  "autoreply_media",
-  "build",
-  "Baileys-master",
-  "ALYA V8",
-  "DHX-pro",
-  "RTXZY-MD-pro",
-  "BETABOTZ-MD2-pro",
-  "KazzTzyCanvs",
-  "starseed-main",
-  "HillzGlitch-Baileys-main",
-  "Script Lyrra MD V7",
-  "Sky Md V2",
-  "Marin Kitagawa MD V1.0 (1)",
-  "AmbaCrash v19 Free (1)",
-  "@blckrose",
-  "backup",
-  "animation",
-  "_tools",
-  "PUSHKONTAK",
-  ".vscode",
-  ".gemini",
-  "fischit-main",
-  ".hillz-temp",
-  // Logo/aset brand hasil upload admin = data user, bukan kode.
-  // Tanpa ini backup route ikut men-commit tiap gambar yang diupload.
-  "brand-assets",
-]);
-
-const EXCLUDE_EXTENSIONS = new Set([
-  ".zip",
-  ".tar.gz",
-  ".7z",
-  ".mp4",
-  ".mp3",
-  ".wav",
-  ".avi",
-  ".mkv",
-  ".ico",
-  ".svg",
-  ".traineddata",
-  ".log",
-  ".bak",
-  ".lock",
-]);
-
-const EXCLUDE_FILES = new Set([
-  ".env",
-  ".env.local",
-  "creds.json",
-  "package-lock.json",
-  "yarn.lock",
-  ".npmrc",
-  ".gitignore",
-  "boot_final.log",
-  "bot_log.txt",
-  "error.txt",
-  "changelog.txt",
-  "UPDATE.txt",
-  "CHANGELOG.md",
-]);
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-function shouldExclude(filePath) {
-  const relativePath = path.relative(process.cwd(), filePath);
-  const parts = relativePath.split(path.sep);
-  for (const part of parts) {
-    if (EXCLUDE_DIRS.has(part)) return true;
-  }
-  const fileName = path.basename(filePath);
-  if (EXCLUDE_FILES.has(fileName)) return true;
-  const ext = path.extname(fileName).toLowerCase();
-  if (EXCLUDE_EXTENSIONS.has(ext)) {
-    const isAsset =
-      relativePath.startsWith("assets" + path.sep) ||
-      relativePath.startsWith("database" + path.sep);
-    if (!isAsset) return true;
-  }
-  if (fileName.endsWith(".tar.gz")) return true;
-  return false;
-}
+// Batas dokumen WhatsApp. Baileys membaca seluruh berkas ke RAM sebelum
+// mengunggah, jadi zip raksasa bisa membunuh proses bot — diperiksa sebelum
+// kirim, bukan dibiarkan gagal di tengah.
+const BATAS_KIRIM = 90 * 1024 * 1024;
 
 function loadBackupState() {
   try {
@@ -191,6 +106,12 @@ async function createBackup() {
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
     const backupPath = path.join(tmpDir, `backup_${timestamp}.zip`);
 
+    const rootDir = process.cwd();
+    // Isi dihitung lebih dulu dari aturan bersama, jadi auto-backup dan
+    // `.backupsc` menghasilkan zip yang IDENTIK isinya.
+    const daftar = kumpulkanBerkas(rootDir);
+    const info = ringkas(daftar, rootDir);
+
     const output = fs.createWriteStream(backupPath);
     const archive = archiver("zip", { zlib: { level: 9 } });
     let fileCount = 0;
@@ -201,38 +122,32 @@ async function createBackup() {
         size: archive.pointer(),
         fileCount,
         timestamp,
+        hilang: info.hilang,
+        perBagian: info.perBagian,
       });
     });
+    output.on("error", reject);
     archive.on("error", reject);
     archive.pipe(output);
 
-    const rootDir = process.cwd();
-
-    async function addDirectory(dirPath) {
-      try {
-        const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-        for (const entry of entries) {
-          const fullPath = path.join(dirPath, entry.name);
-          if (shouldExclude(fullPath)) continue;
-          if (entry.isDirectory()) {
-            await addDirectory(fullPath);
-          } else if (entry.isFile()) {
-            try {
-              const stat = await fs.promises.stat(fullPath);
-              if (stat.size < MAX_FILE_SIZE) {
-                const relativePath = path.relative(rootDir, fullPath);
-                archive.file(fullPath, { name: relativePath });
-                fileCount++;
-              }
-            } catch (e) { console.error('[AutoBackup] file stat/add failed:', e.message); }
-          }
-        }
-      } catch (e) { console.error('[AutoBackup] readdir failed:', e.message); }
+    for (const b of daftar) {
+      archive.file(b.penuh, { name: b.rel });
+      fileCount++;
     }
 
-    addDirectory(rootDir).then(() => {
-      archive.finalize();
-    }).catch(reject);
+    // Pengaturan panel admin ikut, tapi tersanitasi — zip ini dikirim lewat
+    // chat, jadi password admin dan token Telegram tidak boleh ada di dalamnya.
+    const bersih = pengaturanTersanitasi(rootDir);
+    if (bersih) {
+      archive.append(bersih, { name: "admin-settings.sanitized.json" });
+      fileCount++;
+    }
+
+    if (fileCount === 0) {
+      reject(new Error("Tidak ada berkas yang masuk backup"));
+      return;
+    }
+    archive.finalize();
   });
 }
 
@@ -260,6 +175,24 @@ async function sendBackupToOwner(backupInfo) {
     const sizeInMB = (backupInfo.size / (1024 * 1024)).toFixed(2);
     const state = loadBackupState();
 
+    // Gerbang ukuran: kalau zip melewati batas WhatsApp, lapor lokasi berkasnya
+    // alih-alih mencoba unggah dan menghabiskan RAM bot.
+    if (backupInfo.size > BATAS_KIRIM) {
+      await sockInstance.sendMessage(ownerJid, {
+        text:
+          `⚠ *ᴀᴜᴛᴏ ʙᴀᴄᴋᴜᴘ ᴛᴇʀʟᴀʟᴜ ʙᴇsᴀʀ*\n\n` +
+          `Ukuran ${sizeInMB} MB melewati batas kirim WhatsApp (~90 MB).\n` +
+          `Zip tersimpan di VPS:\n\`${backupInfo.path}\``,
+      });
+      logger.error("AutoBackup", `Zip ${sizeInMB} MB melewati batas kirim`);
+      return false;
+    }
+
+    const bagian = (backupInfo.perBagian || [])
+      .slice(0, 6)
+      .map(([k, v]) => `┃ ${k} ${v.n}`)
+      .join("\n");
+
     const caption =
       `🗂️ *ᴀᴜᴛᴏ ʙᴀᴄᴋᴜᴘ*\n\n` +
       `╭┈┈⬡「 📋 *ɪɴꜰᴏ* 」\n` +
@@ -269,6 +202,11 @@ async function sendBackupToOwner(backupInfo) {
       `┃ ⏱️ Interval: ${formatInterval(state.intervalMs)}\n` +
       `┃ #️⃣ Backup ke-${state.backupCount + 1}\n` +
       `╰┈┈┈┈┈┈┈┈⬡\n\n` +
+      (bagian ? `╭┈┈⬡「 📂 *ɪsɪ* 」\n${bagian}\n╰┈┈⬡\n\n` : "") +
+      (backupInfo.hilang?.length
+        ? `⚠ bagian hilang: ${backupInfo.hilang.join(", ")}\n\n`
+        : `✓ lengkap: bot + web + panel admin\n\n`) +
+      `> Sesi WA & .env TIDAK ikut (kredensial).\n` +
       `> ${config.bot?.name || "SHIROWAHD"} Auto Backup System`;
 
     await sockInstance.sendMessage(ownerJid, {

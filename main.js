@@ -80,29 +80,53 @@ const ENABLE_TUNNEL = process.env.ENABLE_TUNNEL === '1';
 await sleep(200);
 
 // ═══════════════════════════════════════
-// 3. Git Pull
+// 3. Git sync (OPT-IN — default MATI)
 // ═══════════════════════════════════════
-step('Git pull');
-try {
-  const GIT_REPO   = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
-  const GIT_TOKEN  = process.env.GIT_TOKEN   || '';
-  const GIT_USER   = process.env.USERNAME    || '';
-  const GIT_BRANCH = process.env.BRANCH      || 'main';
+// Dulu blok ini SELALU menjalankan `git fetch && git reset --hard origin/main`
+// pada SETIAP boot bot. Akibatnya nyata dan merusak: setiap berkas yang diedit
+// di VPS tapi belum di-push akan dikembalikan ke versi remote tanpa peringatan
+// apa pun — termasuk perbaikan darurat yang baru ditulis semenit sebelumnya.
+//
+// Sekarang default MATI. Nyalakan sadar-sadar dengan GIT_AUTO_SYNC=1 di .env
+// kalau memang mau VPS ini selalu mengikuti remote (mis. deploy otomatis).
+//
+// `git reset --hard` TIDAK menyentuh berkas gitignored, jadi sesi WA,
+// database/main/, .env, dan admin-settings.json aman dalam kasus apa pun.
+const GIT_AUTO_SYNC = process.env.GIT_AUTO_SYNC === '1';
 
-  if (!existsSync('.git')) {
-    execSync('git init && git checkout -b ' + GIT_BRANCH, { stdio: 'ignore', timeout: 15000 });
-    let remoteUrl = GIT_REPO;
-    if (GIT_TOKEN && GIT_USER) remoteUrl = GIT_REPO.replace('https://', `https://${GIT_USER}:${GIT_TOKEN}@`);
-    else if (GIT_TOKEN) remoteUrl = GIT_REPO.replace('https://', `https://${GIT_TOKEN}@`);
-    execSync(`git remote add origin ${remoteUrl}`, { stdio: 'ignore', timeout: 5000 });
-    execSync(`git fetch origin ${GIT_BRANCH} && git reset --hard origin/${GIT_BRANCH}`, { stdio: 'ignore', timeout: 60000 });
-    done('initialized');
-  } else {
-    const out = execSync('git fetch origin main && git reset --hard origin/main 2>&1', { encoding: 'utf8', timeout: 30000 }).trim();
-    const short = out.includes('Already up to date') ? 'up to date' : out.split('\n').pop();
-    done(short);
-  }
-} catch (e) { fail(e.message.split('\n')[0]); }
+step('Git sync');
+if (!GIT_AUTO_SYNC) {
+  done('dilewati (GIT_AUTO_SYNC≠1) — edit lokal dipertahankan');
+} else {
+  try {
+    const GIT_REPO   = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
+    const GIT_TOKEN  = process.env.GIT_TOKEN   || '';
+    const GIT_USER   = process.env.USERNAME    || '';
+    const GIT_BRANCH = process.env.BRANCH      || 'main';
+
+    if (!existsSync('.git')) {
+      execSync('git init && git checkout -b ' + GIT_BRANCH, { stdio: 'ignore', timeout: 15000 });
+      let remoteUrl = GIT_REPO;
+      if (GIT_TOKEN && GIT_USER) remoteUrl = GIT_REPO.replace('https://', `https://${GIT_USER}:${GIT_TOKEN}@`);
+      else if (GIT_TOKEN) remoteUrl = GIT_REPO.replace('https://', `https://${GIT_TOKEN}@`);
+      execSync(`git remote add origin ${remoteUrl}`, { stdio: 'ignore', timeout: 5000 });
+      execSync(`git fetch origin ${GIT_BRANCH} && git reset --hard origin/${GIT_BRANCH}`, { stdio: 'ignore', timeout: 60000 });
+      done('initialized');
+    } else {
+      // Peringatkan dulu kalau ada edit lokal yang akan hilang, supaya kejadian
+      // "kode gw balik ke semula" punya jejak di log, bukan senyap.
+      let kotor = '';
+      try { kotor = execSync('git status --porcelain', { encoding: 'utf8', timeout: 15000 }).trim(); } catch { /* abaikan */ }
+      if (kotor) {
+        const n = kotor.split('\n').filter(Boolean).length;
+        console.log(c.err(`  [GIT] ${n} berkas berubah lokal akan DITIMPA oleh remote`));
+      }
+      const out = execSync(`git fetch origin ${GIT_BRANCH} && git reset --hard origin/${GIT_BRANCH} 2>&1`, { encoding: 'utf8', timeout: 30000 }).trim();
+      const short = out.includes('Already up to date') ? 'up to date' : out.split('\n').pop();
+      done(short);
+    }
+  } catch (e) { fail(e.message.split('\n')[0]); }
+}
 
 await sleep(200);
 
@@ -233,7 +257,14 @@ if (!ENABLE_TUNNEL) {
       fail(JSON.stringify(data.errors));
     } else {
       if (!existsSync('./cloudflared')) {
-        execSync('curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o ./cloudflared && chmod +x ./cloudflared', { stdio: 'ignore', timeout: 60000 });
+        // Arsitektur DIDETEKSI, bukan diasumsikan amd64. VPS ARM (Oracle/AWS
+        // Graviton/Hetzner CAX) akan mengunduh biner yang tidak bisa dieksekusi
+        // dan tunnel gagal dengan "Exec format error" yang membingungkan.
+        const arch = process.arch === 'arm64' ? 'arm64'
+                   : process.arch === 'arm'   ? 'arm'
+                   : process.arch === 'ia32'  ? '386'
+                   : 'amd64';
+        execSync(`curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${arch} -o ./cloudflared && chmod +x ./cloudflared`, { stdio: 'ignore', timeout: 120000 });
       }
       const cf = spawn('./cloudflared', ['tunnel', '--no-autoupdate', '--protocol', 'http2', 'run', '--token', data.result], { stdio: 'ignore' });
       cf.on('error', e => console.log(c.err(`  [TUNNEL] ${e.message}`)));

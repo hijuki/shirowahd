@@ -20,6 +20,7 @@
 #    SW_DIR=/root/shirowahd  SW_REPO=<url>  SW_TOKEN=<PAT>
 #    SW_NO_PM2=1     → jangan daftarkan ke pm2 (uji kering)
 #    SW_NONINTERAKTIF=1 → jangan tanya apa pun, pakai default semua
+#    SW_NO_SWAP=1    → jangan bikin swap walau RAM kecil
 # ════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -46,6 +47,42 @@ ask() {
 # ── 1. Paket dasar ──────────────────────────────────────────────────────
 say "Cek paket dasar"
 command -v curl >/dev/null || { apt-get update -qq; apt-get install -y -qq curl; }
+
+# ── 1b. Baca spek VPS dan sesuaikan ─────────────────────────────────────
+# VPS berikutnya belum tentu sekelas yang sekarang. Angka build di-turunkan
+# dari RAM nyata, bukan dipatok. Tanpa ini `next build` di VPS 1 GB kena
+# OOM-killer dan installer mati di tengah tanpa penjelasan.
+CPU=$(nproc 2>/dev/null || echo 1)
+RAM_MB=$(awk '/MemTotal/{printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 1024)
+SWAP_MB=$(awk '/SwapTotal/{printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 0)
+DISK_MB=$(df -Pm / 2>/dev/null | awk 'NR==2{print $4}' || echo 0)
+ARCH=$(uname -m)
+say "Spek VPS: ${CPU} core, ${RAM_MB} MB RAM, ${SWAP_MB} MB swap, ${DISK_MB} MB disk bebas, $ARCH"
+
+[ "$DISK_MB" -lt 3000 ] && warn "Disk bebas < 3 GB — node_modules bot+web butuh ~1.4 GB"
+
+# Heap build: ~50% RAM, dibatasi 512-4096 MB.
+BUILD_HEAP=$(( RAM_MB / 2 ))
+[ "$BUILD_HEAP" -lt 512 ] && BUILD_HEAP=512
+[ "$BUILD_HEAP" -gt 4096 ] && BUILD_HEAP=4096
+
+# Swap: `next build` butuh ~1.5 GB. RAM < 2 GB tanpa swap = OOM hampir pasti.
+TOTAL_MB=$(( RAM_MB + SWAP_MB ))
+if [ "$TOTAL_MB" -lt 2048 ] && [ "${SW_NO_SWAP:-0}" != 1 ]; then
+  if [ ! -f /swapfile ]; then
+    say "RAM+swap hanya ${TOTAL_MB} MB — bikin swapfile 2 GB supaya build tidak kena OOM"
+    if fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none; then
+      chmod 600 /swapfile && mkswap /swapfile >/dev/null 2>&1 && swapon /swapfile 2>/dev/null \
+        && grep -q '^/swapfile' /etc/fstab 2>/dev/null || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+      ok "swap 2 GB aktif"
+    else
+      warn "gagal bikin swap — build mungkin kena OOM"
+    fi
+  else
+    ok "swapfile sudah ada"
+  fi
+fi
+ok "heap build diset ${BUILD_HEAP} MB"
 
 NODE_CUR=0
 command -v node >/dev/null && NODE_CUR=$(node -v 2>/dev/null | sed 's/^v//; s/\..*//')
@@ -103,7 +140,7 @@ npm install --omit=dev --no-audit --no-fund
 ok "dependencies bot"
 
 say "npm install + build (web)"
-( cd web && npm install --no-audit --no-fund && NODE_OPTIONS=--max-old-space-size=2048 npx next build )
+( cd web && npm install --no-audit --no-fund && NODE_OPTIONS=--max-old-space-size=${BUILD_HEAP} npx next build )
 ok "web ter-build ke web/out/"
 
 # ── 5. .env ─────────────────────────────────────────────────────────────
@@ -152,11 +189,33 @@ ok "folder data siap"
 # sudah menerima request sebelum bot punya gunanya. Bot yang dinyalakan tanpa
 # nomor tidak error — ia menunggu papan status diisi panel.
 if [ "${SW_NO_PM2:-0}" != 1 ]; then
+  # Batas memori pm2 diturunkan dari RAM nyata, bukan dipatok. Di VPS kecil
+  # tanpa batas ini satu kebocoran memori bot bikin OOM-killer membunuh
+  # SSH/sshd, bukan cuma bot — VPS jadi tidak bisa dimasuki.
+  BOT_MAXMEM=$(( RAM_MB * 45 / 100 ))
+  WEB_MAXMEM=$(( RAM_MB * 25 / 100 ))
+  [ "$BOT_MAXMEM" -lt 400 ] && BOT_MAXMEM=400
+  [ "$WEB_MAXMEM" -lt 200 ] && WEB_MAXMEM=200
+  [ "$BOT_MAXMEM" -gt 2048 ] && BOT_MAXMEM=2048
+  [ "$WEB_MAXMEM" -gt 1024 ] && WEB_MAXMEM=1024
+  ok "batas memori pm2: bot ${BOT_MAXMEM}M, web ${WEB_MAXMEM}M"
+
+  # Port 80 harus bebas. nginx/apache bawaan image VPS sering sudah memegangnya,
+  # dan pm2 akan melaporkan "online" walau proses langsung mati EADDRINUSE.
+  if command -v ss >/dev/null 2>&1 && ss -ltnH '( sport = :80 )' 2>/dev/null | grep -q .; then
+    PEMILIK=$(ss -ltnpH '( sport = :80 )' 2>/dev/null | grep -oE 'users:\(\("[^"]+' | head -1 | sed 's/.*"//')
+    if [ "$PEMILIK" != "node" ] && [ -n "$PEMILIK" ]; then
+      warn "Port 80 dipakai '$PEMILIK' — dimatikan supaya web bisa hidup"
+      systemctl stop "$PEMILIK" 2>/dev/null || true
+      systemctl disable "$PEMILIK" 2>/dev/null || true
+    fi
+  fi
+
   say "Nyalakan WEB (port 80)"
   if pm2 describe web >/dev/null 2>&1; then
     pm2 restart web --update-env >/dev/null
   else
-    pm2 start web-uploader.js --name web --cwd "$SW_DIR" >/dev/null
+    pm2 start web-uploader.js --name web --cwd "$SW_DIR" --max-memory-restart "${WEB_MAXMEM}M" >/dev/null
   fi
 
   # Tunggu web benar-benar menjawab, bukan sekadar "pm2 bilang online".
@@ -171,7 +230,7 @@ if [ "${SW_NO_PM2:-0}" != 1 ]; then
   if pm2 describe main >/dev/null 2>&1; then
     pm2 restart main --update-env >/dev/null
   else
-    pm2 start main.js --name main --cwd "$SW_DIR" >/dev/null
+    pm2 start main.js --name main --cwd "$SW_DIR" --max-memory-restart "${BOT_MAXMEM}M" >/dev/null
   fi
   pm2 save >/dev/null
   pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
