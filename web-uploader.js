@@ -2067,6 +2067,13 @@ function bacaPapanPairing() {
     if ((d.tahap === 'diminta' || d.tahap === 'kode-siap') && d.diminta && Date.now() - d.diminta > 15 * 60 * 1000) {
       return { ...d, tahap: 'kadaluarsa', kode: '', kodeRapi: '' };
     }
+    // Umur kode dihitung di sini, bukan di frontend. Panel memakainya untuk
+    // hitung mundur "berlaku ±Ns lagi"; tanpa field ini hitungannya selalu
+    // mulai dari 180 walau kodenya sudah tua 2 menit, dan admin memasukkan
+    // kode mati lalu menyimpulkan botnya rusak.
+    if (d.tahap === 'kode-siap' && d.kode) {
+      d.umurKodeDetik = Math.round((Date.now() - (d.kodeDibuat || d.diminta || Date.now())) / 1000);
+    }
     return d;
   } catch {
     return { tahap: 'idle', nomor: '', kode: '', kodeRapi: '', pesan: '' };

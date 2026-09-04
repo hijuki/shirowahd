@@ -38,10 +38,24 @@ function skip(msg) { console.log(c.info('⊘ ') + c.dim(msg || 'skipped')); }
 // 1. Kill old processes
 // ═══════════════════════════════════════
 step('Cleaning old processes');
+// Pola lama `node.*(main|bot|index|start|web-uploader)` MEMBUNUH PROSES WEB.
+// Akibatnya berantai dan nyata: setiap `pm2 restart main` mematikan pm2 `web`,
+// pm2 menghidupkannya kembali (itu sebabnya restart web menumpuk sampai 49),
+// dan di sela itu panel admin mati — persis saat pairing sedang berlangsung,
+// karena pairing memang me-restart `main`. Kode pairing muncul di papan status
+// tapi panel tidak bisa mengambilnya.
+//
+// Pola sekarang menyasar HANYA proses bot dari repo ini: main.js / index.js.
+// `web-uploader.js` sengaja tidak ikut — itu proses milik pm2 `web`, bukan
+// sampah sisa bot. Kata `bot|start` juga dibuang karena terlalu longgar
+// (`pgrep -f` mencocokkan seluruh baris perintah, termasuk milik proses lain
+// yang kebetulan menyebut kata itu).
 try {
   const myPid = process.pid;
-  execSync(`pgrep -f 'node.*(main|bot|index|start|web-uploader)' 2>/dev/null | grep -v ${myPid} | xargs -r kill -9 2>/dev/null`, { stdio: 'ignore', timeout: 5000 });
-  execSync('fuser -k 8080/tcp 2>/dev/null', { stdio: 'ignore', timeout: 3000 });
+  execSync(
+    `pgrep -f 'node .*/(main|index)\\.js' 2>/dev/null | grep -v ${myPid} | xargs -r kill -9 2>/dev/null`,
+    { stdio: 'ignore', timeout: 5000 },
+  );
   done('killed');
 } catch { done('clean'); }
 
@@ -146,10 +160,10 @@ await sleep(200);
 // 6. Web Uploader
 // ═══════════════════════════════════════
 step('Starting web uploader');
-// Web uploader mendengarkan port 80. Kalau sudah ada yang memegang port itu
-// (mis. proses pm2 "web" terpisah, seperti di deploy produksi), jangan spawn
-// lagi — dulu selalu di-spawn sehingga tiap bot restart melempar
-// "EADDRINUSE: address already in use :::80" ke log.
+// Web uploader mendengarkan port 80. Di deploy produksi ia adalah proses pm2
+// sendiri (`web`) yang HARUS sudah hidup sebelum bot, karena pairing dilakukan
+// dari panel web. Jadi di sini bot hanya menutup lubang saat seseorang
+// menjalankan `node main.js` mentah tanpa pm2 — bukan mengambil alih.
 const WEB_PORT = 80;
 const portBusy = () => {
   try {
@@ -158,7 +172,23 @@ const portBusy = () => {
   } catch { return false; }
 };
 
-if (portBusy()) {
+// Kalau pm2 sudah mengelola `web`, JANGAN spawn duplikat. Dulu pengecekannya
+// hanya "port dipakai?" — dan karena langkah 1 baru saja membunuh proses web
+// (pola pgrep terlalu longgar), port sempat kosong dan bot men-spawn web kedua
+// sebagai anak proses bot. Dua server di port 80 = EADDRINUSE, dan web mati
+// setiap kali bot restart.
+const webDikelolaPm2 = () => {
+  try {
+    const out = execSync('pm2 jlist 2>/dev/null', { encoding: 'utf8', timeout: 8000 });
+    return JSON.parse(out).some(
+      (p) => p.name === 'web' && p.pm2_env?.status === 'online',
+    );
+  } catch { return false; }
+};
+
+if (webDikelolaPm2()) {
+  skip('pm2 "web" sudah mengelola port 80');
+} else if (portBusy()) {
   skip(`port ${WEB_PORT} sudah dipakai proses lain`);
 } else {
   const webUp = spawn('node', ['web-uploader.js'], {

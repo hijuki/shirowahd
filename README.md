@@ -31,12 +31,12 @@ Selesai install, installer mencetak URL panel dan password admin. **Catat passwo
 Bot yang baru dipasang hidup tanpa nomor. Ia menunggu, bukan error.
 
 1. Buka `http://IP-VPS/admin`, login pakai password dari installer
-2. Tab **Bot** → kartu **Pairing**
-3. Masukkan nomor bot (contoh `628xxxxxxxxxx`) → **Minta Kode**
+2. Tab **BOT WA** → kartu **Pairing Perangkat**
+3. Masukkan nomor bot (contoh `628xxxxxxxxxx`) → tombol **Pair**
 4. Kode 8 digit muncul **di halaman itu**, dengan hitung mundur
 5. Di HP: WhatsApp → Perangkat Tertaut → Tautkan dengan nomor telepon → masukkan kode
 
-Kode WhatsApp hanya hidup 2–3 menit. Kalau habis, tekan Minta Kode lagi.
+Kode WhatsApp hanya hidup 2–3 menit. Kalau habis, tekan **Ulangi**.
 
 Begitu tersambung, bot otomatis mengirim **BOT ON** ke semua grup yang tidak dimatikan di panel. Pengumuman ini hanya jalan sekali per nomor/sesi baru — `pm2 restart main` biasa tidak mengulanginya.
 
