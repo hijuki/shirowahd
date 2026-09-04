@@ -243,7 +243,8 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
   // Encode ulang. RESOLUSI tidak disentuh sama sekali.
   //
   // fps:
-  //   > 60          → diturunkan dengan pembagi bulat (lihat hillz-fps.js)
+  //   > 60          → diratakan ke 60 (lihat hillz-fps.js; 120/240 lewat
+  //                   pembagi bulat, 90/100 dipaksa 60)
   //   header bohong → fps NYATA dipaksa sebagai PECAHAN, bukan desimal.
   //                   Diukur: tanpa ini, ffmpeg percaya header 25/1 dan membuang
   //                   630 dari 1083 paket; dengan fps nyata semuanya bertahan.

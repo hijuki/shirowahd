@@ -8,35 +8,33 @@
  * sama sekali. Jadi "maksimal 60 fps" tidak mungkin dijamin selama aturannya
  * masih dua.
  *
- * ═══ MASALAH SEBENARNYA: menurunkan fps itu mudah, menurunkannya tanpa
- * bikin patah-patah itu tidak ═══
+ * ═══ SEMUA DIRATAKAN KE 60 ═══
  *
- * Cara naif (`-r 60` pada sumber 90 fps) memaksa ffmpeg memilih frame terdekat
- * untuk setiap 1/60 detik. Frame sumber ada di 0, 11.1, 22.2, 33.3 ms; slot
- * target minta 0, 16.7, 33.3 ms. Yang terpilih jadi frame sumber ke
- * 0, 2, 3, 5, 6, 8 … — jaraknya bergantian 2 frame, 1 frame, 2 frame.
- * Gerakan jadi tersendat berirama. Itulah "patah-patah" yang terasa walaupun
- * angka di header cantik: 60 fps.
+ * Target selalu 60, apa pun sumbernya. Ada dua cara mencapainya, dan yang
+ * dipakai tergantung apakah sumbernya kelipatan bulat dari 60:
  *
- * Yang dipakai di sini: **pembagi bulat**. Ambil N terkecil yang membuat
- * fps/N ≤ 60, lalu target = fps/N. Setiap frame ke-N diambil, sisanya dibuang,
- * jarak antar frame SELALU sama. Hasilnya:
+ * 1. KELIPATAN BULAT (120, 180, 240, 300, dan 119,88) → **pembagi bulat**.
+ *    Ambil setiap frame ke-N, sisanya dibuang. Jarak antar frame SELALU sama,
+ *    jadi gerakannya mulus sempurna:
  *
- *   120 fps → N=2 → 60 fps    (ambil 1 dari 2, sempurna)
- *   240 fps → N=4 → 60 fps
- *   180 fps → N=3 → 60 fps
- *   144 fps → N=3 → 48 fps
- *   100 fps → N=2 → 50 fps
- *    90 fps → N=2 → 45 fps    ← 45 fps rata TERLIHAT lebih halus
- *                               daripada 60 fps yang tersendat
+ *      120 fps → N=2 → 60 fps
+ *      180 fps → N=3 → 60 fps
+ *      240 fps → N=4 → 60 fps
+ *      119,88  → N=2 → 59,94 fps  (pecahan NTSC dipertahankan)
  *
- * 45 fps rata memang di bawah 60, dan itu memenuhi permintaan "maksimal 60".
- * Judder lebih mengganggu mata daripada framerate yang sedikit lebih rendah —
- * itu sebabnya pembagi bulat yang dimenangkan, bukan angka 60 yang dipaksa.
+ * 2. BUKAN KELIPATAN (90, 100, 144) → tetap dipaksa **60**.
+ *    Di sini ffmpeg harus memilih frame terdekat untuk setiap slot 1/60 detik.
+ *    Contoh 90 fps: frame sumber ada di 0 / 11,1 / 22,2 / 33,3 ms sedangkan
+ *    slot target minta 0 / 16,7 / 33,3 ms, jadi isi gambar maju bergantian
+ *    22,2 ms lalu 11,1 ms — pola 3:2, judder yang sama seperti film 24p di
+ *    TV 60Hz. Timestamp keluarannya tetap rata (CFR), yang bergantian adalah
+ *    isinya.
  *
- * Pengaman: kalau pembagi bulat menjatuhkan hasil di bawah 40 fps (mis. sumber
- * 70 fps → 35), turunnya terlalu jauh; di kasus itu 60 dipaksa dan judder
- * diterima sebagai harga yang lebih murah.
+ *    Judder ini TIDAK BISA dihilangkan tanpa menciptakan frame baru
+ *    (`minterpolate`), dan itu menimbulkan ghosting pada tepi yang bergerak
+ *    plus biaya encode berkali-kali lipat. Diputuskan: 60 rata lebih penting
+ *    daripada menghindari judder pada sumber yang jarang muncul — rekaman HP
+ *    hampir selalu 30/60/120/240, dan semua angka itu masuk kategori 1.
  *
  * ═══ FRAKSI, BUKAN DESIMAL ═══
  *
@@ -51,10 +49,15 @@ import { execSync } from "child_process";
 export const FPS_MAKS = 60;
 
 /**
- * Kalau pembagi bulat menjatuhkan hasil di bawah ini, lebih baik paksa 60 dan
- * terima judder daripada kehilangan setengah kehalusan gerakan.
+ * Batas bawah "masih kisaran 60an".
+ *
+ * Pembagi bulat hanya dipakai kalau hasilnya mendarat di kisaran ini (59,94 dan
+ * 60 lolos). Kalau pembagi bulat menjatuhkan hasil lebih rendah dari ini —
+ * misal 90 fps ÷ 2 = 45 — pembagi DIBUANG dan 60 dipaksa, karena permintaannya
+ * adalah semua diratakan ke 60an, bukan dibiarkan turun sejauh yang kebetulan
+ * dihasilkan pembagi.
  */
-export const FPS_LANTAI = 40;
+export const FPS_KISARAN_MIN = 58;
 
 /** Selisih di bawah ini dianggap pembulatan internal, bukan kebohongan header. */
 const TOLERANSI_BOHONG = 0.2;
@@ -214,11 +217,13 @@ export function rencanaFps(file) {
   }
 
   const targetEksak = sumber / N;
-  if (targetEksak < FPS_LANTAI) {
+  if (targetEksak < FPS_KISARAN_MIN) {
+    // Pembagi bulat mendarat di luar kisaran 60an (90→45, 100→50, 144→48).
+    // Dibuang: 60 dipaksa supaya semua sumber keluar di angka yang sama.
     return {
       perluTurun: true, fpsSumber: sumber, pembagi: 0, target: FPS_MAKS,
       targetStr: String(FPS_MAKS), eksak: false, bohong: f.bohong, detail: f,
-      alasan: `pembagi bulat ${N} menjatuhkan ke ${targetEksak.toFixed(1)} fps (< ${FPS_LANTAI}) — dipaksa ${FPS_MAKS}, judder diterima`,
+      alasan: `${sumber.toFixed(2)} fps → pembagi ${N} mendarat di ${targetEksak.toFixed(1)} fps (di luar kisaran 60an) — diratakan ke ${FPS_MAKS}`,
     };
   }
 
