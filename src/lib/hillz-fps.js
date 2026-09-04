@@ -289,3 +289,47 @@ export function argKeluaranFps(rencana, ffmpegPunyaFpsMode) {
 export function fpsMelewatiBatas(file) {
   return rencanaFps(file).perluTurun;
 }
+
+/**
+ * Potongan argumen siap-tempel untuk jalur yang menyusun perintah ffmpeg sebagai
+ * STRING, bukan array — mis. konversi GIF→MP4 lewat `queueFFmpeg()`.
+ *
+ * Kenapa perlu: GIF menyimpan jeda antar frame dalam satuan 1/100 detik, jadi
+ * `delay=1` berarti 100 fps. Diukur pada GIF 100 fps nyata, perintah GIF→MP4
+ * yang dipakai `cekfemboy.js` / `pindl.js` / `tovideo.js` mengeluarkan MP4
+ * **100/1** — batas 60 fps tembus lewat pintu belakang, padahal ketiga jalur itu
+ * tidak pernah dianggap "jalur encode video".
+ *
+ * Mengembalikan potongan KOSONG kalau sumbernya sudah ≤ 60 fps. Ini penting:
+ * memaksa `-r 60` pada GIF 10 fps akan MENDUPLIKASI frame (berkas membengkak
+ * enam kali tanpa tambahan gerakan sama sekali), jadi klamp hanya boleh
+ * menyalakan diri ketika benar-benar ada yang dilanggar.
+ *
+ * ⚠ `punyaFpsMode` WAJIB dilewatkan `false` oleh pemanggil yang memakai ffmpeg
+ * **bundled** `@ffmpeg-installer` (build 2018) alih-alih ffmpeg sistem.
+ * `FFMPEG_PUNYA_FPS_MODE` dideteksi dari ffmpeg SISTEM (8.x, punya `-fps_mode`),
+ * sedangkan biner bundled menolaknya dengan `Unrecognized option 'fps_mode'` dan
+ * seluruh konversi gagal — terbukti saat menguji `tovideo.js`. Biner bundled
+ * hanya menerima bentuk lama `-vsync 1`.
+ *
+ * @param {string} file berkas sumber (GIF/MP4) yang akan di-encode
+ * @param {object} [opsi] `{ punyaFpsMode }` — default: ffmpeg sistem
+ * @returns {{ vf: string, keluaran: string, perlu: boolean, alasan: string }}
+ *   `vf` = isi untuk `-vf` (tanpa flag), `keluaran` = flag sisi keluaran siap
+ *   digabung ke string perintah.
+ */
+export function potonganKlampFps(file, opsi = {}) {
+  const punyaFpsMode =
+    opsi.punyaFpsMode === undefined ? FFMPEG_PUNYA_FPS_MODE : !!opsi.punyaFpsMode;
+  const r = rencanaFps(file);
+  if (!r.perluTurun) {
+    return { vf: "", keluaran: "", perlu: false, alasan: r.alasan, rencana: r };
+  }
+  return {
+    vf: filterFps(r),
+    keluaran: argKeluaranFps(r, punyaFpsMode).join(" "),
+    perlu: true,
+    alasan: r.alasan,
+    rencana: r,
+  };
+}

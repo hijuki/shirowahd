@@ -2,6 +2,7 @@ import fs from "fs";
 import axios from "axios";
 import path from "path";
 import { queueFFmpeg } from "./../../src/lib/hillz-ffmpeg.js";
+import { potonganKlampFps } from "./../../src/lib/hillz-fps.js";
 import { f } from "../../src/lib/hillz-http.js";
 import te from "../../src/lib/hillz-error.js";
 const pluginConfig = {
@@ -159,8 +160,14 @@ async function handler(m, { sock }) {
             const raw = await f(media.url, "buffer");
             if (!raw) throw new Error("Gagal download GIF");
             fs.writeFileSync(gifPath, raw);
+            // GIF 100 fps (jeda 1/100 s) lolos utuh tanpa klamp — lihat catatan
+            // di hillz-fps.js. Klamp mati sendiri untuk GIF di bawah 60 fps.
+            const klamp = potonganKlampFps(gifPath);
+            const vf = klamp.vf
+              ? `${klamp.vf},scale=trunc(iw/2)*2:trunc(ih/2)*2`
+              : "scale=trunc(iw/2)*2:trunc(ih/2)*2";
             await queueFFmpeg(
-              `ffmpeg -y -ignore_loop 0 -i "${gifPath}" -t 30 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -c:v libx264 -pix_fmt yuv420p -movflags faststart -preset ultrafast -an "${mp4Path}"`,
+              `ffmpeg -y -ignore_loop 0 -i "${gifPath}" -t 30 -vf "${vf}" ${klamp.keluaran} -c:v libx264 -pix_fmt yuv420p -movflags faststart -preset ultrafast -an "${mp4Path}"`,
             );
             if (!fs.existsSync(mp4Path)) throw new Error("Gagal convert GIF");
             await sock.sendMedia(m.chat, fs.readFileSync(mp4Path), null, m, {

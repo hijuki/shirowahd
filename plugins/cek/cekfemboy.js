@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import cekfemboy from "../../src/scraper/lufemboy.js";
 import { queueFFmpeg } from "../../src/lib/hillz-ffmpeg.js";
+import { potonganKlampFps } from "../../src/lib/hillz-fps.js";
 import { fetchBuffer } from "../../src/lib/hillz-utils.js";
 import te from "../../src/lib/hillz-error.js";
 const pluginConfig = {
@@ -30,8 +31,16 @@ async function convertGifToMp4(buffer) {
 
   try {
     fs.writeFileSync(gifPath, buffer);
+    // GIF bisa menyimpan 100 fps (jeda 1/100 detik per frame) dan tanpa klamp
+    // MP4 keluarannya ikut 100 fps — batas 60 fps tembus lewat jalur GIF.
+    // Klamp hanya menyala kalau sumbernya memang di atas 60; GIF lambat
+    // dibiarkan apa adanya supaya frame tidak diduplikasi sia-sia.
+    const klamp = potonganKlampFps(gifPath);
+    const vf = klamp.vf
+      ? `${klamp.vf},scale=trunc(iw/2)*2:trunc(ih/2)*2`
+      : "scale=trunc(iw/2)*2:trunc(ih/2)*2";
     await queueFFmpeg(
-      `ffmpeg -y -ignore_loop 0 -i "${gifPath}" -t 30 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -c:v libx264 -pix_fmt yuv420p -movflags faststart -preset ultrafast -an "${mp4Path}"`,
+      `ffmpeg -y -ignore_loop 0 -i "${gifPath}" -t 30 -vf "${vf}" ${klamp.keluaran} -c:v libx264 -pix_fmt yuv420p -movflags faststart -preset ultrafast -an "${mp4Path}"`,
     );
     if (!fs.existsSync(mp4Path)) throw new Error("Gagal convert GIF");
     return fs.readFileSync(mp4Path);

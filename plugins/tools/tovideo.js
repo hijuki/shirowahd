@@ -4,6 +4,7 @@ import path from 'path'
 import te from '../../src/lib/hillz-error.js'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import ffmpeg from 'fluent-ffmpeg'
+import { potonganKlampFps } from '../../src/lib/hillz-fps.js'
 ffmpeg.setFfmpegPath(ffmpegInstaller.path)
 
 const pluginConfig = {
@@ -59,12 +60,28 @@ function gifToMp4(gifBuffer) {
             reject(new Error('Conversion timeout'))
         }, 60000)
 
+        // Sticker animasi → GIF → MP4. GIF menyimpan jeda 1/100 detik, jadi
+        // sticker cepat bisa menghasilkan 100 fps dan tanpa klamp MP4-nya ikut
+        // 100 fps — batas 60 fps tembus. Klamp mati sendiri kalau sumbernya
+        // sudah di bawah 60, supaya sticker lambat tidak diduplikasi frame-nya.
+        //
+        // punyaFpsMode: false — berkas ini memakai ffmpeg BUNDLED
+        // (@ffmpeg-installer, build 2018) lewat setFfmpegPath di atas, bukan
+        // ffmpeg sistem. Biner itu menolak `-fps_mode` dengan
+        // "Unrecognized option 'fps_mode'" dan SELURUH konversi gagal; yang
+        // diterima hanya bentuk lama `-vsync 1`.
+        const klamp = potonganKlampFps(inputPath, { punyaFpsMode: false })
+        const vf = klamp.vf
+            ? `${klamp.vf},scale=trunc(iw/2)*2:trunc(ih/2)*2`
+            : 'scale=trunc(iw/2)*2:trunc(ih/2)*2'
+
         ffmpeg(inputPath)
             .inputOptions(['-y'])
             .outputOptions([
                 '-movflags', 'faststart',
                 '-pix_fmt', 'yuv420p',
-                '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                '-vf', vf,
+                ...(klamp.perlu ? klamp.keluaran.split(' ') : []),
                 '-c:v', 'libx264',
                 '-preset', 'ultrafast',
                 '-crf', '23',
