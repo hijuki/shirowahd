@@ -7,7 +7,6 @@ import crypto from 'crypto';
 import https from 'https';
 import { execSync, exec as execCb } from 'child_process';
 import { tmpdir } from 'os';
-import * as arena from './src/lib/hillz-arena.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -25,7 +24,7 @@ try {
   } catch { /* .env optional */ }
 }
 
-const PORT = Number(process.env.WEB_PORT) || 80;
+const PORT = 80;
 const WEB_OUT = join(__dirname, 'web', 'out');
 const BRAND_DIR = join(__dirname, 'brand-assets');
 const SETTINGS_FILE = join(__dirname, 'admin-settings.json');
@@ -374,77 +373,6 @@ function getClientIP(req) {
 function parseUrl(url) {
   const i = url.indexOf('?');
   return i === -1 ? url : url.substring(0, i);
-}
-
-// ═══════════════════ Penunjang ARENA 2048 ═══════════════════
-// Disimpan di memori saja dan sengaja: kalau proses restart, paling buruk
-// seorang pemain bisa mengirim ulang satu sesi lama. Itu jauh lebih murah
-// daripada menambah berkas yang harus ditulis dua proses.
-
-// Batas laju: 30 sesi baru per IP per 10 menit. Sekadar penahan bot iseng.
-const arenaLaju = new Map();
-function arenaBolehMulai(ip) {
-  const kini = Date.now(), jendela = 10 * 60 * 1000;
-  const cap = (arenaLaju.get(ip) || []).filter((t) => kini - t < jendela);
-  if (cap.length >= 30) { arenaLaju.set(ip, cap); return false; }
-  cap.push(kini);
-  arenaLaju.set(ip, cap);
-  if (arenaLaju.size > 5000) arenaLaju.clear(); // jaga memori
-  return true;
-}
-
-// Nama pemain dari WA bisa berisi apa saja. Papan skor dirender lewat innerHTML
-// di halaman arena, jadi dibersihkan SEBELUM disimpan, bukan hanya saat dibaca.
-function arenaNamaAman(n) {
-  return String(n || 'Pemain').replace(/[<>&"'`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24) || 'Pemain';
-}
-
-// Satu sesi = satu kali kirim skor. Tanpa ini, satu permainan bagus bisa
-// dikirim berulang-ulang dan papan skor jadi penuh entri kembar.
-const arenaTerpakai = new Map();
-function arenaSesiTerpakai(id) {
-  const kini = Date.now();
-  for (const [k, t] of arenaTerpakai) if (kini - t > 6 * 60 * 60 * 1000) arenaTerpakai.delete(k);
-  return arenaTerpakai.has(id);
-}
-function arenaTandaiTerpakai(id) {
-  arenaTerpakai.set(id, Date.now());
-}
-
-/**
- * Kabari pemain di WhatsApp lewat API internal bot (127.0.0.1:8081).
- * Gagal di sini TIDAK boleh menggagalkan penyimpanan skor — karena itu
- * hasilnya cuma boolean, tanpa throw.
- *
- * Host/port bisa dialihkan lewat env supaya uji integrasi bisa memakai server
- * tiruan, bukan mengirim pesan WhatsApp sungguhan.
- */
-function arenaKabariWA(jid, hasil, pos, tiga) {
-  return new Promise((resolve) => {
-    let teks = '🎮 *REKOR BARU — ARENA 2048*\n\n';
-    teks += `⭐ Skor: *${hasil.skor}*\n🔢 Ubin tertinggi: *${hasil.ubin}*\n👣 Langkah: *${hasil.langkahSah}*\n`;
-    if (pos) teks += `🏅 Peringkat: *#${pos.posisi}* dari ${pos.dari} pemain\n`;
-    if (tiga && tiga.length) {
-      teks += '\n🏆 *3 TERATAS*\n';
-      tiga.forEach((s, i) => { teks += `${['🥇', '🥈', '🥉'][i]} ${s.skor} — ${s.nama || 'Anonim'}\n`; });
-    }
-    teks += '\nLihat papan skor lengkap: *.arenatop*';
-    try {
-      const isi = Buffer.from(JSON.stringify({ jid, text: teks }), 'utf8');
-      const r = http.request({
-        hostname: process.env.ARENA_BOT_HOST || '127.0.0.1',
-        port: Number(process.env.ARENA_BOT_PORT) || 8081,
-        path: '/send', method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': isi.length }, timeout: 8000,
-      }, (resp) => {
-        resp.resume();
-        resolve(resp.statusCode === 200);
-      });
-      r.on('timeout', () => { r.destroy(); resolve(false); });
-      r.on('error', () => resolve(false));
-      r.end(isi);
-    } catch { resolve(false); }
-  });
 }
 
 // --- Video conversion: non-MP4 → MP4 H.264, keep 4K + original FPS ---
@@ -1194,85 +1122,6 @@ async function handleRequest(req, res) {
       welcomeText: settings.welcomeText || '',
       welcomeCta: settings.welcomeCta || ''
     });
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // ARENA 2048 — game di website, papan skor tersambung WhatsApp.
-  // Semua rute di bawah PUBLIK dan berdiri sendiri: tidak menyentuh
-  // upload/klaim/status, tidak butuh token admin, dan tidak memakai
-  // penyimpanan yang sama. Kalau arena error, uploader tetap jalan.
-  // ═══════════════════════════════════════════════════════════════════
-
-  // Halaman game (HTML tunggal, bukan bagian build Next.js).
-  if (req.method === 'GET' && (url === '/arena' || url === '/arena/' || url === '/arena.html')) {
-    try {
-      const html = readFileSync(join(__dirname, 'arena-web', 'index.html'), 'utf8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
-      res.end(html);
-    } catch { res.writeHead(404); res.end('Arena belum terpasang'); }
-    return;
-  }
-
-  // Mulai sesi: server yang menentukan seed. Klien tidak boleh memilih seed,
-  // kalau tidak, pemain bisa mencari seed gampang lalu mengulanginya.
-  if (req.method === 'POST' && url === '/api/arena/mulai') {
-    try {
-      if (!arenaBolehMulai(clientIP)) { jsonRes(res, 429, { ok: false, error: 'Terlalu sering, tunggu sebentar' }); return; }
-      const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
-      const p = body.token ? arena.bacaToken(arena.rahasiaArena(), body.token) : null;
-      const { seed, sesi } = arena.sesiBaru(arena.rahasiaArena(), p ? p.jid : '', p ? p.nama : '');
-      jsonRes(res, 200, { ok: true, seed, sesi, pemain: p ? (p.nama || 'Pemain') : null, waktuServer: Date.now() });
-    } catch (e) { jsonRes(res, 400, { ok: false, error: e.message }); }
-    return;
-  }
-
-  // Selesai: klien mengirim URUTAN LANGKAH, bukan skor. Server memutar ulang
-  // dari seed di dalam sesi bertanda tangan lalu menghitung skornya sendiri.
-  if (req.method === 'POST' && url === '/api/arena/selesai') {
-    try {
-      const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
-      const s = arena.bacaSesi(arena.rahasiaArena(), body.sesi);
-      if (!s) { jsonRes(res, 403, { ok: false, error: 'Sesi tidak sah atau kedaluwarsa' }); return; }
-      if (arenaSesiTerpakai(s.id)) { jsonRes(res, 409, { ok: false, error: 'Sesi ini sudah dikirim' }); return; }
-
-      const hasil = arena.putarUlang(s.seed, body.langkah);
-      if (!hasil.ok) { jsonRes(res, 400, { ok: false, error: hasil.alasan }); return; }
-      arenaTandaiTerpakai(s.id);
-
-      // Tamu (tanpa token WA) boleh main, skornya tidak masuk papan skor.
-      if (!s.jid) { jsonRes(res, 200, { ok: true, skor: hasil.skor, ubin: hasil.ubin, peringkat: null, wa: false, tamu: true }); return; }
-
-      const sebelum = arena.bacaSkor(arena.BERKAS_SKOR);
-      const lamaKu = arena.peringkat(sebelum, s.jid);
-      const rekorBaru = !lamaKu || hasil.skor > lamaKu.skor;
-
-      const daftar = arena.tambahSkor(arena.BERKAS_SKOR, {
-        jid: s.jid, nama: arenaNamaAman(s.nama), skor: hasil.skor, ubin: hasil.ubin,
-        langkah: hasil.langkahSah, waktu: Date.now(),
-      });
-      const pos = arena.peringkat(daftar, s.jid);
-
-      let wa = false;
-      if (rekorBaru) wa = await arenaKabariWA(s.jid, hasil, pos, arena.papanSkor(daftar, 3));
-
-      jsonRes(res, 200, { ok: true, skor: hasil.skor, ubin: hasil.ubin, langkah: hasil.langkahSah, peringkat: pos, rekorBaru, wa });
-    } catch (e) { jsonRes(res, 400, { ok: false, error: e.message }); }
-    return;
-  }
-
-  // Papan skor publik. Nomor WA TIDAK pernah keluar — hanya nama.
-  if (req.method === 'GET' && url.startsWith('/api/arena/papan')) {
-    try {
-      const q = new URLSearchParams(req.url.split('?')[1] || '');
-      const aku = q.get('t') ? arena.bacaToken(arena.rahasiaArena(), q.get('t')) : null;
-      const daftar = arena.bacaSkor(arena.BERKAS_SKOR);
-      const papan = arena.papanSkor(daftar, 10).map((s) => ({
-        nama: String(s.nama || 'Anonim').replace(/[<>&"]/g, '').slice(0, 24),
-        skor: s.skor, ubin: s.ubin, aku: !!(aku && s.jid === aku.jid),
-      }));
-      jsonRes(res, 200, { ok: true, papan, pemain: arena.papanSkor(daftar, 9999).length, waktuServer: Date.now() });
-    } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
   }
 
