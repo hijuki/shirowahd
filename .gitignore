@@ -41,3 +41,5 @@ brand-assets/
 
 # Cadangan sementara hasil audit
 *.bak-audit
+arena-scores.json
+arena-secret
