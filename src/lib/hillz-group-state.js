@@ -20,20 +20,45 @@ import { fileURLToPath } from "url";
 const AKAR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BERKAS = () => path.join(AKAR, "database", "main", "groups-off.json");
 
-/** Cache supaya tidak membaca disk untuk setiap pesan masuk. */
+/**
+ * Cache supaya tidak membaca+parse JSON untuk setiap pesan masuk.
+ *
+ * KUNCI CACHE = mtime berkas, BUKAN sekadar umur detik. Ini bukan optimasi,
+ * ini koreksi bug nyata: berkas ini ditulis oleh proses `web` tapi dibaca oleh
+ * proses `main`, jadi `tulis()` hanya membatalkan cache di prosesnya sendiri.
+ * Dengan cache berbasis waktu murni (dulu 3 detik), proses bot bisa memegang
+ * daftar BASI selama jendela itu — dan siapa pun yang membaca lebih dulu ikut
+ * "menyegarkan" timestamp tanpa menyegarkan isinya.
+ *
+ * Akibatnya terbukti: `/groups` di bot-api memanggil daftarGrupMati() untuk
+ * mengisi field `disabled`, itu mengisi cache dengan daftar KOSONG; toggle dari
+ * panel lalu menulis berkas; `/announce` beberapa milidetik kemudian masih
+ * membaca cache kosong dan mengirim ke SEMUA grup, termasuk grup yang baru saja
+ * dimatikan admin. Membandingkan mtime membuat pembatalan cache berlaku lintas
+ * proses, dan biayanya hanya satu statSync.
+ */
 let cache = null;
-let cacheWaktu = 0;
-const UMUR_CACHE_MS = 3000;
+let cacheKunci = "";
 
 function baca() {
-  if (cache && Date.now() - cacheWaktu < UMUR_CACHE_MS) return cache;
+  // Kunci = mtime + ukuran. Ukuran ikut karena resolusi mtime bisa kasar: dua
+  // tulisan dalam milidetik yang sama akan tampak identik kalau hanya mtime
+  // yang dibandingkan, dan daftar basi lolos lagi.
+  let kunci = "0:0";
+  try {
+    const s = fs.statSync(BERKAS());
+    kunci = `${s.mtimeMs}:${s.size}`;
+  } catch {
+    kunci = "0:0";
+  }
+  if (cache && kunci === cacheKunci) return cache;
   try {
     const d = JSON.parse(fs.readFileSync(BERKAS(), "utf8"));
     cache = new Set(Array.isArray(d) ? d : Array.isArray(d.off) ? d.off : []);
   } catch {
     cache = new Set();
   }
-  cacheWaktu = Date.now();
+  cacheKunci = kunci;
   return cache;
 }
 
@@ -44,7 +69,13 @@ function tulis(set) {
     fs.writeFileSync(BERKAS(), JSON.stringify([...set], null, 1));
   } catch { }
   cache = set;
-  cacheWaktu = Date.now();
+  // Kunci di-hitung ULANG dari berkas yang baru ditulis, bukan dikarang.
+  try {
+    const s = fs.statSync(BERKAS());
+    cacheKunci = `${s.mtimeMs}:${s.size}`;
+  } catch {
+    cacheKunci = "";
+  }
   // `global.disabledGroups` tetap disinkronkan supaya kode lama yang membacanya
   // (bot-api `/groups`) melihat kebenaran yang sama.
   global.disabledGroups = set;
