@@ -35,7 +35,14 @@ const config = {
   },
 
   session: {
-    pairingNumber: "62895410816174", // Nomor WA yang akan di-pair, ini penting
+    // KOSONG by default — dan itu memang yang benar.
+    // Nomor ditentukan saat runtime dengan urutan: papan status panel admin >
+    // berkas .pair-number > PAIRING_NUMBER di .env > nilai di sini.
+    // Dulu nomor ini ter-hardcode. Akibatnya di VPS baru bot LANGSUNG meminta
+    // kode pairing untuk nomor pemilik sebelumnya (terbukti lewat uji setup
+    // dari nol: bot mencetak PAIRING CODE tanpa ada yang mengisi nomor),
+    // bukan menunggu admin menautkan nomornya sendiri dari dashboard.
+    pairingNumber: process.env.PAIRING_NUMBER || "",
     usePairingCode: true, // true = Pairing Code, false = QR Code
   },
 
