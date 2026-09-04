@@ -2,6 +2,7 @@ import http from 'http';
 import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync, openSync, closeSync, writeSync, renameSync, rmSync } from 'fs';
 import { storeVideo, storeBundle, storeVideoFile, storeBundleFiles, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL, cleanOrphans } from './src/lib/vid-store.js';
 import { join, dirname, extname } from 'path';
+import { rencanaFps, filterFps, argKeluaranFps, FFMPEG_PUNYA_FPS_MODE } from './src/lib/hillz-fps.js';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import https from 'https';
@@ -473,7 +474,9 @@ function needsConvert(name) {
 //   - profile High 10 / High 4:4:4: sama, di luar baseline yang dijamin WA
 //   - tidak ada track audio: sebagian klien WA menolak/putus saat unduh
 // Semua kondisi itu sekarang memaksa re-encode ke H.264 8-bit yuv420p + AAC.
-function detectNeedsReencode(filePath) {
+// `rencana` boleh dititipkan dari pemanggil supaya ffprobe fps tidak dijalankan
+// dua kali untuk berkas yang sama.
+function detectNeedsReencode(filePath, rencana) {
   try {
     const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,profile,r_frame_rate,avg_frame_rate -of default=nw=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString();
     const get = (k) => (raw.match(new RegExp('^' + k + '=(.*)$', 'm')) || [, ''])[1].trim();
@@ -486,6 +489,13 @@ function detectNeedsReencode(filePath) {
     if (codec !== 'h264') return true;
     if (pixFmt && pixFmt !== 'yuv420p') return true;
     if (/10|4:4:4|4:2:2/i.test(profile)) return true;
+
+    // fps di atas 60 WAJIB turun. Ini tidak bisa dikerjakan jalur stream copy:
+    // `-c:v copy` menyalin setiap frame apa adanya, jadi berkas 120 fps yang
+    // codecnya sudah benar dulu lolos ke penerima tanpa disentuh — persis yang
+    // bikin WhatsApp tersendat memutarnya.
+    if ((rencana || rencanaFps(filePath)).perluTurun) return true;
+
     return false;
   } catch { return false; }
 }
@@ -505,10 +515,8 @@ function hasAudioStream(filePath) {
 
 const execP = (cmd, opts = {}) => new Promise((resolve, reject) => execCb(cmd, opts, (err, stdout, stderr) => err ? reject(new Error(String(stderr || err.message).split('\n').filter(Boolean).pop() || 'ffmpeg gagal')) : resolve(stdout)));
 
-const FFMPEG_PUNYA_FPS_MODE = (() => {
-  try { return execSync('ffmpeg -h full 2>&1 | grep -c -- "-fps_mode"', { timeout: 10000, stdio: 'pipe', shell: '/bin/bash' }).toString().trim() !== '0'; }
-  catch { return false; }
-})();
+// Deteksi `-fps_mode` dipusatkan di src/lib/hillz-fps.js supaya jalur upload web
+// dan jalur bot tidak bisa memakai flag yang berbeda.
 
 function codecVideoOf(filePath) {
   try {
@@ -528,35 +536,6 @@ function hitungMasalahDecode(filePath, detik, hanyaDecoder) {
     ).toString().trim();
     return parseInt(out, 10) || 0;
   } catch { return 0; }
-}
-
-function bacaFps(filePath) {
-  try {
-    const raw = execSync('ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate,avg_frame_rate -of default=nw=1 ' + JSON.stringify(filePath), { timeout: 10000, stdio: 'pipe' }).toString();
-    const ambil = (k) => (raw.match(new RegExp('^' + k + '=(.*)$', 'm')) || [, ''])[1].trim();
-    const keAngka = (f) => {
-      if (!f || !/^\d+\/\d+$/.test(f)) return 0;
-      const [n, d] = f.split('/').map(Number);
-      return d ? n / d : 0;
-    };
-    const nominalStr = ambil('r_frame_rate');
-    const avgStr = ambil('avg_frame_rate');
-    return { nominalStr, avgStr, nominal: keAngka(nominalStr), avg: keAngka(avgStr) };
-  } catch { return { nominalStr: '', avgStr: '', nominal: 0, avg: 0 }; }
-}
-
-function fpsBohong(filePath) {
-  const f = bacaFps(filePath);
-  if (!(f.nominal > 0 && f.avg > 0)) return false;
-  return Math.abs(f.avg - f.nominal) / f.nominal > 0.20;
-}
-
-function hitungErrorDecode(filePath, detik) {
-  return hitungMasalahDecode(filePath, detik);
-}
-
-function sumberBermasalah(filePath) {
-  return hitungMasalahDecode(filePath, 15, true) > 0 || fpsBohong(filePath);
 }
 
 function hasilLayak(outPath, durSumber) {
@@ -609,8 +588,14 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
   const tmpIn = src.path;
   const tmpOut = join(tmpdir(), 'upload_out_' + id + '.mp4');
   try {
-    const quickNeeds = detectNeedsReencode(tmpIn);
-    const forceReencode = quickNeeds || fpsBohong(tmpIn);
+    // Rencana fps dihitung SEKALI di sini dan dipakai ulang di semua jalur:
+    // gerbang remux, encode utama, dan percobaan cadangan. Selain menghemat
+    // panggilan ffprobe, ini mencegah dua jalur mengambil keputusan fps yang
+    // berbeda atas berkas yang sama.
+    const rFps = rencanaFps(tmpIn);
+
+    const quickNeeds = detectNeedsReencode(tmpIn, rFps);
+    const forceReencode = quickNeeds || rFps.bohong;
     
     // JALUR 1: STREAM COPY / REMUX (Standar .ttv2 - Kualitas 100% Utuh Asli)
     if (!forceReencode) {
@@ -632,56 +617,73 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
       } catch {}
     }
 
-    // JALUR 2: HD ULTRA-CLEAN TRANSCODE (Hanya untuk HEVC/HDR/Corrupt)
-    // Resolusi dibiarkan ASLI (tanpa scale filter / no downscale)
-    // Kualitas CRF 18 (Ultra HD, tajam, detail mikroskopis terjaga)
-    // FPS dibiarkan asli (passthrough 60/90/120fps)
+    // JALUR 2: HD ULTRA-CLEAN TRANSCODE
+    // Resolusi dibiarkan ASLI (kecuali .MOV/HEVC, dibatasi 1440p).
+    // Kualitas CRF 18. FPS dibatasi 60 — lihat src/lib/hillz-fps.js.
     try { unlinkSync(tmpOut); } catch {}
     if (onPhase) onPhase('encode');
 
-    let fpsFlag = '';
-    const MAX_FPS = 120;
-    try {
-      const f = bacaFps(tmpIn);
-      if (f.nominal > 0 && f.avg > 0 && Math.abs(f.avg - f.nominal) / f.nominal > 0.20) {
-        if (f.avg > MAX_FPS) fpsFlag = ' -r ' + MAX_FPS;
-        else fpsFlag = ' -r ' + f.avgStr;
-      } else if (!f.nominal && f.avg > 0) {
-        if (f.avg > MAX_FPS) fpsFlag = ' -r ' + MAX_FPS;
-        else fpsFlag = ' -r ' + f.avgStr;
-      }
-    } catch {}
-
     const dur = probeDuration(tmpIn);
     const audioSenyap = hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest';
-    const lewatkanFpsUtama = FFMPEG_PUNYA_FPS_MODE ? ' -fps_mode passthrough' : ' -vsync 0';
 
     // Khusus file .MOV / iPhone HEVC: batasi sisi panjang max 2560px (1440p Quad HD)
     // agar WhatsApp lancar memutar tanpa lag / drop frame / patah-patah.
     const isMov = ext === '.mov' || (originalName && /\.mov$/i.test(originalName)) || codecVideoOf(tmpIn) === 'hevc';
-    const scaleFilter = isMov ? ' -vf "scale=2560:2560:force_original_aspect_ratio=decrease:force_divisible_by=2"' : '';
 
-    // CRF 18 = Master Visual Quality (jernih, tajam, detail mikroskopis terjaga)
-    const perintahEncode = (extraIn, fpsArg) =>
+    // SATU rantai -vf. Dulu scale memakai `-vf` sendiri; menambahkan filter fps
+    // sebagai `-vf` kedua akan membuat ffmpeg MEMBUANG yang pertama secara
+    // senyap (opsi terakhir menang), jadi penurunan fps atau downscale-nya
+    // hilang tanpa error apa pun.
+    //
+    // Urutan penting: fps DULU baru scale. Membuang frame sebelum penskalaan
+    // berarti frame yang dibuang tidak ikut diskalakan — hemat separuh kerja
+    // penskalaan pada sumber 120 fps.
+    const rantaiVf = [
+      filterFps(rFps),
+      isMov ? 'scale=2560:2560:force_original_aspect_ratio=decrease:force_divisible_by=2' : '',
+    ].filter(Boolean);
+    const vfArg = rantaiVf.length ? ' -vf ' + JSON.stringify(rantaiVf.join(',')) : '';
+
+    // Saat fps diturunkan, keluaran dipaksa CFR (frame rate tetap) — pemutar WA
+    // menangani CFR jauh lebih mulus daripada VFR. Saat tidak ada penurunan,
+    // timing sumber dibiarkan apa adanya (passthrough).
+    const argFps = ' ' + argKeluaranFps(rFps, FFMPEG_PUNYA_FPS_MODE).join(' ');
+
+    // CRF 18 = Master Visual Quality. Preset `fast` (bukan `veryfast`): pada CRF
+    // yang sama, preset lebih lambat memberi kualitas per bit lebih baik dan
+    // gerakan lebih bersih. Biaya waktunya tertutup karena jumlah frame yang
+    // di-encode sudah separuh setelah fps diturunkan.
+    //
+    // `-g` dipatok ~2 detik supaya WA punya keyframe cukup rapat untuk seek dan
+    // pemulihan setelah paket hilang — keyint default 250 pada 60 fps = 4 detik,
+    // dan seek di tengah gerakan terasa tersendat.
+    const fpsUntukGop = rFps.perluTurun ? rFps.target : (rFps.fpsSumber || 30);
+    const gop = Math.max(24, Math.round(fpsUntukGop * 2));
+
+    const perintahEncode = (extraIn, argFpsPakai) =>
       'ffmpeg -y' + extraIn + ' -i ' + JSON.stringify(tmpIn) + audioSenyap +
-      ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset veryfast -crf 18' +
-      scaleFilter + fpsArg + lewatkanFpsUtama + ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' +
+      ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset fast -crf 18' +
+      ' -g ' + gop + ' -keyint_min ' + Math.round(gop / 2) + ' -sc_threshold 0' +
+      vfArg + argFpsPakai + ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' +
       JSON.stringify(tmpOut);
 
     let kegagalan = [];
     try {
-      await runFfmpeg(perintahEncode('', fpsFlag), { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct);
+      await runFfmpeg(perintahEncode('', argFps), { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct);
     } catch (e) { kegagalan.push('encode: ' + e.message); }
 
     let nilai = hasilLayak(tmpOut, dur);
     if (nilai.ok) return { path: tmpOut, name: toMp4Name(originalName), temp: true };
     kegagalan.push('percobaan 1 ditolak (' + nilai.alasan + ')');
 
-    // Percobaan 2: Mode Tahan-Rusak
+    // Percobaan 2: Mode Tahan-Rusak. Argumen fps TETAP dipakai — dulu percobaan
+    // ini mengirim `lewatkanFpsUtama` sebagai ganti argumen fps, jadi kalau
+    // percobaan 1 gagal, hasil akhirnya lolos dengan fps asli 120 tanpa ada yang
+    // sadar. Batas 60 harus berlaku di SEMUA jalur, bukan cuma jalur mulus.
     try { unlinkSync(tmpOut); } catch {}
     try {
       await runFfmpeg(
-        perintahEncode(' -err_detect ignore_err -fflags +genpts+discardcorrupt', lewatkanFpsUtama),
+        perintahEncode(' -err_detect ignore_err -fflags +genpts+discardcorrupt', argFps),
         { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, dur, onPct
       );
     } catch (e) { kegagalan.push('tahan-rusak: ' + e.message); }

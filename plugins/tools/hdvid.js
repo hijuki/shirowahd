@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import { rencanaFps, filterFps, argKeluaranFps, FFMPEG_PUNYA_FPS_MODE } from "../../src/lib/hillz-fps.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -59,13 +60,23 @@ async function handler(m, { sock }) {
 
     fs.writeFileSync(inputPath, videoBuffer);
 
+    // fps dibatasi 60 di sini juga. `.hdvid` menaikkan resolusi 2x, dan pada
+    // sumber 120 fps itu berarti 4x beban encode untuk frame yang toh dibuang
+    // WhatsApp — jadi fps diturunkan DULU, sebelum scale.
+    const rFps = rencanaFps(inputPath);
+    const filterVideo = [
+      filterFps(rFps),
+      'scale=iw*2:ih*2:flags=lanczos',
+      'unsharp=5:5:1.0:5:5:0.0',
+    ].filter(Boolean);
+
     await new Promise((resolve, reject) => {
       ffmpeg(inputPath)
-        .videoFilters([
-          'scale=iw*2:ih*2:flags=lanczos',
-          'unsharp=5:5:1.0:5:5:0.0'
+        .videoFilters(filterVideo)
+        .outputOptions([
+          '-c:v libx264', '-preset fast', '-crf 23', '-c:a copy',
+          ...argKeluaranFps(rFps, FFMPEG_PUNYA_FPS_MODE),
         ])
-        .outputOptions(['-c:v libx264', '-preset fast', '-crf 23', '-c:a copy'])
         .save(outputPath)
         .on('end', () => resolve())
         .on('error', (err) => reject(err));

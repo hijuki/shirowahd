@@ -4,6 +4,7 @@ import os from "os";
 import path from "path";
 import crypto from "crypto";
 import { execSync, execFile } from "child_process";
+import { rencanaFps, filterFps, argKeluaranFps, FFMPEG_PUNYA_FPS_MODE, FPS_MAKS } from "./hillz-fps.js";
 
 // ── Kenapa modul ini ada ────────────────────────────────────────────────────
 // Dua masalah nyata pada plugin downloader:
@@ -122,37 +123,12 @@ function infoVideo(file) {
   };
 }
 
-/** Pecahan ffprobe ("30000/1001") → angka. 0 kalau bukan pecahan sah. */
-function fraksiKeAngka(f) {
-  if (!f || !/^\d+\/\d+$/.test(f)) return 0;
-  const [n, d] = f.split("/").map(Number);
-  return d ? n / d : 0;
-}
-
 /**
- * Apakah fps di header berbohong soal isi berkas?
- *
- * BUG NYATA yang ini tangani (dilaporkan user: "kadang fps nya ngebug di ttv2,
- * kadang fps nya ga bener seperti video aslinya, tapi segi kualitas udh oke").
- * Diukur pada rekaman HP nyata:
- *
- *   r_frame_rate  = 25/1                 ← yang ditulis di header
- *   avg_frame_rate= 216600000/3603737    = 60,1 fps  ← isi sebenarnya
- *   1083 paket / 18,027 s                = 60,08 fps ← dihitung manual, cocok
- *
- * Kalimat "kualitas oke tapi fps ngebug" itu tanda tangan jalur REMUX: `-c:v
- * copy` menyalin piksel sempurna (karena itu kualitas oke) tapi ikut menyalin
- * header fps yang salah, jadi pemutar memainkannya dengan timing keliru.
- *
- * Selisih >20% dianggap bohong; di bawah itu wajar (pembulatan internal, mis.
- * 29,974 vs 29,970 = 0,1%).
+ * Deteksi fps bohong + pembacaan pecahan sekarang tinggal di
+ * `src/lib/hillz-fps.js` — dulu logikanya di sini, dan versi di
+ * `web-uploader.js` sudah menyimpang (batas 90 vs 120). Satu tempat saja
+ * supaya jalur bot dan jalur upload web tidak bisa lagi berbeda.
  */
-function fpsBohong(info) {
-  const nominal = fraksiKeAngka(info.fps);
-  const avg = fraksiKeAngka(info.fpsAvg);
-  if (!(nominal > 0 && avg > 0)) return false;
-  return Math.abs(avg - nominal) / nominal > 0.20;
-}
 
 function adaAudio(file) {
   return jalankan(
@@ -211,16 +187,18 @@ export async function unduhKeTemp(url, referer, basis) {
 }
 
 /**
- * Pastikan sebuah berkas video bisa diputar WhatsApp, TANPA menurunkan
- * resolusi atau fps. Mengembalikan { path, temp, info, tindakan }.
+ * Pastikan sebuah berkas video bisa diputar WhatsApp. RESOLUSI tidak diturunkan;
+ * fps dibatasi 60 (WhatsApp tidak memutar di atas itu dengan mulus).
+ * Mengembalikan { path, temp, info, tindakan }.
  *
- * - Sudah H.264 8-bit yuv420p + AAC → hanya remux `+faststart` (stream copy,
- *   kualitas 100% utuh). faststart wajib: tanpa moov di depan, penerima harus
- *   mengunduh penuh dulu dan di WA sering terlihat sebagai unduhan gagal.
- * - HEVC / VP9 / 10-bit / 4:2:2 → encode ulang ke H.264 8-bit dengan resolusi
- *   dan fps DIBIARKAN APA ADANYA. `-level` tidak dipaksa: memaksa level yang
- *   lebih rendah dari kebutuhan membuat header berkas berbohong, dan decoder
- *   perangkat keras menolaknya.
+ * - Sudah H.264 8-bit yuv420p + AAC + fps ≤ 60 → hanya remux `+faststart`
+ *   (stream copy, kualitas 100% utuh). faststart wajib: tanpa moov di depan,
+ *   penerima harus mengunduh penuh dulu dan di WA sering terlihat sebagai
+ *   unduhan gagal.
+ * - HEVC / VP9 / 10-bit / 4:2:2 / fps > 60 → encode ulang ke H.264 8-bit,
+ *   resolusi DIBIARKAN. `-level` tidak dipaksa: memaksa level yang lebih rendah
+ *   dari kebutuhan membuat header berkas berbohong, dan decoder perangkat keras
+ *   menolaknya.
  */
 export async function siapkanVideoWA(fileMasuk, opts = {}) {
   const hapusSumber = opts.hapusSumber !== false;
@@ -228,12 +206,18 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
   // Codec benar TIDAK berarti berkasnya siap kirim. Selain codec/pix_fmt, fps
   // header yang menipu juga memaksa encode ulang: jalur remux menyalin header
   // itu apa adanya sehingga videonya "jernih tapi timing-nya ngaco".
-  const fpsNgaco = fpsBohong(info);
+  //
+  // fps di atas 60 juga memaksa encode ulang, dan itu tidak bisa ditawar lewat
+  // remux: `-c:v copy` menyalin setiap frame apa adanya, jadi berkas 120 fps
+  // yang codecnya sudah H.264 dulu lolos utuh ke penerima.
+  const rFps = rencanaFps(fileMasuk);
+  const fpsNgaco = rFps.bohong;
   const perluEncode =
     info.codec !== "h264" ||
     (info.pixFmt && info.pixFmt !== "yuv420p") ||
     /10|4:4:4|4:2:2/.test(info.profile) ||
-    fpsNgaco;
+    fpsNgaco ||
+    rFps.perluTurun;
 
   const out = path.join(TMP, "wa_" + crypto.randomBytes(8).toString("hex") + ".mp4");
   const audioArgs = !adaAudio(fileMasuk)
@@ -258,27 +242,49 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
 
   // Encode ulang. RESOLUSI tidak disentuh sama sekali.
   //
-  // fps: kalau header jujur, dibiarkan apa adanya (ffmpeg memakai fps sumber).
-  // Kalau header berbohong, fps NYATA dipaksa lewat `-r` sebagai PECAHAN —
-  // membulatkan 60,1 jadi 60 membuat audio dan video pelan-pelan bergeser.
-  // Diukur: tanpa `-r`, ffmpeg percaya header 25/1 dan membuang 630 dari 1083
-  // paket; dengan `-r` fps nyata, semua 1083 paket bertahan.
+  // fps:
+  //   > 60          → diturunkan dengan pembagi bulat (lihat hillz-fps.js)
+  //   header bohong → fps NYATA dipaksa sebagai PECAHAN, bukan desimal.
+  //                   Diukur: tanpa ini, ffmpeg percaya header 25/1 dan membuang
+  //                   630 dari 1083 paket; dengan fps nyata semuanya bertahan.
+  //   sudah wajar   → dibiarkan apa adanya (passthrough)
   //
-  // Batas 90 fps menahan berkas VFR ngawur yang melaporkan angka raksasa
-  // (mis. 1000000/1) dan membuat encoder mengamuk.
+  // Filter `fps=` dipakai, bukan cuma `-r`: filter bekerja di dalam rantai
+  // filter dengan timestamp yang dihitung ulang konsisten, sedangkan `-r`
+  // sendirian hanya menambal timestamp di akhir dan pada sumber VFR bisa
+  // menduplikasi frame diam-diam.
+  const vfArgs = [];
   const fpsArgs = [];
-  if (fpsNgaco) {
-    const avg = fraksiKeAngka(info.fpsAvg);
-    if (avg > 0 && avg <= 90) fpsArgs.push("-r", info.fpsAvg);
-    else if (avg > 90) fpsArgs.push("-r", "90");
+  if (rFps.perluTurun) {
+    vfArgs.push("-vf", filterFps(rFps));
+    fpsArgs.push(...argKeluaranFps(rFps, FFMPEG_PUNYA_FPS_MODE));
+  } else if (fpsNgaco) {
+    // Header bohong tapi fps nyatanya masih di bawah batas: pakai angka nyata.
+    // Dijepit di FPS_MAKS untuk berkas VFR ngawur yang melaporkan angka raksasa.
+    const nyata = rFps.detail.nyata;
+    if (nyata > 0) {
+      fpsArgs.push("-r", nyata > FPS_MAKS ? String(FPS_MAKS) : rFps.detail.nyataStr);
+    }
+  } else {
+    fpsArgs.push(...argKeluaranFps(rFps, FFMPEG_PUNYA_FPS_MODE));
   }
+
+  // `-g` dipatok ~2 detik: keyint default 250 berarti 4+ detik antar keyframe,
+  // dan seek di tengah gerakan terasa tersendat. CRF 20 dipertahankan (jalur ini
+  // untuk video unduhan yang sudah terkompresi sekali; CRF lebih rendah hanya
+  // memperbesar berkas tanpa menambah detail yang sudah hilang).
+  const fpsGop = rFps.perluTurun ? rFps.target : (rFps.detail.nyata || 30);
+  const gop = Math.max(24, Math.round(fpsGop * 2));
+
   const argsEnc = [
     "-y", "-err_detect", "ignore_err", "-fflags", "+genpts+discardcorrupt",
     "-i", fileMasuk,
     ...(adaAudio(fileMasuk) ? [] : ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-shortest"]),
+    ...vfArgs,
     ...fpsArgs,
     "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
-    "-preset", "veryfast", "-crf", "20",
+    "-preset", "fast", "-crf", "20",
+    "-g", String(gop), "-keyint_min", String(Math.round(gop / 2)), "-sc_threshold", "0",
     "-c:a", "aac", "-b:a", "192k", "-ac", "2",
     "-movflags", "+faststart", out,
   ];
