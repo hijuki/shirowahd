@@ -13,10 +13,17 @@ function loadSettings() {
   return {};
 }
 
+// Format lama `command:`/`tag:` tidak pernah dibaca loader — lihat catatan di
+// claim.js. `cek` dipulihkan sebagai alias karena kata itu terbukti belum
+// dipegang plugin mana pun (folder plugins/cek/ isinya `cekumur`, `cekjodoh`,
+// dst — tidak ada yang bernama `cek` polos), jadi tidak ada yang direbut.
 export const config = {
-  command: ['cek', 'cekvideo'],
-  tag: 'tools',
-  help: 'Cek status file sebelum diklaim. Gunakan: .cek KODE',
+  name: 'cekvideo',
+  alias: ['cek', 'cekkode'],
+  category: 'claim',
+  description: 'Lihat status berkas sebelum diklaim',
+  usage: '.cekvideo KODE',
+  help: 'Cek status file sebelum diklaim. Gunakan: .cekvideo KODE',
 };
 
 // Sisa waktu dibuat terbaca: menit mentah tidak berguna kalau masa simpan 1440

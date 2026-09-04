@@ -1,9 +1,18 @@
 import { storeVideo, getTTL } from '../../src/lib/vid-store.js';
 
+// Format lama `command:`/`tag:` tidak pernah dibaca loader — lihat catatan di
+// claim.js. Satu catatan penting: `upload` TIDAK dikembalikan sebagai nama
+// perintah. Kata itu sekarang dipegang `tools/tourl.js` (dan `main/web.js`)
+// sebagai alias yang benar-benar hidup; `commands` menang atas `aliases` di
+// getPlugin(), jadi mendaftarkannya di sini akan MEREBUT perintah yang sedang
+// bekerja. Yang dipulihkan hanya alias yang memang belum dipakai siapa pun.
 export const config = {
-  command: ['upload', 'simpanvideo'],
-  tag: 'tools',
-  help: 'Upload video ke server. Reply video dengan .upload',
+  name: 'uploadvideo',
+  alias: ['simpanvideo'],
+  category: 'claim',
+  description: 'Simpan video ke server dan dapatkan kodenya',
+  usage: 'reply video dengan .uploadvideo',
+  help: 'Upload video ke server. Reply video dengan .uploadvideo / .simpanvideo',
 };
 
 export async function handler(m, { sock }) {

@@ -90,9 +90,17 @@ function getImageMimeType(name) {
   return IMAGE_MIME_MAP[ext] || "image/jpeg";
 }
 
+// `command:`/`tag:` adalah format LAMA yang TIDAK PERNAH DIBACA loader
+// (`hillz-plugins.js` hanya melihat `name`/`alias`/`category`). Akibatnya nama
+// perintah jatuh ke nama berkas dan seluruh alias hilang senyap, lalu kategori
+// terisi dari nama folder — dulu "tools", yang tidak diizinkan role "claim"
+// sehingga bot ber-role itu justru diblokir dari perintah intinya sendiri.
 export const config = {
-  command: ["claim"],
-  tag: "tools",
+  name: "claim",
+  alias: ["klaim", "ambil"],
+  category: "claim",
+  description: "Ambil berkas yang sudah diupload lewat kodenya",
+  usage: ".claim KODE (bisa beberapa: .claim AB CD EF)",
   help: "Claim file yang sudah diupload. Gunakan: .claim KODE atau .claim AB CD EF",
 };
 

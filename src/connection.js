@@ -591,16 +591,29 @@ async function startConnection(options = {}) {
 
       startWatchdog(startConnection, options);
 
-      // Pengumuman "BOT ON" ke grup. Ditunda 8 detik supaya daftar grup sudah
-      // tersinkron; kalau langsung, `groupFetchAllParticipating` sering balik
-      // kosong. Penanda per-perangkat di dalam fungsinya mencegah pengumuman
-      // terulang pada restart biasa — hanya sesi/nomor baru yang mengumumkan.
+      // Pengumuman "BOT ON" ke SEMUA grup DIHAPUS dari jalur boot (2026-09-04).
+      // User menolaknya secara eksplisit: "bot konek chat ke grup otomatis
+      // mksdnya bukan gitu, jadi pas masuk grup baru doang". Bot yang menyapa
+      // seluruh grup setiap kali sesi baru dibuat memang perilaku yang salah —
+      // grup lama tidak butuh kabar itu.
+      //
+      // Siarannya tidak dibuang, hanya dipindah ke tombol manual di panel admin
+      // (`POST /announce` → `umumkanBotOn(sock, { paksa: true })`). Sapaan
+      // otomatis sekarang hanya `sapaGrupBaru()`, dipicu dari
+      // `group-participants.update` di bawah.
+      //
+      // Yang dikerjakan di sini cuma satu: menandai grup yang SUDAH dimasuki
+      // sebagai "pernah disapa", supaya event `add` yang diputar ulang WhatsApp
+      // saat sinkronisasi riwayat tidak membuat grup lama tersapa. Ditunda 8
+      // detik dengan alasan yang sama seperti kode lama —
+      // `groupFetchAllParticipating` sering balik kosong kalau dipanggil
+      // langsung setelah `open`, dan daftar kosong akan menyemai berkas kosong.
       setTimeout(async () => {
         try {
-          const { umumkanBotOn } = await import("./lib/hillz-announce.js");
-          await umumkanBotOn(sock, { namaBot: config.bot?.name || "BOT SWHD" });
+          const { semaiGrupLama } = await import("./lib/hillz-announce.js");
+          await semaiGrupLama(sock);
         } catch (e) {
-          colors.logger.warn("announce", `gagal: ${e.message}`);
+          colors.logger.warn("sapa", `penyemaian gagal: ${e.message}`);
         }
       }, 8000);
 
@@ -797,7 +810,7 @@ async function startConnection(options = {}) {
           const inviter = event.author || "";
           const inviterMention = inviter
             ? `@${inviter.split("@")[0]}`
-            : "seseorang";
+            : "";
           const prefix = config.command?.prefix || ".";
 
           let groupName = "grup ini";
@@ -806,36 +819,21 @@ async function startConnection(options = {}) {
             groupName = meta.subject || "grup ini";
           } catch { }
 
-          const saluranId =
-            config.saluran?.id || "120363413208281480@newsletter";
-          const saluranName =
-            config.saluran?.name || config.bot?.name || "SHIROWAHD";
-
-          const welcomeText =
-            `👋 *ʜᴀɪ, sᴀʟᴀᴍ ᴋᴇɴᴀʟ!*\n\n` +
-            `Aku *${config.bot?.name || "SHIROWAHD"}* 🤖\n\n` +
-            `Terima kasih sudah mengundang aku ke *${groupName}*!\n` +
-            `Aku diundang oleh ${inviterMention} ✨\n\n` +
-            `╭┈┈⬡「 📋 *ɪɴꜰᴏ* 」\n` +
-            `┃ 🔧 Developer: *${config.bot?.developer || "HILLZ"}*\n` +
-            `┃ 📢 Prefix: \`${prefix}\`\n` +
-            `┃ 📩 Support: ${config.bot?.support || "-"}\n` +
-            `╰┈┈⬡\n\n` +
-            `> Ketik \`${prefix}menu\` untuk melihat daftar fitur\n` +
-            `> Ketik \`${prefix}help\` untuk bantuan`;
-
-          await sock.sendMessage(event.id, {
-            text: welcomeText,
-            contextInfo: {
-              mentionedJid: inviter ? [inviter] : [],
-              forwardingScore: 9999,
-              isForwarded: true,
-              forwardedNewsletterMessageInfo: {
-                newsletterJid: saluranId,
-                newsletterName: saluranName,
-                serverMessageId: 127,
-              },
-            },
+          // Teks sapaan TIDAK lagi ditulis di sini. Sebelumnya blok ini
+          // menyusun sendiri pesan berhias (`ʜᴀɪ, sᴀʟᴀᴍ ᴋᴇɴᴀʟ`, bingkai
+          // `╭┈┈⬡「 」`) yang ditolak user, dan karena teksnya inline di
+          // penangan event, tidak ada satu tempat pun untuk memperbaikinya.
+          // Sekarang isi pesan + aturan anti-ulang + hormat pada toggle grup
+          // ada di `hillz-announce.js`, satu sumber kebenaran.
+          const { sapaGrupBaru } = await import("./lib/hillz-announce.js");
+          await sapaGrupBaru(sock, event.id, {
+            namaBot: config.bot?.name || "SHIROWAHD",
+            namaGrup: groupName,
+            pengundang: inviterMention,
+            mention: inviter ? [inviter] : [],
+            prefix,
+            saluranId: config.saluran?.id,
+            saluranName: config.saluran?.name || config.bot?.name,
           });
 
           colors.logger.success("grup", `bot bergabung: ${groupName}`);

@@ -36,8 +36,20 @@ const ROLE_BAWAAN = {
   },
   claim: {
     label: "Claim Video",
-    deskripsi: "Khusus alur klaim/upload video + info dasar",
-    kategori: ["store", "main", "info", "cek", "media", "download", "convert"],
+    deskripsi: "Alur klaim/upload video + downloader + info dasar",
+    // `claim` ada di depan karena itu kategori folder tempat claim.js /
+    // cekvideo.js / uploadvideo.js sekarang tinggal. Sebelumnya ketiganya
+    // berada di `plugins/tools/`, sehingga kategorinya terbaca "tools" —
+    // tidak ada di daftar ini — dan bot ber-role "Claim Video" justru
+    // diblokir dari perintah yang menjadi alasan role ini dibuat.
+    //
+    // `search` dan `tools` ikut karena downloader tersebar di tiga folder:
+    // `download/` (tiktok, ig), `search/` (play, pinvid), dan `tools/`
+    // (hd, tourl, tovideo). Tanpa keduanya, "downloader lainnya" mati.
+    kategori: [
+      "claim", "store", "main", "info", "cek",
+      "media", "download", "search", "convert", "tools",
+    ],
   },
   grup: {
     label: "Pengelola Grup",

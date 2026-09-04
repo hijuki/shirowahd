@@ -186,6 +186,19 @@ function saveSettings(data) {
     directUploadPort: data.directUploadPort ?? cur.directUploadPort ?? 8443,
     autoCleanupInterval: data.autoCleanupInterval ?? cur.autoCleanupInterval ?? 30,
     storageQuotaMB: data.storageQuotaMB ?? cur.storageQuotaMB ?? 0,
+    // ── Pengumuman & sapaan bot WA (2026-09-04) ──
+    // WAJIB ada di daftar ini. Objek `s` dibangun ulang dari nol setiap kali
+    // admin menekan Simpan, jadi kunci yang tidak disebut di sini akan HILANG
+    // dari admin-settings.json — walau tadinya ada. `hillz-announce.js`
+    // membaca keempatnya, dan defaultnya "aktif" (`!== false`), jadi kunci
+    // yang terhapus diam-diam akan menyalakan kembali fitur yang dimatikan.
+    //   announceOnConnect → siaran ke semua grup (kini hanya tombol manual)
+    //   greetOnJoin       → sapaan saat bot dimasukkan ke grup BARU
+    //   announceText/greetText → teks kustom, kosong = pakai teks bawaan
+    announceOnConnect: data.announceOnConnect ?? cur.announceOnConnect ?? false,
+    announceText: data.announceText ?? cur.announceText ?? '',
+    greetOnJoin: data.greetOnJoin ?? cur.greetOnJoin ?? true,
+    greetText: data.greetText ?? cur.greetText ?? '',
     // ── Tampilan situs (dulu hanya ada di frontend, tidak bisa diatur admin) ──
     // themeDefault: mode awal untuk pengunjung BARU. Pilihan pengunjung yang
     // sudah pernah menekan tombol mode tetap menang (disimpan di localStorage).

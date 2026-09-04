@@ -61,6 +61,7 @@ const CATEGORY_EMOJIS = {
   islamic: "🕌",
   info: "ℹ️",
   cek: "📁",
+  claim: "🎟️",
   user: "📊",
   canvas: "🎨",
   random: "🎲",
@@ -157,6 +158,11 @@ function getSortedCategories(m, botMode) {
   const categoryOrder = [
     "owner",
     "main",
+    // `claim` ditaruh tinggi: alur klaim video adalah fitur yang dicari orang
+    // datang dari website. Kategori yang tidak terdaftar di sini jatuh ke
+    // urutan 999 dan tercecer di dasar menu, jadi kategori baru WAJIB
+    // didaftarkan di sini — bukan cukup dibuat foldernya.
+    "claim",
     "utility",
     "tools",
     "fun",
@@ -284,6 +290,9 @@ async function buildMenuText(
   const categoryOrder = [
     "owner",
     "main",
+    // Sama seperti daftar di atas — menu ini punya urutan sendiri, jadi
+    // kategori baru harus didaftarkan di KEDUA tempat atau tampil tercecer.
+    "claim",
     "utility",
     "tools",
     "fun",
