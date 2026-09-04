@@ -1068,6 +1068,34 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // CHEST — game HTML mandiri yang menumpang domain ini.
+  //
+  // Sengaja dibuat SEKECIL mungkin dampaknya: cuma satu rute GET yang
+  // menyajikan satu berkas statis. Tidak ada API, tidak ada penyimpanan,
+  // tidak menyentuh upload/klaim/admin. Kalau berkasnya hilang, jawabannya
+  // 404 dan tidak ada rute lain yang terpengaruh.
+  //
+  // Ditaruh SEBELUM POST /upload dan setelah rute static — tidak ada pola
+  // rute lama yang cocok dengan '/chest', jadi tidak ada yang tertutup.
+  // ═══════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && (url === '/chest' || url === '/chest/' || url === '/chest.html')) {
+    try {
+      const html = readFileSync(join(__dirname, 'chest-web', 'index.html'), 'utf8');
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        // Bubble WA memuat halaman dari origin lain, jadi frame tidak boleh ditolak.
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(html);
+    } catch {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Chest belum terpasang');
+    }
+    return;
+  }
+
   if (req.method === 'GET' && url === '/api/settings/public') {
     jsonRes(res, 200, {
       ownerWhatsapp: settings.ownerWhatsapp,
