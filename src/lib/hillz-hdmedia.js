@@ -142,9 +142,27 @@ function kodekAudio(file) {
   ).toLowerCase();
 }
 
+/**
+ * Hitung keluhan decoder pada sebuah berkas. 0 = benar-benar bersih.
+ *
+ * JANGAN mencari satu kalimat tertentu. Dulu fungsi ini `grep -c "Error while
+ * decoding"`, dan pada ffmpeg 8 kalimat itu TIDAK PERNAH muncul lagi — berkas
+ * terpotong sekarang dilaporkan sebagai:
+ *
+ *   [h264] Invalid NAL unit size (4707 > 2467).
+ *   [h264] Error splitting the input into NAL units.
+ *   [mov,mp4] stream 1, offset 0xfa98f: partial file
+ *   [vist#0:0/h264] Decoding error: Invalid data found when processing input
+ *
+ * Empat baris keluhan, dan grep lama menghitungnya 0 → berkas rusak dinyatakan
+ * "bersih" lalu diloloskan lewat remux. Itulah kenapa video rusak dari VPS
+ * masih bisa lewat. Sekarang SEMUA baris pada `-v error` dihitung (kecuali
+ * derau muxer yang bukan soal isi berkas), sama seperti jalur upload web.
+ */
 function errorDecode(file, detik = 8) {
   const out = jalankan(
-    `ffmpeg -v error -i ${JSON.stringify(file)} -t ${detik} -f null - 2>&1 | grep -c "Error while decoding" || true`,
+    `ffmpeg -v error -i ${JSON.stringify(file)} -t ${detik} -f null - 2>&1 ` +
+    `| grep -v "to muxer" | grep -v "Last message repeated" | grep -vc "^$" || true`,
     120000
   );
   return parseInt(out, 10) || 0;

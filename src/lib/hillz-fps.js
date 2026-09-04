@@ -49,15 +49,23 @@ import { execSync } from "child_process";
 export const FPS_MAKS = 60;
 
 /**
- * Batas bawah "masih kisaran 60an".
+ * Toleransi "pembagi bulat ini benar-benar mendarat di 60".
  *
- * Pembagi bulat hanya dipakai kalau hasilnya mendarat di kisaran ini (59,94 dan
- * 60 lolos). Kalau pembagi bulat menjatuhkan hasil lebih rendah dari ini —
- * misal 90 fps ÷ 2 = 45 — pembagi DIBUANG dan 60 dipaksa, karena permintaannya
- * adalah semua diratakan ke 60an, bukan dibiarkan turun sejauh yang kebetulan
- * dihasilkan pembagi.
+ * Pembagi bulat hanya dipakai kalau hasilnya PERSIS 60 (atau bentuk NTSC-nya,
+ * 59,94 — selisih 0,06). Kalau tidak persis, pembagi DIBUANG dan 60 dipaksa,
+ * karena permintaannya semua diratakan ke 60 — bukan dibiarkan mendarat di
+ * angka apa pun yang kebetulan dihasilkan pembagi:
+ *
+ *    90 fps ÷ 2  = 45,00  → dibuang, dipaksa 60
+ *   100 fps ÷ 2  = 50,00  → dibuang, dipaksa 60
+ *   144 fps ÷ 3  = 48,00  → dibuang, dipaksa 60
+ *  1000 fps ÷ 17 = 58,82  → dibuang, dipaksa 60
+ *
+ * Kasus 1000 fps itu bukan karangan: berkas rusak dari VPS memang muncul
+ * dengan fps ngawur, dan 58,82 fps adalah angka sampah — tidak ada kehalusan
+ * yang perlu dijaga dari berkas rusak, jadi 60 bersih yang menang.
  */
-export const FPS_KISARAN_MIN = 58;
+export const FPS_TOLERANSI_TARGET = 0.15;
 
 /** Selisih di bawah ini dianggap pembulatan internal, bukan kebohongan header. */
 const TOLERANSI_BOHONG = 0.2;
@@ -217,13 +225,13 @@ export function rencanaFps(file) {
   }
 
   const targetEksak = sumber / N;
-  if (targetEksak < FPS_KISARAN_MIN) {
-    // Pembagi bulat mendarat di luar kisaran 60an (90→45, 100→50, 144→48).
+  if (FPS_MAKS - targetEksak > FPS_TOLERANSI_TARGET) {
+    // Pembagi bulat tidak mendarat di 60 (90→45, 100→50, 144→48, 1000→58,82).
     // Dibuang: 60 dipaksa supaya semua sumber keluar di angka yang sama.
     return {
       perluTurun: true, fpsSumber: sumber, pembagi: 0, target: FPS_MAKS,
       targetStr: String(FPS_MAKS), eksak: false, bohong: f.bohong, detail: f,
-      alasan: `${sumber.toFixed(2)} fps → pembagi ${N} mendarat di ${targetEksak.toFixed(1)} fps (di luar kisaran 60an) — diratakan ke ${FPS_MAKS}`,
+      alasan: `${sumber.toFixed(2)} fps → pembagi ${N} mendarat di ${targetEksak.toFixed(2)} fps (bukan ${FPS_MAKS}) — diratakan ke ${FPS_MAKS}`,
     };
   }
 
