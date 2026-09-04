@@ -199,8 +199,8 @@ echo
 if [ -z "$MIG" ]; then
   echo "  LANGKAH TERAKHIR — tautkan nomor WhatsApp:"
   echo "    1. Buka $URL/admin lalu login"
-  echo "    2. Tab \"Bot\" → kartu \"Pairing\""
-  echo "    3. Masukkan nomor bot (mis. 628xxx) → Minta Kode"
+  echo "    2. Tab \"BOT WA\" → kartu \"Pairing Perangkat\""
+  echo "    3. Masukkan nomor bot (mis. 628xxx) → tombol \"Pair\""
   echo "    4. Kode 8 digit muncul DI HALAMAN ITU (bukan di terminal)"
   echo "    5. WhatsApp → Perangkat Tertaut → Tautkan dengan nomor telepon"
   echo
