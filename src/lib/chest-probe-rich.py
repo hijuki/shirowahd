@@ -14,9 +14,8 @@ import time
 import urllib.error
 import urllib.request
 
-OWNER = "120363426052801497@g.us"   # grup SHIROHD2.0 — jalur DM kena ack 463,
-                                    # grup terbukti lolos, jadi probe dikirim
-                                    # ke grup kecil (3 anggota, owner di dalam).
+OWNER = "120363429597398620@g.us"   # grup EXPERIMENT — jalur DM kena ack 463,
+                                    # grup lolos. Grup uji lain dilarang.
 BUBBLE = pathlib.Path("/root/shirowahd/chest-web/bubble.html")
 CATATAN = pathlib.Path("/tmp/_chest_probe_ids.json")
 

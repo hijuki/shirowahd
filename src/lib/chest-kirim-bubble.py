@@ -14,7 +14,8 @@ import subprocess
 import urllib.error
 import urllib.request
 
-GRUP = "120363426052801497@g.us"
+GRUP = "120363429597398620@g.us"   # grup EXPERIMENT — satu-satunya tempat uji
+                                    # yang diizinkan user. Grup lain jangan.
 BASIS = "https://swhdhlz.my.id"
 AKAR = pathlib.Path("/root/shirowahd")
 BUBBLE = AKAR / "chest-web" / "bubble.html"

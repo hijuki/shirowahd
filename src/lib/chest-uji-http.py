@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 
 BASIS = "https://swhdhlz.my.id"
-JID = "120363426052801497@g.us"
+JID = "120363429597398620@g.us"   # grup EXPERIMENT
 
 # Token dicetak lewat mesin yang sama seperti bot nanti — bukan lewat
 # endpoint publik, karena endpoint pencetak token memang sengaja tidak ada.
