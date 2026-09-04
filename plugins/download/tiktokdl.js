@@ -23,7 +23,7 @@ async function tiktokDl(url) {
 
   let data = [];
   const domain = "https://www.tikwm.com/api/";
-  const res = (
+  const balasan = (
     await axios.post(
       domain,
       {},
@@ -47,7 +47,21 @@ async function tiktokDl(url) {
         params: { url, count: 12, cursor: 0, web: 1, hd: 1 },
       },
     )
-  ).data.data;
+  ).data;
+
+  // tikwm membalas HTTP 200 walau gagal — kegagalan ada di dalam badan JSON
+  // (`{"code":-1,"msg":"Url parsing is failed! Please check url."}`) dan `data`
+  // bernilai null. Kode lama langsung mengambil `.data.data` lalu menyentuh
+  // `res.title`, jadi yang muncul di log adalah
+  // `TypeError: Cannot read properties of undefined (reading 'title')` —
+  // pesan yang tidak menyebut TikTok sama sekali dan menyesatkan saat dibaca.
+  // Sekarang penyebab aslinya dilempar apa adanya supaya `catch` di handler
+  // bisa memberi tahu pengguna alasan yang benar.
+  const res = balasan?.data;
+  if (!res || balasan?.code !== 0) {
+    const alasan = balasan?.msg || "tanpa keterangan";
+    throw new Error(`tikwm menolak tautan ini: ${alasan}`);
+  }
 
   if (res?.duration == 0) {
     res.images.forEach((v) => data.push({ type: "photo", url: v }));
@@ -217,7 +231,15 @@ async function handler(m, { sock }) {
   } catch (e) {
     console.error(e);
     m.react("❌");
-    m.reply("Coba lagi nanti, atau bisa coba " + m.prefix + "tt2");
+    // Tautan yang ditolak tikwm (bukan tautan TikTok, video privat, sudah
+    // dihapus) BUKAN gangguan sementara — menyuruh pengguna "coba lagi nanti"
+    // membuat mereka menunggu sesuatu yang tidak akan pernah berhasil.
+    const ditolak = /tikwm menolak tautan ini/.test(e?.message || "");
+    m.reply(
+      ditolak
+        ? `Tautannya tidak bisa diproses.\n\n${e.message}\n\nPastikan tautan TikTok-nya benar dan videonya publik.`
+        : "Coba lagi nanti, atau bisa coba " + m.prefix + "tt2",
+    );
   }
 }
 
