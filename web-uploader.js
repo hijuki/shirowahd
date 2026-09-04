@@ -1107,13 +1107,52 @@ async function handleRequest(req, res) {
 
     const aksi = url.slice('/api/chest/'.length);
     const q = new URLSearchParams((req.url.split('?')[1] || ''));
+
+    // Beacon gambar 1x1. Gunanya menjawab satu pertanyaan yang tidak bisa
+    // dijawab XHR: apakah webview bubble bisa menjangkau domain ini SAMA
+    // SEKALI? <img> tidak lewat CORS, jadi kalau ini muat sementara XHR
+    // gagal, yang memblokir CORS/XHR — bukan jaringannya.
+    if (aksi === 'ping.gif') {
+      const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+      res.writeHead(200, {
+        'Content-Type': 'image/gif',
+        'Content-Length': gif.length,
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*',
+      });
+      return res.end(gif);
+    }
+
     let body = {};
     if (req.method === 'POST') {
       try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { body = {}; }
     }
 
+    // JSONP. Alasannya bukan kenyamanan: <script src> tidak lewat CORS dan
+    // tidak lewat XHR, jadi ini jalur terakhir yang masih hidup kalau
+    // webview memblokir keduanya. Konsekuensinya aksi harus bisa lewat GET.
+    //
+    // Aman di sini karena token HMAC adalah satu-satunya kunci dan TIDAK
+    // disimpan di cookie — jadi tidak ada wewenang yang bisa dibonceng
+    // dari request pihak ketiga (CSRF butuh kredensial otomatis, dan di
+    // sini tidak ada). Nama callback disaring ketat sebelum ditulis.
+    const cbMentah = q.get('callback');
+    const jsonp = cbMentah && /^[A-Za-z_$][A-Za-z0-9_$]{0,39}$/.test(cbMentah) ? cbMentah : null;
+    const balas = (kode, obj) => {
+      if (!jsonp) return jsonRes(res, kode, obj);
+      res.writeHead(200, {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*',
+        'X-Content-Type-Options': 'nosniff',
+      });
+      return res.end(`${jsonp}(${JSON.stringify({ ...obj, _http: kode })});`);
+    };
+
+    if (cbMentah && !jsonp) return jsonRes(res, 400, { ok: false, alasan: 'nama callback tidak sah' });
+
     const cek = bacaToken(body.t || q.get('t'));
-    if (!cek.ok) return jsonRes(res, 403, { ok: false, alasan: cek.alasan });
+    if (!cek.ok) return balas(403, { ok: false, alasan: cek.alasan });
 
     const db = muat();
     buangRuangMati(db);
@@ -1121,23 +1160,22 @@ async function handleRequest(req, res) {
     let hasil;
 
     if (aksi === 'lihat') {
-      hasil = chestPandangan(db, cek.ruang, nama);
       // Baca saja: buangRuangMati mungkin mengubah db, tapi tidak perlu
       // ditulis tiap polling — cukup ikut tersimpan saat ada aksi nyata.
-      return jsonRes(res, 200, hasil);
+      return balas(200, chestPandangan(db, cek.ruang, nama));
     }
-    if (req.method !== 'POST') return jsonRes(res, 405, { ok: false, alasan: 'butuh POST' });
 
+    const iPeti = body.i ?? q.get('i');
     if (aksi === 'gabung') hasil = chestGabung(db, cek.ruang, nama);
-    else if (aksi === 'buka') hasil = chestBuka(db, cek.ruang, nama, body.i);
+    else if (aksi === 'buka') hasil = chestBuka(db, cek.ruang, nama, iPeti);
     else if (aksi === 'amankan') hasil = chestAmankan(db, cek.ruang, nama);
     else if (aksi === 'lewat') hasil = chestLewat(db, cek.ruang, nama);
-    else return jsonRes(res, 404, { ok: false, alasan: 'aksi tidak dikenal' });
+    else return balas(404, { ok: false, alasan: 'aksi tidak dikenal' });
 
     if (hasil.ok && !simpan(db)) {
-      return jsonRes(res, 500, { ok: false, alasan: 'gagal menyimpan progres' });
+      return balas(500, { ok: false, alasan: 'gagal menyimpan progres' });
     }
-    return jsonRes(res, hasil.ok ? 200 : 409, {
+    return balas(hasil.ok ? 200 : 409, {
       ...hasil,
       papanBaru: chestPandangan(db, cek.ruang, nama),
     });

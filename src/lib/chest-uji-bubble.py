@@ -42,11 +42,14 @@ statis.append(("nol addEventListener",
 statis.append(("tombol nama pakai atribut onclick",
                asli.count('class="ch" onclick="masuk(') == 4))
 statis.append(("peti dipasang lewat setAttribute('onclick')",
-               "setAttribute('onclick','aksi(\\'buka\\'" in asli
-               or "setAttribute('onclick','aksi(" in asli))
+               "setAttribute('onclick','aksi(" in asli))
 statis.append(("tombol AMANKAN & LEWAT atribut onclick",
                'onclick="aksi(\'amankan\'' in asli and 'onclick="aksi(\'lewat\'' in asli))
-statis.append(("ada tombol TES KLIK offline", 'onclick="tesKlik()"' in asli))
+statis.append(("ada tombol TES NET", 'onclick="tesNet()"' in asli))
+statis.append(("tiga jalur jaringan tersedia",
+               "viaScript" in asli and "viaXhr" in asli and "tesImg" in asli))
+statis.append(("semua aksi lewat GET (syarat JSONP)",
+               "'POST'" not in asli and '"POST"' not in asli))
 statis.append(("nol aset luar", not re.search(r'src="https?://', asli)))
 statis.append(("payload < 14553 char", len(html) < 14553))
 
@@ -63,27 +66,45 @@ periksa = """
     [].every.call(document.querySelectorAll('.ch'), function(e){return e.getAttribute('onclick')}));
   c('fungsi masuk ada', typeof masuk==='function');
   c('fungsi aksi ada', typeof aksi==='function');
-  c('fungsi tesKlik ada', typeof tesKlik==='function');
+  c('fungsi viaScript (JSONP) ada', typeof viaScript==='function');
+  c('fungsi viaXhr ada', typeof viaXhr==='function');
+  c('fungsi tesImg ada', typeof tesImg==='function');
   c('fungsi minta ada', typeof minta==='function');
 
-  // TES KLIK harus jalan tanpa jaringan sama sekali.
-  var sebelum=document.getElementById('dg').textContent;
-  tesKlik();
-  var sesudah=document.getElementById('dg').textContent;
-  c('tesKlik mengubah diagnostik', sebelum!==sesudah);
-  c('diagnostik mencatat KLIK 1', /KLIK 1/.test(sesudah));
-  c('status berubah setelah tesKlik', /klik jalan/.test(document.getElementById('st').textContent));
+  // Diagnostik harus melaporkan keempat jalur secara terpisah — inilah yang
+  // membedakan "jaringan mati" dari "cuma CORS/XHR yang diblokir".
+  var dg=document.getElementById('dg').innerHTML;
+  c('diagnostik lapor jalur img', /img/.test(dg));
+  c('diagnostik lapor jalur script', /script/.test(dg));
+  c('diagnostik lapor jalur xhr', /xhr/.test(dg));
+  c('diagnostik lapor SIMPAN', /SIMPAN (localStorage|sessionStorage|cookie|GAGAL)/.test(dg));
 
-  // Simulasi tap sungguhan pada tombol nama (lewat atribut, seperti di bubble).
+  // JSONP: pastikan tag script benar-benar dibuat dan callback terdaftar.
+  // Dicari lewat src, bukan lewat "script terakhir" — skrip assertion ini
+  // sendiri ikut terhitung di querySelectorAll('script'), jadi indeks
+  // terakhir bukan tag yang baru disuntik.
+  var sebelum=document.querySelectorAll('script').length;
+  viaScript('/api/chest/lihat?t=x', function(){}, function(){});
+  c('viaScript menambah tag script', document.querySelectorAll('script').length>sebelum);
+  var jsonpTag=null;
+  [].forEach.call(document.querySelectorAll('script'), function(s){
+    if((s.src||'').indexOf('/api/chest/')>=0) jsonpTag=s;
+  });
+  c('tag JSONP menunjuk /api/chest/', !!jsonpTag);
+  c('URL JSONP membawa callback=', !!jsonpTag && /callback=__cb/.test(jsonpTag.src));
+
+  // Tap sungguhan lewat atribut, seperti di bubble.
   var chip=document.querySelector('.ch');
   var kode=chip.getAttribute('onclick');
-  c('atribut onclick tombol memanggil masuk()', /masuk\\(/.test(kode));
+  c('atribut onclick memanggil masuk()', /masuk\\(/.test(kode));
   try{ eval(kode); c('eval atribut onclick tidak melempar', true) }
   catch(e){ c('eval atribut onclick tidak melempar', false) }
   c('nama terisi setelah tap', typeof nama==='string' && nama.length>0);
+  c('nKlik naik setelah tap', nKlik>0);
 
-  c('diagnostik lapor SIMPAN', /SIMPAN (localStorage|sessionStorage|cookie|GAGAL)/.test(
-      document.getElementById('dg').textContent));
+  // Suara: context dibuat di dalam handler, jadi setelah tap harus ada state.
+  c('audio dilaporkan setelah tap', typeof audio==='string' && audio!=='-');
+
   c('nol error JS saat muat', galat.length===0);
 
   var d=document.createElement('div'); d.id='HASIL';

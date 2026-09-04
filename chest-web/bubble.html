@@ -2,20 +2,21 @@
 <html lang="id">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-/* v2 — SEMUA handler ditulis sebagai ATRIBUT onclick.
-   Versi v1 memakai el.onclick = function(){} dan tombolnya mati di bubble.
-   Yang pernah terbukti hidup cuma atribut onclick (inline / setAttribute),
-   jadi pola itu yang dipakai konsisten di sini. */
+/* v3 — semua handler ATRIBUT onclick (properti .onclick mati di bubble).
+   Jaringan: EMPAT jalur diuji terpisah (img / script-JSONP / xhr / fetch)
+   karena "xhr error" tidak memberi tahu apakah yang mati jaringannya atau
+   cuma CORS. img tidak lewat CORS, script tidak lewat CORS — kalau salah
+   satunya hidup, permainan tetap bisa jalan. */
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 body{background:#0b1020;color:#e8ecf8;font:13px/1.4 -apple-system,system-ui,sans-serif;padding:10px}
 .w{max-width:340px;margin:0 auto}
 .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
-.t{font-size:15px;font-weight:800;letter-spacing:.4px}.t b{color:#ffc857}
+.t{font-size:15px;font-weight:800}.t b{color:#ffc857}
 .sub{font-size:10px;color:#8b96b8}
 .pil{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
 .ch{background:#151c33;border:1px solid #2a3556;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
 .ch:active{background:#2563eb}
-.bt{display:inline-block;background:#2563eb;color:#fff;border:1px solid #3b82f6;border-radius:8px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer;text-align:center}
+.bt{display:inline-block;background:#2563eb;color:#fff;border:1px solid #3b82f6;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;text-align:center}
 .bt:active{transform:translateY(1px)}
 .bt.g{background:#16a34a;border-color:#22c55e}.bt.y{background:#a16207;border-color:#ca8a04}.bt.n{background:#334155;border-color:#475569}
 .gr{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:8px 0}
@@ -33,8 +34,9 @@ body{background:#0b1020;color:#e8ecf8;font:13px/1.4 -apple-system,system-ui,sans
 .lg{margin-top:6px;font-size:10px;color:#8b96b8;line-height:1.5;max-height:52px;overflow:hidden}
 .st{margin-top:7px;padding:7px 9px;border-radius:7px;background:#101830;font-size:11px;color:#a8b3d1;min-height:28px}
 .st.e{background:#2a1520;color:#fca5a5}
-.dg{margin-top:7px;padding:6px 8px;border-radius:6px;background:#0d1526;font-size:9px;color:#7c88ab;
-    word-break:break-all;line-height:1.6;font-family:ui-monospace,monospace}
+.dg{margin-top:7px;padding:7px 8px;border-radius:6px;background:#0d1526;font-size:10px;color:#9aa6c8;
+    line-height:1.7;font-family:ui-monospace,monospace;word-break:break-all}
+.dg b{color:#4ade80}.dg i{color:#fca5a5;font-style:normal}
 a.lk{display:block;margin-top:7px;background:#25d366;color:#04140d;border-radius:8px;padding:10px;
      font-size:12px;font-weight:800;text-align:center;text-decoration:none}
 </style></head>
@@ -43,7 +45,7 @@ a.lk{display:block;margin-top:7px;background:#25d366;color:#04140d;border-radius
 <div class="hd"><div class="t">📦 CHEST <b>BERSAMA</b></div><div class="sub" id="rd">ronde -</div></div>
 
 <div id="gb">
-  <div class="sub" style="margin-bottom:5px">Pilih nama (tap salah satu):</div>
+  <div class="sub" style="margin-bottom:5px">Tap nama kamu:</div>
   <div class="pil">
     <div class="ch" onclick="masuk('HILLZ')">HILLZ</div>
     <div class="ch" onclick="masuk('REHAN')">REHAN</div>
@@ -55,158 +57,164 @@ a.lk{display:block;margin-top:7px;background:#25d366;color:#04140d;border-radius
 <div class="gr" id="gr"></div>
 
 <div class="row" id="ax" style="display:none">
-  <div class="bt g" onclick="aksi('amankan',null,760)">AMANKAN <span id="bk">0</span></div>
-  <div class="bt y" onclick="aksi('lewat',null,420)">LEWAT</div>
+  <div class="bt g" onclick="aksi('amankan',0,760)">AMANKAN <span id="bk">0</span></div>
+  <div class="bt y" onclick="aksi('lewat',0,420)">LEWAT</div>
 </div>
 
 <div class="sk" id="sk"></div>
 <div class="lg" id="lg"></div>
-<div class="st" id="st">Tap nama di atas buat masuk.</div>
+<div class="st" id="st">Tap nama di atas. Kalau jaringan mati, tap TES NET.</div>
 
 <div class="row">
-  <div class="bt n" onclick="tesKlik()">TES KLIK</div>
   <div class="bt n" onclick="tesNet()">TES NET</div>
   <div class="bt n" onclick="lihat(1)">SEGARKAN</div>
 </div>
 
-<div class="dg" id="dg">diagnostik: belum ada tap</div>
+<div class="dg" id="dg">diagnostik: belum dites</div>
 <a class="lk" href="https://swhdhlz.my.id/chest" target="_blank" rel="noopener">BUKA DI BROWSER ↗</a>
 </div>
 
 <script>
 var API='__API__', T='__TOKEN__';
-var nama='', seq=-1, sibuk=0, nKlik=0, net='belum dites', simpan='belum dites', audio='belum dites', cara='';
+var nama='', seq=-1, sibuk=0, nKlik=0, audio='-', simpan='-', jalur='';
+var N={img:'?',script:'?',xhr:'?',fetch:'?'};
 
 function el(i){return document.getElementById(i)}
 function pesan(t,err){var e=el('st');e.textContent=t;e.className=err?'st e':'st'}
-
+function tandai(v){return v==='OK'?'<b>OK</b>':(v==='?'?'?':'<i>'+v+'</i>')}
 function diag(){
-  el('dg').textContent='diagnostik: KLIK '+nKlik+' · NET '+net+(cara?'('+cara+')':'')+
-    ' · SIMPAN '+simpan+' · AUDIO '+audio;
+  el('dg').innerHTML='KLIK '+nKlik+' · AUDIO '+audio+' · SIMPAN '+simpan+
+    '<br>img '+tandai(N.img)+' · script '+tandai(N.script)+
+    ' · xhr '+tandai(N.xhr)+' · fetch '+tandai(N.fetch)+
+    (jalur?'<br>jalur dipakai: <b>'+jalur+'</b>':'');
 }
-
-/* TES KLIK: murni DOM, nol jaringan. Kalau angkanya naik, mekanisme klik
-   di bubble hidup dan masalahnya ada di jaringan — bukan sebaliknya. */
-function tesKlik(){ nKlik++; bunyi(700,.07); pesan('✓ klik jalan — sudah '+nKlik+'x'); cekSimpan(); diag() }
 
 function cekSimpan(){
-  try{ localStorage.setItem('_c','1'); localStorage.removeItem('_c'); simpan='localStorage'; return }catch(e){}
-  try{ sessionStorage.setItem('_c','1'); sessionStorage.removeItem('_c'); simpan='sessionStorage'; return }catch(e){}
-  try{ document.cookie='_c=1;path=/'; simpan=(document.cookie||'').indexOf('_c')>=0?'cookie':'GAGAL' }catch(e){ simpan='GAGAL' }
+  try{localStorage.setItem('_c','1');localStorage.removeItem('_c');simpan='localStorage';return}catch(e){}
+  try{sessionStorage.setItem('_c','1');sessionStorage.removeItem('_c');simpan='sessionStorage';return}catch(e){}
+  try{document.cookie='_c=1;path=/';simpan=(document.cookie||'').indexOf('_c')>=0?'cookie':'GAGAL'}catch(e){simpan='GAGAL'}
 }
 
-/* Suara: context dibuat DI DALAM handler tap, bukan saat halaman dimuat.
-   Webview memberi context 'suspended' dan cuma gesture yang boleh resume. */
 var AC=null;
 function bunyi(hz,dur,jenis){
   try{
-    var K=window.AudioContext||window.webkitAudioContext;
-    if(!K){audio='tidak ada AudioContext';return}
+    var K=window.AudioContext||window.webkitAudioContext; if(!K){audio='tidak ada';return}
     if(!AC)AC=new K();
     if(AC.state==='suspended'&&AC.resume)AC.resume();
     var o=AC.createOscillator(),g=AC.createGain(),n=AC.currentTime;
     o.type=jenis||'square';o.frequency.value=hz;o.connect(g);g.connect(AC.destination);
     g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.1,n+.012);
     g.gain.exponentialRampToValueAtTime(.0001,n+(dur||.09));
-    o.start(n);o.stop(n+(dur||.09)+.03);
-    audio=AC.state;
-  }catch(e){ audio='gagal: '+(e.message||e).toString().slice(0,26) }
+    o.start(n);o.stop(n+(dur||.09)+.03);audio=AC.state;
+  }catch(e){audio='gagal'}
 }
 
-/* Dua jalur jaringan: fetch dulu, XHR kalau fetch tidak ada/ditolak.
-   Yang berhasil dicatat di diagnostik, jadi ketahuan jalur mana yang hidup. */
-function minta(aksiNm, data, cb){
-  var pakaiGet = (aksiNm==='lihat');
-  var url = API+'/api/chest/'+aksiNm;
-  var body = null;
-  if(pakaiGet){ url += '?t='+encodeURIComponent(T)+'&nama='+encodeURIComponent(nama) }
-  else { data=data||{}; data.t=T; data.nama=nama; body=JSON.stringify(data) }
+/* ── jalur 1: JSONP lewat <script>. Tidak lewat CORS dan tidak lewat XHR,
+   jadi ini yang paling mungkin lolos kalau webview memblokir keduanya. ── */
+var cbN=0;
+function viaScript(path,cb,gagal){
+  var nm='__cb'+(++cbN)+'_'+Math.floor(Math.random()*1e6);
+  var s=document.createElement('script'),beres=0;
+  window[nm]=function(d){beres=1;N.script='OK';if(!jalur)jalur='script';diag();bersih();cb(d)};
+  function bersih(){try{delete window[nm]}catch(e){window[nm]=null}
+    if(s.parentNode)s.parentNode.removeChild(s)}
+  s.onerror=function(){if(!beres){N.script='ditolak';diag();bersih();if(gagal)gagal('script ditolak')}};
+  setTimeout(function(){if(!beres){N.script='timeout';diag();bersih();if(gagal)gagal('script timeout')}},9000);
+  s.src=API+path+(path.indexOf('?')<0?'?':'&')+'callback='+nm;
+  document.head.appendChild(s);
+}
 
-  function sukses(txt,via){
-    net='✓'; cara=via; diag();
-    var d=null; try{ d=JSON.parse(txt) }catch(e){}
-    if(!d){ pesan('jawaban server tidak terbaca',1); return }
+/* ── jalur 2: XHR ── */
+function viaXhr(path,cb,gagal){
+  try{
+    var x=new XMLHttpRequest();x.open('GET',API+path,true);x.timeout=9000;
+    x.onload=function(){var d=null;try{d=JSON.parse(x.responseText)}catch(e){}
+      if(d){N.xhr='OK';if(!jalur)jalur='xhr';diag();cb(d)}else{N.xhr='balasan rusak';diag();gagal('xhr rusak')}};
+    x.onerror=function(){N.xhr='ditolak';diag();gagal('xhr ditolak')};
+    x.ontimeout=function(){N.xhr='timeout';diag();gagal('xhr timeout')};
+    x.send(null);
+  }catch(e){N.xhr='mati';diag();gagal('xhr mati')}
+}
+
+/* ── jalur 3: img beacon. Tidak bisa membawa data, cuma membuktikan
+   webview bisa/tidak menjangkau domain ini sama sekali. ── */
+function tesImg(){
+  var i=new Image(),beres=0;
+  i.onload=function(){beres=1;N.img='OK';diag()};
+  i.onerror=function(){if(!beres){N.img='ditolak';diag()}};
+  setTimeout(function(){if(!beres&&N.img==='?'){N.img='timeout';diag()}},8000);
+  i.src=API+'/api/chest/ping.gif?x='+Date.now();
+}
+
+/* Semua aksi lewat GET supaya JSONP bisa dipakai. Token HMAC satu-satunya
+   kunci dan tidak disimpan di cookie, jadi tidak ada wewenang yang bisa
+   dibonceng request pihak ketiga. */
+function minta(aksiNm,extra,cb){
+  var path='/api/chest/'+aksiNm+'?t='+encodeURIComponent(T)+'&nama='+encodeURIComponent(nama)+(extra||'');
+  function selesai(d){
+    if(!d){pesan('jawaban server tidak terbaca',1);sibuk=0;return}
     cb(d);
   }
-  function gagal(ket){ net='✕ '+ket; diag(); pesan('jaringan gagal: '+ket,1); sibuk=0 }
-
-  if(window.fetch){
-    try{
-      var o={method:pakaiGet?'GET':'POST',cache:'no-store'};
-      if(!pakaiGet){o.body=body;o.headers={'Content-Type':'application/json'}}
-      fetch(url,o).then(function(r){return r.text()}).then(function(t){sukses(t,'fetch')})
-        .catch(function(e){ xhr() });
-      return;
-    }catch(e){}
-  }
-  xhr();
-  function xhr(){
-    try{
-      var x=new XMLHttpRequest();
-      x.open(pakaiGet?'GET':'POST',url,true); x.timeout=9000;
-      if(!pakaiGet)x.setRequestHeader('Content-Type','application/json');
-      x.onload=function(){ sukses(x.responseText,'xhr') };
-      x.onerror=function(){ gagal('xhr error') };
-      x.ontimeout=function(){ gagal('timeout') };
-      x.send(body);
-    }catch(e){ gagal((e.message||'xhr mati').slice(0,24)) }
-  }
+  // Kalau sudah tahu jalur mana yang hidup, langsung pakai itu.
+  if(jalur==='script')return viaScript(path,selesai,function(k){pesan('jaringan gagal: '+k,1);sibuk=0});
+  if(jalur==='xhr')return viaXhr(path,selesai,function(k){pesan('jaringan gagal: '+k,1);sibuk=0});
+  // Belum tahu: coba XHR, kalau gagal jatuh ke JSONP.
+  viaXhr(path,selesai,function(){ viaScript(path,selesai,function(k){
+    pesan('semua jalur jaringan ditolak webview ('+k+')',1);sibuk=0}) });
 }
 
 function gambar(v){
   if(v.seq===seq)return; seq=v.seq;
   el('rd').textContent='ronde '+v.ronde+' · sisa '+v.sisaAman;
-
-  var g=el('gr'); g.innerHTML='';
+  var g=el('gr');g.innerHTML='';
   for(var i=0;i<v.papan.length;i++){
-    var s=v.papan[i], d=document.createElement('div');
-    if(!s.buka){
-      d.className='c'; d.innerHTML='📦';
-      // ATRIBUT, bukan properti — ini pola yang terbukti hidup di bubble.
-      d.setAttribute('onclick','aksi(\'buka\',{i:'+i+'},700)');
-    } else if(s.bom){ d.className='c k bm'; d.innerHTML='💥<small>'+(s.oleh||'')+'</small>' }
-    else { d.className='c k co'; d.innerHTML='+'+s.nilai+'<small>'+(s.oleh||'')+'</small>' }
+    var s=v.papan[i],d=document.createElement('div');
+    if(!s.buka){d.className='c';d.innerHTML='📦';d.setAttribute('onclick','aksi(\'buka\','+i+',700)')}
+    else if(s.bom){d.className='c k bm';d.innerHTML='💥<small>'+(s.oleh||'')+'</small>'}
+    else{d.className='c k co';d.innerHTML='+'+s.nilai+'<small>'+(s.oleh||'')+'</small>'}
     g.appendChild(d);
   }
-
-  var k=el('sk'); k.innerHTML='';
-  if(!v.pemain.length) k.innerHTML='<div><span>belum ada pemain</span><span></span></div>';
+  var k=el('sk');k.innerHTML='';
+  if(!v.pemain.length)k.innerHTML='<div><span>belum ada pemain</span><span></span></div>';
   for(var j=0;j<v.pemain.length;j++){
-    var p=v.pemain[j], r=document.createElement('div');
+    var p=v.pemain[j],r=document.createElement('div');
     r.innerHTML='<span class="'+(p.nama===nama?'me':'')+'">'+(p.giliran?'▶ ':'')+p.nama+'</span>'+
       '<span class="'+(p.giliran?'tn':'')+'">'+p.total+(p.bank?' (+'+p.bank+')':'')+'</span>';
     k.appendChild(r);
   }
-
-  var b=[]; for(var q=0;q<v.log.length;q++)b.push(v.log[q].teks);
+  var b=[];for(var q=0;q<v.log.length;q++)b.push(v.log[q].teks);
   el('lg').innerHTML=b.join('<br>');
   el('gb').style.display=v.aku?'none':'block';
   el('ax').style.display=v.aku?'flex':'none';
   if(v.aku)el('bk').textContent=v.aku.bank;
-
   if(v.aku&&!v.akuGiliran)pesan('giliran '+v.giliran+' — tunggu ya');
-  else if(v.aku)pesan('giliranmu, '+nama+'. Buka peti atau amankan.');
+  else if(v.aku)pesan('giliranmu, '+nama+'. Tap peti atau AMANKAN.');
 }
 
 function lihat(manual){
   if(sibuk)return;
   if(manual){nKlik++;bunyi(520,.06);diag();pesan('menyegarkan…')}
-  minta('lihat',null,function(d){ if(d.ok)gambar(d) });
+  minta('lihat','',function(d){if(d.ok)gambar(d)});
 }
 
-function tesNet(){ nKlik++; bunyi(600,.06); cekSimpan(); diag(); pesan('menguji jaringan…'); lihat(0) }
+function tesNet(){
+  nKlik++;bunyi(600,.06);cekSimpan();
+  N={img:'?',script:'?',xhr:'?',fetch:'?'};jalur='';diag();
+  pesan('menguji 3 jalur jaringan…');
+  tesImg();
+  minta('lihat','',function(d){if(d.ok){gambar(d);pesan('✓ jaringan hidup lewat '+jalur)}});
+}
 
 function masuk(n){
-  nKlik++; nama=n; cekSimpan(); bunyi(800,.08); diag();
-  pesan('masuk sebagai '+n+'…');
-  aksi('gabung',null,0);
+  nKlik++;nama=n;cekSimpan();bunyi(800,.08);diag();pesan('masuk sebagai '+n+'…');
+  aksi('gabung',0,0);
 }
 
-function aksi(nm,data,hz){
+function aksi(nm,iPeti,hz){
   if(sibuk)return;
   if(!nama&&nm!=='gabung'){pesan('tap nama dulu di atas',1);return}
-  sibuk=1; nKlik++; if(hz)bunyi(hz,.07); diag();
-  minta(nm,data,function(d){
+  sibuk=1;nKlik++;if(hz)bunyi(hz,.07);diag();
+  minta(nm,(nm==='buka'?'&i='+iPeti:''),function(d){
     sibuk=0;
     if(d.papanBaru){seq=-1;gambar(d.papanBaru)}
     if(!d.ok){pesan(d.alasan||'ditolak server',1);bunyi(200,.16,'sawtooth');return}
@@ -217,6 +225,6 @@ function aksi(nm,data,hz){
   });
 }
 
-cekSimpan(); diag(); lihat(0);
-setInterval(function(){ lihat(0) }, 3000);   // bubble tidak bisa di-push
+cekSimpan();diag();tesImg();lihat(0);
+setInterval(function(){lihat(0)},3000);
 </script></body></html>
