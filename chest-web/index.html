@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CHEST — SHIROWAHD</title>
+<style>
+/* Token warna diambil dari web/app/globals.css supaya game ini tidak terasa
+   nempel dari luar. Dark jadi default karena game dibuka dari chat WA yang
+   mayoritas gelap; tombol tema tetap disediakan. */
+:root{
+  --bg:#0b0d12; --panel:#141821; --panel-2:#1b2130;
+  --ink:#e7e9ee; --ink-2:#9aa0ad; --ink-3:#7c8494;
+  --edge:#4a5060; --accent:#3ddc84; --gold:#f0b429; --bad:#ef4444;
+}
+html[data-theme="light"]{
+  --bg:#f6f7f9; --panel:#ffffff; --panel-2:#eef0f4;
+  --ink:#0b0b0c; --ink-2:#5d5d64; --ink-3:#b6bac1;
+  --edge:#0b0b0c; --accent:#25d366; --gold:#b8860b; --bad:#dc2626;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;padding:16px 14px 28px;background:var(--bg);color:var(--ink);
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  display:flex;flex-direction:column;align-items:center;min-height:100vh;
+}
+.wrap{width:100%;max-width:420px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.mark{
+  width:38px;height:38px;border-radius:10px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(145deg,var(--accent),#0e7a5f);font-size:20px;
+  box-shadow:3px 3px 0 var(--edge);
+}
+h1{margin:0;font-size:20px;letter-spacing:-.02em;font-weight:800}
+.sub{margin:0;font-size:11px;color:var(--ink-2);letter-spacing:.14em;text-transform:uppercase}
+#tema{
+  margin-left:auto;background:var(--panel);color:var(--ink-2);border:1px solid var(--edge);
+  border-radius:9px;padding:7px 10px;font-size:15px;cursor:pointer
+}
+
+/* Baris angka: total, bank ronde, level. Bank dipisah supaya risikonya
+   kelihatan — itu inti tegangan gamenya. */
+.skor{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.kotak{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:9px 10px}
+.kotak span{display:block;font-size:10px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase}
+.kotak b{font-size:18px;font-variant-numeric:tabular-nums}
+#nBank b{color:var(--gold)}
+
+#lap{
+  background:var(--panel-2);border:1px solid var(--edge);border-radius:11px;
+  padding:9px 12px;font-size:13px;margin-bottom:12px;min-height:38px;display:flex;align-items:center
+}
+
+#papan{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.peti{
+  aspect-ratio:1;border:1px solid var(--edge);border-radius:12px;background:var(--panel);
+  display:grid;place-items:center;font-size:26px;cursor:pointer;user-select:none;
+  transition:transform .12s,background .18s,border-color .18s;
+}
+.peti:active{transform:scale(.94)}
+.peti.buka{cursor:default;background:var(--panel-2);border-color:var(--accent)}
+.peti.bom{background:rgba(239,68,68,.16);border-color:var(--bad)}
+.peti.mati{cursor:default;opacity:.45}
+.peti .nilai{font-size:12px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums}
+
+.tombol{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button.aksi{
+  border:1px solid var(--edge);border-radius:12px;padding:13px 10px;font-size:14px;
+  font-weight:700;cursor:pointer;background:var(--panel);color:var(--ink);
+  box-shadow:3px 3px 0 var(--edge);transition:transform .1s,box-shadow .1s;
+}
+button.aksi:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--edge)}
+button.aksi:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none}
+#bAman{background:var(--accent);color:#04140d;border-color:var(--edge)}
+
+#diag{margin-top:14px;font-size:10.5px;color:var(--ink-3);letter-spacing:.04em;text-align:center;line-height:1.7}
+#hasil{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark">🎁</div>
+    <div>
+      <h1>CHEST</h1>
+      <p class="sub">Peti Harta</p>
+    </div>
+    <button id="tema" title="Ganti tema">◐</button>
+  </header>
+
+  <div class="skor">
+    <div class="kotak" id="nTotal"><span>Total</span><b>0</b></div>
+    <div class="kotak" id="nBank"><span>Ronde</span><b>0</b></div>
+    <div class="kotak" id="nLevel"><span>Level</span><b>1</b></div>
+  </div>
+
+  <div id="lap">Buka peti buat cari koin. Kena bom, koin ronde hangus.</div>
+  <div id="papan"></div>
+
+  <div class="tombol">
+    <button class="aksi" id="bAman">AMANKAN</button>
+    <button class="aksi" id="bBaru">RONDE BARU</button>
+  </div>
+
+  <div id="diag">memuat…</div>
+  <div id="hasil"></div>
+</div>
+
+<script>
+/* ═════════════════════════════════════════════════════════════════
+   CHEST — semua logika di sisi klien, tanpa server.
+   Sengaja begitu supaya halaman ini tidak bisa merusak apa pun:
+   tidak ada API yang dipanggil, tidak ada data bot yang disentuh.
+   ═════════════════════════════════════════════════════════════════ */
+var UKURAN = 16, MAKS_BOM = 6, KUNCI = 'chest_shirowahd_v1';
+var papan = [], total = 0, bank = 0, level = 1, selesai = false, simpanKe = '-';
+
+/* ── Suara: dibangkitkan, bukan berkas. Tidak ada aset yang perlu diunduh,
+      jadi ini tetap jalan walau di dalam bubble WA sekalipun. ── */
+var AC = null, adaSuara = false;
+function ac(){
+  if (AC) return AC;
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); adaSuara = true; }
+  catch(e){ AC = null; }
+  return AC;
+}
+function nada(f, tipe, durasi, vol){
+  var a = ac(); if (!a) return;
+  try {
+    var o = a.createOscillator(), g = a.createGain(), n = a.currentTime;
+    o.type = tipe; o.frequency.value = f;
+    o.connect(g); g.connect(a.destination);
+    g.gain.setValueAtTime(0, n);
+    g.gain.linearRampToValueAtTime(vol, n + .012);
+    g.gain.exponentialRampToValueAtTime(.0001, n + durasi);
+    o.start(n); o.stop(n + durasi + .03);
+  } catch(e){}
+}
+var sfx = {
+  koin:  function(){ nada(880,'triangle',.12,.16); setTimeout(function(){nada(1180,'triangle',.1,.12)},70); },
+  bom:   function(){ nada(150,'square',.22,.2); setTimeout(function(){nada(90,'square',.3,.18)},120); },
+  aman:  function(){ [660,880,1100].forEach(function(f,i){ setTimeout(function(){nada(f,'sine',.14,.14)}, i*90); }); },
+  buka:  function(){ nada(420,'sine',.07,.09); }
+};
+
+/* ── Simpan progres. Tangga localStorage → sessionStorage → cookie, karena
+      webview WA belum tentu mengizinkan yang pertama. Rung yang menang
+      dilaporkan di baris diagnostik supaya ketahuan dari HP asli. ── */
+function tulis(){
+  var d = JSON.stringify({ t: total, l: level });
+  try { localStorage.setItem(KUNCI, d); simpanKe = 'localStorage'; return; } catch(e){}
+  try { sessionStorage.setItem(KUNCI, d); simpanKe = 'sessionStorage'; return; } catch(e){}
+  try {
+    document.cookie = KUNCI + '=' + encodeURIComponent(d) + ';max-age=604800;path=/';
+    if ((document.cookie || '').indexOf(KUNCI) >= 0) { simpanKe = 'cookie'; return; }
+  } catch(e){}
+  simpanKe = 'GAGAL';
+}
+function baca(){
+  var d = null;
+  try { d = localStorage.getItem(KUNCI); } catch(e){}
+  if (!d) { try { d = sessionStorage.getItem(KUNCI); } catch(e){} }
+  if (!d) {
+    try {
+      var m = (document.cookie || '').match(new RegExp(KUNCI + '=([^;]+)'));
+      if (m) d = decodeURIComponent(m[1]);
+    } catch(e){}
+  }
+  if (!d) return;
+  try {
+    var o = JSON.parse(d);
+    if (typeof o.t === 'number') total = o.t;
+    if (typeof o.l === 'number') level = Math.max(1, Math.min(20, o.l));
+  } catch(e){}
+}
+
+/* ── Papan baru. Jumlah bom naik seiring level, dibatasi MAKS_BOM supaya
+      papan tidak pernah jadi mustahil. ── */
+function jumlahBom(){ return Math.min(MAKS_BOM, 1 + level); }
+
+function ronde(){
+  var bom = jumlahBom();
+  papan = [];
+  for (var i = 0; i < UKURAN; i++) {
+    papan.push({ bom: false, nilai: 10 + Math.floor(Math.random() * 81), buka: false });
+  }
+  var taruh = 0;
+  while (taruh < bom) {
+    var k = Math.floor(Math.random() * UKURAN);
+    if (!papan[k].bom) { papan[k].bom = true; taruh++; }
+  }
+  bank = 0; selesai = false;
+  lapor('Level ' + level + ' — ada ' + bom + ' bom di antara ' + UKURAN + ' peti.');
+  gambar();
+}
+
+function lapor(t){ document.getElementById('lap').textContent = t; }
+
+function gambar(){
+  var p = document.getElementById('papan');
+  p.innerHTML = '';
+  for (var i = 0; i < UKURAN; i++) {
+    var s = papan[i];
+    var d = document.createElement('div');
+    d.className = 'peti' + (s.buka ? ' buka' : '') + (s.buka && s.bom ? ' bom' : '') + (selesai && !s.buka ? ' mati' : '');
+    d.setAttribute('data-i', i);
+    if (s.buka) {
+      d.innerHTML = s.bom ? '💥' : '<span class="nilai">+' + s.nilai + '</span>';
+    } else {
+      d.textContent = selesai ? (s.bom ? '💣' : '📦') : '📦';
+    }
+    if (!s.buka && !selesai) d.onclick = (function(n){ return function(){ buka(n); }; })(i);
+    p.appendChild(d);
+  }
+  document.querySelector('#nTotal b').textContent = total;
+  document.querySelector('#nBank b').textContent = bank;
+  document.querySelector('#nLevel b').textContent = level;
+  document.getElementById('bAman').disabled = (bank === 0 || selesai);
+  diag();
+}
+
+function buka(i){
+  if (selesai) return;
+  var s = papan[i];
+  if (s.buka) return;
+  s.buka = true;
+  if (s.bom) {
+    selesai = true;
+    var hangus = bank;
+    bank = 0;
+    level = 1;                       /* kena bom = mulai dari level 1 lagi */
+    sfx.bom();
+    lapor('💥 BOM! ' + hangus + ' koin ronde ini hangus. Level balik ke 1.');
+    tulis();
+  } else {
+    bank += s.nilai;
+    sfx.koin();
+    var sisa = papan.filter(function(x){ return !x.buka && !x.bom; }).length;
+    if (sisa === 0) {
+      selesai = true;
+      total += bank;
+      lapor('🏆 Semua peti aman kebuka! ' + bank + ' koin masuk total.');
+      bank = 0; level = Math.min(20, level + 1);
+      sfx.aman(); tulis();
+    } else {
+      lapor('+' + s.nilai + ' koin. Ronde ini: ' + bank + '. Amankan sekarang atau lanjut?');
+    }
+  }
+  gambar();
+}
+
+function amankan(){
+  if (bank === 0 || selesai) return;
+  total += bank;
+  level = Math.min(20, level + 1);
+  sfx.aman();
+  lapor('✅ ' + bank + ' koin diamankan. Naik ke level ' + level + '.');
+  bank = 0; selesai = true;
+  tulis(); gambar();
+}
+
+function diag(){
+  document.getElementById('diag').textContent =
+    'SUARA ' + (adaSuara ? '✓' : '·') + ' · SIMPAN ' + simpanKe +
+    ' · BOM ' + jumlahBom() + '/' + UKURAN + ' · v1';
+}
+
+/* ── Tema ikut disimpan, biar pilihan tuan tidak hilang tiap buka. ── */
+document.getElementById('tema').onclick = function(){
+  var h = document.documentElement;
+  var baru = h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  h.setAttribute('data-theme', baru);
+  try { localStorage.setItem(KUNCI + '_tema', baru); } catch(e){}
+};
+try {
+  var tSimpan = localStorage.getItem(KUNCI + '_tema');
+  if (tSimpan) document.documentElement.setAttribute('data-theme', tSimpan);
+} catch(e){}
+
+document.getElementById('bAman').onclick = amankan;
+document.getElementById('bBaru').onclick = function(){ ac(); ronde(); };
+
+baca();
+ronde();
+diag();
+</script>
+</body>
+</html>
