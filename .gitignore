@@ -12,6 +12,10 @@ database/sewa.json
 database/stickerCommands.json
 deploy-worker.py
 .env
+# Backup .env hasil perapian. Pola ini WAJIB terpisah: `.env` saja TIDAK
+# menutupi `.env.bak-*`, dan tanpa baris ini satu `git add -A` akan mengirim
+# seluruh kredensial nyata ke GitHub.
+.env.bak-*
 *.log
 node_modules/
 # Runtime state (generated at runtime, not source code)
