@@ -7,6 +7,11 @@ import crypto from 'crypto';
 import https from 'https';
 import { execSync, exec as execCb } from 'child_process';
 import { tmpdir } from 'os';
+import {
+  bacaToken, buatToken, buangRuangMati, muat, simpan,
+  gabung as chestGabung, buka as chestBuka, amankan as chestAmankan,
+  lewat as chestLewat, pandangan as chestPandangan,
+} from './src/lib/chest-server.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -1069,16 +1074,75 @@ async function handleRequest(req, res) {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // CHEST — game HTML mandiri yang menumpang domain ini.
+  // CHEST — API state permainan.
   //
-  // Sengaja dibuat SEKECIL mungkin dampaknya: cuma satu rute GET yang
-  // menyajikan satu berkas statis. Tidak ada API, tidak ada penyimpanan,
-  // tidak menyentuh upload/klaim/admin. Kalau berkasnya hilang, jawabannya
-  // 404 dan tidak ada rute lain yang terpengaruh.
+  // Kenapa state ada di sini dan bukan di dalam bubble: bubble WA tidak
+  // punya origin tetap, jadi localStorage/cookie-nya hangus tiap bubble
+  // dibuang — itu sebab progres selalu balik ke nol. Dua bubble juga tidak
+  // bisa saling lihat, jadi satu-satunya jalan multiplayer adalah lewat
+  // perantara, dan perantaranya rute-rute di bawah ini.
   //
-  // Ditaruh SEBELUM POST /upload dan setelah rute static — tidak ada pola
-  // rute lama yang cocok dengan '/chest', jadi tidak ada yang tertutup.
+  // Kunci akses = token HMAC yang ditandatangani bot dan ditanam di URL
+  // bubble. Tidak ada endpoint pencetak token: kalau ada, siapa pun bisa
+  // bikin ruang sembarangan. Token cuma menentukan RUANG, bukan identitas
+  // orang — di grup, satu bubble dibaca semua anggota, jadi nama pemain
+  // memang deklarasi sendiri. Itu batas yang sudah disepakati, bukan celah
+  // yang kelewat.
+  //
+  // Hak yang diberikan token sengaja sempit: cuma baca/ubah papan permainan
+  // di satu ruang. Tidak ada akses upload, klaim, admin, atau berkas.
   // ═══════════════════════════════════════════════════════════════════
+  if (url.startsWith('/api/chest/')) {
+    // Rem sederhana per IP. Klien polling tiap 2-3 detik, jadi batas ini
+    // longgar untuk pemain wajar tapi menutup pembanjiran.
+    const sekarang = Date.now();
+    if (!globalThis.__chestRem) globalThis.__chestRem = new Map();
+    const rem = globalThis.__chestRem;
+    if (rem.size > 500) for (const [k, v] of rem) if (sekarang - v.t > 60000) rem.delete(k);
+    const jejak = rem.get(clientIP) || { n: 0, t: sekarang };
+    if (sekarang - jejak.t > 10000) { jejak.n = 0; jejak.t = sekarang; }
+    jejak.n++;
+    rem.set(clientIP, jejak);
+    if (jejak.n > 80) return jsonRes(res, 429, { ok: false, alasan: 'terlalu sering' });
+
+    const aksi = url.slice('/api/chest/'.length);
+    const q = new URLSearchParams((req.url.split('?')[1] || ''));
+    let body = {};
+    if (req.method === 'POST') {
+      try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { body = {}; }
+    }
+
+    const cek = bacaToken(body.t || q.get('t'));
+    if (!cek.ok) return jsonRes(res, 403, { ok: false, alasan: cek.alasan });
+
+    const db = muat();
+    buangRuangMati(db);
+    const nama = body.nama ?? q.get('nama') ?? '';
+    let hasil;
+
+    if (aksi === 'lihat') {
+      hasil = chestPandangan(db, cek.ruang, nama);
+      // Baca saja: buangRuangMati mungkin mengubah db, tapi tidak perlu
+      // ditulis tiap polling — cukup ikut tersimpan saat ada aksi nyata.
+      return jsonRes(res, 200, hasil);
+    }
+    if (req.method !== 'POST') return jsonRes(res, 405, { ok: false, alasan: 'butuh POST' });
+
+    if (aksi === 'gabung') hasil = chestGabung(db, cek.ruang, nama);
+    else if (aksi === 'buka') hasil = chestBuka(db, cek.ruang, nama, body.i);
+    else if (aksi === 'amankan') hasil = chestAmankan(db, cek.ruang, nama);
+    else if (aksi === 'lewat') hasil = chestLewat(db, cek.ruang, nama);
+    else return jsonRes(res, 404, { ok: false, alasan: 'aksi tidak dikenal' });
+
+    if (hasil.ok && !simpan(db)) {
+      return jsonRes(res, 500, { ok: false, alasan: 'gagal menyimpan progres' });
+    }
+    return jsonRes(res, hasil.ok ? 200 : 409, {
+      ...hasil,
+      papanBaru: chestPandangan(db, cek.ruang, nama),
+    });
+  }
+
   if (req.method === 'GET' && (url === '/chest' || url === '/chest/' || url === '/chest.html')) {
     try {
       const html = readFileSync(join(__dirname, 'chest-web', 'index.html'), 'utf8');

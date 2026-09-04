@@ -10,10 +10,13 @@ dihapus bersih setelahnya.
 """
 import json
 import pathlib
+import time
 import urllib.error
 import urllib.request
 
-OWNER = "6282262421536@s.whatsapp.net"
+OWNER = "120363426052801497@g.us"   # grup SHIROHD2.0 — jalur DM kena ack 463,
+                                    # grup terbukti lolos, jadi probe dikirim
+                                    # ke grup kecil (3 anggota, owner di dalam).
 BUBBLE = pathlib.Path("/root/shirowahd/chest-web/bubble.html")
 CATATAN = pathlib.Path("/tmp/_chest_probe_ids.json")
 
@@ -172,6 +175,9 @@ for nama, kode in VARIAN.items():
     else:
         err = (out.get("error") or out.get("raw") or "?")
         hasil.append(f"  ✗ {nama:22s} GAGAL: {str(err)[:150]}")
+    # Jeda antar varian: 6 kiriman beruntun dari akun yang sedang kena
+    # timelock itu pola spam. Dikasih napas supaya tidak memperburuk.
+    time.sleep(4)
 
 CATATAN.write_text(json.dumps(ids, indent=1), encoding="utf-8")
 print("\n".join(hasil))

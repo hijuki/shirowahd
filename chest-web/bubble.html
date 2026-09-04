@@ -1,67 +1,169 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="id">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-/* Versi BUBBLE: harus di bawah ~14.5k char, tanpa aset luar, tanpa fetch.
-   Semua handler ditulis inline (onclick=) karena di bubble itulah bentuk
-   yang sudah terbukti hidup. */
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
-body{background:#0b0d12;color:#e7e9ee;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:14px}
+body{background:#0b1020;color:#e8ecf8;font:13px/1.4 -apple-system,system-ui,sans-serif;padding:10px}
 .w{max-width:340px;margin:0 auto}
-.h{display:flex;align-items:center;gap:9px;margin-bottom:12px}
-.m{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(145deg,#3ddc84,#0e7a5f);font-size:18px}
-h1{font-size:17px;font-weight:800;letter-spacing:-.02em}
-.s{font-size:10px;color:#9aa0ad;letter-spacing:.14em;text-transform:uppercase}
-.r{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
-.k{background:#141821;border:1px solid #4a5060;border-radius:10px;padding:8px 10px}
-.k span{display:block;font-size:9px;color:#7c8494;letter-spacing:.1em;text-transform:uppercase}
-.k b{font-size:17px}
-#bank b{color:#f0b429}
-#lap{background:#1b2130;border:1px solid #4a5060;border-radius:10px;padding:8px 11px;font-size:12px;margin-bottom:10px;min-height:34px;display:flex;align-items:center}
-#p{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
-.c{aspect-ratio:1;border:1px solid #4a5060;border-radius:11px;background:#141821;display:grid;place-items:center;font-size:23px;cursor:pointer;user-select:none}
-.c:active{transform:scale(.93)}
-.c.o{background:#1b2130;border-color:#3ddc84;cursor:default}
-.c.b{background:rgba(239,68,68,.17);border-color:#ef4444}
-.c i{font-size:11px;font-weight:700;color:#f0b429;font-style:normal}
-.t{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-button,a.btn{border:1px solid #4a5060;border-radius:11px;padding:12px 8px;font-size:13px;font-weight:700;background:#141821;color:#e7e9ee;cursor:pointer;box-shadow:3px 3px 0 #4a5060;text-align:center;text-decoration:none;display:block}
-button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #4a5060}
-#a{background:#3ddc84;color:#04140d}
-a.btn{margin-top:8px;background:#25d366;color:#04140d;box-shadow:3px 3px 0 #4a5060}
-#d{margin-top:11px;font-size:10px;color:#7c8494;text-align:center;letter-spacing:.05em}
-</style></head><body>
-<div class="w">
-<div class="h"><div class="m">🎁</div><div><h1>CHEST</h1><div class="s">Di dalam bubble</div></div></div>
-<div class="r">
-  <div class="k" id="tot"><span>Total</span><b>0</b></div>
-  <div class="k" id="bank"><span>Ronde</span><b>0</b></div>
+.hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.t{font-size:15px;font-weight:700;letter-spacing:.5px}
+.t b{color:#ffc857}
+.sub{font-size:10px;color:#8b96b8}
+.gab{display:flex;gap:5px;margin-bottom:8px}
+.gab input{flex:1;min-width:0;background:#151c33;border:1px solid #2a3556;color:#e8ecf8;border-radius:7px;padding:7px 9px;font-size:13px}
+.b{background:#2563eb;color:#fff;border:0;border-radius:7px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.b.g{background:#16a34a}.b.y{background:#a16207}.b:disabled{opacity:.4}
+.gr{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:8px 0}
+.c{aspect-ratio:1;background:#151c33;border:1px solid #2a3556;border-radius:8px;display:flex;flex-direction:column;
+   align-items:center;justify-content:center;font-size:17px;cursor:pointer;position:relative}
+.c small{font-size:8px;color:#7c88ab;position:absolute;bottom:2px;max-width:94%;overflow:hidden;white-space:nowrap}
+.c.k{background:#0f1830;border-color:#1d2745;cursor:default}
+.c.co{background:#1a2f1f;border-color:#2f6b3d;font-size:12px;font-weight:700;color:#86efac}
+.c.bm{background:#3a1620;border-color:#7f2337}
+.row{display:flex;gap:5px;margin:8px 0}
+.row .b{flex:1}
+.sk{background:#101830;border:1px solid #1f2a48;border-radius:8px;padding:7px 8px;margin-top:8px}
+.sk div{display:flex;justify-content:space-between;padding:2px 0;font-size:12px}
+.sk .me{color:#ffc857;font-weight:700}
+.sk .tn{color:#4ade80}
+.lg{margin-top:7px;font-size:10px;color:#8b96b8;line-height:1.5;max-height:56px;overflow:hidden}
+.st{margin-top:7px;padding:6px 8px;border-radius:7px;background:#101830;font-size:11px;color:#a8b3d1;min-height:26px}
+.st.e{background:#2a1520;color:#fca5a5}
+.dg{margin-top:7px;font-size:9px;color:#5f6a8a;word-break:break-all;line-height:1.5}
+</style></head>
+<body><div class="w">
+<div class="hd"><div class="t">📦 CHEST <b>BERSAMA</b></div><div class="sub" id="rd">ronde -</div></div>
+
+<div class="gab" id="gb">
+  <input id="nm" placeholder="nama kamu" maxlength="14" autocomplete="off">
+  <button class="b" id="bg">MASUK</button>
 </div>
-<div id="lap">Buka peti cari koin. Kena bom, koin ronde hangus.</div>
-<div id="p"></div>
-<div class="t"><button id="a">AMANKAN</button><button id="n">RONDE BARU</button></div>
-<a class="btn" href="https://swhdhlz.my.id/chest" target="_blank" rel="noopener">BUKA VERSI PENUH ↗</a>
-<div id="d">probe C1 · html primitive</div>
+
+<div class="gr" id="gr"></div>
+
+<div class="row" id="ax" style="display:none">
+  <button class="b g" id="ba">AMANKAN <span id="bk">0</span></button>
+  <button class="b y" id="bl">LEWAT</button>
+</div>
+
+<div class="sk" id="sk"></div>
+<div class="lg" id="lg"></div>
+<div class="st" id="st">Ketik nama, lalu MASUK.</div>
+<div class="dg" id="dg"></div>
 </div>
 <script>
-var N=16,tot=0,bank=0,mati=false,pp=[];
-function q(s){return document.querySelector(s)}
-function baru(){pp=[];for(var i=0;i<N;i++)pp.push({b:false,v:10+Math.floor(Math.random()*81),o:false});
-var t=0;while(t<3){var k=Math.floor(Math.random()*N);if(!pp[k].b){pp[k].b=true;t++}}
-bank=0;mati=false;q('#lap').textContent='Ada 3 bom di antara 16 peti.';g()}
-function g(){var p=q('#p');p.innerHTML='';
-for(var i=0;i<N;i++){var s=pp[i],d=document.createElement('div');
-d.className='c'+(s.o?' o':'')+(s.o&&s.b?' b':'');
-d.innerHTML=s.o?(s.b?'💥':'<i>+'+s.v+'</i>'):(mati&&s.b?'💣':'📦');
-if(!s.o&&!mati)d.setAttribute('onclick','buka('+i+')');
-p.appendChild(d)}
-q('#tot b').textContent=tot;q('#bank b').textContent=bank;
-q('#a').disabled=(bank===0||mati)}
-function buka(i){if(mati)return;var s=pp[i];if(s.o)return;s.o=true;
-if(s.b){mati=true;var h=bank;bank=0;q('#lap').textContent='💥 BOM! '+h+' koin hangus.'}
-else{bank+=s.v;var sisa=pp.filter(function(x){return !x.o&&!x.b}).length;
-if(sisa===0){mati=true;tot+=bank;q('#lap').textContent='🏆 Bersih! '+bank+' koin masuk total.';bank=0}
-else q('#lap').textContent='+'+s.v+' koin. Ronde: '+bank+'. Amankan atau lanjut?'}g()}
-q('#a').setAttribute('onclick','if(bank>0&&!mati){tot+=bank;document.querySelector("#lap").textContent="✅ "+bank+" koin diamankan.";bank=0;mati=true;g()}');
-q('#n').setAttribute('onclick','baru()');
-baru();
+// URL + token ditanam bot saat mengirim bubble. Bubble tidak punya origin
+// tetap, jadi semua state hidup di server; di sini cuma tampilan + polling.
+var API='__API__', T='__TOKEN__';
+var nama=localStorage.getItem('chest_nama')||'', seq=-1, sibuk=false, timer=null;
+var $=function(i){return document.getElementById(i)};
+
+function pesan(t,err){var e=$('st');e.textContent=t;e.className=err?'st e':'st'}
+
+// ── suara: dites, bukan diasumsikan ──────────────────────────────────
+// Keluhan "gada suara" belum tentu AudioContext diblokir — bisa juga
+// karena butuh user-gesture. Jadi context dibuat DI DALAM tap pertama,
+// lalu hasilnya dilaporkan apa adanya ke baris diagnostik.
+var AC=null, suaraStatus='belum dites';
+function bunyi(hz,dur,jenis){
+  try{
+    var K=window.AudioContext||window.webkitAudioContext;
+    if(!K){suaraStatus='AudioContext tidak ada';return}
+    if(!AC)AC=new K();
+    if(AC.state==='suspended')AC.resume();
+    var o=AC.createOscillator(),g=AC.createGain();
+    o.type=jenis||'square';o.frequency.value=hz;
+    g.gain.value=.09;o.connect(g);g.connect(AC.destination);
+    o.start();o.stop(AC.currentTime+(dur||.09));
+    suaraStatus=AC.state;
+  }catch(e){suaraStatus='gagal: '+e.message}
+  diag();
+}
+function diag(){
+  var s=[];
+  try{localStorage.setItem('_p','1');localStorage.removeItem('_p');s.push('LS ok')}catch(e){s.push('LS mati')}
+  s.push('audio '+suaraStatus);
+  $('dg').textContent='diagnostik: '+s.join(' · ');
+}
+
+function req(aksi,data,cb){
+  var x=new XMLHttpRequest();
+  x.open(aksi==='lihat'?'GET':'POST',API+'/api/chest/'+aksi+(aksi==='lihat'?'?t='+encodeURIComponent(T)+'&nama='+encodeURIComponent(nama):''),true);
+  x.timeout=9000;
+  if(aksi!=='lihat')x.setRequestHeader('Content-Type','application/json');
+  x.onload=function(){var d=null;try{d=JSON.parse(x.responseText)}catch(e){}
+    if(!d){pesan('jawaban server tidak terbaca ('+x.status+')',true);return}
+    cb(d,x.status)};
+  x.onerror=function(){pesan('tidak bisa menghubungi server',true)};
+  x.ontimeout=function(){pesan('server lambat menjawab',true)};
+  var body=null;
+  if(aksi!=='lihat'){data=data||{};data.t=T;data.nama=nama;body=JSON.stringify(data)}
+  x.send(body);
+}
+
+function gambar(v){
+  if(v.seq===seq)return; seq=v.seq;
+  $('rd').textContent='ronde '+v.ronde+' · sisa '+v.sisaAman;
+
+  var g=$('gr');g.innerHTML='';
+  for(var i=0;i<v.papan.length;i++){
+    var s=v.papan[i],d=document.createElement('div');
+    if(!s.buka){d.className='c';d.textContent='📦';d.setAttribute('data-i',i)}
+    else if(s.bom){d.className='c k bm';d.textContent='💥';d.innerHTML+='<small>'+(s.oleh||'')+'</small>'}
+    else{d.className='c k co';d.textContent='+'+s.nilai;d.innerHTML+='<small>'+(s.oleh||'')+'</small>'}
+    g.appendChild(d);
+  }
+
+  var k=$('sk');k.innerHTML='';
+  if(!v.pemain.length)k.innerHTML='<div><span>belum ada pemain</span><span></span></div>';
+  for(var j=0;j<v.pemain.length;j++){
+    var p=v.pemain[j],r=document.createElement('div');
+    r.innerHTML='<span class="'+(p.nama===nama?'me':'')+'">'+(p.giliran?'▶ ':'')+p.nama+'</span>'+
+      '<span class="'+(p.giliran?'tn':'')+'">'+p.total+(p.bank?' (+'+p.bank+')':'')+'</span>';
+    k.appendChild(r);
+  }
+
+  $('lg').innerHTML=v.log.map(function(l){return l.teks}).join('<br>');
+  $('gb').style.display=v.aku?'none':'flex';
+  $('ax').style.display=v.aku?'flex':'none';
+  if(v.aku)$('bk').textContent=v.aku.bank;
+
+  if(v.aku&&!v.akuGiliran)pesan('giliran '+v.giliran+' — tunggu ya');
+  else if(v.aku)pesan('giliranmu. Buka peti atau amankan koin.');
+}
+
+function lihat(){ if(sibuk)return; req('lihat',null,function(d){if(d.ok)gambar(d)}) }
+
+function aksi(nm,data,hz){
+  if(sibuk)return; sibuk=true;
+  bunyi(hz||620,.07);
+  req(nm,data,function(d,st){
+    sibuk=false;
+    if(d.papanBaru){seq=-1;gambar(d.papanBaru)}
+    if(!d.ok){pesan(d.alasan||'gagal',true);bunyi(200,.16,'sawtooth');return}
+    if(d.jenis==='bom'){pesan('💥 kena bom! koin di tangan hangus');bunyi(150,.3,'sawtooth')}
+    else if(d.jenis==='bersih'){pesan('🏆 papan bersih! ronde baru');bunyi(900,.2)}
+    else if(d.diamankan)pesan('✅ '+d.diamankan+' koin masuk total');
+  });
+}
+
+$('gr').onclick=function(e){
+  var c=e.target.closest?e.target.closest('.c'):null;
+  if(!c||c.className.indexOf('k')>=0)return;
+  if(!nama){pesan('masuk dulu pakai nama',true);return}
+  aksi('buka',{i:+c.getAttribute('data-i')},700);
+};
+$('bg').onclick=function(){
+  var n=($('nm').value||'').trim();
+  if(n.length<2){pesan('nama minimal 2 huruf',true);return}
+  nama=n; try{localStorage.setItem('chest_nama',n)}catch(e){}
+  aksi('gabung',{},800);
+};
+$('ba').onclick=function(){aksi('amankan',{},760)};
+$('bl').onclick=function(){aksi('lewat',{},420)};
+
+if(nama)$('nm').value=nama;
+diag();
+lihat();
+timer=setInterval(lihat,2500);   // bubble tidak bisa di-push, jadi polling
 </script></body></html>
