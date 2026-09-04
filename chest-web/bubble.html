@@ -2,168 +2,221 @@
 <html lang="id">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
+/* v2 — SEMUA handler ditulis sebagai ATRIBUT onclick.
+   Versi v1 memakai el.onclick = function(){} dan tombolnya mati di bubble.
+   Yang pernah terbukti hidup cuma atribut onclick (inline / setAttribute),
+   jadi pola itu yang dipakai konsisten di sini. */
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 body{background:#0b1020;color:#e8ecf8;font:13px/1.4 -apple-system,system-ui,sans-serif;padding:10px}
 .w{max-width:340px;margin:0 auto}
 .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
-.t{font-size:15px;font-weight:700;letter-spacing:.5px}
-.t b{color:#ffc857}
+.t{font-size:15px;font-weight:800;letter-spacing:.4px}.t b{color:#ffc857}
 .sub{font-size:10px;color:#8b96b8}
-.gab{display:flex;gap:5px;margin-bottom:8px}
-.gab input{flex:1;min-width:0;background:#151c33;border:1px solid #2a3556;color:#e8ecf8;border-radius:7px;padding:7px 9px;font-size:13px}
-.b{background:#2563eb;color:#fff;border:0;border-radius:7px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer}
-.b.g{background:#16a34a}.b.y{background:#a16207}.b:disabled{opacity:.4}
+.pil{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
+.ch{background:#151c33;border:1px solid #2a3556;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.ch:active{background:#2563eb}
+.bt{display:inline-block;background:#2563eb;color:#fff;border:1px solid #3b82f6;border-radius:8px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer;text-align:center}
+.bt:active{transform:translateY(1px)}
+.bt.g{background:#16a34a;border-color:#22c55e}.bt.y{background:#a16207;border-color:#ca8a04}.bt.n{background:#334155;border-color:#475569}
 .gr{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:8px 0}
-.c{aspect-ratio:1;background:#151c33;border:1px solid #2a3556;border-radius:8px;display:flex;flex-direction:column;
-   align-items:center;justify-content:center;font-size:17px;cursor:pointer;position:relative}
-.c small{font-size:8px;color:#7c88ab;position:absolute;bottom:2px;max-width:94%;overflow:hidden;white-space:nowrap}
+.c{aspect-ratio:1;background:#151c33;border:1px solid #2a3556;border-radius:8px;display:flex;
+   align-items:center;justify-content:center;font-size:18px;cursor:pointer;position:relative}
+.c:active{transform:scale(.93)}
+.c small{position:absolute;bottom:1px;font-size:8px;color:#7c88ab;max-width:96%;overflow:hidden;white-space:nowrap}
 .c.k{background:#0f1830;border-color:#1d2745;cursor:default}
-.c.co{background:#1a2f1f;border-color:#2f6b3d;font-size:12px;font-weight:700;color:#86efac}
+.c.co{background:#16301f;border-color:#2f6b3d;font-size:12px;font-weight:800;color:#86efac}
 .c.bm{background:#3a1620;border-color:#7f2337}
-.row{display:flex;gap:5px;margin:8px 0}
-.row .b{flex:1}
-.sk{background:#101830;border:1px solid #1f2a48;border-radius:8px;padding:7px 8px;margin-top:8px}
+.row{display:flex;gap:5px;margin:8px 0}.row .bt{flex:1}
+.sk{background:#101830;border:1px solid #1f2a48;border-radius:8px;padding:7px 9px;margin-top:8px}
 .sk div{display:flex;justify-content:space-between;padding:2px 0;font-size:12px}
-.sk .me{color:#ffc857;font-weight:700}
-.sk .tn{color:#4ade80}
-.lg{margin-top:7px;font-size:10px;color:#8b96b8;line-height:1.5;max-height:56px;overflow:hidden}
-.st{margin-top:7px;padding:6px 8px;border-radius:7px;background:#101830;font-size:11px;color:#a8b3d1;min-height:26px}
+.sk .me{color:#ffc857;font-weight:800}.sk .tn{color:#4ade80}
+.lg{margin-top:6px;font-size:10px;color:#8b96b8;line-height:1.5;max-height:52px;overflow:hidden}
+.st{margin-top:7px;padding:7px 9px;border-radius:7px;background:#101830;font-size:11px;color:#a8b3d1;min-height:28px}
 .st.e{background:#2a1520;color:#fca5a5}
-.dg{margin-top:7px;font-size:9px;color:#5f6a8a;word-break:break-all;line-height:1.5}
+.dg{margin-top:7px;padding:6px 8px;border-radius:6px;background:#0d1526;font-size:9px;color:#7c88ab;
+    word-break:break-all;line-height:1.6;font-family:ui-monospace,monospace}
+a.lk{display:block;margin-top:7px;background:#25d366;color:#04140d;border-radius:8px;padding:10px;
+     font-size:12px;font-weight:800;text-align:center;text-decoration:none}
 </style></head>
 <body><div class="w">
+
 <div class="hd"><div class="t">📦 CHEST <b>BERSAMA</b></div><div class="sub" id="rd">ronde -</div></div>
 
-<div class="gab" id="gb">
-  <input id="nm" placeholder="nama kamu" maxlength="14" autocomplete="off">
-  <button class="b" id="bg">MASUK</button>
+<div id="gb">
+  <div class="sub" style="margin-bottom:5px">Pilih nama (tap salah satu):</div>
+  <div class="pil">
+    <div class="ch" onclick="masuk('HILLZ')">HILLZ</div>
+    <div class="ch" onclick="masuk('REHAN')">REHAN</div>
+    <div class="ch" onclick="masuk('DIKZ')">DIKZ</div>
+    <div class="ch" onclick="masuk('TAMU')">TAMU</div>
+  </div>
 </div>
 
 <div class="gr" id="gr"></div>
 
 <div class="row" id="ax" style="display:none">
-  <button class="b g" id="ba">AMANKAN <span id="bk">0</span></button>
-  <button class="b y" id="bl">LEWAT</button>
+  <div class="bt g" onclick="aksi('amankan',null,760)">AMANKAN <span id="bk">0</span></div>
+  <div class="bt y" onclick="aksi('lewat',null,420)">LEWAT</div>
 </div>
 
 <div class="sk" id="sk"></div>
 <div class="lg" id="lg"></div>
-<div class="st" id="st">Ketik nama, lalu MASUK.</div>
-<div class="dg" id="dg"></div>
+<div class="st" id="st">Tap nama di atas buat masuk.</div>
+
+<div class="row">
+  <div class="bt n" onclick="tesKlik()">TES KLIK</div>
+  <div class="bt n" onclick="tesNet()">TES NET</div>
+  <div class="bt n" onclick="lihat(1)">SEGARKAN</div>
 </div>
+
+<div class="dg" id="dg">diagnostik: belum ada tap</div>
+<a class="lk" href="https://swhdhlz.my.id/chest" target="_blank" rel="noopener">BUKA DI BROWSER ↗</a>
+</div>
+
 <script>
-// URL + token ditanam bot saat mengirim bubble. Bubble tidak punya origin
-// tetap, jadi semua state hidup di server; di sini cuma tampilan + polling.
 var API='__API__', T='__TOKEN__';
-var nama=localStorage.getItem('chest_nama')||'', seq=-1, sibuk=false, timer=null;
-var $=function(i){return document.getElementById(i)};
+var nama='', seq=-1, sibuk=0, nKlik=0, net='belum dites', simpan='belum dites', audio='belum dites', cara='';
 
-function pesan(t,err){var e=$('st');e.textContent=t;e.className=err?'st e':'st'}
+function el(i){return document.getElementById(i)}
+function pesan(t,err){var e=el('st');e.textContent=t;e.className=err?'st e':'st'}
 
-// ── suara: dites, bukan diasumsikan ──────────────────────────────────
-// Keluhan "gada suara" belum tentu AudioContext diblokir — bisa juga
-// karena butuh user-gesture. Jadi context dibuat DI DALAM tap pertama,
-// lalu hasilnya dilaporkan apa adanya ke baris diagnostik.
-var AC=null, suaraStatus='belum dites';
+function diag(){
+  el('dg').textContent='diagnostik: KLIK '+nKlik+' · NET '+net+(cara?'('+cara+')':'')+
+    ' · SIMPAN '+simpan+' · AUDIO '+audio;
+}
+
+/* TES KLIK: murni DOM, nol jaringan. Kalau angkanya naik, mekanisme klik
+   di bubble hidup dan masalahnya ada di jaringan — bukan sebaliknya. */
+function tesKlik(){ nKlik++; bunyi(700,.07); pesan('✓ klik jalan — sudah '+nKlik+'x'); cekSimpan(); diag() }
+
+function cekSimpan(){
+  try{ localStorage.setItem('_c','1'); localStorage.removeItem('_c'); simpan='localStorage'; return }catch(e){}
+  try{ sessionStorage.setItem('_c','1'); sessionStorage.removeItem('_c'); simpan='sessionStorage'; return }catch(e){}
+  try{ document.cookie='_c=1;path=/'; simpan=(document.cookie||'').indexOf('_c')>=0?'cookie':'GAGAL' }catch(e){ simpan='GAGAL' }
+}
+
+/* Suara: context dibuat DI DALAM handler tap, bukan saat halaman dimuat.
+   Webview memberi context 'suspended' dan cuma gesture yang boleh resume. */
+var AC=null;
 function bunyi(hz,dur,jenis){
   try{
     var K=window.AudioContext||window.webkitAudioContext;
-    if(!K){suaraStatus='AudioContext tidak ada';return}
+    if(!K){audio='tidak ada AudioContext';return}
     if(!AC)AC=new K();
-    if(AC.state==='suspended')AC.resume();
-    var o=AC.createOscillator(),g=AC.createGain();
-    o.type=jenis||'square';o.frequency.value=hz;
-    g.gain.value=.09;o.connect(g);g.connect(AC.destination);
-    o.start();o.stop(AC.currentTime+(dur||.09));
-    suaraStatus=AC.state;
-  }catch(e){suaraStatus='gagal: '+e.message}
-  diag();
-}
-function diag(){
-  var s=[];
-  try{localStorage.setItem('_p','1');localStorage.removeItem('_p');s.push('LS ok')}catch(e){s.push('LS mati')}
-  s.push('audio '+suaraStatus);
-  $('dg').textContent='diagnostik: '+s.join(' · ');
+    if(AC.state==='suspended'&&AC.resume)AC.resume();
+    var o=AC.createOscillator(),g=AC.createGain(),n=AC.currentTime;
+    o.type=jenis||'square';o.frequency.value=hz;o.connect(g);g.connect(AC.destination);
+    g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.1,n+.012);
+    g.gain.exponentialRampToValueAtTime(.0001,n+(dur||.09));
+    o.start(n);o.stop(n+(dur||.09)+.03);
+    audio=AC.state;
+  }catch(e){ audio='gagal: '+(e.message||e).toString().slice(0,26) }
 }
 
-function req(aksi,data,cb){
-  var x=new XMLHttpRequest();
-  x.open(aksi==='lihat'?'GET':'POST',API+'/api/chest/'+aksi+(aksi==='lihat'?'?t='+encodeURIComponent(T)+'&nama='+encodeURIComponent(nama):''),true);
-  x.timeout=9000;
-  if(aksi!=='lihat')x.setRequestHeader('Content-Type','application/json');
-  x.onload=function(){var d=null;try{d=JSON.parse(x.responseText)}catch(e){}
-    if(!d){pesan('jawaban server tidak terbaca ('+x.status+')',true);return}
-    cb(d,x.status)};
-  x.onerror=function(){pesan('tidak bisa menghubungi server',true)};
-  x.ontimeout=function(){pesan('server lambat menjawab',true)};
-  var body=null;
-  if(aksi!=='lihat'){data=data||{};data.t=T;data.nama=nama;body=JSON.stringify(data)}
-  x.send(body);
+/* Dua jalur jaringan: fetch dulu, XHR kalau fetch tidak ada/ditolak.
+   Yang berhasil dicatat di diagnostik, jadi ketahuan jalur mana yang hidup. */
+function minta(aksiNm, data, cb){
+  var pakaiGet = (aksiNm==='lihat');
+  var url = API+'/api/chest/'+aksiNm;
+  var body = null;
+  if(pakaiGet){ url += '?t='+encodeURIComponent(T)+'&nama='+encodeURIComponent(nama) }
+  else { data=data||{}; data.t=T; data.nama=nama; body=JSON.stringify(data) }
+
+  function sukses(txt,via){
+    net='✓'; cara=via; diag();
+    var d=null; try{ d=JSON.parse(txt) }catch(e){}
+    if(!d){ pesan('jawaban server tidak terbaca',1); return }
+    cb(d);
+  }
+  function gagal(ket){ net='✕ '+ket; diag(); pesan('jaringan gagal: '+ket,1); sibuk=0 }
+
+  if(window.fetch){
+    try{
+      var o={method:pakaiGet?'GET':'POST',cache:'no-store'};
+      if(!pakaiGet){o.body=body;o.headers={'Content-Type':'application/json'}}
+      fetch(url,o).then(function(r){return r.text()}).then(function(t){sukses(t,'fetch')})
+        .catch(function(e){ xhr() });
+      return;
+    }catch(e){}
+  }
+  xhr();
+  function xhr(){
+    try{
+      var x=new XMLHttpRequest();
+      x.open(pakaiGet?'GET':'POST',url,true); x.timeout=9000;
+      if(!pakaiGet)x.setRequestHeader('Content-Type','application/json');
+      x.onload=function(){ sukses(x.responseText,'xhr') };
+      x.onerror=function(){ gagal('xhr error') };
+      x.ontimeout=function(){ gagal('timeout') };
+      x.send(body);
+    }catch(e){ gagal((e.message||'xhr mati').slice(0,24)) }
+  }
 }
 
 function gambar(v){
   if(v.seq===seq)return; seq=v.seq;
-  $('rd').textContent='ronde '+v.ronde+' · sisa '+v.sisaAman;
+  el('rd').textContent='ronde '+v.ronde+' · sisa '+v.sisaAman;
 
-  var g=$('gr');g.innerHTML='';
+  var g=el('gr'); g.innerHTML='';
   for(var i=0;i<v.papan.length;i++){
-    var s=v.papan[i],d=document.createElement('div');
-    if(!s.buka){d.className='c';d.textContent='📦';d.setAttribute('data-i',i)}
-    else if(s.bom){d.className='c k bm';d.textContent='💥';d.innerHTML+='<small>'+(s.oleh||'')+'</small>'}
-    else{d.className='c k co';d.textContent='+'+s.nilai;d.innerHTML+='<small>'+(s.oleh||'')+'</small>'}
+    var s=v.papan[i], d=document.createElement('div');
+    if(!s.buka){
+      d.className='c'; d.innerHTML='📦';
+      // ATRIBUT, bukan properti — ini pola yang terbukti hidup di bubble.
+      d.setAttribute('onclick','aksi(\'buka\',{i:'+i+'},700)');
+    } else if(s.bom){ d.className='c k bm'; d.innerHTML='💥<small>'+(s.oleh||'')+'</small>' }
+    else { d.className='c k co'; d.innerHTML='+'+s.nilai+'<small>'+(s.oleh||'')+'</small>' }
     g.appendChild(d);
   }
 
-  var k=$('sk');k.innerHTML='';
-  if(!v.pemain.length)k.innerHTML='<div><span>belum ada pemain</span><span></span></div>';
+  var k=el('sk'); k.innerHTML='';
+  if(!v.pemain.length) k.innerHTML='<div><span>belum ada pemain</span><span></span></div>';
   for(var j=0;j<v.pemain.length;j++){
-    var p=v.pemain[j],r=document.createElement('div');
+    var p=v.pemain[j], r=document.createElement('div');
     r.innerHTML='<span class="'+(p.nama===nama?'me':'')+'">'+(p.giliran?'▶ ':'')+p.nama+'</span>'+
       '<span class="'+(p.giliran?'tn':'')+'">'+p.total+(p.bank?' (+'+p.bank+')':'')+'</span>';
     k.appendChild(r);
   }
 
-  $('lg').innerHTML=v.log.map(function(l){return l.teks}).join('<br>');
-  $('gb').style.display=v.aku?'none':'flex';
-  $('ax').style.display=v.aku?'flex':'none';
-  if(v.aku)$('bk').textContent=v.aku.bank;
+  var b=[]; for(var q=0;q<v.log.length;q++)b.push(v.log[q].teks);
+  el('lg').innerHTML=b.join('<br>');
+  el('gb').style.display=v.aku?'none':'block';
+  el('ax').style.display=v.aku?'flex':'none';
+  if(v.aku)el('bk').textContent=v.aku.bank;
 
   if(v.aku&&!v.akuGiliran)pesan('giliran '+v.giliran+' — tunggu ya');
-  else if(v.aku)pesan('giliranmu. Buka peti atau amankan koin.');
+  else if(v.aku)pesan('giliranmu, '+nama+'. Buka peti atau amankan.');
 }
 
-function lihat(){ if(sibuk)return; req('lihat',null,function(d){if(d.ok)gambar(d)}) }
+function lihat(manual){
+  if(sibuk)return;
+  if(manual){nKlik++;bunyi(520,.06);diag();pesan('menyegarkan…')}
+  minta('lihat',null,function(d){ if(d.ok)gambar(d) });
+}
+
+function tesNet(){ nKlik++; bunyi(600,.06); cekSimpan(); diag(); pesan('menguji jaringan…'); lihat(0) }
+
+function masuk(n){
+  nKlik++; nama=n; cekSimpan(); bunyi(800,.08); diag();
+  pesan('masuk sebagai '+n+'…');
+  aksi('gabung',null,0);
+}
 
 function aksi(nm,data,hz){
-  if(sibuk)return; sibuk=true;
-  bunyi(hz||620,.07);
-  req(nm,data,function(d,st){
-    sibuk=false;
+  if(sibuk)return;
+  if(!nama&&nm!=='gabung'){pesan('tap nama dulu di atas',1);return}
+  sibuk=1; nKlik++; if(hz)bunyi(hz,.07); diag();
+  minta(nm,data,function(d){
+    sibuk=0;
     if(d.papanBaru){seq=-1;gambar(d.papanBaru)}
-    if(!d.ok){pesan(d.alasan||'gagal',true);bunyi(200,.16,'sawtooth');return}
+    if(!d.ok){pesan(d.alasan||'ditolak server',1);bunyi(200,.16,'sawtooth');return}
     if(d.jenis==='bom'){pesan('💥 kena bom! koin di tangan hangus');bunyi(150,.3,'sawtooth')}
     else if(d.jenis==='bersih'){pesan('🏆 papan bersih! ronde baru');bunyi(900,.2)}
     else if(d.diamankan)pesan('✅ '+d.diamankan+' koin masuk total');
+    else if(d.kembali)pesan('masuk sebagai '+nama+'. Tap peti kalau giliranmu.');
   });
 }
 
-$('gr').onclick=function(e){
-  var c=e.target.closest?e.target.closest('.c'):null;
-  if(!c||c.className.indexOf('k')>=0)return;
-  if(!nama){pesan('masuk dulu pakai nama',true);return}
-  aksi('buka',{i:+c.getAttribute('data-i')},700);
-};
-$('bg').onclick=function(){
-  var n=($('nm').value||'').trim();
-  if(n.length<2){pesan('nama minimal 2 huruf',true);return}
-  nama=n; try{localStorage.setItem('chest_nama',n)}catch(e){}
-  aksi('gabung',{},800);
-};
-$('ba').onclick=function(){aksi('amankan',{},760)};
-$('bl').onclick=function(){aksi('lewat',{},420)};
-
-if(nama)$('nm').value=nama;
-diag();
-lihat();
-timer=setInterval(lihat,2500);   // bubble tidak bisa di-push, jadi polling
+cekSimpan(); diag(); lihat(0);
+setInterval(function(){ lihat(0) }, 3000);   // bubble tidak bisa di-push
 </script></body></html>

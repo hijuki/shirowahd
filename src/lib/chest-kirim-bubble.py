@@ -71,12 +71,20 @@ def ex(code, timeout=180):
         return {"raw": raw[:400]}
 
 
-# ── 4. kirim + sadap ack, biar ketahuan kalau ditolak ─────────────────
+# ── 4. hapus bubble v1 kalau ada, lalu kirim v2 + sadap ack ───────────
 kode = """
   const { generateWAMessageFromContent } = await import('hillz');
   const crypto = await import('crypto');
   const html = %s;
   const jid = %s;
+
+  // Buang bubble versi lama supaya chat tidak menumpuk dan tuan tidak
+  // perlu menebak bubble mana yang terbaru.
+  const lama = global.__chestBubbleId;
+  if (lama) {
+    try { await sock.sendMessage(jid, { delete: { remoteJid: jid, fromMe: true, id: lama } }); } catch {}
+    await new Promise(s => setTimeout(s, 700));
+  }
 
   const catat = {};
   const onU = (arr) => { for (const u of arr) if (u.key?.id) catat[u.key.id] = { st: u.update?.status, err: u.update?.messageStubParameters }; };
@@ -106,11 +114,12 @@ kode = """
 
   await sock.relayMessage(jid, msg.message, { messageId: msg.key.id });
   const id = msg.key.id;
+  global.__chestBubbleId = id;
 
   await new Promise(s => setTimeout(s, 20000));
   sock.ev.off('messages.update', onU);
   const a = catat[id];
-  return JSON.stringify({ id, ack: a || 'sunyi (tidak ditolak)', ditolak463: a?.err?.[0] === '463' });
+  return JSON.stringify({ id, hapusLama: lama || null, ack: a || 'sunyi (tidak ditolak)', ditolak463: a?.err?.[0] === '463' });
 """ % (json.dumps(html), json.dumps(GRUP))
 
 hasil = ex(kode)
