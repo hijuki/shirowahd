@@ -178,11 +178,15 @@ const config = {
     dailyLimitReset: true,
     smartTriggers: false,
 
-    // Reaksi ⏳ → ✅/❌ pada perintah yang lama. Ambang dalam milidetik:
-    // di bawah angka ini bot senyap (tidak ada reaksi sama sekali), supaya
-    // perintah cepat seperti .menu tidak boros 2 panggilan sendMessage.
+    // Reaksi beranimasi pada perintah yang lama diproses: 🕐🕑🕒… lalu ✅/❌.
+    // reaksiAmbang = jeda sebelum animasi mulai; di bawah angka ini bot senyap
+    // supaya perintah cepat seperti .menu tidak boros sendMessage.
+    // reaksiJeda = jeda antar bingkai (lantai 400 ms ditegakkan di modul).
+    // reaksiGaya = jam | pasir | bulan | putar
     reaksiProses: true,
     reaksiAmbang: 1200,
+    reaksiJeda: 1200,
+    reaksiGaya: "jam",
   },
 
   registration: {

@@ -15,7 +15,7 @@ import {
   formatSuggestionMessage,
 } from "./lib/hillz-similarity.js";
 import { getDatabase } from "./lib/hillz-database.js";
-import { pasangReaksi, AMBANG_BAKU } from "./lib/hillz-reaksi.js";
+import { pasangReaksi, AMBANG_BAKU, JEDA_BAKU, GAYA_BAKU } from "./lib/hillz-reaksi.js";
 import {
   formatUptime,
   createWaitMessage,
@@ -1840,27 +1840,33 @@ async function messageHandler(msg, sock, options = {}) {
       }
     }
 
-    // ═══ INDIKATOR PROSES ═══
-    // Reaksi ⏳ dipasang HANYA kalau plugin ini benar-benar lama (lewat ambang).
-    // Alasan tidak dipasang untuk semua perintah: 492 dari 823 plugin sudah
-    // m.react() sendiri, dan WhatsApp cuma punya satu slot reaksi per pesan —
-    // ✅ global akan menimpa 🎉/💔 milik plugin dan menghapus informasinya.
-    // Rinciannya di src/lib/hillz-reaksi.js.
+    // ═══ INDIKATOR PROSES BERANIMASI ═══
+    // Selama plugin bekerja, reaksi pada pesan user BERPUTAR (🕐🕑🕒…) supaya
+    // kelihatan hidup, lalu berhenti di ✅ atau ❌.
+    //
+    // Dua hal yang membatasi rancangannya (rinci di src/lib/hillz-reaksi.js):
+    // - Animasi baru mulai setelah ambang, karena tiap bingkai = 1 sendMessage.
+    //   Perintah cepat seperti .menu tetap senyap.
+    // - 492 dari 823 plugin sudah m.react() sendiri, dan WhatsApp cuma punya
+    //   satu slot reaksi per pesan. Begitu plugin bereaksi, animasi berhenti
+    //   dan mundur — kalau tidak, 🎉 milik enchant.js ditimpa bingkai kita.
     const reaksiHidup =
       db.setting("reaksiProses") ?? config.features?.reaksiProses ?? true;
     const indikator = reaksiHidup
       ? pasangReaksi(m, {
           ambang: db.setting("reaksiAmbang") ?? config.features?.reaksiAmbang ?? AMBANG_BAKU,
+          jeda: db.setting("reaksiJeda") ?? config.features?.reaksiJeda ?? JEDA_BAKU,
+          gaya: db.setting("reaksiGaya") ?? config.features?.reaksiGaya ?? GAYA_BAKU,
         })
       : null;
 
     try {
       await plugin.handler(m, context);
-      indikator?.selesai();
+      await indikator?.selesai();
     } catch (galatPlugin) {
       // ❌ dulu, baru lempar ulang — supaya penanganan galat di bawah (log +
       // incrementStat + pesan ke user) tetap jalan apa adanya.
-      indikator?.gagal();
+      await indikator?.gagal();
       throw galatPlugin;
     }
 
