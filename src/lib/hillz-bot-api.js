@@ -383,8 +383,10 @@ ${execCode}
     if (req.method === 'POST' && url === '/bots/role/delete') {
       try {
         const body = await parseBody(req);
-        hapusRoleKustom(body.id);
-        json(res, 200, { ok: true });
+        const r = hapusRoleKustom(body.id);
+        // `dipindah` diteruskan supaya panel bisa memberi tahu bot mana yang
+        // rolenya jatuh kembali ke `full` — jangan telan senyap.
+        json(res, 200, { ok: true, dipindah: r.dipindah || [] });
       } catch (e) { json(res, 400, { error: e.message }); }
       return;
     }

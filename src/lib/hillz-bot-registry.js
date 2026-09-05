@@ -178,13 +178,34 @@ function hapusBot(id) {
 }
 
 function simpanRoleKustom(id, role) {
+  // `String(id)` saja TIDAK cukup: `String(undefined)` menghasilkan "undefined",
+  // yang lolos filter regex dan membuat role bernama literal "undefined" di
+  // registry. Itu benar-benar terjadi saat panel mengirim body tanpa `id`.
+  if (typeof id !== "string" && typeof id !== "number") {
+    throw new Error("id role wajib diisi");
+  }
   const kunci = String(id).replace(/[^a-z0-9_-]/gi, "").toLowerCase();
   if (!kunci) throw new Error("id role tidak valid");
   if (kunci in ROLE_BAWAAN) throw new Error("role bawaan tidak bisa ditimpa");
+
+  if (!Array.isArray(role.kategori)) {
+    throw new Error("kategori wajib berupa daftar (array)");
+  }
   const nyata = new Set(kategoriTersedia());
-  const kategori = Array.isArray(role.kategori)
-    ? role.kategori.filter((k) => nyata.has(k))
-    : null;
+  const kategori = role.kategori.filter((k) => nyata.has(k));
+  // Kategori yang tidak dikenal DILAPORKAN, tidak dibuang diam-diam — dulu
+  // kategori ngawur disaring habis lalu role kosong tetap disimpan.
+  const asing = role.kategori.filter((k) => !nyata.has(k));
+  if (!kategori.length) {
+    throw new Error(
+      asing.length
+        ? `tidak ada kategori yang dikenal: ${asing.join(", ")}`
+        : "pilih minimal satu kategori",
+    );
+  }
+  // Role dengan `kategori: []` adalah role yang MEMBLOKIR SEMUA perintah
+  // berkategori (lihat `bolehJalan`), jadi menyimpannya = mematikan bot
+  // tanpa admin sadar. Untuk "semua kategori" sudah ada role bawaan `full`.
   const data = baca();
   data.rolesKustom[kunci] = {
     label: String(role.label || kunci),
@@ -192,18 +213,28 @@ function simpanRoleKustom(id, role) {
     kategori,
   };
   tulis(data);
-  return semuaRole()[kunci];
+  return { ...semuaRole()[kunci], diabaikan: asing };
 }
 
 function hapusRoleKustom(id) {
-  if (id in ROLE_BAWAAN) throw new Error("role bawaan tidak bisa dihapus");
+  if (typeof id !== "string" && typeof id !== "number") {
+    throw new Error("id role wajib diisi");
+  }
+  const kunci = String(id);
+  if (kunci in ROLE_BAWAAN) throw new Error("role bawaan tidak bisa dihapus");
   const data = baca();
-  delete data.rolesKustom[id];
+  // Dulu penghapusan role yang tidak ada tetap membalas `ok:true`, jadi salah
+  // ketik id terlihat berhasil di panel padahal tidak ada yang berubah.
+  if (!(kunci in data.rolesKustom)) throw new Error(`role "${kunci}" tidak ada`);
+  delete data.rolesKustom[kunci];
   // Bot yang memakai role terhapus dikembalikan ke `full`, jangan dibiarkan
   // menunjuk role hantu — itu akan memblokir semua perintahnya secara diam-diam.
-  for (const b of Object.values(data.bots)) if (b.role === id) b.role = "full";
+  const dipindah = [];
+  for (const [bid, b] of Object.entries(data.bots)) {
+    if (b.role === kunci) { b.role = "full"; dipindah.push(bid); }
+  }
   tulis(data);
-  return true;
+  return { ok: true, dipindah };
 }
 
 /**

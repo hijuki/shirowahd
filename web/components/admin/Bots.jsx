@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getBots, saveBot, deleteBot, pairExtraBot, stopExtraBot, getPairState } from '@/lib/admin-api'
+import { getBots, saveBot, deleteBot, pairExtraBot, stopExtraBot, getPairState, saveBotRole, deleteBotRole } from '@/lib/admin-api'
 
 /**
  * Kartu Multi-Bot — beberapa nomor WA hidup bareng, tiap nomor bisa dimatikan
@@ -22,6 +22,11 @@ export default function Bots({ toast }) {
   const [labelBaru, setLabelBaru] = useState('')
   const [roleBaru, setRoleBaru] = useState('full')
 
+  // Editor role kustom: backend sudah punya /bots/role/save & /bots/role/delete
+  // (validasi kategori ada di hillz-bot-registry.js), tapi panel belum punya
+  // jalan masuknya — jadi role kustom hanya bisa dibuat lewat curl. Ini UI-nya.
+  const [roleForm, setRoleForm] = useState(null) // { id, label, deskripsi, kategori: [] }
+
   const muat = async () => {
     try { setData(await getBots()) } catch (e) { setData({ ok: false, error: e.message }) }
     try { setPair(await getPairState()) } catch { }
@@ -34,12 +39,44 @@ export default function Bots({ toast }) {
 
   const bots = data?.bots ? Object.values(data.bots) : []
   const roles = data?.roles || {}
+  const kategoriTersedia = data?.kategori || []
 
   const ubah = async (bot, patch) => {
     setBusy(true)
     try {
       await saveBot({ id: bot.id, ...patch })
       toast('Tersimpan', 'success')
+      muat()
+    } catch (e) { toast(`Error: ${e.message}`, 'error') }
+    setBusy(false)
+  }
+
+  const simpanRole = async () => {
+    const f = roleForm
+    const id = (f?.id || '').replace(/[^a-z0-9_-]/gi, '').toLowerCase()
+    if (!id) return toast('ID role wajib (huruf/angka/-/_)', 'warn')
+    if (roles[id]?.bawaan) return toast('Role bawaan tidak bisa ditimpa', 'warn')
+    if (!f.kategori.length) return toast('Pilih minimal satu kategori', 'warn')
+    setBusy(true)
+    try {
+      await saveBotRole({ id, label: f.label.trim() || id, deskripsi: f.deskripsi.trim(), kategori: f.kategori })
+      toast(`Role "${id}" disimpan`, 'success')
+      setRoleForm(null)
+      muat()
+    } catch (e) { toast(`Error: ${e.message}`, 'error') }
+    setBusy(false)
+  }
+
+  const hapusRole = async (id) => {
+    if (roles[id]?.bawaan) return toast('Role bawaan tidak bisa dihapus', 'warn')
+    // Bot yang memakai role ini dikembalikan ke `full` oleh backend, jadi tidak
+    // ada bot yang menunjuk role hantu dan diam-diam kehilangan semua perintah.
+    if (!confirm(`Hapus role "${id}"? Bot yang memakainya kembali ke Full Bot.`)) return
+    setBusy(true)
+    try {
+      await deleteBotRole(id)
+      toast(`Role "${id}" dihapus`, 'success')
+      if (roleBaru === id) setRoleBaru('full')
       muat()
     } catch (e) { toast(`Error: ${e.message}`, 'error') }
     setBusy(false)
@@ -184,6 +221,99 @@ export default function Bots({ toast }) {
           Bot tambahan memakai plugin &amp; database yang sama, jadi tidak perlu deploy ulang.
           Bot utama harus tersambung dulu.
         </p>
+      </div>
+
+      {/* Role kustom: bikin role sendiri dari kategori plugin yang benar-benar ada */}
+      <div className="rounded-[14px] p-4 bg-[var(--paper-2)] border border-[var(--edge)] space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-bold">
+            <i className="fa-solid fa-user-shield mr-1.5 text-[var(--volt)]" />Role Kustom
+          </p>
+          {!roleForm && (
+            <button onClick={() => setRoleForm({ id: '', label: '', deskripsi: '', kategori: [] })} disabled={busy}
+              className="min-h-10 rounded-[10px] px-3 py-2 bg-[var(--paper)] border border-[var(--edge)] text-sm transition-all duration-[150ms] active:scale-[.97]">
+              <i className="fa-solid fa-plus mr-1.5" />Buat Role
+            </button>
+          )}
+        </div>
+
+        {/* Daftar role: bawaan tidak bisa diubah/dihapus (dikunci di backend juga) */}
+        <div className="space-y-2">
+          {Object.entries(roles).map(([id, r]) => (
+            <div key={id} className="flex flex-wrap items-center gap-2 rounded-[10px] px-3 py-2 bg-[var(--paper)] border border-[var(--edge)]">
+              <b className="text-sm">{r.label}</b>
+              <span className="font-mono text-[11px] text-[var(--ink-2)]">{id}</span>
+              {r.bawaan
+                ? <span className="chip px-2 py-0.5 text-[10px] bg-[var(--sunk)] text-[var(--ink-2)]">BAWAAN</span>
+                : (
+                  <span className="flex gap-2 ml-auto">
+                    <button onClick={() => setRoleForm({ id, label: r.label, deskripsi: r.deskripsi || '', kategori: r.kategori || [] })}
+                      disabled={busy} aria-label={`Ubah role ${r.label}`}
+                      className="min-h-9 rounded-[9px] px-2.5 py-1.5 bg-[var(--paper-2)] border border-[var(--edge)] text-xs transition-all duration-[150ms] active:scale-[.97]">
+                      <i className="fa-solid fa-pen mr-1" />Ubah
+                    </button>
+                    <button onClick={() => hapusRole(id)} disabled={busy} aria-label={`Hapus role ${r.label}`}
+                      className="min-h-9 rounded-[9px] px-2.5 py-1.5 bg-bad/[.08] border border-bad/25 text-bad text-xs transition-all duration-[150ms] active:scale-[.97]">
+                      <i className="fa-solid fa-trash mr-1" />Hapus
+                    </button>
+                  </span>
+                )}
+              <p className="basis-full text-[11px] text-[var(--ink-2)]">
+                {r.kategori === null ? 'Semua kategori.' : `${(r.kategori || []).length} kategori: ${(r.kategori || []).join(', ') || '—'}`}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {roleForm && (
+          <div className="rounded-[12px] p-3 bg-[var(--paper)] border border-[var(--volt)]/30 space-y-3">
+            <div className="grid gap-2 md:grid-cols-2">
+              <input value={roleForm.id} onChange={e => setRoleForm({ ...roleForm, id: e.target.value })}
+                placeholder="id-role (mis. downloader)" aria-label="ID role"
+                className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm font-mono" />
+              <input value={roleForm.label} onChange={e => setRoleForm({ ...roleForm, label: e.target.value })}
+                placeholder="Nama tampil (mis. Bot Downloader)" aria-label="Label role"
+                className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm" />
+            </div>
+            <input value={roleForm.deskripsi} onChange={e => setRoleForm({ ...roleForm, deskripsi: e.target.value })}
+              placeholder="Keterangan singkat" aria-label="Deskripsi role"
+              className="w-full min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm" />
+
+            <div>
+              <p className="text-xs text-[var(--ink-2)] mb-2">
+                Kategori aktif ({roleForm.kategori.length}/{kategoriTersedia.length}) — diambil dari folder <code>plugins/</code> yang nyata
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {kategoriTersedia.map(k => {
+                  const aktif = roleForm.kategori.includes(k)
+                  return (
+                    <button key={k} type="button" aria-pressed={aktif}
+                      onClick={() => setRoleForm({
+                        ...roleForm,
+                        kategori: aktif ? roleForm.kategori.filter(x => x !== k) : [...roleForm.kategori, k],
+                      })}
+                      className={`min-h-9 rounded-[9px] px-2.5 py-1.5 text-xs border transition-all duration-[150ms] active:scale-[.97] ${aktif
+                        ? 'bg-[var(--volt)]/15 border-[var(--volt)]/40 text-[var(--volt)] font-bold'
+                        : 'bg-[var(--paper-2)] border-[var(--edge)] text-[var(--ink-2)]'}`}>
+                      {k}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button onClick={simpanRole} disabled={busy}
+                className="btn-primary min-h-11 rounded-[12px] px-5 py-2.5 text-sm font-bold disabled:opacity-50">
+                <i className="fa-solid fa-floppy-disk mr-1.5" />Simpan Role
+              </button>
+              <button onClick={() => setRoleForm(null)} disabled={busy}
+                className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] text-sm transition-all duration-[150ms] active:scale-[.97]">
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

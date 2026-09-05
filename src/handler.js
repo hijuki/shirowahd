@@ -110,7 +110,6 @@ let FormData,
   handleAutoAI,
   handleAutoDownload,
   checkStickerCommand,
-  handleStickerReply,
   sendWelcomeMessage,
   sendGoodbyeMessage,
   autoJoinDetector,
@@ -238,10 +237,6 @@ try {
 try {
   checkStickerCommand = (await import("./lib/hillz-sticker-command.js"))
     .checkStickerCommand;
-} catch { }
-try {
-  handleStickerReply = (await import("./lib/hillz-sticker-reply.js"))
-    .handleStickerReply;
 } catch { }
 try {
   sendWelcomeMessage = (await import("../plugins/group/welcome.js"))
@@ -1381,11 +1376,6 @@ async function messageHandler(msg, sock, options = {}) {
       if (checkAntimedia && m.isGroup) {
         const mediaHandled = await checkAntimedia(m, sock, db);
         if (mediaHandled) return;
-      }
-
-      if (handleStickerReply && m.isGroup) {
-        const stickerReplyHandled = await handleStickerReply(m, sock);
-        if (stickerReplyHandled) return;
       }
 
       if (checkStickerCommand) {

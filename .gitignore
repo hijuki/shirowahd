@@ -58,3 +58,7 @@ recover-cf.mjs
 rename-ourin.sh
 # Catatan rilis lokal (juga ada di daftar kecuali auto-backup).
 UPDATE.txt
+
+# Salinan tersanitasi dibuat ulang tiap backup — tidak perlu ter-track,
+# dan isinya masih memuat ownerWhatsapp + struktur setelan lengkap.
+admin-settings.sanitized.json

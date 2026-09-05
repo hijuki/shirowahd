@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { changePassword, blacklistAction, getBlacklist, getStats, setMaintenance } from '@/lib/admin-api'
+import { changePassword, blacklistAction, getBlacklist, getStats, setMaintenance, getSettings } from '@/lib/admin-api'
 
 export default function Security({ toast }) {
   const [cur, setCur] = useState('')
@@ -13,12 +13,20 @@ export default function Security({ toast }) {
   const [blacklist, setBlacklist] = useState([])
   const [maint, setMaint] = useState(false)
   const [busy, setBusy] = useState(false)
+  // Benderanya dari backend (`passwordBocor` di GET /admin/api/settings): password
+  // aktif masih sama dengan default yang pernah ter-commit ke repo publik.
+  const [pwBocor, setPwBocor] = useState(false)
 
   const load = async () => {
     try {
-      const [b, s] = await Promise.all([getBlacklist().catch(() => []), getStats()])
+      const [b, s, st] = await Promise.all([
+        getBlacklist().catch(() => []),
+        getStats(),
+        getSettings().catch(() => null),
+      ])
       setBlacklist(Array.isArray(b) ? b : [])
       if (s?.maintenance != null) setMaint(s.maintenance)
+      setPwBocor(!!st?.passwordBocor)
     } catch { }
   }
   useEffect(() => { load() }, [])
@@ -32,6 +40,7 @@ export default function Security({ toast }) {
       setPwMsg({ ok: true, text: 'Password berhasil diubah!' })
       toast('Password berhasil diubah!', 'success')
       setCur(''); setNw(''); setCf('')
+      load() // peringatan password-bocor harus hilang begitu password diganti
     } catch (e) {
       setPwMsg({ ok: false, text: e.message })
       toast(`Error: ${e.message}`, 'error')
@@ -63,6 +72,20 @@ export default function Security({ toast }) {
         <p className="text-[var(--ink-2)] text-sm mt-1">Password, blacklist IP &amp; maintenance</p>
       </div>
 
+      {/* Peringatan password bawaan: nilainya ada di repo publik, jadi ini
+          bukan "kurang ideal" — panel benar-benar bisa dimasuki orang lain. */}
+      {pwBocor && (
+        <div role="alert" className="card p-5 md:p-6 border border-bad/40 bg-bad/[.07] space-y-2">
+          <p className="font-bold text-bad text-sm">
+            <i className="fa-solid fa-triangle-exclamation mr-2" />Password admin masih bawaan
+          </p>
+          <p className="text-sm text-[var(--ink-2)]">
+            Password yang aktif sama dengan default yang pernah ter-commit ke repositori publik,
+            jadi siapa pun yang membaca repo bisa masuk ke panel ini. Ganti sekarang lewat formulir di bawah.
+          </p>
+        </div>
+      )}
+
       {/* Change password */}
       <form onSubmit={submitPw} className="card p-6 md:p-8 space-y-4 max-w-xl">
         <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-key text-[var(--volt)] mr-2" />Ganti Password Admin</h2>
@@ -70,6 +93,7 @@ export default function Security({ toast }) {
           <div key={label}>
             <label className="text-xs font-bold uppercase tracking-wider text-[var(--ink-2)] mb-1.5 block">{label}</label>
             <input type="password" value={val} onChange={e => setter(e.target.value)} required
+              minLength={label === 'Password Saat Ini' ? undefined : 8}
               className="w-full rounded-[12px] px-4 py-3 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none transition-colors duration-[150ms]" />
           </div>
         ))}

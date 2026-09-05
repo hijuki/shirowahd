@@ -64,7 +64,7 @@ function loadSettings() {
     ownerWhatsapp: '', groups: [], channels: [],
     claimGroups: [],
     popupButtons: [],
-    adminPassword: '@Hillz126',
+    adminPassword: '',
     maintenance: false,
     ipBlacklist: [],
     siteName: 'SHIROWAHD',
@@ -146,7 +146,7 @@ function saveSettings(data) {
     // menyaring null/undefined, jadi payload berisi "" dulu bisa mengosongkan
     // password admin (risiko terkunci) atau menghapus nama situs (judul & og
     // jadi kosong). Field non-kritis seperti bannerText tetap boleh dikosongkan.
-    adminPassword: nonEmpty(data.adminPassword) ?? cur.adminPassword ?? process.env.ADMIN_PASSWORD ?? '@Hillz126',
+    adminPassword: nonEmpty(data.adminPassword) ?? cur.adminPassword ?? process.env.ADMIN_PASSWORD ?? '',
     maintenance: data.maintenance ?? cur.maintenance ?? false,
     ipBlacklist: data.ipBlacklist ?? cur.ipBlacklist ?? [],
     siteName: nonEmpty(data.siteName) ?? cur.siteName ?? 'SHIROWAHD',
@@ -219,25 +219,66 @@ function saveSettings(data) {
   return s;
 }
 
+// Password bawaan yang PERNAH ter-commit ke repo publik. Nilainya bukan lagi
+// rahasia, jadi menyimpannya di sini tidak membocorkan apa pun — gunanya cuma
+// SATU: mendeteksi kalau password admin yang aktif masih memakai nilai ini,
+// lalu menegur pemilik lewat panel dan log. JANGAN pakai sebagai fallback.
+const PASSWORD_BOCOR = '@Hillz126';
+
 // Password admin, urutan menang:
 //   1. adminPassword di admin-settings.json  → tombol "Ubah Password" di panel
 //      benar-benar berefek
 //   2. ADMIN_PASSWORD di .env                → dipakai VPS baru (install.sh
 //      men-generate acak), berlaku selama panel belum pernah set password
-//   3. default bawaan                        → jaring terakhir agar tidak
-//      terkunci sendiri
+//   3. password acak yang dibuat & disimpan saat pertama dibutuhkan
 //
 // Urutan ini harus memeriksa KEBERADAAN berkas, bukan hasil loadSettings():
-// loadSettings() mengembalikan objek default (berisi password bawaan) ketika
-// berkasnya belum ada, sehingga password acak dari .env akan tertimpa dan
-// setiap VPS baru memakai password yang sama. Itu lubang keamanan, bukan
-// ketidaknyamanan.
+// loadSettings() mengembalikan objek default ketika berkasnya belum ada,
+// sehingga password acak dari .env akan tertimpa dan setiap VPS baru memakai
+// password yang sama. Itu lubang keamanan, bukan ketidaknyamanan.
+//
+// TIDAK ADA LAGI default hardcode. Dulu baris ini mengembalikan
+// PASSWORD_BOCOR, dan karena nilai itu ter-commit di repo publik, siapa pun
+// yang pernah membaca repo bisa masuk ke panel VPS mana pun yang belum
+// menyetel password.
 function getAdminPassword() {
   if (existsSync(SETTINGS_FILE)) {
     const dariBerkas = loadSettings().adminPassword;
     if (dariBerkas) return dariBerkas;
   }
-  return process.env.ADMIN_PASSWORD || '@Hillz126';
+  if (process.env.ADMIN_PASSWORD) return process.env.ADMIN_PASSWORD;
+
+  // Jaring terakhir: buat password acak SEKALI, simpan, dan cetak ke log supaya
+  // pemilik bisa membacanya lewat `pm2 logs web`. Lebih baik pemilik harus
+  // membuka log daripada seluruh dunia tahu passwordnya.
+  const acak = crypto.randomBytes(12).toString('base64url');
+  try {
+    const s = loadSettings();
+    s.adminPassword = acak;
+    writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[ADMIN] gagal menyimpan password acak:', e.message);
+  }
+  const garis = '='.repeat(58);
+  console.log(
+    `\n${garis}\n[ADMIN] Password admin belum diset — password ACAK dibuat:\n` +
+    `[ADMIN]   ${acak}\n` +
+    `[ADMIN] Segera ganti lewat panel → Keamanan → Ubah Password.\n${garis}\n`,
+  );
+  return acak;
+}
+
+// Apakah password admin yang aktif masih memakai default yang sudah bocor?
+// Membaca LANGSUNG dari sumbernya, tidak lewat getAdminPassword(), supaya
+// pemeriksaan ini tidak pernah memicu pembuatan password acak sebagai efek
+// samping — predikat tidak boleh mengubah keadaan.
+function passwordMasihBocor() {
+  try {
+    const aktif = existsSync(SETTINGS_FILE)
+      ? (loadSettings().adminPassword || process.env.ADMIN_PASSWORD || '')
+      : (process.env.ADMIN_PASSWORD || '');
+    return aktif === PASSWORD_BOCOR;
+  } catch { return false; }
 }
 
 (function initTTL() {
@@ -394,8 +435,76 @@ function jsonRes(res, code, obj) {
   res.end(JSON.stringify(obj));
 }
 
+// Rentang resmi Cloudflare (IPv4+IPv6). Hanya permintaan yang datang DARI
+// alamat ini — atau dari loopback (cloudflared/tunnel di host yang sama) —
+// yang boleh menentukan IP klien lewat header.
+const PROXY_TEPERCAYA = [
+  '127.0.0.0/8', '::1/128',
+  '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+  '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+  '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+  '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+  '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32',
+  '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+];
+
+function ipKeBigInt(ip) {
+  const bersih = String(ip || '').replace(/^::ffff:/i, '');
+  if (bersih.includes(':')) {
+    // IPv6: kembangkan '::' lalu gabung jadi 128 bit
+    const [kiri, kanan = ''] = bersih.split('::');
+    const a = kiri ? kiri.split(':') : [];
+    const b = kanan ? kanan.split(':') : [];
+    const isi = new Array(8 - a.length - b.length).fill('0');
+    const blok = [...a, ...isi, ...b];
+    if (blok.length !== 8) return null;
+    return blok.reduce((acc, h) => (acc << 16n) + BigInt(parseInt(h || '0', 16)), 0n);
+  }
+  const o = bersih.split('.');
+  if (o.length !== 4) return null;
+  // IPv4 dipetakan ke ruang IPv4-mapped IPv6 supaya satu pembanding cukup
+  const v4 = o.reduce((acc, n) => (acc << 8n) + BigInt(parseInt(n, 10) & 255), 0n);
+  return 0xffffn << 32n | v4;
+}
+
+function dalamCidr(ip, cidr) {
+  const [jaringan, panjangStr] = cidr.split('/');
+  const alamat = ipKeBigInt(ip);
+  const basis = ipKeBigInt(jaringan);
+  if (alamat === null || basis === null) return false;
+  const ipv4 = !jaringan.includes(':');
+  const total = ipv4 ? 32 : 128;
+  const panjang = parseInt(panjangStr, 10);
+  const geser = BigInt(total - panjang);
+  if (ipv4) {
+    const maskedA = (alamat & 0xffffffffn) >> geser;
+    const maskedB = (basis & 0xffffffffn) >> geser;
+    return maskedA === maskedB;
+  }
+  return (alamat >> geser) === (basis >> geser);
+}
+
+function proxiTepercaya(ip) {
+  return PROXY_TEPERCAYA.some((c) => dalamCidr(ip, c));
+}
+
+// IP klien dipakai untuk rate-limit login, rate-limit upload, dan blacklist.
+// Kalau header dipercaya tanpa syarat, penyerang cukup memutar X-Forwarded-For
+// untuk mendapat bucket baru setiap permintaan → ketiga pengaman itu lumpuh.
+// Header hanya dipercaya bila peer soket memang proxy yang kita kenal.
 function getClientIP(req) {
-  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  const soket = req.socket.remoteAddress || 'unknown';
+  if (!proxiTepercaya(soket)) return soket;
+  const cf = String(req.headers['cf-connecting-ip'] || '').trim();
+  if (cf) return cf;
+  // XFF bisa berisi rantai; entri PALING KANAN yang bukan proxy tepercaya
+  // adalah yang ditulis oleh proxy terdekat, jadi paling sulit dipalsukan.
+  const rantai = String(req.headers['x-forwarded-for'] || '')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+  for (let i = rantai.length - 1; i >= 0; i--) {
+    if (!proxiTepercaya(rantai[i])) return rantai[i];
+  }
+  return soket;
 }
 
 function parseUrl(url) {
@@ -1341,6 +1450,10 @@ async function handleRequest(req, res) {
     // ada gunanya mengeksposnya di respons JSON. Saat panel menyimpan kembali,
     // field yang hilang otomatis memakai nilai lama di saveSettings().
     const { adminPassword, ...safe } = loadSettings();
+    // Panel perlu tahu kalau password aktif masih memakai default yang bocor di
+    // repo publik, supaya bisa memasang peringatan. Yang dikirim hanya BENDERA,
+    // bukan passwordnya.
+    safe.passwordBocor = passwordMasihBocor();
     jsonRes(res, 200, safe);
     return;
   }
@@ -1372,13 +1485,33 @@ async function handleRequest(req, res) {
       if (data.currentPassword !== getAdminPassword()) {
         jsonRes(res, 401, { ok: false, error: 'Password lama salah' }); return;
       }
-      if (data.newPassword.length < 4) {
-        jsonRes(res, 400, { ok: false, error: 'Password baru minimal 4 karakter' }); return;
+      // 4 karakter bisa ditebak brute-force dalam hitungan menit; rate-limit
+      // hanya memperlambat, bukan mencegah. 8 karakter minimum.
+      if (String(data.newPassword).length < 8) {
+        jsonRes(res, 400, { ok: false, error: 'Password baru minimal 8 karakter' }); return;
+      }
+      // Menolak balik ke default yang sudah bocor di repo publik — kalau tidak,
+      // peringatan di panel bisa "diselesaikan" dengan mengetik ulang nilai itu.
+      if (data.newPassword === PASSWORD_BOCOR) {
+        jsonRes(res, 400, { ok: false, error: 'Password itu ada di repositori publik, pilih yang lain' }); return;
+      }
+      if (data.newPassword === data.currentPassword) {
+        jsonRes(res, 400, { ok: false, error: 'Password baru sama dengan yang lama' }); return;
       }
       const s = loadSettings();
       s.adminPassword = data.newPassword;
       saveSettings(s);
-      jsonRes(res, 200, { ok: true });
+
+      // Ganti password HARUS mengusir sesi lain. Tanpa ini, token yang sudah
+      // dipegang penyerang tetap sah sampai 24 jam ke depan, jadi mengganti
+      // password tidak benar-benar merebut kembali panel. Token milik pemanggil
+      // dipertahankan supaya admin tidak menendang dirinya sendiri.
+      const tokenSaya = (req.headers['authorization'] || '').replace('Bearer ', '');
+      let dicabut = 0;
+      for (const t of [...tokens.keys()]) {
+        if (t !== tokenSaya) { tokens.delete(t); dicabut++; }
+      }
+      jsonRes(res, 200, { ok: true, sesiLainDicabut: dicabut });
     } catch (e) {
       jsonRes(res, 400, { ok: false, error: e.message });
     }
@@ -1514,36 +1647,47 @@ async function handleRequest(req, res) {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     try {
       const cwd = __dirname;
-      const run = (cmd) => {
-        try { return execSync(cmd, { cwd, encoding: 'utf8', timeout: 60000 }).trim(); }
-        catch (e) { throw new Error(e.stderr ? e.stderr.toString().trim() : e.message); }
-      };
-      run('git config user.name "shirowahd-admin"');
-      run('git config user.email "admin@shirowahd.local"');
-
       const branch = process.env.BRANCH || 'main';
       const repo = process.env.GIT_ADDRESS || 'https://github.com/hijuki/shirowahd';
       const token = process.env.GIT_TOKEN || '';
       if (!token) throw new Error('GIT_TOKEN tidak ditemukan di .env — tambahkan GIT_TOKEN=ghp_xxx di /root/shirowahd/.env');
+      // Semua keluaran/galat git dicuci dulu: token tidak boleh bocor ke
+      // backup-history.json, Telegram, maupun badan balasan HTTP. Perintah git
+      // memuat token di URL-nya, jadi pesan galat mentah PASTI mengandungnya.
+      const cuci = (s) => String(s || '').split(token).join('***');
+      const run = (cmd) => {
+        try { return execSync(cmd, { cwd, encoding: 'utf8', timeout: 60000 }).trim(); }
+        catch (e) { throw new Error(cuci(e.stderr ? e.stderr.toString().trim() : e.message)); }
+      };
+      run('git config user.name "shirowahd-admin"');
+      run('git config user.email "admin@shirowahd.local"');
+
+      // authUrl dipakai untuk MENJALANKAN git, jadi wajib ber-token asli.
+      // Sebelum ini isinya literal '***', jadi setiap `git push` dari tombol
+      // panel gagal dengan "could not read Password". `git fetch` tetap lolos
+      // (repo publik boleh dibaca anonim) sehingga hitungan behind/ahead ikut
+      // jalan dan kegagalannya tidak terlihat sebagai masalah kredensial.
+      // Untuk pesan/log tidak perlu URL tersendiri: `cuci()` di atas sudah
+      // membuang token dari setiap keluaran git.
       const authUrl = repo.replace(/^https:\/\/([^@]*@)?/, `https://${token}@`);
 
-      // admin-settings.json TIDAK di-backup langsung karena isinya password admin
-      // + token Telegram. Yang di-commit adalah salinan tersanitasi, supaya
-      // konfigurasi tetap punya backup tanpa membocorkan kredensial.
-      try {
-        const s = loadSettings();
-        const safe = { ...s };
-        for (const k of ['adminPassword', 'telegramBotToken']) {
-          if (safe[k]) safe[k] = '__SET_VIA_ENV__';
-        }
-        writeFileSync(join(__dirname, 'admin-settings.sanitized.json'), JSON.stringify(safe, null, 2), 'utf8');
-      } catch { /* jangan gagalkan backup gara-gara ini */ }
+      // admin-settings.json TIDAK di-backup ke git sama sekali. Salinan
+      // "tersanitasi" pun DIHENTIKAN dari jalur ini: repo `hijuki/shirowahd`
+      // publik, dan walau adminPassword + telegramBotToken sudah diganti
+      // '__SET_VIA_ENV__', sisanya masih memuat `ownerWhatsapp` (nomor pribadi)
+      // plus seluruh struktur setelan. Backup konfigurasi tetap ada lewat jalur
+      // PRIVAT: zip `.backupsc` / auto-backup meng-append salinan segar dari
+      // memori dan dikirim ke pemilik lewat WhatsApp, bukan ke GitHub.
+      //
+      // Berkas itu juga TIDAK ditulis ke disk lagi. Dulu salinan basi di disk
+      // membuat zip berisi dua entri bernama sama dan yang terbaca saat ekstrak
+      // adalah versi lama → `JSON.parse` gagal di tengah pemulihan.
 
       // Stage semua perubahan yang relevan. config.js ikut karena isinya sekarang
       // hanya referensi process.env (tanpa secret). File state runtime sudah
       // di-untrack lewat .gitignore. `rename-ourin.sh` dibuang dari daftar ini
       // (skrip migrasi sekali-pakai yang sudah dihapus dari repo).
-      run('git add -A config.js admin-settings.sanitized.json .gitignore .env.example main.js web-uploader.js install.sh migrate.sh README.md package.json index.js 2>/dev/null || true');
+      run('git add -A config.js .gitignore .env.example main.js web-uploader.js install.sh migrate.sh README.md package.json index.js 2>/dev/null || true');
       try { run('git add -A plugins/ src/ case/ database/ web/ 2>/dev/null || true'); } catch {}
 
       let status = '';
