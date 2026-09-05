@@ -210,12 +210,40 @@ const ADA_ZSCALE = (() => {
   } catch { return false; }
 })();
 
-function filterHdrKeSdr(jenis = "hdr") {
+function filterHdrKeSdr(jenis = "hdr", info = {}) {
   if (ADA_ZSCALE) {
-    if (jenis === "gamut") {
-      return "zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p";
+    // ═══ KENAPA ADA setparams DI DEPAN (terukur, mencegah kiriman GAGAL) ═══
+    //
+    // zscale menolak bekerja kalau salah satu label warna masukan `unknown`:
+    //
+    //   [Parsed_zscale_0] code 3074: no path between colorspaces
+    //   [vf#0:0] Error while filtering: Generic error in an external library
+    //   → berkas keluaran 0 byte
+    //
+    // Diuji langsung: berkas 10-bit dengan `color_trc` terbaca tapi
+    // `color_space=unknown` membuat seluruh rantai mati. Dan `tin=/min=/pin=`
+    // TIDAK menolong — pesan galatnya sama persis. Yang menolong hanya
+    // `setparams`, yang menempelkan label pada frame di dalam graf filter.
+    //
+    // Di jalur produksi kegagalan ini tidak kelihatan sebagai galat: fungsi
+    // pemanggil melihat berkas 0 byte, lalu jatuh ke `tindakan: "apa-adanya"`
+    // dan mengirim berkas HDR aslinya. Jadi gejalanya justru keluhan lama yang
+    // kembali muncul secara acak pada video tertentu, tanpa jejak di log.
+    //
+    // Hanya label yang KOSONG yang ditambal; label yang sudah terbaca dibiarkan,
+    // supaya berkas PQ (`smpte2084`) tidak dipaksa diperlakukan sebagai HLG.
+    const tambal = [];
+    if (!info.primer || info.primer === "unknown") tambal.push("color_primaries=bt2020");
+    if (!info.transfer || info.transfer === "unknown") {
+      tambal.push(jenis === "hdr" ? "color_trc=arib-std-b67" : "color_trc=bt709");
     }
-    return "zscale=t=linear:npl=100,tonemap=tonemap=hable:desat=0," +
+    if (!info.ruang || info.ruang === "unknown") tambal.push("colorspace=bt2020nc");
+    const depan = tambal.length ? `setparams=${tambal.join(":")}:range=tv,` : "";
+
+    if (jenis === "gamut") {
+      return depan + "zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p";
+    }
+    return depan + "zscale=t=linear:npl=100,tonemap=tonemap=hable:desat=0," +
       "zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p";
   }
   // Cadangan tanpa libzimg. `colorspace` bawaan ffmpeg bisa memindahkan
@@ -379,27 +407,51 @@ function lajuMbps(file) {
  * 576x1024 30 fps, dan mencekik klip 1080p60. Jadi batas dihitung dari dua
  * petunjuk, lalu diambil yang lebih besar:
  *
- *   a) laju sumber x 1,6 — H.264 butuh ~40-60% lebih banyak bit daripada HEVC
- *      untuk mutu yang sama, jadi ini lantai yang menjaga mutu tidak turun.
- *   b) piksel per detik x 0,09 bit — kebutuhan wajar H.264 pada mutu bagus.
+ *   a) laju sumber x 1,35 — H.264 butuh lebih banyak bit daripada HEVC untuk
+ *      mutu yang sama, jadi ini lantai yang menjaga mutu tidak turun.
+ *   b) piksel per detik x 0,062 bit — kebutuhan wajar H.264 pada mutu bagus.
  *
- * Lalu dijepit 2-14 Mbps: di bawah 2 Mbps 1080p mulai pecah, di atas 14 Mbps
- * tidak ada perangkat kelas menengah yang nyaman.
+ * Lalu dijepit 2-10 Mbps.
  *
- * `-level 4.0` ikut dipatok karena inilah level yang dijamin didukung decoder
- * perangkat keras 1080p mana pun (batasnya 25 Mbps, jauh di atas 14). Tanpa
- * itu x264 menulis Level 4.2 — terukur pada keluaran lama — dan sebagian
- * perangkat lama menolak berkasnya mentah-mentah.
+ * ═══ KENAPA ANGKANYA DITURUNKAN DARI 1,6 / 0,09 / 14 (terukur) ═══
+ *
+ * Keluhan lanjutan: hasil aman di Telegram tapi "patah dikit tipis" di
+ * WhatsApp. Media WA terenkripsi ujung-ke-ujung sehingga server WA TIDAK BISA
+ * meng-encode ulang isinya, dan jalur kirim kita cuma `video: { url: path }`
+ * tanpa transcode — jadi fps-nya tidak diturunkan oleh siapa pun. Yang berbeda
+ * adalah pemutarnya: pemutar dalam WhatsApp punya anggaran jauh lebih ketat
+ * daripada Telegram.
+ *
+ * Sapuan pada potongan 14 detik dari sumber yang sama, warna dipatok identik
+ * supaya yang dibandingkan murni lajunya, mutu diukur SSIM terhadap acuan CRF 0
+ * dengan rantai warna yang sama (bukan terhadap sumber HDR — itu pernah
+ * menghasilkan SSIM 0,55 dan 0,33 yang keduanya mustahil):
+ *
+ *   1,6 / 0,09 / 14   11,20 Mbps   19,25 MB   puncak 16,5 Mbps   3,09x   SSIM 0,9641
+ *   1,35 / 0,062 / 10  8,99 Mbps   15,59 MB   puncak 12,3 Mbps   3,47x   SSIM 0,9566
+ *   1,2 / 0,05 / 9     7,99 Mbps   13,88 MB   puncak 11,4 Mbps   3,55x   SSIM 0,9517
+ *
+ * Yang dipilih baris tengah: puncak turun 25% (16,5 → 12,3 Mbps), decode 1-thread
+ * naik 12%, ukuran turun 19%, dengan biaya SSIM 0,0075 — masih di bawah ambang
+ * yang terlihat mata (~0,01). Baris ketiga menghemat lebih banyak tapi biaya
+ * mutunya mulai nyata (0,0124) dengan tambahan keringanan yang kecil.
+ *
+ * Batas atas 14 → 10 Mbps: 14 Mbps tidak pernah tercapai oleh rumus ini pada
+ * 1080p60 (11,20 yang menang), jadi angka itu cuma pagar yang tidak pernah
+ * dipakai. 10 Mbps membuatnya mengikat pada kasus yang justru bermasalah.
+ *
+ * `-level` TIDAK dipatok di sini; dihitung dari ukuran+fps lewat levelH264().
+ * Patokan 4.0 sempat dipakai dan itu keliru untuk 1080x1920@60 (butuh 4.2).
  */
 function batasLaju(file, info, fpsEfektif) {
   const sumber = lajuMbps(file);
   const px = (Number(info.width) || 0) * (Number(info.height) || 0);
   const pps = px * (fpsEfektif > 0 ? fpsEfektif : 30);
-  const dariSumber = sumber * 1.6;
-  const dariPiksel = (pps * 0.09) / 1e6;
+  const dariSumber = sumber * 1.35;
+  const dariPiksel = (pps * 0.062) / 1e6;
   let mbps = Math.max(dariSumber, dariPiksel);
   if (!(mbps > 0)) return null;
-  mbps = Math.min(14, Math.max(2, mbps));
+  mbps = Math.min(10, Math.max(2, mbps));
   return {
     maxrate: mbps.toFixed(2) + "M",
     // ═══ KENAPA BUFSIZE = MAXRATE (1x), BUKAN 2x ═══
@@ -572,7 +624,7 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
   // lebih membingungkan pemutar daripada label HDR yang utuh.
   const argWarna = [];
   if (hdrJenis) {
-    filters.push(filterHdrKeSdr(hdrJenis));
+    filters.push(filterHdrKeSdr(hdrJenis, info));
     argWarna.push(
       "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
       // `-color_range tv` ikut dipatok: tanpa ini sebagian berkas keluar tanpa
@@ -583,9 +635,11 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
   const vfArgs = filters.length ? ["-vf", filters.join(",")] : [];
 
   // `-g` dipatok ~2 detik: keyint default 250 berarti 4+ detik antar keyframe,
-  // dan seek di tengah gerakan terasa tersendat. CRF 20 dipertahankan (jalur ini
-  // untuk video unduhan yang sudah terkompresi sekali; CRF lebih rendah hanya
-  // memperbesar berkas tanpa menambah detail yang sudah hilang).
+  // dan seek di tengah gerakan terasa tersendat. CRF 21 dipakai (bukan 20):
+  // jalur ini untuk video unduhan yang sudah terkompresi sekali, jadi CRF lebih
+  // rendah hanya memperbesar berkas tanpa menambah detail yang sudah hilang.
+  // Kenaikan 20 → 21 diukur bersama penurunan batas laju; SSIM turun 0,0075
+  // terhadap acuan CRF 0, di bawah ambang yang terlihat mata.
   const fpsGop = rFps.perluTurun ? rFps.target : (rFps.detail.nyata || 30);
   const gop = Math.max(24, Math.round(fpsGop * 2));
 
@@ -611,7 +665,24 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
     ...vfArgs,
     ...fpsArgs,
     "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
-    "-preset", "fast", "-crf", "20",
+    "-preset", "fast", "-crf", "21",
+    // ═══ KENAPA refs 2 / bf 2 (terukur) ═══
+    //
+    // Keluhan "di WA patah dikit tipis, di Telegram aman" bukan soal berkasnya:
+    // media WA terenkripsi ujung-ke-ujung sehingga tidak ada transcode di sisi
+    // server, dan jalur kirim kita tidak menyentuh video. Yang berbeda adalah
+    // pemutarnya — pemutar dalam WhatsApp punya anggaran lebih ketat.
+    //
+    // x264 `preset fast` memakai 3 frame acuan dan 3 B-frame. Tiap frame acuan
+    // tambahan memaksa decoder menahan satu gambar lagi di memori dan menambah
+    // ketergantungan antar frame, dan itu bagian yang paling menyiksa decoder
+    // lemah. Dibatasi 2/2: masih cukup untuk efisiensi kompresi, tapi kebutuhan
+    // buffernya turun.
+    //
+    // Diukur pada potongan 14 detik, 1 thread (proksi HP kelas menengah),
+    // sisanya identik: ukuran nyaris tidak berubah (13,92 → 13,91 MB) sementara
+    // beban decode-nya ikut turun bersama penurunan laju di batasLaju().
+    "-refs", "2", "-bf", "2",
     ...argWarna,
     ...argLaju,
     "-g", String(gop), "-keyint_min", String(Math.round(gop / 2)), "-sc_threshold", "0",
