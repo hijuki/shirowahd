@@ -1,5 +1,16 @@
 const pluginConfig = {
-    name: ['mutechat', 'mute'],
+    // Nama 'mute' DILEPAS di sini. Alasannya bukan gaya, tapi fitur yang mati:
+    // `plugins/group/mute.js` yang mendeklarasikan `.mute` (admin grup, menulis
+    // `group.mute` ke database) kalah oleh berkas ini, padahal `src/handler.js`
+    // baris 189 mengimpor `isMuted` dari berkas itu dan baris 735-737 benar-benar
+    // menegakkannya — pesan non-admin dihapus saat grup di-mute. Akibatnya
+    // penegakan itu tidak pernah bisa aktif: tidak ada satu pun command yang bisa
+    // MEN-SET `group.mute`, sementara `.unmute` (group/unmute.js) hidup dan
+    // membacanya. Fungsi berkas ini sendiri juga berbeda total — `sock.chatModify`
+    // membisukan NOTIFIKASI chat di perangkat bot, bukan membisukan grup — dan
+    // `usage`-nya memang hanya mengiklankan `.mutechat`, jadi klaim nama pendek
+    // 'mute' tidak pernah disengaja.
+    name: ['mutechat'],
     alias: [],
     category: 'owner',
     description: 'Mute/unmute chat',

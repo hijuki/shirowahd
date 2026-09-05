@@ -135,7 +135,19 @@ export default function Login({ onSuccess }) {
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
                   aria-label={showPassword ? 'Sembunyikan kunci' : 'Tampilkan kunci'}
-                  className="btn btn-icon absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--ink-2)] hover:text-[var(--ink)]"
+                  /* `!absolute` dan `!-translate-y-1/2` WAJIB pakai tanda seru.
+                     Tanpa itu tombol ini melompat keluar kotak input — terukur
+                     40px tinggi tapi dasarnya 20px DI BAWAH dasar input, dan
+                     jaraknya 280px dari tepi kanan padahal kelasnya `right-1.5`.
+                     Sebabnya: `.btn` di globals.css menetapkan
+                     `position: relative` + `transform: translate3d(0,0,0)`, dan
+                     kelas itu TIDAK berada di dalam @layer. Utility Tailwind
+                     (`absolute`, `-translate-y-1/2`) ada di layer utilities, dan
+                     deklarasi tanpa layer selalu menang atas yang berlayer. Jadi
+                     `position` dan `transform` milik `.btn` yang dipakai, bukan
+                     milik utility. Tanda seru menambahkan !important sehingga
+                     utility kembali menang. */
+                  className="btn btn-icon !absolute right-1.5 top-1/2 !-translate-y-1/2 text-[var(--ink-2)] hover:text-[var(--ink)]"
                 >
                   <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-[12px]`} />
                 </button>

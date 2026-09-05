@@ -9,8 +9,22 @@ const nexrayTypes = [
   "happy", "wink", "poke", "dance", "cringe"
 ];
 
+// Daftar di atas dipakai untuk DUA hal sekaligus: nama command dan nilai
+// `?type=` ke api.nexray.eu.cc. Keduanya tidak selalu bisa sama.
+//
+// `wink` adalah kasusnya: nama `.wink` juga dideklarasikan
+// `plugins/tools/wink.js` (peningkat kualitas video Wink AI, plus alias
+// .winkenhance/.winkhd/.wenhance) dan berkas ITU yang menang di registry.
+// Akibatnya reaksi anime `wink` tidak pernah bisa dipanggil — satu dari 31
+// reaksi mati diam-diam.
+//
+// Yang TIDAK boleh dilakukan: mengganti isi `nexrayTypes`, karena nilainya
+// dikirim mentah ke API. Jadi nama command-nya saja yang dipetakan.
+const NAMA_ALTERNATIF = { winkanime: "wink" };
+const namaCommand = nexrayTypes.filter((t) => !Object.values(NAMA_ALTERNATIF).includes(t));
+
 const pluginConfig = {
-  name: ["loli", ...nexrayTypes],
+  name: ["loli", ...namaCommand, ...Object.keys(NAMA_ALTERNATIF)],
   alias: [],
   category: "random",
   description: "Random gambar anime/reaction (Nexray Source)",
@@ -40,9 +54,13 @@ async function handler(m, { sock }) {
       );
     }
 
-    if (nexrayTypes.includes(cmd)) {
+    // `.winkanime` harus diterjemahkan kembali ke type `wink` sebelum dikirim ke
+    // API — namanya diganti karena tabrakan, endpoint-nya tidak.
+    const tipe = NAMA_ALTERNATIF[cmd] || cmd;
+
+    if (nexrayTypes.includes(tipe)) {
       m.react("🖼️");
-      const res = await axios.get(`https://api.nexray.eu.cc/random/anime?type=${cmd}`, {
+      const res = await axios.get(`https://api.nexray.eu.cc/random/anime?type=${tipe}`, {
         responseType: "arraybuffer"
       });
       const buffer = Buffer.from(res.data);

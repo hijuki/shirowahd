@@ -422,6 +422,41 @@ function readBody(req) {
   });
 }
 
+// ── Balasan 404 tunggal untuk SELURUH server ────────────────────────────────
+// Sebelum ini ada tujuh tempat yang masing-masing menulis
+// `res.writeHead(404); res.end('Not found')`, dan hanya SATU (jalur paling
+// bawah) yang tahu cara menyajikan halaman berdesain. Akibatnya nyata:
+// `/admin/api` dan `/api` membalas 9 byte teks polos — itulah layar hitam
+// kosong yang terlihat di Chrome Android.
+//
+// Pembedanya HARUS pemanggilnya, bukan bentuk URL. Versi lama mengecualikan
+// prefiks `/admin/api` dan `/api` karena khawatir klien API menerima HTML.
+// Kekhawatiran itu salah sasaran: `fetch()` mengirim `Accept: */*`, dan seluruh
+// pemanggilan di web/ sudah diperiksa — tidak ada satu pun yang mengirim
+// `Accept: text/html`. Yang mengirim header itu hanya browser saat pengguna
+// membuka URL langsung di bilah alamat, dan orang itu memang layak melihat
+// halaman, bukan sembilan byte.
+function kirim404(req, res) {
+  const browser = req.method === 'GET'
+    && String(req.headers.accept || '').includes('text/html');
+
+  if (browser) {
+    const berkas404 = join(WEB_OUT, '404.html');
+    if (existsSync(berkas404)) {
+      // Status TETAP 404: membalas 200 untuk halaman galat membuat mesin
+      // pengindeks memperlakukan tiap URL nyasar sebagai halaman sah.
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+      res.end(readFileSync(berkas404));
+      return;
+    }
+  }
+
+  // Klien API (fetch/curl) tetap menerima JSON — bukan teks telanjang, supaya
+  // penanganan galat di sisi klien tidak perlu menebak bentuk balasan.
+  res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify({ ok: false, error: 'Not found' }));
+}
+
 function jsonRes(res, code, obj) {
   res.writeHead(code, {
     "Content-Type": "application/json",
@@ -1049,7 +1084,7 @@ async function handleRequest(req, res) {
       res.end(readFileSync(file));
       return;
     }
-    res.writeHead(404); res.end('Not found'); return;
+    kirim404(req, res); return;
   }
 
 
@@ -1115,7 +1150,7 @@ async function handleRequest(req, res) {
         return;
       }
     }
-    res.writeHead(404); res.end('Not found'); return;
+    kirim404(req, res); return;
   }
 
   if (req.method === 'GET' && url === '/api/stats/public') {
@@ -1341,7 +1376,7 @@ async function handleRequest(req, res) {
       const vid = readFileSync(join(__dirname, 'header-video.mp4'));
       res.writeHead(200, { 'Content-Type': 'video/mp4', 'Cache-Control': 'public, max-age=86400' });
       res.end(vid);
-    } catch { res.writeHead(404); res.end('Not found'); }
+    } catch { kirim404(req, res); }
     return;
   }
 
@@ -1350,7 +1385,7 @@ async function handleRequest(req, res) {
       const img = readFileSync(join(__dirname, 'header-poster.jpg'));
       res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' });
       res.end(img);
-    } catch { res.writeHead(404); res.end('Not found'); }
+    } catch { kirim404(req, res); }
     return;
   }
 
@@ -1391,7 +1426,7 @@ async function handleRequest(req, res) {
       const t = { '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.gif':'image/gif', '.webp':'image/webp', '.svg':'image/svg+xml', '.ico':'image/x-icon' };
       res.writeHead(200, { 'Content-Type': t[extname(file).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'public, max-age=3600' });
       res.end(readFileSync(file));
-    } else { res.writeHead(404); res.end('Not found'); }
+    } else { kirim404(req, res); }
     return;
   }
 
@@ -2214,27 +2249,10 @@ async function handleRequest(req, res) {
   // (`web/out/404.html`, hasil `app/not-found.jsx`) tapi tidak pernah terpakai
   // karena tidak ada yang menyajikannya.
   //
-  // Pembedanya header Accept, bukan bentuk URL: pemanggil API (fetch/curl)
-  // tetap harus menerima teks pendek, sementara browser mendapat halaman.
-  // Jalur /admin/api dan /api dikecualikan eksplisit supaya klien yang salah
-  // menulis Accept tidak menerima HTML sebagai balasan API.
-  const mintaHtml = req.method === 'GET'
-    && String(req.headers.accept || '').includes('text/html')
-    && !url.startsWith('/admin/api')
-    && !url.startsWith('/api');
-
-  if (mintaHtml) {
-    const berkas404 = join(WEB_OUT, '404.html');
-    if (existsSync(berkas404)) {
-      // Status TETAP 404: mengirim 200 untuk halaman galat membuat mesin
-      // pengindeks memperlakukan tiap URL nyasar sebagai halaman sah.
-      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
-      res.end(readFileSync(berkas404));
-      return;
-    }
-  }
-
-  res.writeHead(404); res.end('Not found');
+  // Logika pemilihan browser-vs-API sekarang tinggal di satu tempat:
+  // `kirim404()` di dekat `jsonRes`. Dulu logika itu HANYA ada di sini,
+  // sehingga enam jalur 404 lain di atas melewatinya dan membalas teks polos.
+  kirim404(req, res);
 }
 
 const server = http.createServer(handleRequest);

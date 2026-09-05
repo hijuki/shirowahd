@@ -1,5 +1,14 @@
 const pluginConfig = {
-    name: ['pinchat', 'pin'],
+    // Nama 'pin' DILEPAS dari daftar. Nama itu juga dideklarasikan
+    // `plugins/search/pin.js` (cari gambar Pinterest, alias .pinsearch/.pins) dan
+    // berkas ITU yang menang di registry — jadi 'pin' di sini tidak pernah bisa
+    // dipanggil, sekadar entri yang menciptakan laporan tabrakan.
+    //
+    // `.pinchat` (nama pertama) tetap hidup dan itu yang benar-benar dipakai,
+    // jadi tidak ada fitur yang hilang. Pemilik `.pin` yang sah adalah pencari
+    // Pinterest: satu kata itu jauh lebih sering dimaksudkan sebagai "cari
+    // gambar" daripada "pin chat", dan versi ini owner-only.
+    name: ['pinchat'],
     alias: [],
     category: 'owner',
     description: 'Pin/unpin chat',

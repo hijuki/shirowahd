@@ -13,7 +13,10 @@ const VIDEO_ACCEPT = 'video/*'
 const IMAGE_ACCEPT = 'image/*'
 
 const CELLS = 24
-const STAGES = ['ANTRE', 'KIRIM', 'PERIKSA', 'PROSES', 'SELESAI']
+// Tahap pertama dulu bernama 'ANTRE' — kata yang menyiratkan pengguna sedang
+// menunggu giliran di belakang orang lain, padahal yang terjadi adalah berkasnya
+// mulai dikirim. 'UPLOAD' menyebut apa yang benar-benar berlangsung.
+const STAGES = ['UPLOAD', 'KIRIM', 'PERIKSA', 'PROSES', 'SELESAI']
 
 /* ══════════════════════════════════════════════════════════════
    REACTOR — indikator proses. Tiga lapis informasi sekaligus:
@@ -35,8 +38,15 @@ function Reactor({ pct, stageIdx, phase, phaseText, cellFloor, label, sub, right
               floor shadow". Kemajuan sudah dibawa .reactor-ring (conic --p),
               denyut hidup dibawa .reactor-core, kedalaman oleh floor shadow. */}
           <span className="reactor-core">
-            <span className="reactor-num data">{pct}</span>
-            <span className="kicker !text-[8px] mt-[2px]">PERSEN</span>
+            {/* Dulu: angka 26px + kata "PERSEN" mono 8px di bawahnya. Kata itu
+                memakan tinggi inti untuk informasi yang sudah jelas dari
+                konteks, dan memaksa angkanya kecil. Sekarang angkanya besar
+                dengan tanda % kecil di sampingnya — pola yang dibaca lebih
+                cepat dan menyisakan ruang untuk tinggi huruf yang layak. */}
+            <span className="reactor-read">
+              <span className="reactor-num">{pct}</span>
+              <span className="reactor-pc">%</span>
+            </span>
           </span>
           {/* Penanda tahap: tanpa ini, angka yang mulai ulang di tahap 2 terbaca
               sebagai progres yang mundur, bukan sebagai hitungan baru. */}
@@ -71,9 +81,12 @@ function Reactor({ pct, stageIdx, phase, phaseText, cellFloor, label, sub, right
         </div>
       </div>
 
-      <div className="rail mt-3">
+      {/* `--rp` menggerakkan garis progres di dasar rel. Lima sel hanya bisa
+          menyatakan "tahap 3 dari 5"; garis itu yang membawa angka pecahannya. */}
+      <div className="rail mt-3" style={{ '--rp': pct }}>
         {STAGES.map((s, i) => (
           <span key={s} className="rail-step"
+            data-i={String(i + 1).padStart(2, '0')}
             data-on={i < stageIdx ? '1' : i === stageIdx ? 'now' : '0'}>{s}</span>
         ))}
       </div>

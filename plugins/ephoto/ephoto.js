@@ -20,6 +20,15 @@ const EFFECT_URLS = {
     cartoonstyle: 'https://en.ephoto360.com/create-a-cartoon-style-graffiti-text-effect-online-668.html',
     papercutstyle: 'https://en.ephoto360.com/multicolor-3d-paper-cut-style-text-effect-658.html',
     watercolortext: 'https://en.ephoto360.com/create-a-watercolor-text-effect-online-655.html',
+    // `watercolor` dan `wctext` ditambahkan sebagai KUNCI, bukan alias.
+    // Alasannya ada di baris 131: efek dipilih dengan `EFFECT_URLS[m.command]`,
+    // yaitu kata yang BENAR-BENAR diketik pengguna. Alias tidak menolong di
+    // sini — `.watercolor` dulu mendarat di berkas ini lewat alias milik
+    // plugins/canvas/watercolortext.js dan langsung kena "❌ Efek tidak
+    // ditemukan" karena tabel ini tidak punya kuncinya. Dua nama pendek itu
+    // sekarang jalan sungguhan, memakai URL yang sama.
+    watercolor: 'https://en.ephoto360.com/create-a-watercolor-text-effect-online-655.html',
+    wctext: 'https://en.ephoto360.com/create-a-watercolor-text-effect-online-655.html',
     effectclouds: 'https://en.ephoto360.com/write-text-effect-clouds-in-the-sky-online-619.html',
     blackpinklogo: 'https://en.ephoto360.com/create-blackpink-logo-online-free-607.html',
     gradienttext: 'https://en.ephoto360.com/create-3d-gradient-text-effect-online-600.html',
@@ -43,7 +52,7 @@ const pluginConfig = {
         'glitchtext', 'writetext', 'advancedglow', 'typographytext', 'pixelglitch',
         'neonglitch', 'flagtext', 'flag3dtext', 'deletingtext', 'blackpinkstyle',
         'glowingtext', 'underwatertext', 'logomaker', 'cartoonstyle', 'papercutstyle',
-        'watercolortext', 'effectclouds', 'blackpinklogo', 'gradienttext', 'summerbeach',
+        'watercolortext', 'watercolor', 'wctext', 'effectclouds', 'blackpinklogo', 'gradienttext', 'summerbeach',
         'luxurygold', 'multicoloredneon', 'sandsummer', 'galaxywallpaper', '1917style',
         'makingneon', 'royaltext', 'freecreate', 'galaxystyle', 'amongustext',
         'rainytext', 'lighteffects'

@@ -42,7 +42,15 @@ const JSON_CATEGORIES = {
 
 const API_CATEGORIES = {
   blowjob: { endpoint: "blowjob", emoji: "👄", label: "Blowjob Anime" },
-  neko: { endpoint: "neko", emoji: "🐱", label: "Neko NSFW" },
+  // Kunci diganti dari `neko` ke `nekonsfw`. Nama `.neko` juga ada di
+  // `nexrayTypes` plugins/random/anime.js (baris 6) dan berkas ITU yang menang di
+  // registry, jadi kategori ini tidak pernah bisa dipanggil: pengguna yang
+  // mengetik `.neko` selalu mendapat gambar anime biasa. Menyimpan kuncinya apa
+  // adanya berarti satu entri di `.nsfwmenu` yang mustahil dijalankan.
+  //
+  // `endpoint` sengaja tetap "neko" — itu alamat API pihak ketiga, bukan nama
+  // command; mengubahnya akan merusak pemanggilan yang sudah benar.
+  nekonsfw: { endpoint: "neko", emoji: "🐱", label: "Neko NSFW" },
   trap: { endpoint: "trap", emoji: "🎭", label: "Trap Anime" },
   waifunsfw: { endpoint: "waifu", emoji: "💕", label: "Waifu NSFW" },
 }

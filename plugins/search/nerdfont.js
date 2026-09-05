@@ -47,12 +47,22 @@ async function nerdfonts() {
   }
 }
 const pluginConfig = {
-  name: "dafont",
-  alias: ["nerdfont", "font"],
+  // Nama utama diganti dari "dafont" ke "nerdfont", dan alias "font" dilepas.
+  // Alasannya: berkas ini sebenarnya mengambil daftar dari nerdfonts.com
+  // (lihat `axios.get("https://www.nerdfonts.com/font-downloads")` di atas),
+  // BUKAN dari DaFont — nama "dafont" salah sejak awal dan bertabrakan dengan
+  // `plugins/tools/dafont.js` yang benar-benar memanggil DaFont. Berkas itu
+  // yang menang, jadi seluruh berkas ini mati, dan alias `.nerdfont` yang cuma
+  // ada di sini justru mengeksekusi pencarian DaFont.
+  //
+  // Alias "font" juga dilepas karena `tools/dafont.js` sudah memilikinya;
+  // membiarkannya berarti tabrakan alias yang sama terulang.
+  name: "nerdfont",
+  alias: ["nerdfonts"],
   category: "search",
-  description: "Cari font di DaFont",
-  usage: ".dafont <query>",
-  example: ".dafont Coolvetica",
+  description: "Daftar Nerd Fonts terbaru dari nerdfonts.com",
+  usage: ".nerdfont <query>",
+  example: ".nerdfont JetBrains",
   isOwner: false,
   isPremium: false,
   isGroup: false,

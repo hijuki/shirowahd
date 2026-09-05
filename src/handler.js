@@ -1592,6 +1592,13 @@ async function messageHandler(msg, sock, options = {}) {
           "self",
           "public",
           "botmode",
+          // `gcmode` = nama baru plugins/group/botmode.js (dulu 'botmode', kalah
+          // oleh owner/botmode.js sehingga mati). Ikut diblokir untuk jadibot
+          // karena mengubah mode bot memang bukan wewenang jadibot; tanpa baris
+          // ini, memberi nama baru pada plugin itu justru MEMBUKA celah yang
+          // sebelumnya tertutup hanya karena plugin-nya tidak bisa dipanggil.
+          "gcmode",
+          "modegrup",
           "restart",
           "shutdown",
         ];
@@ -1646,11 +1653,15 @@ async function messageHandler(msg, sock, options = {}) {
 
       const currentConfig = modeConfig[botMode] || modeConfig.all;
 
-      if (
-        m.command !== "botmode" &&
-        m.command !== "menu" &&
-        m.command !== "menucat"
-      ) {
+      // Command yang HARUS lolos filter mode, kalau tidak pengguna terkunci:
+      // saat mode membatasi kategori, satu-satunya jalan keluar adalah mengubah
+      // mode itu sendiri. `gcmode`/`modegrup` ikut dikecualikan karena itu nama
+      // baru pengatur mode per-grup (plugins/group/botmode.js); tanpa ini, mode
+      // seperti `store` memblokir kategori `group` dan admin tidak bisa
+      // mengembalikannya.
+      const lolosFilterMode = ["botmode", "gcmode", "modegrup", "menu", "menucat"];
+
+      if (!lolosFilterMode.includes(m.command)) {
         let isBlocked = false;
 
         if (
@@ -1676,7 +1687,11 @@ async function messageHandler(msg, sock, options = {}) {
             `> Bot sedang dalam mode *${currentConfig.name}*\n` +
             `> Command \`${m.prefix}${m.command}\` tersedia di mode *${suggestedModeName}*\n\n` +
             `💡 Hubungi admin grup untuk mengganti mode:\n` +
-            `\`${m.prefix}botmode ${suggestedMode}\``,
+            // Saran ditujukan ke ADMIN GRUP, jadi command yang disebut harus
+            // yang boleh dipakai admin grup. `.botmode` milik owner/botmode.js
+            // (`isOwner: true`) — menyuruh admin mengetiknya hanya menghasilkan
+            // penolakan izin. Pengatur mode per-grup sekarang `.gcmode`.
+            `\`${m.prefix}${m.isGroup ? "gcmode" : "botmode"} ${suggestedMode}\``,
           );
           return;
         }

@@ -1,11 +1,21 @@
 import { getDatabase } from '../../src/lib/hillz-database.js'
 const pluginConfig = {
-    name: 'botmode',
-    alias: ['setmode', 'mode'],
+    // Nama diganti dari 'botmode' ke 'gcmode' (alias .modegrup). Nama lama juga
+    // dideklarasikan `plugins/owner/botmode.js` dan berkas itu yang menang, jadi
+    // handler di sini mati total — hanya ekspor `MODES`/`getGroupMode`-nya yang
+    // masih hidup, dipakai plugins/main/menu.js, allmenu.js, dan menucat.js.
+    // Karena itu berkas ini TIDAK boleh dihapus.
+    //
+    // Fiturnya juga berbeda dan sah: versi ini `isAdmin: true, isGroup: true` —
+    // admin grup mengatur mode grupnya sendiri; versi owner `isOwner: true` dan
+    // bisa mengubah mode global. Dengan nama lama, izin admin-grup itu tidak
+    // pernah bisa dipakai: yang menjawab selalu versi owner.
+    name: 'gcmode',
+    alias: ['modegrup'],
     category: 'group',
     description: 'Atur mode bot untuk grup ini',
-    usage: '.botmode <md/cpanel/pushkontak/store/otp/all>',
-    example: '.botmode store',
+    usage: '.gcmode <md/cpanel/pushkontak/store/otp/all>',
+    example: '.gcmode store',
     isOwner: false,
     isPremium: false,
     isGroup: true,
@@ -68,7 +78,7 @@ function handler(m, { sock }) {
         let modeList = ''
         for (const [key, val] of Object.entries(MODES)) {
             const isCurrent = key === currentMode ? ' ⬅️' : ''
-            modeList += `┃ \`${m.prefix}botmode ${key}\`${isCurrent}\n`
+            modeList += `┃ \`${m.prefix}gcmode ${key}\`${isCurrent}\n`
             modeList += `┃ └ ${val.desc}\n`
         }
 
@@ -79,7 +89,7 @@ function handler(m, { sock }) {
             `${modeList}` +
             `╰───────────────\n\n` +
             `*ꜰʟᴀɢ sᴛᴏʀᴇ:*\n` +
-            `> \`${m.prefix}botmode store\` - Manual order\n\n` +
+            `> \`${m.prefix}gcmode store\` - Manual order\n\n` +
             `> _Pengaturan per-grup_`
         )
     }

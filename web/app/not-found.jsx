@@ -7,7 +7,7 @@
 
    Semua yang dipakai di sini milik sistem yang sudah ada — `.plate`, `.btn`,
    `.rule`, `.kicker`, `.bg-wa`, `.badge-h`, `--r`, `--edge` — supaya halaman
-   galat tidak jadi pulau desain sendiri. Tidak ada nilai warna/radius/bayangan
+   ini tidak jadi pulau desain sendiri. Tidak ada nilai warna/radius/bayangan
    yang ditulis ulang di berkas ini.
 
    Server component (tanpa 'use client'): halaman ini tidak butuh state, dan
@@ -63,8 +63,15 @@ export default function NotFound() {
                   (mono 10px, tracking 0.22em, --ink-2). Sebelumnya baris ini
                   saya tulis manual dengan font/tracking/warna sendiri: sama
                   secara visual, tapi jadi salinan token yang bisa melenceng
-                  kalau nilai aslinya berubah. */}
-              <p className="kicker">Galat 404</p>
+                  kalau nilai aslinya berubah.
+
+                  Isinya dulu "Galat 404" dan itu keliru dua kali: "galat" istilah
+                  teknis yang tidak dipakai di mana pun lagi di situs ini, dan
+                  huruf kecilnya melanggar pola kicker lain yang semuanya kapital
+                  (`GERBANG 01 / KONSOL`, `24 JAM TERAKHIR`, `LANGKAH BERIKUTNYA`).
+                  Bentuk `404 / NYASAR` mengikuti pola garis-miring yang sudah
+                  ada di layar login. */}
+              <p className="kicker">404 / NYASAR</p>
 
               <h1 className="font-[family-name:var(--font-display)] leading-[0.92] mt-2
                              text-[clamp(34px,11vw,68px)]">
@@ -93,7 +100,7 @@ export default function NotFound() {
               {/* Baris bawah memakai plat WhatsApp yang sama dengan
                   hero/navbar — satu logo, satu sumber (WaMark), bukan ikon
                   font yang kurus. Badge H ikut hadir karena pasangan "logo WA
-                  + badge H" adalah tanda tangan situs ini; halaman galat tidak
+                  + badge H" adalah tanda tangan situs ini; halaman ini tidak
                   dikecualikan.
                   `.rule` = pemisah 2px yang sudah ada di globals.css.
                   Percobaan pertama saya menulis `.hair`, kelas yang tidak

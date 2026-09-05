@@ -1,10 +1,20 @@
 const pluginConfig = {
-    name: 'pinchat',
-    alias: ['pinmsg', 'pinpesan'],
+    // Nama utama diganti dari 'pinchat' ke 'pinpesan'. Bukan kosmetik: nama
+    // 'pinchat' juga dideklarasikan `plugins/owner/pinchat.js` (isOwner: true,
+    // `sock.chatModify` = pin CHAT di daftar obrolan), dan berkas itu yang
+    // menang. Akibatnya seluruh berkas ini mati — termasuk alias `.pinmsg` dan
+    // `.pinpesan` yang malah mengeksekusi versi owner, jadi admin grup yang
+    // mengetiknya ditolak "khusus owner", bukan mendapat pin pesan.
+    //
+    // Dua fitur ini memang berbeda dan dua-duanya sah: yang ini mem-pin PESAN
+    // di dalam grup (`sock.sendMessage({ pin: key })`, admin grup boleh), yang
+    // di owner/ mem-pin CHAT-nya. Karena itu solusinya ganti nama, bukan hapus.
+    name: 'pinpesan',
+    alias: ['pinmsg', 'pinmessage'],
     category: 'group',
     description: 'Pin pesan penting di grup',
-    usage: '.pinchat (reply pesan)',
-    example: '.pinchat',
+    usage: '.pinpesan (reply pesan)',
+    example: '.pinpesan',
     isOwner: false,
     isPremium: false,
     isGroup: true,
@@ -22,8 +32,8 @@ async function handler(m, { sock, args }) {
             `⚠️ *ᴠᴀʟɪᴅᴀsɪ ɢᴀɢᴀʟ*\n\n` +
             `> Reply pesan yang ingin di-pin!\n\n` +
             `*Cara penggunaan:*\n` +
-            `> Reply pesan → ketik \`.pinchat\`\n` +
-            `> Optional: \`.pinchat 24\` (pin 24 jam)`
+            `> Reply pesan → ketik \`.pinpesan\`\n` +
+            `> Optional: \`.pinpesan 24\` (pin 24 jam)`
         );
         return;
     }

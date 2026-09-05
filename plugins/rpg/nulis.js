@@ -2,12 +2,22 @@ import { getDatabase } from "../../src/lib/hillz-database.js";
 import { addExpWithLevelCheck } from "../../src/lib/hillz-level.js";
 
 const pluginConfig = {
-  name: "nulis",
-  alias: ["author", "wattpad"],
+  // Nama utama diganti dari "nulis" ke "nulisrpg", dan alias .author/.wattpad
+  // dilepas. Alasannya: nama "nulis" juga dipakai `plugins/tools/nulis.js`
+  // (generate GAMBAR tulisan tangan) dan berkas itu yang menang, jadi seluruh
+  // berkas RPG ini mati. Lebih buruk, alias `.author` dan `.wattpad` — yang
+  // hanya ditulis di sini — tetap hidup tapi mengeksekusi versi tools, jadi
+  // pengguna yang minta royalti RPG malah mendapat gambar tulisan tangan tanpa
+  // pesan galat apa pun.
+  //
+  // Dua fitur ini tidak bisa digabung (yang ini menambah Money/Exp di database,
+  // yang di tools memanggil API gambar), jadi yang benar ganti nama.
+  name: "nulisrpg",
+  alias: ["royalti", "ceritarpg"],
   category: "rpg",
   description: "Nulis cerpen atau artikel untuk dapet royalti",
-  usage: ".nulis",
-  example: ".nulis",
+  usage: ".nulisrpg",
+  example: ".nulisrpg",
   isOwner: false,
   isPremium: false,
   isGroup: false,

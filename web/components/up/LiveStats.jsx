@@ -9,6 +9,9 @@ import { useCountUp } from '@/lib/motion'
    2. Sparkline byte per jam (path SVG digambar sekali)
    3. Feed aktivitas anonim (jenis file + ukuran + waktu)
    4. Gauge penyimpanan kalau admin memasang kuota
+
+   Judul yang tampil ke pengunjung dulu "Telemetri" — istilah teknis
+   yang tidak dipakai di bagian lain situs. Sekarang "Statistik".
    ══════════════════════════════════════════════════════════════ */
 
 function timeShort(ts) {
@@ -25,7 +28,10 @@ const KIND = {
   bundle: { i: 'fa-layer-group', l: 'BUNDLE' },
 }
 
-/* Sparkline: satu path dari deret byte per jam. */
+/* Sparkline: satu path dari deret byte per jam.
+   Isian pakai gradien (defs) supaya bidangnya meluruh ke bawah dan garisnya
+   tetap jadi subjek; titik nilai terakhir dipasang sebagai elemen DOM di luar
+   SVG karena `preserveAspectRatio="none"` akan memipihkan <circle> jadi elips. */
 function Spark({ series }) {
   const W = 300, H = 46
   const max = Math.max(1, ...series)
@@ -36,11 +42,24 @@ function Spark({ series }) {
   })
   const line = pts.map(([x, y], i) => (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ')
   const area = line + ` L${W} ${H} L0 ${H} Z`
+  const last = pts[pts.length - 1] || [W, H]
+  // Titik akhir diposisikan dalam PERSEN tinggi, bukan piksel viewBox — itu satu
+  // -satunya cara agar dia tetap menempel di garis setelah SVG direntang.
+  const topPct = (last[1] / H) * 100
   return (
-    <svg className="spark w-full h-[46px]" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
-      <path className="spark-area" d={area} />
-      <path className="spark-draw" d={line} />
-    </svg>
+    <div className="spark-wrap">
+      <svg className="spark w-full h-[46px]" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
+        <defs>
+          <linearGradient id="sparkFade" x1="0" y1="0" x2="0" y2="1">
+            <stop className="spark-stop-a" offset="0%" />
+            <stop className="spark-stop-b" offset="100%" />
+          </linearGradient>
+        </defs>
+        <path className="spark-area" d={area} />
+        <path className="spark-draw" d={line} />
+      </svg>
+      <span className="spark-dot" style={{ top: `${topPct}%` }} />
+    </div>
   )
 }
 
@@ -81,7 +100,7 @@ export default function LiveStats() {
     // Dua balok abu sebelumnya tidak memberi tahu apa pun tentang isi yang akan
     // datang, jadi pergantian skeleton → data terasa seperti layout melompat.
     return (
-      <section className="plate plate-seam" aria-busy="true" aria-label="Memuat telemetri">
+      <section className="plate plate-seam" aria-busy="true" aria-label="Memuat statistik">
         <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="sk sk-tile w-8 h-8 shrink-0" />
@@ -94,10 +113,14 @@ export default function LiveStats() {
         </div>
         <div className="rule-dash mx-4" />
         <div className="grid grid-cols-3 split-x border-b-2 border-[var(--edge)]">
+          {/* Tinggi placeholder disamakan dengan sel nyata (pt-3 pb-[26px] +
+              angka 34px) supaya pergantian skeleton → data tidak menggeser
+              grafik di bawahnya. */}
           {[0, 1, 2].map(i => (
-            <div key={i} className="px-3 py-3 space-y-1.5">
+            <div key={i} className="px-3 pt-3 pb-[26px] space-y-1.5">
               <span className="sk sk-line block w-[40px] h-[8px]" style={{ '--d': `${i * 70}ms` }} />
-              <span className="sk sk-line block w-[52px] h-[22px]" style={{ '--d': `${i * 70 + 40}ms` }} />
+              <span className="sk sk-line block w-[52px] h-[28px]" style={{ '--d': `${i * 70 + 40}ms` }} />
+              <span className="sk sk-line block w-[34px] h-[8px]" style={{ '--d': `${i * 70 + 80}ms` }} />
             </div>
           ))}
         </div>
@@ -134,8 +157,11 @@ export default function LiveStats() {
             <i className="fa-solid fa-chart-column text-[12px]" />
           </span>
           <div className="min-w-0">
-            <p className="display-m !text-[15px]">Telemetri</p>
-            <p className="kicker !text-[9px] mt-[2px]">24 JAM TERAKHIR</p>
+            {/* Judul dinaikkan 15→17px dan diberi jarak huruf negatif: pada 15px
+                Archivo Black, judul panel berbobot sama dengan chip LIVE di
+                sebelahnya, jadi hierarkinya rata. */}
+            <p className="display-m !text-[17px] !tracking-[-0.02em]">Statistik</p>
+            <p className="kicker !text-[9px] mt-[3px]">24 JAM TERAKHIR</p>
           </div>
         </div>
         <span className="chip"><span className="dot-live" />LIVE</span>
@@ -143,17 +169,22 @@ export default function LiveStats() {
 
       <div className="rule-dash mx-4" />
 
-      {/* ── Angka ringkas: 3 kolom, tetap ada tapi bukan satu-satunya ── */}
+      {/* ── Angka ringkas: 3 kolom, tetap ada tapi bukan satu-satunya ──
+          Ukuran & font diatur lewat `.stat-num` / `.stat-num-word`, BUKAN
+          utility Tailwind. Versi sebelumnya menulis `data
+          font-[family-name:var(--font-display)]` dan font efektifnya terukur
+          JetBrains Mono — `.data` ada di luar @layer sehingga menang atas
+          utility. Satu kelas = satu sumber kebenaran. */}
       <div className="grid grid-cols-3 split-x border-b-2 border-[var(--edge)]">
         {[
-          { k: 'HARI INI', v: today, s: 'upload' },
-          { k: 'AKTIF', v: active, s: 'kode' },
-          { k: 'JALUR', v: d.direct ? '100MB+' : 'STANDAR', s: d.direct ? 'aktif' : 'normal', wide: true },
+          { k: 'HARI INI', v: today, s: 'upload', hot: today > 0 },
+          { k: 'AKTIF', v: active, s: 'kode', hot: active > 0 },
+          { k: 'JALUR', v: d.direct ? '100MB+' : 'STANDAR', s: d.direct ? 'aktif' : 'normal', wide: true, hot: !!d.direct },
         ].map(c => (
-          <div key={c.k} className="px-3 py-3">
+          <div key={c.k} className="stat-cell px-3 pt-3 pb-[26px]" data-hot={c.hot ? '1' : '0'}>
             <p className="kicker !text-[8px]">{c.k}</p>
-            <p className={`data font-[family-name:var(--font-display)] mt-1 leading-none ${c.wide ? 'text-[15px]' : 'text-[26px]'}`}>{c.v}</p>
-            <p className="kicker !text-[8px] !tracking-[0.1em] mt-[3px]">{c.s}</p>
+            <p className={`mt-1.5 ${c.wide ? 'stat-num-word' : 'stat-num'}`}>{c.v}</p>
+            <p className="kicker !text-[8px] !tracking-[0.1em] mt-[5px]">{c.s}</p>
           </div>
         ))}
       </div>
