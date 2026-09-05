@@ -95,7 +95,7 @@ export default function Files({ toast }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => confirm('Hapus semua file kedaluwarsa?') && act(cleanupExpired, 'Cleanup selesai')}
-            disabled={busy} aria-busy={busy} className="btn-primary text-sm">
+            disabled={busy} aria-busy={busy} className="btn btn-primary !text-[12px]">
             <i className="fa-solid fa-broom mr-2" />Bersihkan Kedaluwarsa
           </button>
           <button onClick={doCleanOrphans}

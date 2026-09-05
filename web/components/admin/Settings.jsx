@@ -44,8 +44,12 @@ function Toggle({ on, onChange, label, desc, icon, color }) {
           menggantung — terbaca rusak, bukan mati. Sekarang: track tenggelam
           (`--sunk`) + garis tepi, knob memakai warna tinta saat mati sehingga
           statusnya terbaca dari bentuk DAN warna, bukan warna saja. */}
+      {/* Tidak ada onClick di sini: baris pembungkusnya (<div onClick={onChange}>)
+          yang menangani klik, dan klik pada tombol ini menggelembung ke sana.
+          Menambahkan handler sendiri bikin toggle terpanggil DUA KALI sehingga
+          nilainya balik ke semula. */}
       <button type="button" role="switch" aria-checked={!!on} aria-label={label}
-        className={`relative w-11 h-6 rounded-full shrink-0 border transition-colors duration-200 ${on
+        className={`sw relative w-11 h-6 rounded-full shrink-0 border transition-colors duration-200 ${on
           ? 'bg-[var(--accent)] border-[var(--accent)]'
           : 'bg-[var(--sunk)] border-[color-mix(in_srgb,var(--edge)_28%,transparent)]'}`}>
         <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full transition-all duration-200 ${on
@@ -62,15 +66,19 @@ function LinkCard({ item, onChange, onRemove, phName, phLink, color }) {
       <div className="flex items-center gap-2">
         <input value={item.name || ''} onChange={e => onChange({ ...item, name: e.target.value })} placeholder={phName}
           className="flex-1 min-w-0 rounded-[var(--r-soft)] px-3 py-2 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-xs font-semibold text-[var(--ink)] placeholder:text-[var(--ink-3)] transition-colors" />
-        <button type="button" onClick={onRemove} className="btn btn-danger shrink-0 rounded-[var(--r-xs)] text-bad/60 hover:text-bad">
+        <button type="button" onClick={onRemove} aria-label="Hapus tautan ini" className="btn btn-icon btn-danger !text-bad/70 hover:!text-bad">
           <i className="fa-solid fa-trash-can text-xs" />
         </button>
       </div>
       <div className="flex items-center gap-2">
         <input value={item.link || ''} onChange={e => onChange({ ...item, link: e.target.value })} placeholder={phLink}
           className="flex-1 min-w-0 rounded-[var(--r-soft)] px-3 py-2 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-xs font-mono text-[var(--ink-2)] placeholder:text-[var(--ink-3)] transition-colors" />
-        <button type="button" onClick={() => onChange({ ...item, visible: item.visible === false ? true : false })}
-          className={`shrink-0 px-2.5 py-1.5 rounded-[var(--r-soft)] text-[10px] font-extrabold uppercase tracking-wider transition-all ${item.visible !== false ? 'bg-good/15 text-good border border-good/30' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border border-[var(--edge)]'}`}>
+        <button type="button" role="switch" aria-checked={item.visible !== false}
+          aria-label="Tampilkan tautan ini"
+          onClick={() => onChange({ ...item, visible: item.visible === false ? true : false })}
+          className={`seg-btn min-h-10 shrink-0 !text-[10px] uppercase tracking-wider ${item.visible !== false
+            ? 'seg-btn-on !text-[var(--good)] !border-[color-mix(in_srgb,var(--good)_30%,transparent)]'
+            : ''}`}>
           {item.visible !== false ? 'Aktif' : 'Off'}
         </button>
       </div>
@@ -225,7 +233,7 @@ function BrandGallery({ data, set }) {
                         aria-pressed={!!isGelap} className={`seg-btn ${isGelap ? 'seg-btn-on' : ''}`}>
                         <i className="fa-solid fa-moon text-[9px] mr-1" />Gelap</button>
                     </div>
-                    <button type="button" onClick={() => onDelete(f.name)} aria-label={`Hapus ${f.name}`} className="btn btn-icon btn-danger !w-8 !h-8 !min-w-8 !text-[10px]"><i className="fa-solid fa-trash" /></button>
+                    <button type="button" onClick={() => onDelete(f.name)} aria-label={`Hapus ${f.name}`} className="btn btn-icon btn-danger !text-[10px]"><i className="fa-solid fa-trash" /></button>
                   </div>
                 </div>
               </div>
@@ -607,8 +615,14 @@ export default function Settings({ toast }) {
                     <h3 className="text-xs font-extrabold tracking-wider uppercase text-[var(--ink)] flex items-center gap-2">
                       <i className="fa-solid fa-clock-rotate-left text-[var(--acid)]" /> Riwayat Backup GitHub
                     </h3>
-                    <button type="button" onClick={doBackup} disabled={backupBusy} className="text-xs text-[var(--volt)] hover:underline font-bold">
-                      Backup Sekarang
+                    {/* Tombol ini memicu push git sungguhan ke GitHub — bukan aksi
+                        sepele, jadi tampil sebagai tombol, bukan tautan teks
+                        polos. Sebelumnya tinggi klik-nya cuma setinggi teks 12px
+                        dan keadaan sibuknya tidak terlihat sama sekali. */}
+                    <button type="button" onClick={doBackup} disabled={backupBusy} aria-busy={backupBusy}
+                      className="btn btn-quiet min-h-10 !text-[11px] gap-1.5 !text-[var(--volt)]">
+                      <i className={`fa-solid ${backupBusy ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'}`} />
+                      {backupBusy ? 'Mem-backup…' : 'Backup Sekarang'}
                     </button>
                   </div>
                   {bkHistory.length ? (

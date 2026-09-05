@@ -98,7 +98,7 @@ export default function Security({ toast }) {
           </div>
         ))}
         {pwMsg && <p className={`text-sm anim-fade ${pwMsg.ok ? 'text-emerald-300' : 'text-bad'}`}><i className={`fa-solid ${pwMsg.ok ? 'fa-circle-check' : 'fa-triangle-exclamation'} mr-1.5`} />{pwMsg.text}</p>}
-        <button type="submit" disabled={pwBusy} className="btn-primary min-h-10 font-[family-name:var(--font-display)]">
+        <button type="submit" disabled={pwBusy} className="btn btn-primary min-h-10 font-[family-name:var(--font-display)]">
           {pwBusy ? <><i className="fa-solid fa-spinner fa-spin mr-2" />Menyimpan…</> : <><i className="fa-solid fa-check mr-2" />Ubah Password</>}
         </button>
       </form>
@@ -110,7 +110,7 @@ export default function Security({ toast }) {
           <input value={blInput} onChange={e => setBlInput(e.target.value)} placeholder="Contoh: 192.168.1.100"
             onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addBl())}
             className="flex-1 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
-          <button onClick={addBl} disabled={!blInput.trim()} className="btn-primary text-sm"><i className="fa-solid fa-plus mr-1.5" />Blokir</button>
+          <button onClick={addBl} disabled={!blInput.trim()} className="btn btn-primary text-sm"><i className="fa-solid fa-plus mr-1.5" />Blokir</button>
         </div>
         {!blacklist.length ? (
           <div className="py-10 text-center">
@@ -138,11 +138,12 @@ export default function Security({ toast }) {
           <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-screwdriver-wrench text-[#b45309] mr-2" />Mode Maintenance</h2>
           <p className="text-[var(--ink-2)] text-sm mt-0.5">Saat aktif, upload dinonaktifkan untuk semua pengguna</p>
         </div>
-        {/* after:-inset-y-1 = area sentuh 40px. Dipakai ::after (bukan padding) karena
-            padding pada elemen rounded-full ikut mewarnai latar dan bentuk pil jadi berubah. */}
+        {/* Area sentuh 40px datang dari `.sw::after` di globals.css, bukan dari
+            utilitas after:* inline — supaya semua saklar di panel memakai satu
+            aturan yang sama, bukan tiap tempat menulis ulang sendiri. */}
         <button onClick={toggleMaint} disabled={busy} aria-busy={busy} aria-label="Mode maintenance"
           type="button" role="switch" aria-checked={!!maint}
-          className={`relative w-14 h-8 after:content-[''] after:absolute after:-inset-y-1 after:inset-x-0 rounded-full transition-all duration-[250ms] shrink-0 ml-4 ${maint ? 'bg-gradient-to-r from-[#fbbf24] to-[#fb7185] shadow-[0_0_18px_rgba(251,113,133,.45)]' : 'bg-[var(--paper-2)]'}`}
+          className={`sw relative w-14 h-8 rounded-full transition-all duration-[250ms] shrink-0 ml-4 ${maint ? 'bg-gradient-to-r from-[#fbbf24] to-[#fb7185] shadow-[0_0_18px_rgba(251,113,133,.45)]' : 'bg-[var(--paper-2)]'}`}
           style={{ transitionTimingFunction: 'var(--ease-out)' }}>
           <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-[250ms] ${maint ? 'translate-x-6' : ''}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
         </button>

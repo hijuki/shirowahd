@@ -160,10 +160,11 @@ export default function Bots({ toast }) {
                 </select>
 
                 <button onClick={() => ubah(b, { aktif: !b.aktif })} disabled={busy} aria-busy={busy}
-                  className={`min-h-10 rounded-[var(--r-soft)] px-3 py-2 text-sm border transition-all duration-[150ms] active:scale-[.97] ${b.aktif
-                    ? 'bg-[var(--paper)] border-[var(--edge)]'
-                    : 'bg-emerald-500/[.08] border-emerald-500/25 text-emerald-300 font-bold'}`}>
-                  <i className={`fa-solid fa-power-off mr-1.5`} />{b.aktif ? 'Matikan' : 'Nyalakan'}
+                  role="switch" aria-checked={!!b.aktif} type="button"
+                  className={`btn min-h-10 !text-[12px] gap-1.5 ${b.aktif
+                    ? 'btn-quiet'
+                    : 'btn-quiet !bg-[color-mix(in_srgb,var(--good)_10%,var(--paper))] !border-[color-mix(in_srgb,var(--good)_28%,var(--edge))] !text-[var(--good)] font-bold'}`}>
+                  <i className={`fa-solid fa-power-off`} />{b.aktif ? 'Matikan' : 'Nyalakan'}
                 </button>
 
                 {!b.utama && (
@@ -214,7 +215,7 @@ export default function Bots({ toast }) {
           </select>
         </div>
         <button onClick={tambah} disabled={busy || nomorBaru.replace(/\D/g, '').length < 10} aria-busy={busy}
-          className="btn-primary min-h-11 text-sm disabled:opacity-50">
+          className="btn btn-primary min-h-11 text-sm disabled:opacity-50">
           <i className="fa-solid fa-link mr-1.5" />Tautkan &amp; Jalankan
         </button>
         <p className="text-[var(--ink-2)] text-xs">
@@ -292,9 +293,9 @@ export default function Bots({ toast }) {
                         ...roleForm,
                         kategori: aktif ? roleForm.kategori.filter(x => x !== k) : [...roleForm.kategori, k],
                       })}
-                      className={`min-h-9 rounded-[var(--r-soft)] px-2.5 py-1.5 text-xs border transition-all duration-[150ms] active:scale-[.97] ${aktif
-                        ? 'bg-[var(--volt)]/15 border-[var(--volt)]/40 text-[var(--volt)] font-bold'
-                        : 'bg-[var(--paper-2)] border-[var(--edge)] text-[var(--ink-2)]'}`}>
+                      className={`seg-btn min-h-9 !text-[11px] ${aktif
+                        ? 'seg-btn-on !text-[var(--volt)] !border-[color-mix(in_srgb,var(--volt)_40%,transparent)]'
+                        : ''}`}>
                       {k}
                     </button>
                   )
@@ -304,7 +305,7 @@ export default function Bots({ toast }) {
 
             <div className="flex flex-wrap gap-2">
               <button onClick={simpanRole} disabled={busy} aria-busy={busy}
-                className="btn-primary min-h-11 text-sm disabled:opacity-50">
+                className="btn btn-primary min-h-11 text-sm disabled:opacity-50">
                 <i className="fa-solid fa-floppy-disk mr-1.5" />Simpan Role
               </button>
               <button onClick={() => setRoleForm(null)} disabled={busy} aria-busy={busy}

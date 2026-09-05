@@ -279,7 +279,7 @@ export default function Bot({ toast }) {
               className="w-24 rounded-[var(--r-soft)] px-3 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm transition-colors duration-[150ms]" />
           </div>
           {!bcRunning ? (
-            <button onClick={doBroadcast} disabled={busy} aria-busy={busy} className="btn-primary font-[family-name:var(--font-display)] text-sm"><i className="fa-solid fa-paper-plane mr-2" />Kirim Broadcast</button>
+            <button onClick={doBroadcast} disabled={busy} aria-busy={busy} className="btn btn-primary font-[family-name:var(--font-display)] text-sm"><i className="fa-solid fa-paper-plane mr-2" />Kirim Broadcast</button>
           ) : (
             <button onClick={doCancelBc} disabled={busy} aria-busy={busy} className="btn btn-danger"><i className="fa-solid fa-stop mr-2" />Batalkan</button>
           )}
@@ -296,7 +296,7 @@ export default function Bot({ toast }) {
           className="w-full rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
         <textarea value={sendText} onChange={e => setSendText(e.target.value)} rows={2} placeholder="Isi pesan…"
           className="w-full rounded-[var(--r-soft)] px-4 py-3 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm resize-y transition-colors duration-[150ms]" />
-        <button onClick={doSend} disabled={busy} aria-busy={busy} className="btn-primary font-[family-name:var(--font-display)] text-sm"><i className="fa-solid fa-paper-plane mr-2" />Kirim</button>
+        <button onClick={doSend} disabled={busy} aria-busy={busy} className="btn btn-primary font-[family-name:var(--font-display)] text-sm"><i className="fa-solid fa-paper-plane mr-2" />Kirim</button>
       </div>
 
       {/* Exec command */}
@@ -320,7 +320,7 @@ export default function Bot({ toast }) {
         <form onSubmit={doExec} className="flex gap-2">
           <input value={cmd} onChange={e => setCmd(e.target.value)} placeholder="Contoh: await sock.sendMessage(target, { text: 'hai' })"
             className="flex-1 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
-          <button type="submit" disabled={busy} aria-busy={busy} className="btn-primary min-h-10 text-sm"><i className="fa-solid fa-play mr-1.5" />Run</button>
+          <button type="submit" disabled={busy} aria-busy={busy} className="btn btn-primary min-h-10 text-sm"><i className="fa-solid fa-play mr-1.5" />Run</button>
         </form>
         {out && (
           <pre className="rounded-[var(--r-soft)] bg-black/40 border border-[var(--edge)] p-4 text-xs font-mono overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap anim-fade">{out}</pre>

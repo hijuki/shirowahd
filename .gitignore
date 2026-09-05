@@ -62,3 +62,7 @@ UPDATE.txt
 # Salinan tersanitasi dibuat ulang tiap backup — tidak perlu ter-track,
 # dan isinya masih memuat ownerWhatsapp + struktur setelan lengkap.
 admin-settings.sanitized.json
+
+# Skrip audit/uji lokal — tidak untuk repo publik.
+# Ditaruh di luar tmp/ karena hillz-temp-cleaner.js menyapu tmp/ tiap 30 menit.
+.audit/

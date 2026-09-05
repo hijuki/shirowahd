@@ -572,6 +572,10 @@ h3 {
   gap: 8px;
   flex: 1 0 auto;
   min-width: 132px;
+  /* min-height 40px: sebelumnya tinggi terenderrnya 38px — dua piksel di bawah
+     ambang target sentuh. Padding tidak dinaikkan supaya bilahnya tidak jadi
+     lebih tinggi dari yang dirancang; yang dijamin cuma area kliknya. */
+  min-height: 40px;
   padding: 11px 14px;
   font-family: var(--font-display);
   font-size: 10.5px;
@@ -617,7 +621,13 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  min-height: 32px;
+  /* min-height 40px, bukan 32 + ::after. Percobaan ::after gagal: kartu aset
+     punya overflow tersembunyi, jadi area yang menjulur keluar kotak ikut
+     terpotong dan hit-test tetap 32px. Yang mengekang tombol-tombol ini adalah
+     LEBAR (tiga muat sebaris), bukan tinggi — jadi tingginya boleh 40px.
+     Catatan urutan: nilai ini juga mengalahkan `min-h-10` Tailwind di JSX karena
+     lapisan komponen dimuat setelah utilities; jadi ambangnya harus benar DI SINI. */
+  min-height: 40px;
   padding: 6px 10px;
   font-family: var(--font-sans);
   font-size: 10.5px;
@@ -655,6 +665,22 @@ h3 {
   background: var(--accent);
   border-color: var(--edge);
   box-shadow: var(--sh-1);
+}
+
+/* Saklar pil (role="switch"). Kotak visualnya sengaja 44x24 supaya tidak
+   mendominasi baris, tapi area sentuhnya dinaikkan lewat ::after.
+   Memakai padding akan mengubah bentuk pil itu sendiri.
+   inset -10px (bukan -8px): hit-test pada -8px membaca 37px, kurang 3px dari
+   ambang 40px karena elemen tetangga menang di piksel terluar. -10px memberi
+   ruang lebih dari cukup, dan gelembungnya aman — baris pembungkusnya memang
+   toggle yang sama. */
+.sw {
+  position: relative;
+}
+.sw::after {
+  content: '';
+  position: absolute;
+  inset: -10px -6px;
 }
 
 /* ═══════════════ IDENTITAS BRAND ═══════════════
@@ -735,6 +761,11 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  /* min-height 40px: `.btn` tidak punya ambang tinggi sendiri, jadi tombol
+     dengan teks 10-11px (ikon, `!text-[10px]`) turun ke 39px dan lolos dari
+     ambang target sentuh. Padding tetap 13px supaya tombol normal tidak berubah
+     ukuran — min-height hanya mengangkat yang terlalu pendek. */
+  min-height: 40px;
   padding: 13px 18px;
   border: var(--bw) solid var(--edge);
   background: var(--paper);

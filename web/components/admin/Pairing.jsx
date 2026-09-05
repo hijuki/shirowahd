@@ -183,7 +183,7 @@ export default function Pairing({ toast }) {
                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), doPair())}
                 className="flex-1 min-h-11 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
               <button onClick={doPair} disabled={busy || phone.replace(/\D/g, '').length < 10} aria-busy={busy}
-                className="btn-primary min-h-11 text-sm disabled:opacity-50">
+                className="btn btn-primary min-h-11 text-sm disabled:opacity-50">
                 <i className="fa-solid fa-link mr-1.5" />{menunggu ? 'Ulangi' : 'Pair'}
               </button>
             </div>
