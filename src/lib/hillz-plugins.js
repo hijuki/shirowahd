@@ -78,6 +78,14 @@ const defaultConfig = {
 
 // Catatan tabrakan nama command antar-plugin, diisi saat registrasi.
 const duplicateCommands = [];
+// Tabrakan ALIAS — sebelumnya tidak dilacak sama sekali.
+const duplicateAliases = [];
+// Kepemilikan nama per plugin, dipakai menghitung plugin yang tidak
+// terjangkau setelah seluruh muatan selesai.
+const pluginOwnership = [];
+// alias → { filePath, primaryName } pendeklarasinya. Dipakai mendeteksi alias
+// yang dibajak: masih hidup, tapi mengeksekusi plugin lain.
+const aliasOrigin = new Map();
 
 const normalizePluginNames = (name) => {
   const values = Array.isArray(name) ? name : [name];
@@ -219,9 +227,33 @@ function registerPlugin(plugin) {
     pluginStore.commands.set(n, plugin);
   }
 
+  // Alias juga saling menimpa, dan SEBELUM INI tidak dicatat sama sekali —
+  // hanya tabrakan `name` yang terlacak. Akibatnya panel bisa melaporkan
+  // "14 tabrakan" padahal ada plugin yang seluruh nama DAN aliasnya direbut
+  // plugin lain, jadi benar-benar tidak bisa dipanggil. Contoh nyata:
+  // plugins/cek/cekcupu.js (.cupu, .noob) dua-duanya direbut fun/siapa.js.
   for (const a of aliases) {
+    const prev = pluginStore.aliases.get(a);
+    if (prev && prev !== primaryName) {
+      duplicateAliases.push({ alias: a, kept: primaryName, shadowed: prev });
+    }
     pluginStore.aliases.set(a, primaryName);
   }
+  // Alias dipetakan ke NAMA, bukan ke plugin. Itu sumber bug diam yang lebih
+  // buruk daripada plugin mati: kalau `primaryName` nanti direbut plugin lain,
+  // alias di sini tetap hidup tapi mengeksekusi plugin PEREBUT. Pengguna
+  // mengetik `.howgay` (hanya ada di fun/gay.js) dan mendapat fun/siapa.js
+  // tanpa pesan galat apa pun.
+  //
+  // Karena itu jalur asal alias disimpan terpisah, supaya keadaan akhir bisa
+  // divonis setelah semua plugin dimuat (lihat getHijackedAliases).
+  for (const a of aliases) {
+    aliasOrigin.set(a, { filePath: plugin.filePath, primaryName });
+  }
+  // Dicatat untuk hitung keterjangkauan setelah SEMUA plugin dimuat. Tidak bisa
+  // diputuskan di sini: plugin yang sekarang menang bisa direbut plugin
+  // berikutnya, jadi vonis hanya sah setelah muatan selesai.
+  pluginOwnership.push({ filePath: plugin.filePath, names, aliases, primaryName });
 
   const categoryLower = String(
     category || defaultConfig.category,
@@ -300,6 +332,24 @@ function printPluginTable(plugins) {
     }
   }
 
+  // Ini yang benar-benar penting, dan sebelumnya tidak pernah dilaporkan:
+  // plugin yang SELURUH nama dan aliasnya direbut plugin lain. Berkasnya
+  // dimuat dan memakan memori, tapi tidak ada satu pun cara memanggilnya.
+  const mati = getUnreachablePlugins();
+  if (mati.length > 0) {
+    console.log("");
+    console.log(
+      `  ${theme.pill("mati", "system")} ${chalk.redBright(String(mati.length))} ${theme.dim("plugin tak bisa dipanggil (semua namanya direbut)")}`,
+    );
+    for (const p of mati.slice(0, 10)) {
+      const rel = path.relative(process.cwd(), p.filePath);
+      console.log(`  ${theme.dim("·")} ${rel} ${theme.dim("nama:")} ${p.names.map((n) => "." + n).join(" ")}`);
+    }
+    if (mati.length > 10) {
+      console.log(`  ${theme.dim(`+${mati.length - 10} lainnya`)}`);
+    }
+  }
+
   console.log("");
 }
 
@@ -316,6 +366,12 @@ async function loadPlugins(pluginsDir) {
   pluginStore.aliases.clear();
   pluginStore.categories.clear();
   duplicateCommands.length = 0;
+  // Wajib direset bersama yang lain: `loadPlugins` bisa dipanggil ulang (hot
+  // reload), dan array yang tidak dikosongkan akan menumpuk hasil muatan lama
+  // sehingga hitungan duplikat/plugin-mati membengkak tiap reload.
+  duplicateAliases.length = 0;
+  pluginOwnership.length = 0;
+  aliasOrigin.clear();
 
   let loadedCount = 0;
   const loadedPlugins = [];
@@ -639,6 +695,61 @@ function getDuplicateCommands() {
   return duplicateCommands.slice();
 }
 
+// Plugin yang SELURUH nama + aliasnya dimenangkan plugin lain, jadi tidak ada
+// satu pun cara memanggilnya. Dihitung dari keadaan akhir pluginStore (bukan
+// dari urutan muat) supaya vonisnya mencerminkan apa yang benar-benar aktif.
+//
+// Bedanya dengan getDuplicateCommands: satu nama bertabrakan belum tentu
+// masalah — plugin yang kalah mungkin masih punya nama lain yang lolos. Yang
+// dilaporkan di sini hanya plugin yang benar-benar mati total.
+function getUnreachablePlugins() {
+  const mati = [];
+  for (const p of pluginOwnership) {
+    const semua = [...p.names, ...p.aliases];
+    if (semua.length === 0) continue;
+    const hidup = semua.some((n) => {
+      const lewatNama = pluginStore.commands.get(n);
+      if (lewatNama && lewatNama.filePath === p.filePath) return true;
+      const utama = pluginStore.aliases.get(n);
+      if (!utama) return false;
+      const lewatAlias = pluginStore.commands.get(utama);
+      return !!lewatAlias && lewatAlias.filePath === p.filePath;
+    });
+    if (!hidup) {
+      mati.push({ filePath: p.filePath, names: p.names, aliases: p.aliases });
+    }
+  }
+  return mati;
+}
+
+// Tabrakan alias antar-plugin.
+function getDuplicateAliases() {
+  return duplicateAliases.slice();
+}
+
+// Alias DIBAJAK: alias `a` ditulis di berkas X, tapi `getPlugin(a)` mengembalikan
+// berkas Y. Terjadi karena alias dipetakan ke nama, dan nama itu direbut plugin
+// lain setelahnya.
+//
+// Kenapa dipisah dari duplicateAliases: tabrakan alias biasa (dua plugin sama-sama
+// mendeklarasikan `.fb`) memang harus ada yang menang — itu bukan bug. Yang di
+// sini adalah alias yang pemiliknya tunggal tapi tetap menjalankan plugin lain,
+// dan itu selalu salah.
+function getHijackedAliases() {
+  const hasil = [];
+  for (const [alias, asal] of aliasOrigin.entries()) {
+    const utama = pluginStore.aliases.get(alias);
+    // Alias direbut plugin lain yang juga mendeklarasikannya: tabrakan wajar.
+    if (utama !== asal.primaryName) continue;
+    const tujuan = pluginStore.commands.get(utama);
+    if (!tujuan) continue;
+    if (tujuan.filePath !== asal.filePath) {
+      hasil.push({ alias, declaredIn: asal.filePath, executes: tujuan.filePath });
+    }
+  }
+  return hasil;
+}
+
 export {
   loadPlugin,
   loadPlugins,
@@ -660,4 +771,7 @@ export {
   defaultConfig,
   getAllCommandNames,
   getDuplicateCommands,
+  getDuplicateAliases,
+  getHijackedAliases,
+  getUnreachablePlugins,
 };

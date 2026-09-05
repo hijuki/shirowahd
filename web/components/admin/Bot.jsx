@@ -9,6 +9,8 @@ export default function Bot({ toast }) {
   const [internal, setInternal] = useState(null)
   const [plug, setPlug] = useState(null)
   const [showDups, setShowDups] = useState(false)
+  const [showMati, setShowMati] = useState(false)
+  const [showBajak, setShowBajak] = useState(false)
   const [groups, setGroups] = useState([])
   const [busy, setBusy] = useState(false)
 
@@ -181,12 +183,18 @@ export default function Bot({ toast }) {
           <p className="text-[var(--ink-2)] text-sm">Data plugin belum tersedia. Bot mungkin sedang booting.</p>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* grid-cols-6 di layar lebar: kartu kelima ("Plugin mati") dan
+                keenam ("Alias dibajak") ditambah setelahnya; dengan
+                md:grid-cols-4 mereka jatuh sendirian ke baris kedua dan terbaca
+                seperti angka nyasar, bukan bagian ringkasan. */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
                 { l: 'Plugin aktif', v: plug.plugins, c: '#34d399' },
                 { l: 'Command + alias', v: plug.commands, c: '#67e8f9' },
                 { l: 'Kategori', v: plug.categories, c: '#93c5fd' },
                 { l: 'Nama tabrakan', v: plug.duplicateCount, c: plug.duplicateCount ? '#fbbf24' : '#7e90ad' },
+                { l: 'Plugin mati', v: plug.unreachableCount ?? '—', c: plug.unreachableCount ? '#f87171' : '#7e90ad' },
+                { l: 'Alias dibajak', v: plug.hijackedAliasCount ?? '—', c: plug.hijackedAliasCount ? '#f472b6' : '#7e90ad' },
               ].map(s => (
                 <div key={s.l} className="rounded-[var(--r)] px-4 py-3 bg-[var(--paper-2)] border border-[var(--edge)]">
                   <p className="text-[10px] font-bold tracking-wider uppercase text-[var(--ink-2)]">{s.l}</p>
@@ -212,6 +220,71 @@ export default function Bot({ toast }) {
                         <p className="font-mono font-bold text-[#b45309]">.{d.command}</p>
                         <p className="text-[var(--acid)] mt-1 break-all"><i className="fa-solid fa-check mr-1" />aktif: {d.kept}</p>
                         <p className="text-[var(--ink-2)] break-all"><i className="fa-solid fa-xmark mr-1" />mati: {d.shadowed}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Daftar plugin yang benar-benar tidak bisa dipanggil. Dipisah dari
+                daftar tabrakan di atas karena maknanya berbeda: tabrakan sering
+                tidak berbahaya (plugin yang kalah masih punya nama lain), yang
+                di sini seluruh nama DAN aliasnya direbut. */}
+            {plug.unreachableCount > 0 && (
+              <div className="mt-4">
+                <button onClick={() => setShowMati(v => !v)}
+                  className="btn btn-danger">
+                  <i className={`fa-solid fa-chevron-${showMati ? 'up' : 'down'} mr-1.5`} />
+                  {showMati ? 'Sembunyikan' : 'Lihat'} {plug.unreachableCount} plugin yang tak bisa dipanggil
+                </button>
+                {showMati && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-[var(--ink-2)] text-xs">
+                      Seluruh nama dan alias plugin ini sudah dipakai plugin lain yang dimuat setelahnya.
+                      Berkasnya tetap dimuat dan memakan memori, tapi tidak ada satu pun cara memanggilnya.
+                      Perbaikannya: ganti namanya, atau hapus berkasnya kalau memang duplikat.
+                    </p>
+                    {(plug.unreachable || []).map((p, i) => (
+                      <div key={p.file + i} className="rounded-[var(--r-soft)] px-3 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] text-xs">
+                        <p className="font-mono font-bold text-[#f87171] break-all">{p.file}</p>
+                        <p className="text-[var(--ink-2)] mt-1">
+                          nama: {(p.names || []).map(n => '.' + n).join(' ')}
+                          {p.aliases?.length ? ` · alias: ${p.aliases.map(a => '.' + a).join(' ')}` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Daftar alias dibajak — kelas ketiga, dan yang paling berbahaya.
+                Dua daftar di atas memberi tahu ada command yang MATI; yang ini
+                soal command yang HIDUP tapi menjalankan berkas lain. Tanpa
+                daftar ini kartu "Alias dibajak" cuma angka tanpa jalan keluar:
+                admin tahu ada 9 masalah tapi tidak tahu alias mana. */}
+            {plug.hijackedAliasCount > 0 && (
+              <div className="mt-4">
+                <button onClick={() => setShowBajak(v => !v)}
+                  className="btn btn-danger">
+                  <i className={`fa-solid fa-chevron-${showBajak ? 'up' : 'down'} mr-1.5`} />
+                  {showBajak ? 'Sembunyikan' : 'Lihat'} {plug.hijackedAliasCount} alias yang menjalankan plugin salah
+                </button>
+                {showBajak && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-[var(--ink-2)] text-xs">
+                      Alias ini ditulis di satu berkas, tapi saat dipanggil yang jalan berkas lain.
+                      Tidak ada gejalanya: command tetap membalas, hasilnya saja bukan yang dimaksud.
+                      Perbaikannya: ganti alias yang bertabrakan di salah satu berkas.
+                    </p>
+                    {(plug.hijackedAliases || []).map((h, i) => (
+                      <div key={h.alias + i} className="rounded-[var(--r-soft)] px-3 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] text-xs">
+                        <p className="font-mono font-bold text-[#f472b6]">.{h.alias}</p>
+                        <p className="text-[var(--ink-2)] mt-1 break-all">
+                          <i className="fa-solid fa-pen-to-square mr-1" />ditulis di: {h.declaredIn}
+                        </p>
+                        <p className="text-[var(--acid)] break-all">
+                          <i className="fa-solid fa-play mr-1" />yang jalan: {h.executes}
+                        </p>
                       </div>
                     ))}
                   </div>

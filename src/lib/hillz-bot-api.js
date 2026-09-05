@@ -4,6 +4,9 @@ import {
   getPluginCount,
   getAllCommandNames,
   getDuplicateCommands,
+  getDuplicateAliases,
+  getHijackedAliases,
+  getUnreachablePlugins,
   getCategories,
 } from './hillz-plugins.js';
 import { daftarGrupMati, toggleGrup } from './hillz-group-state.js';
@@ -86,6 +89,15 @@ export function startBotApi() {
       try {
         const names = getAllCommandNames();
         const dups = getDuplicateCommands();
+        // `unreachable` ≠ `duplicates`. Tabrakan nama sering tidak berbahaya
+        // (plugin yang kalah masih punya nama lain), tapi plugin yang seluruh
+        // nama + aliasnya direbut benar-benar tidak bisa dipanggil. Panel perlu
+        // membedakan keduanya supaya angka "14 tabrakan" tidak dibaca sebagai
+        // "14 plugin rusak".
+        const mati = getUnreachablePlugins();
+        // Alias dibajak: lebih berbahaya daripada plugin mati karena tidak ada
+        // gejala apa pun — command jalan, hasilnya salah.
+        const bajak = getHijackedAliases();
         json(res, 200, {
           ok: true,
           plugins: getPluginCount(),
@@ -93,6 +105,15 @@ export function startBotApi() {
           categories: getCategories().length,
           duplicateCount: dups.length,
           duplicates: dups,
+          aliasDuplicateCount: getDuplicateAliases().length,
+          unreachableCount: mati.length,
+          unreachable: mati.map((p) => ({
+            file: p.filePath,
+            names: p.names,
+            aliases: p.aliases,
+          })),
+          hijackedAliasCount: bajak.length,
+          hijackedAliases: bajak,
         });
       } catch (e) {
         json(res, 500, { error: e.message });

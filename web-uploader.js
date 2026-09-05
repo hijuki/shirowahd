@@ -2207,11 +2207,37 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // Terakhir: tidak ada rute yang cocok.
+  //
+  // Sebelumnya SEMUA jalur nyasar dijawab teks polos `Not found` — termasuk
+  // ketika yang mengetuk adalah browser. Halaman 404 berdesain sudah ada
+  // (`web/out/404.html`, hasil `app/not-found.jsx`) tapi tidak pernah terpakai
+  // karena tidak ada yang menyajikannya.
+  //
+  // Pembedanya header Accept, bukan bentuk URL: pemanggil API (fetch/curl)
+  // tetap harus menerima teks pendek, sementara browser mendapat halaman.
+  // Jalur /admin/api dan /api dikecualikan eksplisit supaya klien yang salah
+  // menulis Accept tidak menerima HTML sebagai balasan API.
+  const mintaHtml = req.method === 'GET'
+    && String(req.headers.accept || '').includes('text/html')
+    && !url.startsWith('/admin/api')
+    && !url.startsWith('/api');
+
+  if (mintaHtml) {
+    const berkas404 = join(WEB_OUT, '404.html');
+    if (existsSync(berkas404)) {
+      // Status TETAP 404: mengirim 200 untuk halaman galat membuat mesin
+      // pengindeks memperlakukan tiap URL nyasar sebagai halaman sah.
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+      res.end(readFileSync(berkas404));
+      return;
+    }
+  }
+
   res.writeHead(404); res.end('Not found');
 }
 
 const server = http.createServer(handleRequest);
-
 // ── Papan status pairing (dipakai bersama proses bot) ───────────────────────
 // Proses `web` dan `main` adalah dua proses terpisah, jadi kode pairing tidak
 // bisa lewat variabel. Berkas ini papan tulis bersamanya; sisi bot menulisnya
