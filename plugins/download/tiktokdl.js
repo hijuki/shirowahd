@@ -63,8 +63,14 @@ async function tiktokDl(url) {
     throw new Error(`tikwm menolak tautan ini: ${alasan}`);
   }
 
-  if (res?.duration == 0) {
-    res.images.forEach((v) => data.push({ type: "photo", url: v }));
+  // `duration == 0` dipakai tikwm untuk menandai postingan carousel foto, TAPI
+  // `images` tidak selalu ada — video pendek yang durasinya dibulatkan ke 0 juga
+  // masuk ke cabang ini, dan `res.images.forEach` di situ melempar
+  // `TypeError: Cannot read properties of undefined (reading 'forEach')`.
+  // Jadi yang menentukan cabang bukan durasi, melainkan ADA-TIDAKNYA daftar foto.
+  const fotoCarousel = Array.isArray(res?.images) ? res.images : null;
+  if (fotoCarousel?.length) {
+    fotoCarousel.forEach((v) => data.push({ type: "photo", url: v }));
   } else {
     // URL disimpan APA ADANYA (tanpa concat basis). tikwm kadang mengembalikan
     // URL absolut CDN, kadang path relatif; concat buta menghasilkan
@@ -90,15 +96,22 @@ async function tiktokDl(url) {
     size_nowm: res.size,
     size_nowm_hd: res.hd_size,
     data,
-    music_info: {
-      id: res.music_info.id,
-      title: res.music_info.title,
-      author: res.music_info.author,
-      album: res.music_info.album || null,
-      // Tanda kurung wajib: `"a" + x || y` dievaluasi sebagai `("a" + x) || y`,
-      // dan string non-kosong selalu truthy → fallback music_info.play tidak pernah jalan.
-      url: res.music ? "https://www.tikwm.com" + res.music : res.music_info?.play,
-    },
+    // `music_info` bisa hilang sama sekali pada beberapa postingan (audio asli
+    // yang dihapus, atau carousel foto tanpa musik). `res.music_info.id`
+    // langsung melempar TypeError persis seperti bug `reading 'title'` dulu —
+    // pola yang sama: rantai properti bersarang tanpa penjaga. Jadi seluruh
+    // objeknya dibuat null-able, bukan tiap barisnya diberi `?.` satu-satu.
+    music_info: res.music_info
+      ? {
+        id: res.music_info.id,
+        title: res.music_info.title,
+        author: res.music_info.author,
+        album: res.music_info.album || null,
+        // Tanda kurung wajib: `"a" + x || y` dievaluasi sebagai `("a" + x) || y`,
+        // dan string non-kosong selalu truthy → fallback music_info.play tidak pernah jalan.
+        url: res.music ? "https://www.tikwm.com" + res.music : res.music_info?.play,
+      }
+      : null,
     stats: {
       views: formatNumber(res.play_count),
       likes: formatNumber(res.digg_count),
@@ -106,12 +119,18 @@ async function tiktokDl(url) {
       share: formatNumber(res.share_count),
       download: formatNumber(res.download_count),
     },
-    author: {
-      id: res.author.id,
-      fullname: res.author.unique_id,
-      nickname: res.author.nickname,
-      avatar: "https://www.tikwm.com" + res.author.avatar,
-    },
+    // Sama seperti `music_info`: `res.author` juga rantai bersarang tanpa
+    // penjaga. Akun yang dihapus/dibatasi membuat tikwm mengirim respons tanpa
+    // `author`, dan `res.author.id` melempar TypeError sebelum pengguna dapat
+    // apa pun — padahal videonya sendiri sudah berhasil diambil.
+    author: res.author
+      ? {
+        id: res.author.id,
+        fullname: res.author.unique_id,
+        nickname: res.author.nickname,
+        avatar: res.author.avatar ? "https://www.tikwm.com" + res.author.avatar : null,
+      }
+      : null,
   };
 }
 
@@ -171,9 +190,9 @@ async function handler(m, { sock }) {
 
       const caption =
         `🎵 *𝗧 𝗜 𝗞 𝗧 𝗢 𝗞  -  𝗗 𝗢 𝗪 𝗡 𝗟 𝗢 𝗔 𝗗 𝗘 𝗥*\n\n` +
-        `- Author: *${result.author.nickname}* (${result.author.fullname})\n` +
+        `- Author: *${result.author?.nickname || "-"}* (${result.author?.fullname || "-"})\n` +
         `- Caption: ${result.title || "-"}\n` +
-        `- Music: ${result.music_info.title} - ${result.music_info.author}\n` +
+        `- Music: ${result.music_info?.title || "-"} - ${result.music_info?.author || "-"}\n` +
         `- Duration: ${result.duration}\n` +
         `- Uploaded: ${result.taken_at}\n` +
         `- Region: ${result.region}\n\n` +
@@ -199,9 +218,9 @@ async function handler(m, { sock }) {
     } else {
       const caption =
         `📸 *𝗧 𝗜 𝗞 𝗧 𝗢 𝗞  -  𝗗 𝗢 𝗪 𝗡 𝗟 𝗢 𝗔 𝗗 𝗘 𝗥*\n\n` +
-        `- Author: *${result.author.nickname}* (${result.author.fullname})\n` +
+        `- Author: *${result.author?.nickname || "-"}* (${result.author?.fullname || "-"})\n` +
         `- Caption: ${result.title || "-"}\n` +
-        `- Music: ${result.music_info.title} - ${result.music_info.author}\n` +
+        `- Music: ${result.music_info?.title || "-"} - ${result.music_info?.author || "-"}\n` +
         `- Uploaded: ${result.taken_at}\n` +
         `- Region: ${result.region}\n\n` +
         `*Statistik Konten:*\n` +
