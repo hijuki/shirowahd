@@ -49,6 +49,21 @@
   --acid: #16a34a;
   --hot: #ff4d1c;
   --volt: #2b3bff;
+  /* TOKEN MATI YANG BARU KETEMU: `.btn-danger` memakai `var(--bad)` di tiga
+     properti (background, border-color, color), tapi `--bad` tidak pernah
+     dideklarasikan di mana pun. Diukur di browser: `--bad` = "" (kosong).
+     Akibatnya `color-mix(in oklab, var(--bad) 14%, var(--paper))` jadi nilai
+     INVALID, browser membuang seluruh deklarasi itu, dan 16 tombol bahaya di
+     panel admin (Bot, Bots, Dashboard, Files, Pairing, Security, Settings)
+     jatuh ke tampilan `.btn` biasa — putih netral, tidak terbaca sebagai aksi
+     merusak. Yang ada cuma `--color-bad` di blok @theme, dan itu nama lain. */
+  --bad: #c01f06;
+  /* Warna teks/ikon DI ATAS `--bad`. Token terpisah karena `--bad` sengaja
+     berbeda arah per tema: gelap memakai merah terang (#ff6a4d) supaya
+     terbaca di atas plat gelap, dan putih di atasnya cuma 2.83:1 — gagal AA.
+     Di tema terang justru sebaliknya: putih 6.10:1 lulus, coklat-gelap malah
+     jatuh ke 2.74:1. Satu nilai tidak mungkin benar untuk dua-duanya. */
+  --on-bad: #ffffff;
   /* identitas brand — hijau WhatsApp & gradien badge H.
      Dua-duanya elemen identitas: jangan diganti warna netral. */
   --wa: #25d366;
@@ -160,6 +175,10 @@
   --acid: #3ddc84;
   --hot: #ff7a52;
   --volt: #8b98ff;
+  /* Lebih terang di gelap supaya tetap terbaca di atas plat #171a20. */
+  --bad: #ff6a4d;
+  /* Terukur 6.49:1 di atas #ff6a4d, sementara putih cuma 2.83:1. */
+  --on-bad: #2a0a04;
 
   /* GELAP: shadow bukan tinta lagi — jadi kedalaman gelap + jejak aksen tipis.
      Sebelumnya shadow = hijau neon 5px di segala arah: tiap kartu punya
@@ -896,6 +915,84 @@ h3 {
   background: var(--hot);
   color: #fff;
 }
+/* ── TOMBOL BATAL SAAT UPLOAD ──
+   Yang dikeluhkan: "kotak mana orange lagi". Terukur sebelum diubah:
+   322×56px = 90% lebar panel, isian `--hot` #ff7a52 penuh, radius 16px
+   (radius/tinggi = 0.29 → membaca sebagai lempeng persegi).
+
+   Dua kesalahan yang sebenarnya, bukan cuma soal selera:
+   1. BOBOT. Batal itu jalan keluar, bukan ajakan. Dengan lebar penuh dan
+      warna paling keras di palet, dia jadi objek paling dominan di layar —
+      padahal subjeknya ada di atasnya (progres). Pengguna diarahkan matanya
+      ke tombol yang seharusnya jarang dipakai.
+   2. WARNA. `--hot` juga dipakai untuk galat. Membatalkan upload sendiri
+      bukan galat dan tidak merusak apa pun, jadi memakai warna galat
+      melebih-lebihkan akibatnya.
+
+   Sekarang: pil selebar isinya (bukan lebar penuh), isian netral, dan warna
+   bahaya cuma muncul di kapsul ikon 24px. Warna merahnya baru mengambil
+   seluruh tombol saat hover/tekan — eskalasi yang menyusul niat, bukan
+   mendahuluinya. Radius pil membuat "kotak" hilang secara definitif. */
+.btn-stop {
+  border-radius: var(--r-pill);
+  width: auto;
+  min-height: 44px;
+  padding: 8px 18px 8px 8px;
+  gap: 11px;
+  /* TERUKUR: `--paper-2` sama nilainya dengan `--plate-fill` di tema gelap
+     (dua-duanya #171a20), jadi pil-nya melebur — isian 1.00:1 terhadap alas,
+     bingkai `--edge` cuma 2.16:1, gagal 1.4.11 yang minta 3:1.
+     Di tema terang tidak kelihatan karena `--edge` di sana 19.67:1.
+     Perbaikannya BUKAN warna baru, tapi campuran relatif terhadap plat: satu
+     ekspresi yang otomatis benar di dua tema karena `--ink` sudah berbalik
+     arah per tema. 11% → 1.26:1 (gelap) / 1.32:1 (terang) = pil terbaca
+     sebagai objek tanpa jadi tombol utama. Bingkai 46% → 3.56:1 / 3.79:1. */
+  background: color-mix(in oklab, var(--ink) 11%, var(--plate-fill));
+  border-color: color-mix(in oklab, var(--ink) 46%, var(--plate-fill));
+  color: var(--ink-2);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  box-shadow: var(--sh-1), var(--bevel);
+  transition: transform 140ms var(--ease), box-shadow 140ms var(--ease),
+    background-color 220ms var(--ease), color 220ms var(--ease),
+    border-color 220ms var(--ease);
+}
+.btn-stop .btn-cap {
+  border-radius: var(--r-pill);
+  width: 28px;
+  height: 28px;
+  border: 0;
+  /* Kapsul TIDAK memakai isian merah samar. Terukur: pada 16% ia cuma 1.06:1
+     terhadap isian pil (tak terlihat), dan menaikkannya sampai terlihat
+     (32%+) menjatuhkan kontras ikon di dalamnya ke 3.71:1 — di bawah 4.5.
+     Dua syarat itu saling melawan, jadi pendekatannya diganti: kapsul memakai
+     isian merah PENUH dengan ikon putih. Terukur 4.80:1 (terang) dan 5.46:1
+     (gelap) untuk ikon, dan kapsulnya sendiri jelas terlihat sebagai satu
+     titik bahaya kecil. Bahaya hadir sebagai aksen 28px, bukan sebagai
+     bidang 322px seperti tombol oranye yang lama. */
+  background: var(--bad);
+  color: var(--on-bad);
+  box-shadow: none;
+}
+.btn-stop:hover {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: var(--on-bad);
+  box-shadow: var(--sh-2), var(--bevel);
+}
+.btn-stop:hover .btn-cap {
+  /* Saat seluruh pil sudah merah, kapsul harus berbalik: bidang terang dengan
+     ikon merah, supaya tetap terbaca sebagai objek terpisah. */
+  background: var(--on-bad);
+  color: var(--bad);
+  box-shadow: none;
+}
+/* Sapuan kilau `.btn::after` dimatikan di sini: dia `mix-blend-mode: overlay`
+   di atas isian netral, hasilnya kilatan kelabu yang tidak terbaca sebagai
+   apa pun pada pil sekecil ini. */
+.btn-stop::after {
+  display: none;
+}
 .btn-ghost {
   background: transparent;
 }
@@ -1340,41 +1437,88 @@ h3 {
   width: 128px;
   height: 128px;
   flex-shrink: 0;
-  /* Ruang 3D lokal supaya orb punya kedalaman nyata, bukan bulatan datar. */
-  perspective: 520px;
-  transform-style: preserve-3d;
 }
-/* Custom property WAJIB diregistrasi supaya bisa dianimasikan. Tanpa @property,
-   --p bertipe token teks: `transition: background` pada conic-gradient tidak
-   pernah jalan dan cincin melompat kaku tiap kali persen berubah. */
+/* Custom property WAJIB diregistrasi supaya bisa dianimasikan. Dipakai untuk
+   memutar KEPALA progres; panjang busur TIDAK lagi lewat custom property
+   (lihat catatan di .reactor-arc). */
 @property --p {
   syntax: "<number>";
   inherits: false;
   initial-value: 0;
 }
 
-.reactor-ring {
+/* ── CINCIN ──
+   Dulu: conic-gradient + mask donat, tebal pita 20.8px, DI ATAS 30 gerigi
+   `repeating-conic-gradient` setiap 12deg, dengan inti ber-`translateZ(14px)`
+   di dalam `perspective: 520px` dan dua lapis gradien kubah + `inset` shadow.
+   Terukur begitu di browser. Gabungan gerigi-analog + kubah mengkilap itulah
+   yang terbaca kuno: bahasa speedometer/dasbor mobil, dan kilau bevel yang
+   sudah pernah ditolak pengguna untuk tombol ("metallic/bevel rejected")
+   masih hidup di sini.
+
+   Sekarang SVG dua-goresan. Empat hal yang tidak bisa didapat dari
+   conic-gradient:
+   1. `stroke-linecap: round` — ujung busur membulat. Conic-gradient selalu
+      memotong lurus dari pusat, dan potongan pai itu yang bikin kaku.
+   2. `stroke-dashoffset` adalah properti panjang biasa, jadi transisinya
+      dijamin jalan tanpa @property. Panjangnya dihitung di JS dan dipasang
+      sebagai nilai inline — sengaja TIDAK lewat `calc(var(--x))`, karena
+      properti kustom yang tidak diregistrasi berperilaku diskret dan itu
+      persis jebakan yang dulu membuat garis progres rel diam di 0.
+   3. Goresan bisa memakai gradien `<defs>`, jadi busurnya punya arah terang.
+   4. Anti-alias lengkung SVG bersih; tepi depan conic-gradient bergerigi
+      halus di sebagian GPU.
+   Pita dikuruskan 20.8px → 9px: cincin tipis membuat angka jadi subjek. */
+.reactor-svg {
   position: absolute;
   inset: 0;
-  /* BULAT. Sebelumnya radius 0 → cincin conic terlihat sebagai kotak berwarna. */
-  border-radius: var(--r-pill);
-  border: var(--bw) solid var(--edge);
-  background: conic-gradient(
-    var(--ring-hue, var(--accent)) calc(var(--p, 0) * 1%),
-    transparent 0
-  );
-  mask: radial-gradient(farthest-side, transparent 62%, #000 64%);
-  -webkit-mask: radial-gradient(farthest-side, transparent 62%, #000 64%);
-  /* Yang ditransisikan adalah --p-nya, bukan background-nya. */
-  transition: --p 320ms var(--ease-out), background-color 200ms linear;
+  width: 100%;
+  height: 100%;
+  /* Mulai dari jam 12. Kotak persegi yang dirotasi 90° punya kotak-pembatas
+     identik, jadi tidak ada goyangan layout seperti bug cincin lama. */
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+.reactor-track {
+  fill: none;
+  /* BUG TERUKUR: dulu `var(--sunk)` → 1.12:1 terhadap plat di tema gelap,
+     1.16:1 di terang. Artinya lintasan cincin TIDAK TERLIHAT sama sekali, dan
+     busur hijau mengapung tanpa acuan "sisa perjalanan" — itu salah satu
+     sebab cincin terbaca murah: progres tanpa konteks.
+     `--sunk` memang token untuk cekungan di dalam plat, tapi ia dirancang
+     untuk bidang lebar; pada goresan 9px selisih 1.1:1 hilang total.
+     Nilai 38% dicari dengan probe, bukan ditebak: ia satu-satunya persen yang
+     lolos di DUA tema (gelap 2.76:1, terang 2.92:1) pada target 2,2–3,4:1 —
+     cukup untuk terbaca sebagai lekukan, tidak cukup untuk bersaing dengan
+     busur. Token `--edge` tidak bisa dipakai karena berperilaku berlawanan
+     antar tema: terukur 2.16:1 di gelap tapi 19.67:1 di terang. */
+  stroke: color-mix(in oklab, var(--ink) 38%, var(--plate-fill));
+  stroke-width: 9;
+}
+.reactor-arc {
+  fill: none;
+  stroke: url(#reactorArc);
+  stroke-width: 9;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 340ms var(--ease-out);
+}
+.reactor-stop-a {
+  stop-color: color-mix(in oklab, var(--accent) 55%, var(--edge));
+}
+.reactor-stop-b {
+  stop-color: var(--accent);
 }
 /* Tahap 2 (ffmpeg) memakai warna berbeda supaya perpindahan tahap terbaca
    sebagai tahap baru, bukan sebagai progres yang mundur. */
-.reactor[data-phase="encode"] .reactor-ring {
-  --ring-hue: var(--volt);
+.reactor[data-phase="encode"] .reactor-stop-a {
+  stop-color: color-mix(in oklab, var(--volt) 55%, var(--edge));
 }
-.reactor[data-phase="done"] .reactor-ring {
-  --ring-hue: var(--acid);
+.reactor[data-phase="encode"] .reactor-stop-b {
+  stop-color: var(--volt);
+}
+.reactor[data-phase="done"] .reactor-stop-a,
+.reactor[data-phase="done"] .reactor-stop-b {
+  stop-color: var(--acid);
 }
 
 /* Penanda tahap di bawah angka */
@@ -1420,106 +1564,148 @@ h3 {
     opacity: 0.35;
   }
 }
-.reactor-notch {
-  position: absolute;
-  inset: 0;
-  border-radius: var(--r-pill);
-  background: repeating-conic-gradient(
-    from 0deg,
-    transparent 0 11deg,
-    var(--paper) 11deg 13deg
-  );
-  mask: radial-gradient(farthest-side, transparent 62%, #000 64%);
-  -webkit-mask: radial-gradient(farthest-side, transparent 62%, #000 64%);
-  pointer-events: none;
-}
-.reactor-core {
-  position: absolute;
-  inset: 22px;
-  display: grid;
-  place-items: center;
-  /* Inti bulat + kubah cahaya = kedalaman. Radius 0 bikin "kotak di dalam
-     lingkaran", itu yang terbaca sebagai desain tidak presisi. */
-  border-radius: var(--r-pill);
-  border: var(--bw) solid var(--edge);
-  background:
-    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.9), transparent 46%),
-    radial-gradient(circle at 68% 82%, rgba(0, 0, 0, 0.07), transparent 52%),
-    var(--paper);
-  box-shadow: var(--bevel), inset 0 -6px 12px rgba(0, 0, 0, 0.07);
-  transform: translateZ(14px);
-}
-[data-theme="dark"] .reactor-core {
-  background:
-    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.16), transparent 46%),
-    radial-gradient(circle at 68% 82%, rgba(0, 0, 0, 0.5), transparent 52%),
-    var(--plate-fill);
-}
 /* Angka persen. Dulu `font-size: 26px` dengan kata "PERSEN" mono 8px di
    bawahnya; tinggi inti (84px) habis untuk dua baris, jadi angkanya tidak
    pernah bisa besar. Sekarang satu baris: angka + tanda % kecil di garis
-   dasar yang sama.
+   dasar yang sama, dan karena piring inti sudah dihapus angkanya bisa 38px.
    `tabular-nums` wajib — tanpa itu lebar glif 1 berbeda dari 8, dan angka
    yang berubah tiap 200 ms akan tampak bergeser kiri-kanan. */
 .reactor-read {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: baseline;
+  justify-content: center;
+  /* BUG TERUKUR (ketemu dari peta piksel, bukan dari dugaan): dengan
+     `align-items: baseline` pada flex container setinggi 128px, baseline
+     alignment jatuh ke perilaku flex-start — jadi angkanya menempel di TEPI
+     ATAS cincin, bukan di tengahnya. Terukur: pusat `.reactor-num` 47,5px di
+     atas pusat `.reactor`, dan angkanya menabrak titik awal busur di jam 12.
+     `flex-wrap: wrap` + `align-content: center` memperbaikinya tanpa
+     menambah elemen: wrap membuat isi jadi satu FLEX LINE yang bisa
+     diposisikan `align-content` di tengah sumbu silang, sementara
+     `align-items: baseline` tetap bekerja untuk menyelaraskan angka dengan
+     tanda % di dalam baris itu. */
+  flex-wrap: wrap;
+  align-content: center;
   gap: 1px;
-  transform: translateZ(16px);
+}
+/* Denyut nafas di belakang angka. Ini pengganti "hidup" untuk cincin yang
+   berputar sendiri — aturan rasa yang tercatat melarang orbit berputar, dan
+   memang cincin berputar berbohong saat upload macet. Nafas tidak menyatakan
+   kemajuan, hanya menyatakan "masih bekerja", jadi ia jujur. */
+.reactor-read::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 74px;
+  height: 74px;
+  margin: -37px 0 0 -37px;
+  border-radius: var(--r-pill);
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--accent) 20%, transparent) 0%,
+    transparent 68%
+  );
+  animation: reactorBreath 1.7s var(--ease) infinite;
+  pointer-events: none;
+}
+.reactor[data-phase="encode"] .reactor-read::before {
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--volt) 22%, transparent) 0%,
+    transparent 68%
+  );
+}
+.reactor[data-phase="done"] .reactor-read::before {
+  animation: none;
+  opacity: 0;
+}
+@keyframes reactorBreath {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
 }
 .reactor-num {
+  position: relative;
   font-family: var(--font-display);
-  font-size: 34px;
+  font-size: 38px;
   line-height: 0.86;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
 }
 .reactor-pc {
+  position: relative;
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
   opacity: 0.55;
 }
-/* BUG YANG DIKELUHKAN ("yang muter-muter ngebug"): elemen ini KOTAK 140px
+/* BUG YANG DIKELUHKAN DULU ("yang muter-muter ngebug"): elemen itu KOTAK 140px
    dengan hanya sisi atas berwarna, lalu diputar 360°. Kotak yang diputar
    membuat kotak-pembatasnya melar sampai 198px (140 × √2) dan menyusut lagi
-   tiap putaran — terlihat goyang dan menabrak elemen sebelah. Diukur di
-   browser: rect 179×179 padahal elemennya 140×140.
-   Lingkaran tidak punya masalah ini: bounding box-nya konstan saat dirotasi. */
-/* Pengganti cincin berputar: KEPALA PROGRES.
-   Titik kecil yang duduk tepat di ujung busur conic. Dia bergerak karena
-   kemajuan nyata (--p × 3.6deg), bukan karena animasi hias — jadi tidak
-   pernah "berputar sendiri" saat upload macet, dan tidak ada kotak yang
-   diputar sehingga tidak ada sudut menonjol. */
+   tiap putaran — terlihat goyang dan menabrak elemen sebelah.
+   Penggantinya: KEPALA PROGRES. Titik yang duduk tepat di ujung busur dan
+   bergerak HANYA karena kemajuan nyata (--p × 3.6deg). Radius 54px = sama
+   dengan radius goresan SVG, jadi titiknya benar-benar menempel di ujung
+   busur, bukan mengapung di tepi luar. */
 .reactor-head {
   position: absolute;
-  inset: -1px;
-  /* Wadah tetap dibuat bulat: walaupun transparan, ini menjaga audit geometri
-     tetap bersih (tidak ada kotak yang dirotasi di dalam orb). */
+  inset: 0;
   border-radius: var(--r-pill);
   pointer-events: none;
   transform: rotate(calc(var(--p, 0) * 3.6deg));
-  transition: transform 0.32s var(--ease-out);
+  transition: transform 340ms var(--ease-out);
 }
 .reactor-head::after {
   content: "";
   position: absolute;
-  top: -4px;
+  top: 5.5px;
   left: 50%;
   width: 9px;
   height: 9px;
   margin-left: -4.5px;
-  border-radius: 999px;
-  background: var(--ring-hue, var(--accent));
-  border: 2px solid var(--paper);
-  box-shadow: 0 0 0 1.5px var(--edge);
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  /* Kilau yang bernafas di ujung busur: sinyal "sedang mengalir" yang
+     menempel pada titik kemajuan nyata, bukan animasi hias yang berputar. */
+  box-shadow: 0 0 0 2px var(--plate-fill), 0 0 8px 2px
+    color-mix(in oklab, var(--accent) 60%, transparent);
+  animation: reactorHead 1.7s var(--ease) infinite;
+}
+@keyframes reactorHead {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--plate-fill), 0 0 5px 1px
+      color-mix(in oklab, var(--accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--plate-fill), 0 0 11px 3px
+      color-mix(in oklab, var(--accent) 75%, transparent);
+  }
 }
 .reactor[data-phase="encode"] .reactor-head::after {
   background: var(--volt);
+  animation: none;
+  box-shadow: 0 0 0 2px var(--plate-fill), 0 0 9px 2px
+    color-mix(in oklab, var(--volt) 65%, transparent);
 }
 .reactor[data-phase="done"] .reactor-head {
   opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reactor-read::before,
+  .reactor-head::after {
+    animation: none;
+  }
 }
 
 /* sel blok bertumpuk */
@@ -1544,7 +1730,8 @@ h3 {
 .cell-on {
   /* Gradien vertikal, bukan warna rata: sel setinggi 18px dengan isian rata
      terbaca sebagai kotak stiker. Kemiringan cahaya membuatnya terbaca sebagai
-     volume kecil, sejalan dengan `.reactor-core` yang juga punya kubah cahaya. */
+     volume kecil, sejalan dengan gradien busur cincin yang juga punya arah
+     terang. */
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--accent) 78%, #ffffff) 0%,
@@ -1679,7 +1866,7 @@ h3 {
    nilai `--rp` yang dipasang di `.rail` (lewat style inline React) TIDAK
    turun ke `.rail::after`, jadi pseudo-element selalu memakai initial-value
    0 dan garisnya terukur `0px` walaupun persennya 99. Beda dengan `--p` di
-   `.reactor-ring` yang dipasang langsung pada elemen yang memakainya. */
+   `.reactor-head` yang dipasang langsung pada elemen yang memakainya. */
 @property --rp {
   syntax: "<number>";
   inherits: true;

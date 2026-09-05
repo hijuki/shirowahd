@@ -26,27 +26,48 @@ const STAGES = ['UPLOAD', 'KIRIM', 'PERIKSA', 'PROSES', 'SELESAI']
    ══════════════════════════════════════════════════════════════ */
 function Reactor({ pct, stageIdx, phase, phaseText, cellFloor, label, sub, right, subRight }) {
   const on = Math.round((pct / 100) * CELLS)
+  // Geometri cincin. R dan lingkar dihitung di JS, bukan di CSS: panjang busur
+  // dipasang lewat `stroke-dashoffset` (properti panjang biasa) sehingga
+  // transisinya dijamin berjalan. Pernah kena masalah ini pada garis progres
+  // rel — custom property yang tidak diregistrasi berperilaku diskret.
+  const R = 54
+  const LINGKAR = 2 * Math.PI * R
   return (
     <div className="plate-flat p-3.5">
       <div className="reactor-lay">
         <div className="reactor" data-phase={phase}>
-          <span className="reactor-ring" style={{ '--p': pct }} />
-          <span className="reactor-notch" />
+          <svg className="reactor-svg" viewBox="0 0 128 128" aria-hidden="true">
+            <defs>
+              <linearGradient id="reactorArc" x1="0" y1="0" x2="1" y2="1">
+                <stop className="reactor-stop-a" offset="0%" />
+                <stop className="reactor-stop-b" offset="100%" />
+              </linearGradient>
+            </defs>
+            <circle className="reactor-track" cx="64" cy="64" r={R} />
+            {/* Dua lingkaran rambut (.reactor-rim) DIHAPUS. Terukur 40% edge di
+                atas transparan = nyaris tidak terlihat, jadi mereka cuma
+                menambah dua node tanpa hasil visual. Sekarang lintasan utama
+                sudah terbaca sendiri (2,76:1 gelap / 2,92:1 terang), jadi
+                garis bantu itu tinggal jadi kebisingan.
+                CATATAN PENTING: `<circle>` tanpa `fill` memakai default SVG
+                `fill: black` — kalau elemennya ditinggal sementara aturan CSS
+                dihapus, hasilnya cakram hitam menutup cincin. Karena itu
+                keduanya dibuang bersamaan, bukan cuma CSS-nya. */}
+            {/* pathLength tidak dipakai: dashoffset dihitung dari lingkar nyata
+                supaya ujung membulat (linecap round) tidak melebihi busur. */}
+            <circle className="reactor-arc" cx="64" cy="64" r={R}
+              strokeDasharray={LINGKAR}
+              strokeDashoffset={LINGKAR * (1 - Math.min(100, pct) / 100)} />
+          </svg>
           <span className="reactor-head" style={{ '--p': pct }} />
-          {/* Cincin orbit yang berputar DIHAPUS: aturan rasa pengguna yang
-              tercatat = "no spinning orbit rings — subtle conic sweep ring +
-              floor shadow". Kemajuan sudah dibawa .reactor-ring (conic --p),
-              denyut hidup dibawa .reactor-core, kedalaman oleh floor shadow. */}
-          <span className="reactor-core">
-            {/* Dulu: angka 26px + kata "PERSEN" mono 8px di bawahnya. Kata itu
-                memakan tinggi inti untuk informasi yang sudah jelas dari
-                konteks, dan memaksa angkanya kecil. Sekarang angkanya besar
-                dengan tanda % kecil di sampingnya — pola yang dibaca lebih
-                cepat dan menyisakan ruang untuk tinggi huruf yang layak. */}
-            <span className="reactor-read">
-              <span className="reactor-num">{pct}</span>
-              <span className="reactor-pc">%</span>
-            </span>
+          {/* Piring inti dengan kubah cahaya + translateZ DIHAPUS: itu bevel
+              mengkilap, bahasa yang sudah ditolak pengguna untuk tombol, dan
+              digabung 30 gerigi analog di cincin luar hasilnya terbaca seperti
+              speedometer. Sekarang angkanya duduk langsung di plat, dengan
+              denyut nafas lembut di belakangnya sebagai tanda "masih hidup". */}
+          <span className="reactor-read">
+            <span className="reactor-num">{pct}</span>
+            <span className="reactor-pc">%</span>
           </span>
           {/* Penanda tahap: tanpa ini, angka yang mulai ulang di tahap 2 terbaca
               sebagai progres yang mundur, bukan sebagai hitungan baru. */}
@@ -429,10 +450,15 @@ export default function UploadPanel({ settings, toast }) {
                     <p className="kicker">DIPROSES DI SERVER — JANGAN TUTUP HALAMAN</p>
                   </div>
                 ) : (
-                <button onClick={cancelUpload} className="btn btn-hot w-full">
-                  <span className="btn-cap"><i className="fa-solid fa-stop text-[9px]" /></span>
-                  BATALKAN
-                </button>
+                // Dibungkus flex + justify-center, dan `w-full` dibuang: tombol
+                // batal tidak boleh selebar tombol utama. Lebar penuh membuatnya
+                // punya bobot yang sama dengan aksi yang kita justru inginkan.
+                <div className="flex justify-center">
+                  <button onClick={cancelUpload} className="btn btn-stop">
+                    <span className="btn-cap"><i className="fa-solid fa-stop text-[8px]" /></span>
+                    BATALKAN UPLOAD
+                  </button>
+                </div>
                 )
               ) : (
                 <button onClick={doUpload} className="btn btn-primary w-full">
