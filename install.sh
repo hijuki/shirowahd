@@ -211,12 +211,31 @@ if [ "${SW_NO_PM2:-0}" != 1 ]; then
     fi
   fi
 
+  # DIPERBAIKI 2026-09-05 setelah diukur di produksi: `pm2 restart` TIDAK BISA
+  # mengubah --max-memory-restart. Proses yang sudah ada dari sebelum baris ini
+  # ditambahkan tetap berjalan TANPA batas memori (terukur: main 1180 MB,
+  # batas=TIDAK AKTIF), jadi pengaman OOM-nya tidak pernah menyala.
+  # Satu-satunya cara menerapkan batas ke proses lama: delete lalu start ulang.
+  pm2_nyalakan() {
+    local nama="$1" berkas="$2" batas="$3"
+    local sekarang
+    sekarang=$(pm2 jlist 2>/dev/null | node -e '
+      let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+        try{const p=JSON.parse(s).find(x=>x.name===process.argv[1]);
+          process.stdout.write(String(p?Math.round((p.pm2_env?.max_memory_restart||0)/1048576):-1));
+        }catch(e){process.stdout.write("-1")}});' "$nama" 2>/dev/null || echo -1)
+
+    if [ "$sekarang" = "$batas" ]; then
+      pm2 restart "$nama" --update-env >/dev/null
+    else
+      # -1 = belum ada prosesnya; angka lain = batasnya salah/tidak aktif.
+      [ "$sekarang" != "-1" ] && pm2 delete "$nama" >/dev/null 2>&1
+      pm2 start "$berkas" --name "$nama" --cwd "$SW_DIR" --max-memory-restart "${batas}M" >/dev/null
+    fi
+  }
+
   say "Nyalakan WEB (port 80)"
-  if pm2 describe web >/dev/null 2>&1; then
-    pm2 restart web --update-env >/dev/null
-  else
-    pm2 start web-uploader.js --name web --cwd "$SW_DIR" --max-memory-restart "${WEB_MAXMEM}M" >/dev/null
-  fi
+  pm2_nyalakan web web-uploader.js "$WEB_MAXMEM"
 
   # Tunggu web benar-benar menjawab, bukan sekadar "pm2 bilang online".
   for i in $(seq 1 20); do
@@ -227,14 +246,23 @@ if [ "${SW_NO_PM2:-0}" != 1 ]; then
   [ "${code:-000}" = "200" ] && ok "web menjawab 200" || warn "web belum menjawab 200 (cek: pm2 logs web)"
 
   say "Nyalakan BOT (mode menunggu pairing)"
-  if pm2 describe main >/dev/null 2>&1; then
-    pm2 restart main --update-env >/dev/null
-  else
-    pm2 start main.js --name main --cwd "$SW_DIR" --max-memory-restart "${BOT_MAXMEM}M" >/dev/null
-  fi
+  pm2_nyalakan main main.js "$BOT_MAXMEM"
   pm2 save >/dev/null
   pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
   ok "pm2 tersimpan (auto-start saat VPS reboot)"
+
+  # Rotasi log: panel admin membaca main-out.log / main-error.log, jadi log yang
+  # tumbuh tanpa batas bukan cuma memakan disk — ia memperlambat panel juga.
+  # Tanpa modul ini log pm2 TIDAK pernah dipangkas sama sekali.
+  if ! pm2 ls 2>/dev/null | grep -qi logrotate; then
+    say "Pasang rotasi log pm2"
+    pm2 install pm2-logrotate >/dev/null 2>&1 || warn "pm2-logrotate gagal dipasang (tidak fatal)"
+  fi
+  pm2 set pm2-logrotate:max_size 10M      >/dev/null 2>&1 || true
+  pm2 set pm2-logrotate:retain 7          >/dev/null 2>&1 || true
+  pm2 set pm2-logrotate:compress true     >/dev/null 2>&1 || true
+  pm2 set pm2-logrotate:rotateInterval '0 0 * * *' >/dev/null 2>&1 || true
+  ok "rotasi log: maks 10 MB, simpan 7 berkas, dikompresi"
 fi
 
 # ── 8. Ringkasan ────────────────────────────────────────────────────────

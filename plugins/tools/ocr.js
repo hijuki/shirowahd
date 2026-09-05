@@ -1,8 +1,18 @@
-import * as _tesseract from "tesseract.js";
 import te from "../../src/lib/hillz-error.js";
 import { sendToolsPreview } from "../../src/lib/hillz-context.js";
 
-function getTesseract() {
+// Dulu: `import * as _tesseract from "tesseract.js"` — impor STATIS.
+// Akibatnya tesseract.js dimuat pada SETIAP boot bot walau `.ocr` tidak pernah
+// dipakai, dan runtime emscripten-nya menulis 31 baris peringatan
+// "Blocking on the main thread is very dangerous" ke main-error.log. Panel admin
+// membaca berkas log itu, jadi peringatan itulah yang mengotori panel — bukan
+// galat, cuma kebisingan yang menutupi galat sungguhan.
+//
+// Sekarang dimuat saat dipakai. Hasilnya dicache supaya `.ocr` kedua tidak
+// mengimpor ulang.
+let _tesseract = null;
+async function getTesseract() {
+  if (!_tesseract) _tesseract = await import("tesseract.js");
   return _tesseract;
 }
 const pluginConfig = {

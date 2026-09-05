@@ -133,29 +133,52 @@ await sleep(200);
 // ═══════════════════════════════════════
 // 4. Patch Baileys
 // ═══════════════════════════════════════
+// DIPERBAIKI 2026-09-05 setelah diukur: langkah ini melaporkan "✔ 2 file(s)"
+// pada SETIAP boot padahal nol byte berubah. Dua sebab, dua-duanya senyap:
+//
+// 1. Salah paket. Kode mengimpor `hillz` (alias npm ke `ourin-baileys@9.0.21`,
+//    49 berkas), tapi yang ditambal `@whiskeysockets/baileys` — nol berkas
+//    mengimpornya.
+// 2. Regex tidak pernah cocok. `/maxContentLengthBytes:\s*\d+/` mencari ANGKA,
+//    isi berkasnya `maxContentLengthBytes: +attrs.maxContentLengthBytes`.
+//    `replace()` mengembalikan string yang sama, tapi `patched++` tetap jalan
+//    karena gerbangnya cuma `includes('maxContentLengthBytes:')`.
+//
+// Akibatnya berkas di node_modules ditulis ulang tiap boot dengan isi identik,
+// dan log memberi keyakinan palsu bahwa sebuah batas sudah dibuka.
+//
+// Sekarang: paket yang BENAR-BENAR dipakai diperiksa lebih dulu, dan penulisan
+// hanya terjadi kalau isinya sungguh berubah. Kalau tidak ada yang perlu
+// ditambal, itu yang dilaporkan — bukan angka karangan.
 step('Patching Baileys');
 try {
   let patched = 0;
-  const sendFile  = './node_modules/@whiskeysockets/baileys/lib/Socket/messages-send.js';
-  const mediaFile = './node_modules/@whiskeysockets/baileys/lib/Utils/messages-media.js';
+  let dilewati = 0;
 
-  if (existsSync(sendFile)) {
-    let src = readFileSync(sendFile, 'utf8');
-    if (src.includes('maxContentLengthBytes:') && !src.includes('maxContentLengthBytes: Infinity')) {
-      src = src.replace(/maxContentLengthBytes:\s*\d+/g, 'maxContentLengthBytes: Infinity');
-      writeFileSync(sendFile, src);
+  // Urutan penting: paket yang diimpor kode lebih dulu.
+  const kandidat = ['./node_modules/hillz', './node_modules/@whiskeysockets/baileys'];
+  const tambalan = [
+    { sub: 'lib/Socket/messages-send.js', cari: /maxContentLengthBytes:\s*\d+/g, ganti: 'maxContentLengthBytes: Infinity' },
+    { sub: 'lib/Utils/messages-media.js', cari: /if \(opts\?\.maxContentLength/g, ganti: 'if (false && opts?.maxContentLength' },
+  ];
+
+  for (const basis of kandidat) {
+    if (!existsSync(basis)) continue;
+    for (const t of tambalan) {
+      const f = `${basis}/${t.sub}`;
+      if (!existsSync(f)) continue;
+      const src = readFileSync(f, 'utf8');
+      const baru = src.replace(t.cari, t.ganti);
+      // Gerbangnya perbandingan isi, bukan `includes()` — inilah yang dulu bohong.
+      if (baru === src) { dilewati++; continue; }
+      writeFileSync(f, baru);
       patched++;
     }
   }
-  if (existsSync(mediaFile)) {
-    let src = readFileSync(mediaFile, 'utf8');
-    if (src.includes('opts?.maxContentLength') && !src.includes('if (false && opts?.maxContentLength')) {
-      src = src.replace(/if \(opts\?\.maxContentLength/g, 'if (false && opts?.maxContentLength');
-      writeFileSync(mediaFile, src);
-      patched++;
-    }
-  }
-  patched ? done(`${patched} file(s)`) : done('already patched');
+
+  patched
+    ? done(`${patched} file(s)`)
+    : done(`nol pola cocok — batas ini tidak ada di paket yang dipakai (${dilewati} berkas diperiksa)`);
 } catch (e) { fail(e.message.split('\n')[0]); }
 
 await sleep(200);

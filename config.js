@@ -302,7 +302,7 @@ const config = {
 
   // NOTE: kalau mau command "autoai" nya berfungsi, ini gak wajib di isi yak
   // ambil apikey di: https://aistudio.google.com/apikey
-  geminiApiKey: "",
+  geminiApiKey: process.env.GEMINI_API_KEY || "",
 
   autoaiPersonas: {
     Bell409: `- Nama kamu adalah Bella Clarissa, lebih suka dipanggil Bella.
