@@ -466,9 +466,11 @@ function lajuMbps(file) {
  * keluhan "patah tipis di WA" tetap ada. Jadi angkanya dikembalikan ke 0,09 —
  * menurunkan laju hanya mengurangi mutu tanpa membayar apa pun.
  *
- * Batas atas 12 Mbps (bukan 14): 14 tidak pernah tercapai rumus ini pada
- * 1080p60, jadi itu pagar mati. 12 memberi ruang untuk 4K/klip laju tinggi
- * tanpa membiarkan angkanya lepas.
+ * Batas atas 14 Mbps DIKEMBALIKAN (sempat saya turunkan ke 12). Pada 1080p60
+ * rumus ini selalu menang di 11,20 sehingga 14 memang pagar mati dan angkanya
+ * tidak berpengaruh di sini — tapi pada klip 4K/laju tinggi, batas 12 memotong
+ * lebih awal dari 14, dan memotong = menurunkan mutu. Karena tidak ada bukti 12
+ * memperbaiki apa pun, dikembalikan ke nilai yang sudah terbukti.
  *
  * `-level` TIDAK dipatok di sini; dihitung dari ukuran+fps lewat levelH264().
  * Patokan 4.0 sempat dipakai dan itu keliru untuk 1080x1920@60 (butuh 4.2).
@@ -481,7 +483,7 @@ function batasLaju(file, info, fpsEfektif) {
   const dariPiksel = (pps * 0.09) / 1e6;
   let mbps = Math.max(dariSumber, dariPiksel);
   if (!(mbps > 0)) return null;
-  mbps = Math.min(12, Math.max(2, mbps));
+  mbps = Math.min(14, Math.max(2, mbps));
   return {
     maxrate: mbps.toFixed(2) + "M",
     // ═══ KENAPA BUFSIZE = MAXRATE (1x), BUKAN 2x ═══
@@ -695,25 +697,35 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
     ...vfArgs,
     ...fpsArgs,
     "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
-    "-preset", "fast", "-crf", "21",
-    // ═══ CAVLC (`-coder 0`) DICABUT — PENGUKURAN SAYA CACAT ═══
+    "-preset", "fast", "-crf", "20",
+    // ═══ SEMUA TUAS "PERINGAN DECODER" DICABUT — JANGAN DIPASANG LAGI ═══
     //
-    // CAVLC pernah dipasang di sini dengan alasan meringankan decoder. Dasarnya
-    // perbandingan SSIM CAVLC@11,0M (0,9567) lawan CABAC@8,99M (0,9545), lalu
-    // disimpulkan "CAVLC sedikit lebih baik". Itu CACAT: dua laju yang berbeda
-    // dibandingkan, jadi yang terukur pengaruh laju, bukan pengaruh coder.
+    // Tiga hal pernah ditambahkan di sini untuk mengejar keluhan "patah tipis di
+    // WhatsApp". Ketiganya dicabut karena user melaporkan hasilnya LEBIH BURUK:
+    // "di wa malah turun jauh qualitas turun fps turun, malah bagusan yang
+    // sebelum lo otak-atik". Yang dicabut:
     //
-    // Pada laju yang SAMA, angkanya terbalik: CAVLC@8,99M = 0,9483 lawan
-    // CABAC@8,99M = 0,9545. CAVLC memang 10-15% kurang efisien, jadi pada laju
-    // dipatok ia SELALU kalah mutu. User melaporkannya langsung: "di wa malah
-    // turun jauh, qualitas turun".
+    // 1. `-coder 0` (CAVLC). Dasarnya perbandingan SSIM CAVLC@11,0M (0,9567)
+    //    lawan CABAC@8,99M (0,9545) — CACAT, karena dua LAJU yang berbeda
+    //    dibandingkan, jadi yang terukur pengaruh laju bukan pengaruh coder.
+    //    Pada laju SAMA angkanya terbalik: CAVLC@8,99M = 0,9483 lawan
+    //    CABAC@8,99M = 0,9545. CAVLC 10-15% kurang efisien, jadi pada laju yang
+    //    dipatok `maxrate` ia SELALU kalah mutu.
     //
-    // Jangan pasang lagi tanpa membandingkan pada laju yang identik.
+    // 2. `-refs 2 -bf 2` (preset fast defaultnya 3/3). Alasannya meringankan
+    //    buffer decoder. Tapi memotong frame acuan juga memotong efisiensi
+    //    kompresi, dan karena `maxrate` mengikat pada sumber ini, biayanya
+    //    dibayar sebagai MUTU, bukan ukuran.
     //
-    // refs/bf dibatasi 2 (preset fast defaultnya 3/3): tiap frame acuan menambah
-    // gambar yang harus ditahan decoder. Ukuran nyaris tidak berubah, dan ini
-    // TIDAK menukar mutu seperti CAVLC.
-    "-refs", "2", "-bf", "2",
+    // 3. CRF 21 (dari 20). Menaikkan CRF = menurunkan mutu, titik.
+    //
+    // Pelajaran yang berlaku umum di berkas ini: kalau dua setelan encoder
+    // dibandingkan, LAJUNYA WAJIB IDENTIK. Beda satu variabel saja.
+    //
+    // Kembali ke setelan yang user sendiri sudah nyatakan "fps udh oke": preset
+    // fast, CRF 20, refs/bf default. Yang TETAP dipertahankan cuma dua, karena
+    // dua-duanya bukan tukar-menukar mutu: kurva warna pilihan user (npl=1000
+    // mobius) dan tambalan `setparams` yang mencegah keluaran 0 byte.
     ...argWarna,
     ...argLaju,
     "-g", String(gop), "-keyint_min", String(Math.round(gop / 2)), "-sc_threshold", "0",
