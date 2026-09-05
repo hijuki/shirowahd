@@ -15,6 +15,7 @@ import {
   formatSuggestionMessage,
 } from "./lib/hillz-similarity.js";
 import { getDatabase } from "./lib/hillz-database.js";
+import { pasangReaksi, AMBANG_BAKU } from "./lib/hillz-reaksi.js";
 import {
   formatUptime,
   createWaitMessage,
@@ -1839,7 +1840,29 @@ async function messageHandler(msg, sock, options = {}) {
       }
     }
 
-    await plugin.handler(m, context);
+    // ═══ INDIKATOR PROSES ═══
+    // Reaksi ⏳ dipasang HANYA kalau plugin ini benar-benar lama (lewat ambang).
+    // Alasan tidak dipasang untuk semua perintah: 492 dari 823 plugin sudah
+    // m.react() sendiri, dan WhatsApp cuma punya satu slot reaksi per pesan —
+    // ✅ global akan menimpa 🎉/💔 milik plugin dan menghapus informasinya.
+    // Rinciannya di src/lib/hillz-reaksi.js.
+    const reaksiHidup =
+      db.setting("reaksiProses") ?? config.features?.reaksiProses ?? true;
+    const indikator = reaksiHidup
+      ? pasangReaksi(m, {
+          ambang: db.setting("reaksiAmbang") ?? config.features?.reaksiAmbang ?? AMBANG_BAKU,
+        })
+      : null;
+
+    try {
+      await plugin.handler(m, context);
+      indikator?.selesai();
+    } catch (galatPlugin) {
+      // ❌ dulu, baru lempar ulang — supaya penanganan galat di bawah (log +
+      // incrementStat + pesan ke user) tetap jalan apa adanya.
+      indikator?.gagal();
+      throw galatPlugin;
+    }
 
     if (!m.isOwner && !m.isPartner && plugin.config.cooldown > 0) {
       db.setCooldown(m.sender, m.command, plugin.config.cooldown);

@@ -177,6 +177,12 @@ const config = {
     logMessage: true,
     dailyLimitReset: true,
     smartTriggers: false,
+
+    // Reaksi ⏳ → ✅/❌ pada perintah yang lama. Ambang dalam milidetik:
+    // di bawah angka ini bot senyap (tidak ada reaksi sama sekali), supaya
+    // perintah cepat seperti .menu tidak boros 2 panggilan sendMessage.
+    reaksiProses: true,
+    reaksiAmbang: 1200,
   },
 
   registration: {
