@@ -704,42 +704,23 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
     ...fpsArgs,
     "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
     "-preset", "fast", "-crf", "21",
-    // ═══ INI TUAS YANG SEBENARNYA MENYELESAIKAN "PATAH TIPIS DI WA" ═══
+    // ═══ CAVLC (`-coder 0`) DICABUT — PENGUKURAN SAYA CACAT ═══
     //
-    // `-coder 0` = CAVLC, bukan CABAC.
+    // CAVLC pernah dipasang di sini dengan alasan meringankan decoder. Dasarnya
+    // perbandingan SSIM CAVLC@11,0M (0,9567) lawan CABAC@8,99M (0,9545), lalu
+    // disimpulkan "CAVLC sedikit lebih baik". Itu CACAT: dua laju yang berbeda
+    // dibandingkan, jadi yang terukur pengaruh laju, bukan pengaruh coder.
     //
-    // Keluhan bertahan setelah laju bit diturunkan DUA KALI (puncak 16,5 → 12,3
-    // → 11,4 Mbps). Dua kegagalan pada tuas yang sama = tuasnya salah. Yang
-    // mengikat ternyata beban macroblock, bukan laju:
+    // Pada laju yang SAMA, angkanya terbalik: CAVLC@8,99M = 0,9483 lawan
+    // CABAC@8,99M = 0,9545. CAVLC memang 10-15% kurang efisien, jadi pada laju
+    // dipatok ia SELALU kalah mutu. User melaporkannya langsung: "di wa malah
+    // turun jauh, qualitas turun".
     //
-    //   1080x1920@60 = 8160 MB/frame x 59,88 = 488.621 MB/detik
-    //                = 93,6% batas Level 4.2 (522.240 MB/detik)
+    // Jangan pasang lagi tanpa membandingkan pada laju yang identik.
     //
-    // Decoder perangkat keras dijamin sampai batas level, tidak di atasnya, jadi
-    // 93,6% berarti nol cadangan untuk adegan ramai. Pemutar Telegram punya
-    // cadangan itu; pemutar dalam WhatsApp tidak.
-    //
-    // CABAC (entropy coding aritmetik) adalah bagian termahal dari decode H.264
-    // dan TIDAK bisa diparalelkan. CAVLC jauh lebih murah. Diukur 1-thread pada
-    // potongan 14 detik, sisanya identik:
-    //
-    //   1080x1920 CABAC   3,48x realtime   ← sebelum
-    //   1080x1920 CAVLC   4,83x realtime   = +39%, resolusi & fps UTUH
-    //   864x1536  CABAC   4,57x            = +31%, harus turunkan resolusi
-    //   720x1280  CABAC   5,98x            = +72%, resolusi turun jauh
-    //
-    // CAVLC memberi keringanan LEBIH BESAR daripada menurunkan resolusi ke
-    // 864x1536, tanpa menyentuh resolusi maupun fps. Itu sebabnya dipilih:
-    // user menyatakan kualitasnya sudah bagus dan hanya fps yang bermasalah,
-    // jadi menukar resolusi atau fps = merusak yang sudah benar.
-    //
-    // Biayanya ~10-15% efisiensi bit. Karena laju dibatasi, biaya itu muncul
-    // sebagai MUTU turun (SSIM 0,9545 → 0,9483), bukan berkas lebih besar. Itu
-    // dibayar dengan mengembalikan batas laju ke 0,09 (lihat batasLaju): pada
-    // 11,0 Mbps CAVLC mencapai SSIM 0,9567, sedikit LEBIH BAIK dari CABAC 8,99M.
-    "-coder", "0",
     // refs/bf dibatasi 2 (preset fast defaultnya 3/3): tiap frame acuan menambah
-    // gambar yang harus ditahan decoder. Ukuran nyaris tidak berubah.
+    // gambar yang harus ditahan decoder. Ukuran nyaris tidak berubah, dan ini
+    // TIDAK menukar mutu seperti CAVLC.
     "-refs", "2", "-bf", "2",
     ...argWarna,
     ...argLaju,
