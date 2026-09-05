@@ -291,6 +291,129 @@ export function fpsMelewatiBatas(file) {
 }
 
 /**
+ * Selisih dari rata-rata yang masih dianggap pembulatan timescale, bukan VFR.
+ *
+ * Timebase MP4 yang umum (1/15360, 1/30000) tidak bisa menyatakan 1/60 detik
+ * secara persis, jadi berkas CFR sehat pun bergantian 16,667 ms dan 16,666 ms —
+ * terukur pada sumber TikTok 60 fps: 1154 vs 576 kejadian. Itu 0,006% dan
+ * TIDAK boleh dihitung sebagai VFR.
+ */
+const VFR_TOLERANSI = 0.05;
+
+/**
+ * Jarak antar frame yang lebih dari sekian kali rata-rata = ada frame HILANG.
+ * 1,7x dipilih supaya frame ganda (2x) tertangkap sementara ayunan kecil tidak.
+ */
+const VFR_AMBANG_LOMPAT = 1.7;
+
+/**
+ * Apakah timing berkas ini benar-benar rata (CFR), diukur dari ISI, bukan header?
+ *
+ * ═══ BUG NYATA YANG INI TANGANI ═══
+ *
+ * Keluhan: ".ttv2 download video ga sesuai fps asli malah patah-patah."
+ * Diukur pada video TikTok nyata (1 dari 5 sampel acak dari feed):
+ *
+ *   r_frame_rate   = 30/1        ← header bilang 30 fps
+ *   avg_frame_rate = 111/4       = 27,75 fps
+ *   jarak nyata    = 33,33 ms x136  dan  66,67 ms x10
+ *   lompatan       = 11
+ *
+ * Jadi berkasnya VFR: sebagian besar frame berjarak 33 ms, tapi sebelas kali
+ * jaraknya DUA KALI itu — frame yang hilang. Persis yang terlihat sebagai
+ * tersendat, dan persis kenapa "fps-nya tidak sesuai aslinya".
+ *
+ * Gerbang `bohong` TIDAK menangkapnya: selisih 30 vs 27,74 hanya 7,5%, di bawah
+ * toleransi 20%. Dan karena `perluTurun` juga false (27,74 < 60), berkas itu
+ * lewat jalur REMUX — `-c:v copy` menyalin timestamp rusaknya apa adanya ke
+ * penerima. Kualitas gambar 100% utuh (karena itu keluhannya selalu "kualitas
+ * oke tapi patah"), timing-nya tidak.
+ *
+ * Kenapa harus dibaca per frame, bukan dari header: header hanya punya nominal
+ * dan rata-rata. Rata-rata 27,74 fps tidak memberi tahu apakah frame tersebar
+ * rata di 27,74 fps (mulus, cuma pelan) atau 30 fps dengan sebelas bolong
+ * (patah). Dua-duanya menghasilkan rata-rata yang sama.
+ *
+ * @param {string} file
+ * @param {object} [opsi] `{ batasDetik }` — hanya periksa N detik pertama.
+ * @returns {{vfr:boolean, frame:number, fpsNyata:number, deltaUnik:number,
+ *   kelasBeda:number, lompatan:number, terbaca:boolean, alasan:string}}
+ */
+export function deteksiVfr(file, opsi = {}) {
+  // ═══ KENAPA `packet=`, BUKAN `frame=` ═══
+  //
+  // `frame=pts_time` memaksa ffprobe MEN-DECODE seluruh video: terukur 13,96
+  // detik untuk klip 29 detik 1080p60. Itu biaya yang ditanggung SETIAP unduhan.
+  // `packet=pts_time` hanya membaca tabel timestamp di container: 0,07 detik —
+  // 200x lebih cepat.
+  //
+  // Keduanya diuji berdampingan pada dua berkas dan hasilnya IDENTIK sampai
+  // angka terakhir:
+  //   sumber mulus : frame {1731, 59.880 fps, lompat 0, kelas 0}
+  //                  packet {1731, 59.880 fps, lompat 0, kelas 0}
+  //   sumber patah : frame {615, 51.394 fps, lompat 102, kelas 2}
+  //                  packet {615, 51.394 fps, lompat 102, kelas 2}
+  //
+  // Masuk akal: yang diukur adalah JADWAL TAYANG frame, dan jadwal itu tersimpan
+  // di header paket container. Decode hanya perlu kalau yang diukur isi gambar.
+  //
+  // Karena `packet=` murah, `-read_intervals` tidak lagi wajib; tetapi batas
+  // tetap dipertahankan sebagai jaring untuk berkas berjam-jam.
+  const batas = Number(opsi.batasDetik) > 0 ? Number(opsi.batasDetik) : 600;
+  const raw = jalankan(
+    "ffprobe -v error -select_streams v:0 -read_intervals " +
+      JSON.stringify("%+" + batas) +
+      " -show_entries packet=pts_time -of csv=p=0 " +
+      JSON.stringify(file),
+    60000,
+  );
+
+  // parseFloat, BUKAN Number: `-of csv=p=0` meninggalkan koma di ujung sebagian
+  // baris ("0.033333,") dan `Number("0.033333,")` = NaN. Salah pilih di sini
+  // membuat probe melaporkan "1 frame" untuk berkas 1731 frame — sudah kena.
+  const t = raw
+    .split("\n")
+    .map((s) => parseFloat(s))
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => a - b);
+
+  const kosong = {
+    vfr: false, frame: t.length, fpsNyata: 0, deltaUnik: 0, kelasBeda: 0,
+    lompatan: 0, terbaca: false,
+    alasan: "timing per frame tidak terbaca — tidak bisa disimpulkan VFR",
+  };
+  if (t.length < 12) return kosong;
+
+  const delta = [];
+  for (let i = 1; i < t.length; i++) delta.push(+(t[i] - t[i - 1]).toFixed(6));
+  const unik = new Set(delta);
+  const rata = delta.reduce((a, b) => a + b, 0) / delta.length;
+  if (!(rata > 0)) return kosong;
+
+  // Dua ukuran terpisah, karena masing-masing menandakan hal berbeda:
+  //   kelasBeda = ada jarak yang benar-benar lain kelasnya (VFR sesungguhnya)
+  //   lompatan  = ada frame yang HILANG (yang paling terasa saat diputar)
+  const kelasBeda = new Set(
+    delta.filter((d) => Math.abs(d - rata) / rata > VFR_TOLERANSI),
+  ).size;
+  const lompatan = delta.filter((d) => d > rata * VFR_AMBANG_LOMPAT).length;
+
+  const vfr = kelasBeda > 0 || lompatan > 0;
+  return {
+    vfr,
+    frame: t.length,
+    fpsNyata: 1 / rata,
+    deltaUnik: unik.size,
+    kelasBeda,
+    lompatan,
+    terbaca: true,
+    alasan: vfr
+      ? `timing tidak rata: ${kelasBeda} jarak menyimpang >${VFR_TOLERANSI * 100}%, ${lompatan} frame hilang — wajib diratakan ke CFR`
+      : `timing rata di ${(1 / rata).toFixed(2)} fps (${unik.size} nilai jarak, selisih pembulatan timescale saja)`,
+  };
+}
+
+/**
  * Potongan argumen siap-tempel untuk jalur yang menyusun perintah ffmpeg sebagai
  * STRING, bukan array — mis. konversi GIF→MP4 lewat `queueFFmpeg()`.
  *
