@@ -78,11 +78,11 @@ export default function Login({ onSuccess }) {
       <header className="relative z-10 flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5
         border-b-[var(--bw)] border-[var(--edge)] bg-[var(--plate-fill)]">
         <span className="flex items-center gap-2.5 min-w-0">
-          <span className="badge-h inline-grid! w-[22px] h-[22px] !border-[2px] !rounded-[6px] text-[10px]">H</span>
+          <span className="badge-h inline-grid! w-[22px] h-[22px] !border-[2px] !rounded-[var(--r-xs)] text-[10px]">H</span>
           <span className="kicker !text-[9px] truncate">SWHDHLZ · AREA TERBATAS</span>
         </span>
         <button onClick={toggle} aria-label="Ganti mode tampilan"
-          className="ibtn !w-9 !h-9 !rounded-[10px] shrink-0">
+          className="ibtn !w-9 !h-9 !rounded-[var(--r-soft)] shrink-0">
           <i className={`fa-solid ${theme === 'dark' ? 'fa-moon' : 'fa-sun'} text-[11px]`} />
         </button>
       </header>
@@ -97,7 +97,7 @@ export default function Login({ onSuccess }) {
               <p className="kicker !text-[9px] mb-1.5">GERBANG 01 / KONSOL</p>
               <h1 className="display-m">MASUK<br />KONSOL</h1>
             </div>
-            <span className="relative w-12 h-12 shrink-0 grid place-items-center rounded-[11px]
+            <span className="relative w-12 h-12 shrink-0 grid place-items-center rounded-[var(--r-soft)]
               border-[var(--bw)] border-[var(--edge)] bg-wa stack-shadow">
               <i className="fa-solid fa-shield-halved text-[16px] text-[#06180d]" />
               <span className="stamp-ring" style={{ '--ring-inset': '-5px', '--ring-max': 1.18 }} />
@@ -135,8 +135,7 @@ export default function Login({ onSuccess }) {
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
                   aria-label={showPassword ? 'Sembunyikan kunci' : 'Tampilkan kunci'}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center
-                    rounded-[8px] text-[var(--ink-2)] hover:text-[var(--ink)] transition-colors"
+                  className="btn btn-icon absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--ink-2)] hover:text-[var(--ink)]"
                 >
                   <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-[12px]`} />
                 </button>
@@ -157,7 +156,7 @@ export default function Login({ onSuccess }) {
               </div>
             )}
 
-            <button type="submit" disabled={loading || locked || !password}
+            <button type="submit" disabled={loading || locked || !password} aria-busy={loading}
               className="btn btn-wa w-full !py-3.5 disabled:opacity-45 disabled:pointer-events-none">
               <span className="btn-cap">
                 <i className={`fa-solid ${loading ? 'fa-circle-notch fa-spin' : locked ? 'fa-ban' : 'fa-arrow-right'} text-[9px]`} />
@@ -173,7 +172,7 @@ export default function Login({ onSuccess }) {
                 ['fa-user-shield', 'SSH ROOT'],
                 ['fa-gauge-high', '5 COBA'],
               ].map(([ico, txt]) => (
-                <li key={txt} className="flex flex-col items-center gap-1.5 py-2.5 rounded-[9px]
+                <li key={txt} className="flex flex-col items-center gap-1.5 py-2.5 rounded-[var(--r-soft)]
                   border-[var(--bw)] border-[var(--edge)] bg-[var(--paper-2)]">
                   <i className={`fa-solid ${ico} text-[11px] text-[var(--ink-2)]`} />
                   <span className="kicker !text-[7px] !tracking-[0.14em]">{txt}</span>

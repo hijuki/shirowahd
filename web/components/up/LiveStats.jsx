@@ -77,14 +77,46 @@ export default function LiveStats() {
   if (err) return null
 
   if (!d) {
+    // Skeleton yang MENIRU susunan aslinya: 3 angka ringkas + grafik 24 batang.
+    // Dua balok abu sebelumnya tidak memberi tahu apa pun tentang isi yang akan
+    // datang, jadi pergantian skeleton → data terasa seperti layout melompat.
     return (
-      <section className="plate plate-seam p-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="kicker">MEMUAT TELEMETRI</span>
-          <span className="dot-live" />
+      <section className="plate plate-seam" aria-busy="true" aria-label="Memuat telemetri">
+        <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="sk sk-tile w-8 h-8 shrink-0" />
+            <div className="min-w-0 space-y-1.5">
+              <span className="sk sk-line block w-[84px] h-[13px]" />
+              <span className="sk sk-line block w-[56px] h-[8px]" style={{ '--d': '90ms' }} />
+            </div>
+          </div>
+          <span className="chip"><span className="dot-live" />LIVE</span>
         </div>
-        <div className="skeleton h-[78px] mb-2" />
-        <div className="skeleton skeleton-text w-2/3" />
+        <div className="rule-dash mx-4" />
+        <div className="grid grid-cols-3 split-x border-b-2 border-[var(--edge)]">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="px-3 py-3 space-y-1.5">
+              <span className="sk sk-line block w-[40px] h-[8px]" style={{ '--d': `${i * 70}ms` }} />
+              <span className="sk sk-line block w-[52px] h-[22px]" style={{ '--d': `${i * 70 + 40}ms` }} />
+            </div>
+          ))}
+        </div>
+        <div className="px-4 pt-4 pb-4">
+          <div className="flex items-baseline justify-between mb-2">
+            <span className="kicker opacity-55">UPLOAD / JAM</span>
+            <span className="sk sk-line w-[48px] h-[8px]" />
+          </div>
+          {/* Tinggi batang bervariasi supaya terbaca sebagai grafik yang sedang
+              dimuat, bukan sebagai deretan balok seragam. */}
+          <div className="bars">
+            {Array.from({ length: 24 }).map((_, i) => (
+              <span key={i} className="bar">
+                <span className="sk block w-full rounded-[var(--r-xs)]"
+                  style={{ height: `${18 + ((i * 37) % 62)}%`, '--d': `${i * 34}ms` }} />
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
     )
   }

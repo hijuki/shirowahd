@@ -139,7 +139,7 @@ export default function Bots({ toast }) {
           const hidupSub = st?.tahap === 'tersambung'
           const hidup = b.utama ? hidupUtama : hidupSub
           return (
-            <div key={b.id} className="rounded-[14px] p-4 bg-[var(--paper-2)] border border-[var(--edge)] space-y-3">
+            <div key={b.id} className="rounded-[var(--r)] p-4 bg-[var(--paper-2)] border border-[var(--edge)] space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="w-[8px] h-[8px] rounded-full shrink-0"
                   style={{ background: hidup ? '#34d399' : '#7e90ad', animation: hidup ? 'pulseDot 1.7s infinite' : 'none' }} />
@@ -155,20 +155,20 @@ export default function Bots({ toast }) {
                 <label className="text-xs text-[var(--ink-2)]" htmlFor={`role-${b.id}`}>Role</label>
                 <select id={`role-${b.id}`} value={b.role} disabled={busy}
                   onChange={e => ubah(b, { role: e.target.value })}
-                  className="min-h-10 rounded-[10px] px-3 py-2 bg-[var(--paper)] border border-[var(--edge)] text-sm outline-none">
+                  className="min-h-10 rounded-[var(--r-soft)] px-3 py-2 bg-[var(--paper)] border border-[var(--edge)] text-sm outline-none">
                   {Object.entries(roles).map(([id, r]) => <option key={id} value={id}>{r.label}</option>)}
                 </select>
 
-                <button onClick={() => ubah(b, { aktif: !b.aktif })} disabled={busy}
-                  className={`min-h-10 rounded-[10px] px-3 py-2 text-sm border transition-all duration-[150ms] active:scale-[.97] ${b.aktif
+                <button onClick={() => ubah(b, { aktif: !b.aktif })} disabled={busy} aria-busy={busy}
+                  className={`min-h-10 rounded-[var(--r-soft)] px-3 py-2 text-sm border transition-all duration-[150ms] active:scale-[.97] ${b.aktif
                     ? 'bg-[var(--paper)] border-[var(--edge)]'
                     : 'bg-emerald-500/[.08] border-emerald-500/25 text-emerald-300 font-bold'}`}>
                   <i className={`fa-solid fa-power-off mr-1.5`} />{b.aktif ? 'Matikan' : 'Nyalakan'}
                 </button>
 
                 {!b.utama && (
-                  <button onClick={() => hapus(b)} disabled={busy}
-                    className="min-h-10 rounded-[10px] px-3 py-2 bg-bad/[.08] border border-bad/25 text-bad text-sm transition-all duration-[150ms] active:scale-[.97]">
+                  <button onClick={() => hapus(b)} disabled={busy} aria-busy={busy}
+                    className="btn btn-danger">
                     <i className="fa-solid fa-trash mr-1.5" />Hapus
                   </button>
                 )}
@@ -182,7 +182,7 @@ export default function Bots({ toast }) {
 
               {/* Kode pairing bot tambahan tampil di barisnya sendiri */}
               {!b.utama && st?.tahap === 'kode-siap' && st.kode && (
-                <div className="rounded-[12px] p-3 bg-[var(--paper)] border border-[var(--volt)]/30 text-center">
+                <div className="rounded-[var(--r-soft)] p-3 bg-[var(--paper)] border border-[var(--volt)]/30 text-center">
                   <p className="text-[10px] font-bold tracking-[.2em] uppercase text-[var(--ink-2)]">Kode Pairing</p>
                   <p className="font-mono font-bold tabular-nums select-all text-2xl" style={{ color: 'var(--volt)', letterSpacing: '.08em' }}>
                     {st.kodeRapi || st.kode}
@@ -199,22 +199,22 @@ export default function Bots({ toast }) {
       </div>
 
       {/* Tambah bot */}
-      <div className="rounded-[14px] p-4 bg-[var(--paper-2)] border border-dashed border-[var(--edge)] space-y-3">
+      <div className="rounded-[var(--r)] p-4 bg-[var(--paper-2)] border border-dashed border-[var(--edge)] space-y-3">
         <p className="text-sm font-bold"><i className="fa-solid fa-plus mr-1.5 text-[var(--volt)]" />Tambah nomor bot</p>
         <div className="grid gap-2 md:grid-cols-3">
           <input value={nomorBaru} onChange={e => setNomorBaru(e.target.value.replace(/\D/g, ''))}
             placeholder="628xxxxxxxxxx" inputMode="numeric" aria-label="Nomor bot tambahan"
-            className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper)] border border-[var(--edge)] outline-none text-sm font-mono" />
+            className="min-h-11 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper)] border border-[var(--edge)] outline-none text-sm font-mono" />
           <input value={labelBaru} onChange={e => setLabelBaru(e.target.value)}
             placeholder="Nama (mis. Bot Claim)" aria-label="Nama bot tambahan"
-            className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper)] border border-[var(--edge)] outline-none text-sm" />
+            className="min-h-11 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper)] border border-[var(--edge)] outline-none text-sm" />
           <select value={roleBaru} onChange={e => setRoleBaru(e.target.value)} aria-label="Role bot tambahan"
-            className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper)] border border-[var(--edge)] outline-none text-sm">
+            className="min-h-11 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper)] border border-[var(--edge)] outline-none text-sm">
             {Object.entries(roles).map(([id, r]) => <option key={id} value={id}>{r.label}</option>)}
           </select>
         </div>
-        <button onClick={tambah} disabled={busy || nomorBaru.replace(/\D/g, '').length < 10}
-          className="btn-primary min-h-11 rounded-[12px] px-5 py-2.5 text-sm font-bold disabled:opacity-50">
+        <button onClick={tambah} disabled={busy || nomorBaru.replace(/\D/g, '').length < 10} aria-busy={busy}
+          className="btn-primary min-h-11 text-sm disabled:opacity-50">
           <i className="fa-solid fa-link mr-1.5" />Tautkan &amp; Jalankan
         </button>
         <p className="text-[var(--ink-2)] text-xs">
@@ -224,14 +224,14 @@ export default function Bots({ toast }) {
       </div>
 
       {/* Role kustom: bikin role sendiri dari kategori plugin yang benar-benar ada */}
-      <div className="rounded-[14px] p-4 bg-[var(--paper-2)] border border-[var(--edge)] space-y-3">
+      <div className="rounded-[var(--r)] p-4 bg-[var(--paper-2)] border border-[var(--edge)] space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-bold">
             <i className="fa-solid fa-user-shield mr-1.5 text-[var(--volt)]" />Role Kustom
           </p>
           {!roleForm && (
-            <button onClick={() => setRoleForm({ id: '', label: '', deskripsi: '', kategori: [] })} disabled={busy}
-              className="min-h-10 rounded-[10px] px-3 py-2 bg-[var(--paper)] border border-[var(--edge)] text-sm transition-all duration-[150ms] active:scale-[.97]">
+            <button onClick={() => setRoleForm({ id: '', label: '', deskripsi: '', kategori: [] })} disabled={busy} aria-busy={busy}
+              className="btn btn-quiet">
               <i className="fa-solid fa-plus mr-1.5" />Buat Role
             </button>
           )}
@@ -240,7 +240,7 @@ export default function Bots({ toast }) {
         {/* Daftar role: bawaan tidak bisa diubah/dihapus (dikunci di backend juga) */}
         <div className="space-y-2">
           {Object.entries(roles).map(([id, r]) => (
-            <div key={id} className="flex flex-wrap items-center gap-2 rounded-[10px] px-3 py-2 bg-[var(--paper)] border border-[var(--edge)]">
+            <div key={id} className="flex flex-wrap items-center gap-2 rounded-[var(--r-soft)] px-3 py-2 bg-[var(--paper)] border border-[var(--edge)]">
               <b className="text-sm">{r.label}</b>
               <span className="font-mono text-[11px] text-[var(--ink-2)]">{id}</span>
               {r.bawaan
@@ -248,12 +248,12 @@ export default function Bots({ toast }) {
                 : (
                   <span className="flex gap-2 ml-auto">
                     <button onClick={() => setRoleForm({ id, label: r.label, deskripsi: r.deskripsi || '', kategori: r.kategori || [] })}
-                      disabled={busy} aria-label={`Ubah role ${r.label}`}
-                      className="min-h-9 rounded-[9px] px-2.5 py-1.5 bg-[var(--paper-2)] border border-[var(--edge)] text-xs transition-all duration-[150ms] active:scale-[.97]">
+                      disabled={busy} aria-busy={busy} aria-label={`Ubah role ${r.label}`}
+                      className="btn btn-quiet min-h-9 text-xs">
                       <i className="fa-solid fa-pen mr-1" />Ubah
                     </button>
-                    <button onClick={() => hapusRole(id)} disabled={busy} aria-label={`Hapus role ${r.label}`}
-                      className="min-h-9 rounded-[9px] px-2.5 py-1.5 bg-bad/[.08] border border-bad/25 text-bad text-xs transition-all duration-[150ms] active:scale-[.97]">
+                    <button onClick={() => hapusRole(id)} disabled={busy} aria-busy={busy} aria-label={`Hapus role ${r.label}`}
+                      className="btn btn-danger min-h-9 text-xs">
                       <i className="fa-solid fa-trash mr-1" />Hapus
                     </button>
                   </span>
@@ -266,18 +266,18 @@ export default function Bots({ toast }) {
         </div>
 
         {roleForm && (
-          <div className="rounded-[12px] p-3 bg-[var(--paper)] border border-[var(--volt)]/30 space-y-3">
+          <div className="rounded-[var(--r-soft)] p-3 bg-[var(--paper)] border border-[var(--volt)]/30 space-y-3">
             <div className="grid gap-2 md:grid-cols-2">
               <input value={roleForm.id} onChange={e => setRoleForm({ ...roleForm, id: e.target.value })}
                 placeholder="id-role (mis. downloader)" aria-label="ID role"
-                className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm font-mono" />
+                className="min-h-11 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm font-mono" />
               <input value={roleForm.label} onChange={e => setRoleForm({ ...roleForm, label: e.target.value })}
                 placeholder="Nama tampil (mis. Bot Downloader)" aria-label="Label role"
-                className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm" />
+                className="min-h-11 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm" />
             </div>
             <input value={roleForm.deskripsi} onChange={e => setRoleForm({ ...roleForm, deskripsi: e.target.value })}
               placeholder="Keterangan singkat" aria-label="Deskripsi role"
-              className="w-full min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm" />
+              className="w-full min-h-11 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm" />
 
             <div>
               <p className="text-xs text-[var(--ink-2)] mb-2">
@@ -292,7 +292,7 @@ export default function Bots({ toast }) {
                         ...roleForm,
                         kategori: aktif ? roleForm.kategori.filter(x => x !== k) : [...roleForm.kategori, k],
                       })}
-                      className={`min-h-9 rounded-[9px] px-2.5 py-1.5 text-xs border transition-all duration-[150ms] active:scale-[.97] ${aktif
+                      className={`min-h-9 rounded-[var(--r-soft)] px-2.5 py-1.5 text-xs border transition-all duration-[150ms] active:scale-[.97] ${aktif
                         ? 'bg-[var(--volt)]/15 border-[var(--volt)]/40 text-[var(--volt)] font-bold'
                         : 'bg-[var(--paper-2)] border-[var(--edge)] text-[var(--ink-2)]'}`}>
                       {k}
@@ -303,12 +303,12 @@ export default function Bots({ toast }) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button onClick={simpanRole} disabled={busy}
-                className="btn-primary min-h-11 rounded-[12px] px-5 py-2.5 text-sm font-bold disabled:opacity-50">
+              <button onClick={simpanRole} disabled={busy} aria-busy={busy}
+                className="btn-primary min-h-11 text-sm disabled:opacity-50">
                 <i className="fa-solid fa-floppy-disk mr-1.5" />Simpan Role
               </button>
-              <button onClick={() => setRoleForm(null)} disabled={busy}
-                className="min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] text-sm transition-all duration-[150ms] active:scale-[.97]">
+              <button onClick={() => setRoleForm(null)} disabled={busy} aria-busy={busy}
+                className="btn btn-quiet min-h-11">
                 Batal
               </button>
             </div>

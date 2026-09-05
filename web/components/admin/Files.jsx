@@ -95,12 +95,12 @@ export default function Files({ toast }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => confirm('Hapus semua file kedaluwarsa?') && act(cleanupExpired, 'Cleanup selesai')}
-            disabled={busy} className="btn-primary rounded-[12px] px-4 py-2.5 text-sm font-bold">
+            disabled={busy} aria-busy={busy} className="btn-primary text-sm">
             <i className="fa-solid fa-broom mr-2" />Bersihkan Kedaluwarsa
           </button>
           <button onClick={doCleanOrphans}
-            disabled={busy} title="Hapus file di disk yang tidak tercatat di index (sisa index reset)"
-            className="rounded-[12px] px-4 py-2.5 text-sm font-bold bg-[var(--paper-2)] border border-[var(--edge)] hover:bg-[var(--paper-2)] transition-all duration-[150ms] active:scale-[.97]">
+            disabled={busy} aria-busy={busy} title="Hapus file di disk yang tidak tercatat di index (sisa index reset)"
+            className="btn btn-quiet">
             <i className="fa-solid fa-ghost mr-2" />Hapus File Orphan
           </button>
         </div>
@@ -111,13 +111,13 @@ export default function Files({ toast }) {
         <div className="relative flex-1 min-w-[200px]">
           <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-2)] text-sm" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Cari nama atau kode…"
-            className="w-full rounded-[12px] pl-10 pr-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm transition-colors duration-[150ms]" />
+            className="w-full rounded-[var(--r-soft)] pl-10 pr-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-sm transition-colors duration-[150ms]" />
         </div>
         {selected.size > 0 && (
           <div className="flex gap-2 anim-fade">
             <span className="text-xs text-[var(--ink-2)] self-center mr-1">{selected.size} dipilih</span>
-            <button onClick={bulkExtend} disabled={busy} className="rounded-[12px] px-3 py-2.5 text-sm bg-[#22d3ee]/15 border border-[var(--edge)] text-[var(--volt)] hover:bg-[#22d3ee]/25 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1.5" />+1 Jam</button>
-            <button onClick={bulkDelete} disabled={busy} className="rounded-[12px] px-3 py-2.5 text-sm bg-bad/15 border border-bad/30 text-bad hover:bg-bad/25 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-trash mr-1.5" />Hapus</button>
+            <button onClick={bulkExtend} disabled={busy} aria-busy={busy} className="btn btn-quiet bg-[#22d3ee]/15 text-[var(--volt)] hover:bg-[#22d3ee]/25"><i className="fa-solid fa-clock-rotate-left mr-1.5" />+1 Jam</button>
+            <button onClick={bulkDelete} disabled={busy} aria-busy={busy} className="btn btn-danger"><i className="fa-solid fa-trash mr-1.5" />Hapus</button>
           </div>
         )}
       </div>
@@ -125,8 +125,21 @@ export default function Files({ toast }) {
       {/* Files table */}
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-6 space-y-3">
-            {[...Array(5)].map((_, i) => <div key={i} className="skeleton h-10 w-full" />)}
+          /* Meniru baris berkas: ikon jenis + nama + ukuran + aksi. Lima balok
+             seragam sebelumnya tidak menunjukkan bahwa ini sebuah daftar. */
+          <div className="divide-y-2 divide-[var(--edge)]" aria-busy="true" aria-label="Memuat daftar berkas">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3">
+                <span className="sk sk-tile w-9 h-9 shrink-0" style={{ '--d': `${i * 80}ms` }} />
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <span className="sk sk-line block h-[11px]"
+                    style={{ width: `${52 + ((i * 13) % 34)}%`, '--d': `${i * 80 + 40}ms` }} />
+                  <span className="sk sk-line block w-[74px] h-[8px]" style={{ '--d': `${i * 80 + 80}ms` }} />
+                </div>
+                <span className="sk sk-line w-[54px] h-[10px] shrink-0" style={{ '--d': `${i * 80 + 120}ms` }} />
+                <span className="sk sk-tile w-8 h-8 shrink-0" style={{ '--d': `${i * 80 + 160}ms` }} />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">
@@ -160,8 +173,8 @@ export default function Files({ toast }) {
                     <td className="px-4 py-3">{remainingLabel(v)}</td>
                     <td className="px-4 py-3 text-[var(--ink-2)]">{fmtTime(v.ts || v.timestamp)}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <button onClick={() => extOne(v.code)} disabled={busy} title="Perpanjang 1 jam" className="text-[var(--volt)] hover:text-[#a5f3fc] px-2 transition-all duration-[150ms]"><i className="fa-solid fa-clock-rotate-left" /></button>
-                      <button onClick={() => delOne(v.code)} disabled={busy} title="Hapus" className="text-bad hover:text-bad/70 px-2 transition-all duration-[150ms]"><i className="fa-solid fa-trash" /></button>
+                      <button onClick={() => extOne(v.code)} disabled={busy} aria-busy={busy} title="Perpanjang 1 jam" aria-label={`Perpanjang ${v.code} 1 jam`} className="btn btn-icon btn-quiet !text-[var(--volt)] mr-1.5"><i className="fa-solid fa-clock-rotate-left" /></button>
+                      <button onClick={() => delOne(v.code)} disabled={busy} aria-busy={busy} title="Hapus" aria-label={`Hapus ${v.code}`} className="btn btn-icon btn-danger"><i className="fa-solid fa-trash" /></button>
                     </td>
                   </tr>
                 ))}
@@ -183,8 +196,8 @@ export default function Files({ toast }) {
                     <p className="text-xs text-[var(--ink-2)] mt-0.5"><i className="fa-solid fa-clock mr-1" />Sisa {remainingLabel(v)} · {fmtTime(v.ts || v.timestamp)}</p>
                     <div className="mt-2 flex gap-2">
                       {/* min-h-10 (40px): tinggi 30px membuat tombol Hapus mudah tersalah-pencet. */}
-                      <button onClick={() => extOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-3 min-h-10 inline-flex items-center bg-[#22d3ee]/15 text-[var(--volt)] border border-[var(--edge)] transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-clock-rotate-left mr-1" />+1 Jam</button>
-                      <button onClick={() => delOne(v.code)} disabled={busy} className="text-xs rounded-[10px] px-3 min-h-10 inline-flex items-center bg-bad/15 text-bad border border-bad/30 transition-all duration-[150ms] active:scale-[.97]"><i className="fa-solid fa-trash mr-1" />Hapus</button>
+                      <button onClick={() => extOne(v.code)} disabled={busy} aria-busy={busy} className="btn btn-quiet text-xs bg-[#22d3ee]/15 text-[var(--volt)]"><i className="fa-solid fa-clock-rotate-left mr-1" />+1 Jam</button>
+                      <button onClick={() => delOne(v.code)} disabled={busy} aria-busy={busy} className="btn btn-danger text-xs"><i className="fa-solid fa-trash mr-1" />Hapus</button>
                     </div>
                   </div>
                 </div>

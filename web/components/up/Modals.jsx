@@ -52,7 +52,7 @@ export function Sheet({ onClose, title, kicker, children, foot, wide = false }) 
                 </span>
               </span>
               <button onClick={close} aria-label="Tutup"
-                className="w-9 h-9 shrink-0 grid place-items-center border-2 border-current/45 rounded-[10px] hover:border-current hover:bg-current/10 transition-colors">
+                className="w-9 h-9 shrink-0 grid place-items-center border-2 border-current/45 rounded-[var(--r-soft)] hover:border-current hover:bg-current/10 transition-colors">
                 <i className="fa-solid fa-xmark text-[12px]" />
               </button>
             </div>
@@ -255,7 +255,7 @@ export function AboutModal({ onClose, settings }) {
   return (
     <Sheet onClose={onClose} title="Tentang" kicker="INFORMASI">
       <div className="plate-sunk p-4 text-center">
-        <span className="badge-h inline-grid! w-14 h-14 !border-[3px] !rounded-[13px] stack-shadow">
+        <span className="badge-h inline-grid! w-14 h-14 !border-[3px] !rounded-[var(--r-soft)] stack-shadow">
           <span className="text-[22px] leading-none relative z-[2]">H</span>
         </span>
         <p className="display-m !text-[18px] mt-3">SWHDHLZ</p>
@@ -264,7 +264,7 @@ export function AboutModal({ onClose, settings }) {
 
       <p className="text-[12px] leading-[1.65] text-[var(--ink-2)] mt-4">
         Upload media ke grup WhatsApp via bot. Upload file, dapatkan kode klaim, lalu kirim{' '}
-        <code className="inline-block align-middle font-[family-name:var(--font-mono)] text-[11px] leading-[15px] px-1.5 py-[2px] rounded-[6px] border-2 border-[var(--edge)] bg-[var(--accent)] text-[#06180d]">.claim KODE</code>{' '}
+        <code className="inline-block align-middle font-[family-name:var(--font-mono)] text-[11px] leading-[15px] px-1.5 py-[2px] rounded-[var(--r-xs)] border-2 border-[var(--edge)] bg-[var(--accent)] text-[#06180d]">.claim KODE</code>{' '}
         di grup.
       </p>
 
@@ -274,7 +274,7 @@ export function AboutModal({ onClose, settings }) {
           { i: 'fa-lock', t: 'AMAN' },
           { i: 'fa-hand-sparkles', t: 'MUDAH' },
         ].map(f => (
-          <div key={f.t} className="flex flex-col items-center gap-1.5 py-3 rounded-[9px] border-2 border-[var(--edge)] bg-[var(--paper-2)]">
+          <div key={f.t} className="flex flex-col items-center gap-1.5 py-3 rounded-[var(--r-soft)] border-2 border-[var(--edge)] bg-[var(--paper-2)]">
             <i className={`fa-solid ${f.i} text-[12px]`} />
             <span className="kicker !text-[8px]">{f.t}</span>
           </div>

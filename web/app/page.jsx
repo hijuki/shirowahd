@@ -36,11 +36,33 @@ function VelocityBand({ items, invert, speed = 42, rev }) {
 }
 
 function Skeleton() {
+  // Rangka halaman pertama: hero, panel tab upload, area jatuhkan-berkas.
+  // Sebelumnya tiga balok tanpa bentuk — tidak memberi tahu apa yang datang,
+  // dan begitu data masuk, layout-nya melompat karena proporsinya berbeda.
   return (
-    <div className="wrap px-4 pt-10 space-y-4">
-      <div className="skeleton h-[54px]" />
-      <div className="skeleton h-[120px]" />
-      <div className="skeleton h-[300px]" />
+    <div className="wrap px-4 pt-10 space-y-4" aria-busy="true" aria-label="Memuat halaman">
+      <div className="space-y-3">
+        <span className="sk sk-line block w-[68%] h-[30px]" />
+        <span className="sk sk-line block w-[44%] h-[30px]" style={{ '--d': '110ms' }} />
+        <span className="sk sk-line block w-[80%] h-[11px] mt-1" style={{ '--d': '190ms' }} />
+      </div>
+      <div className="plate overflow-hidden">
+        <div className="grid grid-cols-2 border-b-2 border-[var(--edge)]">
+          {[0, 1].map(i => (
+            <div key={i} className="px-4 py-3.5 flex items-center justify-center gap-2">
+              <span className="sk w-4 h-4 rounded-[var(--r-xs)]" style={{ '--d': `${i * 90}ms` }} />
+              <span className="sk sk-line w-[58px] h-[11px]" style={{ '--d': `${i * 90 + 40}ms` }} />
+            </div>
+          ))}
+        </div>
+        <div className="p-4 space-y-3">
+          <span className="sk sk-tile block w-full h-[132px]" style={{ '--d': '160ms' }} />
+          <div className="flex items-center gap-2">
+            <span className="sk sk-tile flex-1 h-[44px]" style={{ '--d': '230ms' }} />
+            <span className="sk sk-tile w-[44px] h-[44px]" style={{ '--d': '280ms' }} />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

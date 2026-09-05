@@ -27,7 +27,7 @@ function ModalShell({ onClose, children, accent = 'cyan' }) {
             className={`m-auto relative w-full max-w-[400px] transform-gpu will-change-transform ${closing ? 'modal-card-out' : 'modal-card-in'}`}
           >
             {/* Card */}
-            <div className="relative rounded-[22px] bg-[#0a1020] border border-white/[.08] shadow-[0_32px_80px_-12px_rgba(0,0,0,.9)] overflow-hidden">
+            <div className="relative rounded-[var(--r)] bg-[#0a1020] border border-white/[.08] shadow-[0_32px_80px_-12px_rgba(0,0,0,.9)] overflow-hidden">
               {/* Animated gradient border glow (top) */}
               <div className="absolute top-0 inset-x-0 h-[2px] overflow-hidden rounded-t-[22px]">
                 <div className="h-full w-[200%] grad-border-sweep" />
@@ -89,9 +89,9 @@ export function LinkButtons({ ownerWhatsapp, channels = [], claimGroups = [], po
     <div className={items.length === 1 ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-2 gap-2'}>
       {items.map((it, idx) => (
         <a key={it.t + it.href} href={it.href} target="_blank" rel="noreferrer"
-          className={`link-btn-premium flex items-center gap-3 rounded-[15px] px-3.5 py-3 group ${it.feat ? 'col-span-full' : ''}`}
+          className={`link-btn-premium flex items-center gap-3 rounded-[var(--r)] px-3.5 py-3 group ${it.feat ? 'col-span-full' : ''}`}
           style={{ background: `linear-gradient(120deg, ${it.c}14, ${it.c}06)`, border: `1px solid ${it.c}28`, boxShadow: `0 2px 14px -8px ${it.c}55, inset 0 1px 0 rgba(255,255,255,.04)`, animationDelay: `${idx * 80}ms` }}>
-          <span className="w-10 h-10 shrink-0 rounded-[12px] grid place-items-center relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${it.c}22, ${it.c}0d)`, border: `1px solid ${it.c}38`, boxShadow: `0 0 18px -8px ${it.c}66` }}>
+          <span className="w-10 h-10 shrink-0 rounded-[var(--r-soft)] grid place-items-center relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${it.c}22, ${it.c}0d)`, border: `1px solid ${it.c}38`, boxShadow: `0 0 18px -8px ${it.c}66` }}>
             <i className={`${it.i} text-[15px]`} style={{ color: it.c }} />
             {/* Icon inner shimmer */}
             <span className="absolute inset-0 bg-gradient-to-br from-white/12 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -131,7 +131,7 @@ export function IntroModal({ onDone, settings }) {
   return (
     <ModalShell>
       {/* ── Confetti on welcome ── */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[22px]">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[var(--r)]">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="confetti-particle" style={{
             '--x': `${8 + Math.random() * 84}%`,
@@ -156,8 +156,8 @@ export function IntroModal({ onDone, settings }) {
           )}
 
           <div className="absolute -inset-5 rounded-full bg-[#25D366]/10 pointer-events-none" style={{ boxShadow: '0 0 60px 10px rgba(37,211,102,.12) inset' }} />
-          <div className="relative w-[68px] h-[68px] rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
-            <span className="absolute inset-[1px] rounded-[21px] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+          <div className="relative w-[68px] h-[68px] rounded-[var(--r)] bg-gradient-to-br from-[#25D366] via-[#1fae55] to-[#0e7a5f] grid place-items-center shadow-[0_0_50px_-6px_rgba(37,211,102,.5)] floaty">
+            <span className="absolute inset-[1px] rounded-[var(--r)] bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
             <i className="fa-brands fa-whatsapp text-white text-[30px] drop-shadow-[0_2px_10px_rgba(0,0,0,.4)]" />
           </div>
 
@@ -198,12 +198,12 @@ export function IntroModal({ onDone, settings }) {
       <div className="space-y-2 mb-5">
         {steps.map((s, idx) => (
           <div key={s.t}
-            className={`flex items-center gap-3 p-3 rounded-[14px] border transform-gpu transition-[transform,opacity] duration-[500ms] ${phase >= 3 ? 'bg-white/[.03] border-white/[.07] translate-x-0 opacity-100' : 'bg-transparent border-transparent translate-x-6 opacity-0'}`}
+            className={`flex items-center gap-3 p-3 rounded-[var(--r)] border transform-gpu transition-[transform,opacity] duration-[500ms] ${phase >= 3 ? 'bg-white/[.03] border-white/[.07] translate-x-0 opacity-100' : 'bg-transparent border-transparent translate-x-6 opacity-0'}`}
             style={{ transitionTimingFunction: 'var(--ease-out)', transitionDelay: `${idx * 120}ms` }}>
-            <div className="w-10 h-10 shrink-0 rounded-[12px] grid place-items-center relative overflow-hidden group" style={{ background: `${s.c}12`, border: `1px solid ${s.c}28` }}>
+            <div className="w-10 h-10 shrink-0 rounded-[var(--r-soft)] grid place-items-center relative overflow-hidden group" style={{ background: `${s.c}12`, border: `1px solid ${s.c}28` }}>
               <i className={`fa-solid ${s.i} text-[14px] relative z-10`} style={{ color: s.c }} />
               {/* Icon pulse ring */}
-              <div className="absolute inset-0 rounded-[12px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ boxShadow: `inset 0 0 20px ${s.c}20` }} />
+              <div className="absolute inset-0 rounded-[var(--r-soft)] opacity-0 group-hover:opacity-100 transition-opacity" style={{ boxShadow: `inset 0 0 20px ${s.c}20` }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-[12px]">{s.t}</p>
@@ -229,7 +229,7 @@ export function IntroModal({ onDone, settings }) {
 
         {/* Premium CTA button */}
         <button onClick={onDone}
-          className="relative overflow-hidden w-full py-4 rounded-[16px] bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#3b82f6] text-white font-extrabold text-[14px] tracking-wide shadow-[0_10px_30px_-6px_rgba(34,211,238,.55),inset_0_1px_0_rgba(255,255,255,.28)] hover:shadow-[0_14px_42px_-6px_rgba(34,211,238,.75),inset_0_1px_0_rgba(255,255,255,.32)] hover:brightness-110 active:scale-[.96] transition-all duration-[200ms] group">
+          className="relative overflow-hidden w-full py-4 rounded-[var(--r-soft)] bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#3b82f6] text-white font-extrabold text-[14px] tracking-wide shadow-[0_10px_30px_-6px_rgba(34,211,238,.55),inset_0_1px_0_rgba(255,255,255,.28)] hover:shadow-[0_14px_42px_-6px_rgba(34,211,238,.75),inset_0_1px_0_rgba(255,255,255,.32)] hover:brightness-110 active:scale-[.96] transition-all duration-[200ms] group">
           <span className="absolute inset-0 btn-shine-sweep pointer-events-none" />
           <span className="relative flex items-center justify-center gap-2">
             <i className="fa-solid fa-rocket text-[12px] group-hover:-translate-y-0.5 group-hover:scale-110 transition-transform duration-200" />
@@ -260,7 +260,7 @@ export function FaqModal({ onClose }) {
     <ModalShell onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-[#22d3ee]/15 to-[#3b82f6]/5 border border-[#22d3ee]/20 grid place-items-center">
+          <div className="w-8 h-8 rounded-[var(--r-soft)] bg-gradient-to-br from-[#22d3ee]/15 to-[#3b82f6]/5 border border-[#22d3ee]/20 grid place-items-center">
             <i className="fa-solid fa-circle-question text-[#22d3ee] text-[13px]" />
           </div>
           <h2 className="font-[family-name:var(--font-display)] font-bold text-[17px] grad-text">FAQ</h2>
@@ -269,9 +269,9 @@ export function FaqModal({ onClose }) {
       </div>
       <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'none' }}>
         {faqs.map((f, i) => (
-          <div key={f.q} className={`rounded-[14px] border overflow-hidden transition-all duration-[250ms] ${open === i ? 'bg-white/[.04] border-white/[.1]' : 'bg-white/[.015] border-white/[.05]'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
+          <div key={f.q} className={`rounded-[var(--r)] border overflow-hidden transition-all duration-[250ms] ${open === i ? 'bg-white/[.04] border-white/[.1]' : 'bg-white/[.015] border-white/[.05]'}`} style={{ transitionTimingFunction: 'var(--ease-out)' }}>
             <button onClick={() => setOpen(open === i ? -1 : i)} className="w-full flex items-center gap-2.5 px-3.5 py-3 text-left">
-              <div className={`w-6 h-6 shrink-0 rounded-[7px] grid place-items-center border transition-all duration-[250ms] ${open === i ? 'bg-[#22d3ee]/15 border-[#22d3ee]/25' : 'bg-white/[.03] border-white/[.06]'}`}>
+              <div className={`w-6 h-6 shrink-0 rounded-[var(--r-xs)] grid place-items-center border transition-all duration-[250ms] ${open === i ? 'bg-[#22d3ee]/15 border-[#22d3ee]/25' : 'bg-white/[.03] border-white/[.06]'}`}>
                 <i className={`fa-solid ${f.i} text-[9px] ${open === i ? 'text-[#22d3ee]' : 'text-[#7e90ad]'} transition-colors duration-[250ms]`} />
               </div>
               <span className="font-semibold text-[11px] flex-1">{f.q}</span>
@@ -295,7 +295,7 @@ export function AboutModal({ onClose }) {
     <ModalShell onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-[#3b82f6]/15 to-[#22d3ee]/5 border border-[#3b82f6]/20 grid place-items-center">
+          <div className="w-8 h-8 rounded-[var(--r-soft)] bg-gradient-to-br from-[#3b82f6]/15 to-[#22d3ee]/5 border border-[#3b82f6]/20 grid place-items-center">
             <i className="fa-solid fa-circle-info text-[#3b82f6] text-[13px]" />
           </div>
           <h2 className="font-[family-name:var(--font-display)] font-bold text-[17px] grad-text">Tentang</h2>
@@ -304,13 +304,13 @@ export function AboutModal({ onClose }) {
       </div>
 
       <div className="space-y-3">
-        <div className="relative rounded-[16px] p-4 overflow-hidden border border-white/[.06] text-center">
+        <div className="relative rounded-[var(--r-soft)] p-4 overflow-hidden border border-white/[.06] text-center">
           <div className="absolute inset-0 bg-gradient-to-br from-[#22d3ee]/[.06] via-transparent to-[#3b82f6]/[.06]" />
           <div className="relative">
             <div className="relative w-14 h-14 mx-auto mb-2.5">
               <div className="absolute -inset-2 rounded-full bg-[#22d3ee]/12 blur-lg" />
-              <div className="relative w-full h-full rounded-[16px] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_0_32px_-4px_rgba(34,211,238,.4)]">
-                <span className="absolute inset-[1px] rounded-[15px] bg-gradient-to-b from-white/20 to-transparent" />
+              <div className="relative w-full h-full rounded-[var(--r-soft)] bg-gradient-to-br from-[#22d3ee] via-[#3b82f6] to-[#34d399] grid place-items-center shadow-[0_0_32px_-4px_rgba(34,211,238,.4)]">
+                <span className="absolute inset-[1px] rounded-[var(--r)] bg-gradient-to-b from-white/20 to-transparent" />
                 <span className="font-[family-name:var(--font-display)] font-extrabold text-lg text-white relative">H</span>
               </div>
             </div>
@@ -320,17 +320,17 @@ export function AboutModal({ onClose }) {
         </div>
 
         <p className="text-[#7e90ad] text-[11px] leading-relaxed text-center px-1">
-          Upload media ke grup WhatsApp via bot. Upload file, dapatkan kode unik, lalu kirim <code className="font-mono text-[#22d3ee] bg-[#22d3ee]/8 px-1.5 py-0.5 rounded-[4px] text-[9px]">.claim KODE</code> di grup.
+          Upload media ke grup WhatsApp via bot. Upload file, dapatkan kode unik, lalu kirim <code className="font-mono text-[#22d3ee] bg-[#22d3ee]/8 px-1.5 py-0.5 rounded-[var(--r-xs)] text-[9px]">.claim KODE</code> di grup.
         </p>
 
-        <div className="flex items-center gap-2 p-2.5 rounded-[10px] bg-[#34d399]/[.05] border border-[#34d399]/12">
+        <div className="flex items-center gap-2 p-2.5 rounded-[var(--r-soft)] bg-[#34d399]/[.05] border border-[#34d399]/12">
           <i className="fa-solid fa-shield-halved text-[#34d399] text-[10px]" />
           <p className="text-[#7e90ad] text-[9px] leading-snug">File tersimpan sementara — terhapus otomatis setelah expired.</p>
         </div>
 
         <div className="grid grid-cols-3 gap-1.5">
           {[{ i: 'fa-bolt', t: 'Cepat', c: '#22d3ee' }, { i: 'fa-lock', t: 'Aman', c: '#34d399' }, { i: 'fa-wand-magic-sparkles', t: 'Mudah', c: '#3b82f6' }].map(f => (
-            <div key={f.t} className="flex flex-col items-center gap-1 py-2.5 rounded-[10px] bg-white/[.02] border border-white/[.04]">
+            <div key={f.t} className="flex flex-col items-center gap-1 py-2.5 rounded-[var(--r-soft)] bg-white/[.02] border border-white/[.04]">
               <i className={`fa-solid ${f.i} text-[10px]`} style={{ color: f.c }} />
               <span className="text-[8px] font-bold text-[#7e90ad]">{f.t}</span>
             </div>

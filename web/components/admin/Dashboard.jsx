@@ -101,7 +101,7 @@ export default function Dashboard({ toast }) {
                 setTimeout(() => toast('Web Uploader siap!', 'success'), 1500)
               } catch (e) { toast('Error: ' + e.message, 'error') }
             }}
-            className="px-3.5 py-2 rounded-[var(--r-soft)] text-xs font-bold bg-[var(--paper-2)] hover:bg-[var(--paper-2)] text-[var(--ink)] hover:text-[var(--volt)] border border-[var(--edge)] hover:border-[var(--edge)] transition-all flex items-center gap-1.5 active:scale-95"
+            className="btn btn-quiet rounded-[var(--r-soft)] text-xs text-[var(--ink)] hover:text-[var(--volt)] gap-1.5 active:scale-95"
           >
             <i className="fa-solid fa-globe text-[11px]" />
             <span>Web</span>
@@ -115,7 +115,7 @@ export default function Dashboard({ toast }) {
                 toast('Bot WA di-restart!', 'success')
               } catch (e) { toast('Error: ' + e.message, 'error') }
             }}
-            className="px-3.5 py-2 rounded-[var(--r-soft)] text-xs font-bold bg-[var(--paper-2)] hover:bg-[var(--paper-2)] text-[var(--ink)] hover:text-[var(--acid)] border border-[var(--edge)] hover:border-[var(--edge)] transition-all flex items-center gap-1.5 active:scale-95"
+            className="btn btn-quiet rounded-[var(--r-soft)] text-xs text-[var(--ink)] hover:text-[var(--acid)] gap-1.5 active:scale-95"
           >
             <i className="fa-brands fa-whatsapp text-[11px]" />
             <span>Bot</span>
@@ -129,7 +129,7 @@ export default function Dashboard({ toast }) {
                 setTimeout(() => toast('Semua service online!', 'success'), 2000)
               } catch (e) { toast('Error: ' + e.message, 'error') }
             }}
-            className="px-3.5 py-2 rounded-[var(--r-soft)] text-xs font-extrabold bg-[var(--accent)] hover:bg-[var(--acid)] text-[#06180d] shadow-[var(--sh-1)] transition-all flex items-center gap-1.5 active:scale-95"
+            className="btn btn-primary min-h-10 !text-[11px] font-extrabold gap-1.5 !bg-[var(--accent)] hover:!bg-[var(--acid)] !text-[#06180d]"
           >
             <i className="fa-solid fa-rotate text-[11px]" />
             <span>Restart All</span>
@@ -139,9 +139,23 @@ export default function Dashboard({ toast }) {
 
       {/* Stat Cards Grid */}
       {!stats ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="p-5 rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] h-28 animate-pulse" />
+            /* Skeleton bermuatan, bukan kotak abu berdenyut. Bentuknya meniru
+               StatCard sungguhan (label atas, kotak ikon, angka besar, subteks)
+               supaya tidak ada lompatan tata letak saat data tiba, dan kilau
+               `shimmer` bergerak melintang dengan jeda bertahap sehingga
+               terbaca sebagai "sedang memuat", bukan "gagal render". */
+            <div key={i} className="plate plate-flat p-4 flex flex-col justify-between gap-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="sk sk-line w-[54%] h-[9px]" style={{ '--d': `${i * 90}ms` }} />
+                <span className="sk sk-tile w-9 h-9 shrink-0" style={{ '--d': `${i * 90 + 40}ms` }} />
+              </div>
+              <div className="space-y-2">
+                <span className="sk sk-line block w-[68%] h-[22px]" style={{ '--d': `${i * 90 + 80}ms` }} />
+                <span className="sk sk-line block w-[44%] h-[8px]" style={{ '--d': `${i * 90 + 120}ms` }} />
+              </div>
+            </div>
           ))}
         </div>
       ) : (
@@ -209,10 +223,26 @@ export default function Dashboard({ toast }) {
           </div>
 
           {!system ? (
-            <div className="space-y-4 animate-pulse">
-              <div className="h-4 bg-[var(--paper-2)] rounded" />
-              <div className="h-10 bg-[var(--paper-2)] rounded" />
-              <div className="h-4 bg-[var(--paper-2)] rounded" />
+            /* Skeleton monitor: dua meter + tiga baris angka, persis susunan
+               yang akan muncul. Sebelumnya tiga balok abu tanpa bentuk. */
+            <div className="space-y-4">
+              {[0, 1].map(i => (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="sk sk-line w-[34%] h-[9px]" style={{ '--d': `${i * 110}ms` }} />
+                    <span className="sk sk-line w-[28%] h-[9px]" style={{ '--d': `${i * 110 + 50}ms` }} />
+                  </div>
+                  <span className="sk sk-line block w-full h-[10px] !rounded-full" style={{ '--d': `${i * 110 + 90}ms` }} />
+                </div>
+              ))}
+              <div className="pt-2 border-t border-[var(--edge)] space-y-2.5">
+                {[0, 1].map(i => (
+                  <div key={i} className="flex justify-between">
+                    <span className="sk sk-line w-[38%] h-[9px]" style={{ '--d': `${260 + i * 90}ms` }} />
+                    <span className="sk sk-line w-[22%] h-[9px]" style={{ '--d': `${300 + i * 90}ms` }} />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -263,11 +293,15 @@ export default function Dashboard({ toast }) {
                 </div>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={!!maint}
                   onClick={toggleMaint}
-                  disabled={busy}
-                  className={`px-3 py-1.5 rounded-[var(--r-soft)] text-xs font-extrabold uppercase tracking-wider transition-all ${maint
-                    ? 'bg-bad/15 text-bad border border-bad/30'
-                    : 'bg-[var(--paper-2)] text-[var(--ink-2)] hover:text-[var(--ink)] border border-[var(--edge)]'}`}
+                  disabled={busy} aria-busy={busy}
+                  /* min-h-10: tinggi sebelumnya 30px, di bawah ambang sentuh 40px
+                     — pada layar sentuh tombol ini gampang meleset. */
+                  className={`btn min-h-10 px-3.5 !text-[11px] font-extrabold uppercase tracking-wider ${maint
+                    ? 'btn-danger'
+                    : 'btn-quiet !text-[var(--ink-2)]'}`}
                 >
                   {maint ? 'AKTIF (Locked)' : 'OFF (Normal)'}
                 </button>

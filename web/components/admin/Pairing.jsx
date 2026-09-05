@@ -127,18 +127,18 @@ export default function Pairing({ toast }) {
       </p>
 
       {tersambung ? (
-        <div className="rounded-[14px] p-4 bg-emerald-500/[.07] border border-emerald-500/25 space-y-3">
+        <div className="rounded-[var(--r)] p-4 bg-emerald-500/[.07] border border-emerald-500/25 space-y-3">
           <p className="text-sm">
             <i className="fa-solid fa-circle-check text-emerald-400 mr-2" />
             Bot sudah tertaut ke <b className="font-mono">{state?.user?.id?.split(':')[0] || '—'}</b>. Tidak perlu pairing lagi.
           </p>
           <div className="flex flex-wrap gap-2">
-            <button onClick={doAnnounce} disabled={busy}
-              className="min-h-10 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] text-sm transition-all duration-[150ms] active:scale-[.97]">
+            <button onClick={doAnnounce} disabled={busy} aria-busy={busy}
+              className="btn btn-quiet">
               <i className="fa-solid fa-bullhorn mr-1.5" />Kirim ulang &quot;BOT ON&quot; ke grup
             </button>
-            <button onClick={doReset} disabled={busy}
-              className="min-h-10 rounded-[12px] px-4 py-2.5 bg-bad/[.08] border border-bad/25 text-bad text-sm font-bold transition-all duration-[150ms] active:scale-[.97]">
+            <button onClick={doReset} disabled={busy} aria-busy={busy}
+              className="btn btn-danger">
               <i className="fa-solid fa-arrows-rotate mr-1.5" />Ganti Nomor (hapus sesi)
             </button>
           </div>
@@ -146,7 +146,7 @@ export default function Pairing({ toast }) {
       ) : (
         <>
           {tahap === 'kode-siap' && state?.utama?.kode ? (
-            <div className="rounded-[16px] p-5 bg-[var(--paper-2)] border border-[var(--volt)]/30 text-center space-y-3">
+            <div className="rounded-[var(--r)] p-5 bg-[var(--paper-2)] border border-[var(--volt)]/30 text-center space-y-3">
               <p className="text-[10px] font-bold tracking-[.2em] uppercase text-[var(--ink-2)]">Kode Pairing</p>
               <p className="font-mono font-bold tabular-nums select-all"
                 style={{ fontSize: 'clamp(28px,9vw,44px)', letterSpacing: '.08em', color: 'var(--volt)' }}>
@@ -160,12 +160,12 @@ export default function Pairing({ toast }) {
                 {sisaDetik > 0 ? `Berlaku ±${sisaDetik}s lagi` : 'Kemungkinan sudah kadaluarsa — minta kode baru'}
               </p>
               <button onClick={salinKode}
-                className="min-h-10 rounded-[12px] px-4 py-2.5 bg-[var(--paper)] border border-[var(--edge)] text-sm transition-all duration-[150ms] active:scale-[.97]">
+                className="btn btn-quiet">
                 <i className="fa-solid fa-copy mr-1.5" />Salin kode
               </button>
             </div>
           ) : tahap === 'diminta' ? (
-            <div className="rounded-[14px] p-4 bg-[var(--paper-2)] border border-[var(--edge)] text-sm text-[var(--ink-2)]">
+            <div className="rounded-[var(--r)] p-4 bg-[var(--paper-2)] border border-[var(--edge)] text-sm text-[var(--ink-2)]">
               <i className="fa-solid fa-spinner fa-spin mr-2 text-[var(--volt)]" />
               Bot sedang boot dan meminta kode untuk <b className="font-mono">{state?.utama?.nomor}</b>. Biasanya 10-20 detik.
             </div>
@@ -181,9 +181,9 @@ export default function Pairing({ toast }) {
               <input value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="628xxxxxxxxxx"
                 inputMode="numeric" autoComplete="off" aria-label="Nomor WhatsApp bot"
                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), doPair())}
-                className="flex-1 min-h-11 rounded-[12px] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
-              <button onClick={doPair} disabled={busy || phone.replace(/\D/g, '').length < 10}
-                className="btn-primary min-h-11 rounded-[12px] px-5 py-2.5 text-sm font-bold disabled:opacity-50">
+                className="flex-1 min-h-11 rounded-[var(--r-soft)] px-4 py-2.5 bg-[var(--paper-2)] border border-[var(--edge)] outline-none text-sm font-mono transition-colors duration-[150ms]" />
+              <button onClick={doPair} disabled={busy || phone.replace(/\D/g, '').length < 10} aria-busy={busy}
+                className="btn-primary min-h-11 text-sm disabled:opacity-50">
                 <i className="fa-solid fa-link mr-1.5" />{menunggu ? 'Ulangi' : 'Pair'}
               </button>
             </div>

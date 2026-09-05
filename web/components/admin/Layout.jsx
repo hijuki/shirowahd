@@ -123,11 +123,11 @@ export default function Layout({ active, setActive, children }) {
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <button onClick={toggle} aria-label="Ganti mode tampilan"
-              className="w-9 h-9 grid place-items-center rounded-[10px] border-2 border-[var(--edge)] bg-[var(--paper-2)]">
+              className="btn btn-icon">
               <i className={`fa-solid ${theme === 'dark' ? 'fa-moon' : 'fa-sun'} text-[11px]`} />
             </button>
             <button onClick={logout} aria-label="Keluar sesi"
-              className="w-9 h-9 grid place-items-center rounded-[10px] border-2 border-[var(--edge)] bg-[var(--hot)] text-[#fff]">
+              className="btn btn-icon bg-[var(--hot)] text-[#fff]">
               <i className="fa-solid fa-arrow-right-from-bracket text-[11px]" />
             </button>
           </div>

@@ -62,7 +62,7 @@ function LinkCard({ item, onChange, onRemove, phName, phLink, color }) {
       <div className="flex items-center gap-2">
         <input value={item.name || ''} onChange={e => onChange({ ...item, name: e.target.value })} placeholder={phName}
           className="flex-1 min-w-0 rounded-[var(--r-soft)] px-3 py-2 bg-[var(--paper-2)] border border-[var(--edge)] focus:border-[var(--edge)] outline-none text-xs font-semibold text-[var(--ink)] placeholder:text-[var(--ink-3)] transition-colors" />
-        <button type="button" onClick={onRemove} className="w-8 h-8 shrink-0 rounded-[var(--r-xs)] grid place-items-center text-bad/60 hover:text-bad hover:bg-bad/10 transition-colors">
+        <button type="button" onClick={onRemove} className="btn btn-danger shrink-0 rounded-[var(--r-xs)] text-bad/60 hover:text-bad">
           <i className="fa-solid fa-trash-can text-xs" />
         </button>
       </div>
@@ -95,7 +95,7 @@ function LinkSection({ type, data, setData }) {
             {items.length}
           </span>
         </span>
-        <button type="button" onClick={add} className="px-3 py-1.5 rounded-[var(--r-soft)] text-xs font-bold bg-[var(--paper-2)] hover:bg-[var(--paper-2)] text-[var(--ink)] border border-[var(--edge)] transition-all flex items-center gap-1.5 active:scale-95">
+        <button type="button" onClick={add} className="btn btn-quiet rounded-[var(--r-soft)] text-xs text-[var(--ink)] gap-1.5 active:scale-95">
           <i className="fa-solid fa-plus text-[10px]" />Tambah
         </button>
       </div>
@@ -225,7 +225,7 @@ function BrandGallery({ data, set }) {
                         className={`px-2 py-1 rounded-[var(--r-xs)] text-[10px] font-bold transition-all border ${isGelap ? 'bg-[var(--sunk)] text-[var(--ink)] border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border-transparent hover:border-[var(--edge)]'}`}>
                         <i className="fa-solid fa-moon text-[9px] mr-1" />Gelap</button>
                     </div>
-                    <button type="button" onClick={() => onDelete(f.name)} className="w-6 h-6 rounded text-bad/60 hover:text-bad hover:bg-bad/10 grid place-items-center text-[10px] transition-colors"><i className="fa-solid fa-trash" /></button>
+                    <button type="button" onClick={() => onDelete(f.name)} className="btn btn-danger w-6 h-6 rounded text-bad/60 hover:text-bad text-[10px]"><i className="fa-solid fa-trash" /></button>
                   </div>
                 </div>
               </div>
@@ -343,12 +343,35 @@ export default function Settings({ toast }) {
   }
 
   if (loading) {
+    // Meniru bentuk halaman Setelan: kepala + beberapa baris kartu berisi
+    // label kiri dan kontrol kanan. Tiga balok generik sebelumnya tidak
+    // memberi petunjuk apa pun tentang apa yang sedang dimuat.
     return (
-      <div className="plate plate-flat p-6 space-y-3">
-        <span className="kicker">MEMUAT KONFIGURASI</span>
-        <div className="skeleton h-[52px]" />
-        <div className="skeleton skeleton-text w-2/3" />
-        <div className="skeleton skeleton-text w-1/2" />
+      <div className="space-y-4 max-w-5xl mx-auto" aria-busy="true" aria-label="Memuat konfigurasi">
+        <div className="flex items-end justify-between gap-3 pb-4 border-b-[3px] border-[var(--edge)]">
+          <div className="space-y-2">
+            <span className="sk sk-line block w-[132px] h-[19px]" />
+            <span className="sk sk-line block w-[190px] h-[9px]" style={{ '--d': '80ms' }} />
+          </div>
+          <span className="sk sk-tile block w-[104px] h-[38px]" style={{ '--d': '150ms' }} />
+        </div>
+        {[0, 1, 2].map(g => (
+          <div key={g} className="card p-5 space-y-4">
+            <div className="flex items-center gap-2.5">
+              <span className="sk sk-tile w-8 h-8 shrink-0" style={{ '--d': `${g * 110}ms` }} />
+              <span className="sk sk-line w-[118px] h-[13px]" style={{ '--d': `${g * 110 + 50}ms` }} />
+            </div>
+            {[0, 1].map(r => (
+              <div key={r} className="flex items-center justify-between gap-4">
+                <div className="space-y-1.5 flex-1">
+                  <span className="sk sk-line block w-[46%] h-[11px]" style={{ '--d': `${g * 110 + r * 70 + 90}ms` }} />
+                  <span className="sk sk-line block w-[66%] h-[8px]" style={{ '--d': `${g * 110 + r * 70 + 130}ms` }} />
+                </div>
+                <span className="sk sk-tile w-[52px] h-[28px] shrink-0" style={{ '--d': `${g * 110 + r * 70 + 170}ms` }} />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     )
   }
@@ -410,7 +433,7 @@ export default function Settings({ toast }) {
                       setTimeout(() => { toast('Web Uploader berhasil di-restart!', 'success'); loadCf() }, 1500)
                     } catch (e) { toast('Gagal restart web: ' + e.message, 'error') }
                   }}
-                  className="p-3.5 rounded-[var(--r-soft)] bg-[var(--paper-2)] hover:bg-[var(--paper-2)] border border-[var(--edge)] hover:border-[var(--edge)] transition-all text-left group flex items-center gap-3.5"
+                  className="btn btn-quiet rounded-[var(--r-soft)] text-left group gap-3.5"
                 >
                   <div className="w-10 h-10 rounded-[var(--r-xs)] bg-[var(--paper-2)] border border-[var(--edge)] grid place-items-center shrink-0">
                     <i className="fa-solid fa-globe text-sm text-[var(--volt)] group-hover:scale-110 transition-transform" />
@@ -430,7 +453,7 @@ export default function Settings({ toast }) {
                       toast('Bot WhatsApp berhasil di-restart!', 'success')
                     } catch (e) { toast('Gagal restart bot: ' + e.message, 'error') }
                   }}
-                  className="p-3.5 rounded-[var(--r-soft)] bg-[var(--paper-2)] hover:bg-[var(--paper-2)] border border-[var(--edge)] hover:border-[var(--edge)] transition-all text-left group flex items-center gap-3.5"
+                  className="btn btn-quiet rounded-[var(--r-soft)] text-left group gap-3.5"
                 >
                   <div className="w-10 h-10 rounded-[var(--r-xs)] bg-[var(--paper-2)] border border-[var(--edge)] grid place-items-center shrink-0">
                     <i className="fa-brands fa-whatsapp text-base text-[var(--acid)] group-hover:scale-110 transition-transform" />
@@ -450,7 +473,7 @@ export default function Settings({ toast }) {
                       setTimeout(() => { toast('Semua service berhasil di-restart!', 'success'); loadCf() }, 2000)
                     } catch (e) { toast('Gagal restart: ' + e.message, 'error') }
                   }}
-                  className="p-3.5 rounded-[var(--r-soft)] bg-[var(--paper-2)] hover:bg-[var(--paper-2)] border border-[var(--edge)] hover:border-[var(--edge)] transition-all text-left group flex items-center gap-3.5"
+                  className="btn btn-quiet rounded-[var(--r-soft)] text-left group gap-3.5"
                 >
                   <div className="w-10 h-10 rounded-[var(--r-xs)] bg-[var(--paper-2)] border border-[var(--edge)] grid place-items-center shrink-0">
                     <i className="fa-solid fa-rotate text-sm text-[var(--ink)] group-hover:scale-110 transition-transform" />
@@ -493,15 +516,15 @@ export default function Settings({ toast }) {
               {/* Status Badges */}
               <div className="flex flex-wrap gap-2.5 pt-2">
                 <div className="px-3 py-1.5 rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-[var(--r-soft)] ${cf?.direct?.enabled ? 'bg-good animate-pulse' : 'bg-[#7e90ad]'}`} />
+                  <span className={`w-2 h-2 rounded-full ${cf?.direct?.enabled ? 'bg-good animate-pulse' : 'bg-[#7e90ad]'}`} />
                   <span className="text-xs font-mono text-[var(--ink-2)]">Setelan: <strong className="text-[var(--ink)]">{cf?.direct?.enabled ? 'AKTIF (ON)' : 'MATI (OFF)'}</strong></span>
                 </div>
                 <div className="px-3 py-1.5 rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-[var(--r-soft)] ${cf?.direct?.listening ? 'bg-good' : 'bg-bad'}`} />
+                  <span className={`w-2 h-2 rounded-full ${cf?.direct?.listening ? 'bg-good' : 'bg-bad'}`} />
                   <span className="text-xs font-mono text-[var(--ink-2)]">Port 8443: <strong className="text-[var(--ink)]">{cf?.direct?.listening ? 'OPEN (LISTEN)' : 'CLOSED'}</strong></span>
                 </div>
                 <div className="px-3 py-1.5 rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-[var(--r-soft)] ${cf?.direct?.certReady ? 'bg-good' : 'bg-bad'}`} />
+                  <span className={`w-2 h-2 rounded-full ${cf?.direct?.certReady ? 'bg-good' : 'bg-bad'}`} />
                   <span className="text-xs font-mono text-[var(--ink-2)]">SSL Let's Encrypt: <strong className="text-[var(--ink)]">{cf?.direct?.certReady ? 'VALID (Ready)' : 'Missing'}</strong></span>
                 </div>
               </div>
@@ -563,7 +586,7 @@ export default function Settings({ toast }) {
                   {tunnel ? (
                     <div className="space-y-2 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-[var(--r-soft)] ${tunnel.running ? 'bg-good' : 'bg-bad'}`} />
+                        <span className={`w-2.5 h-2.5 rounded-full ${tunnel.running ? 'bg-good' : 'bg-bad'}`} />
                         <span className="font-semibold text-[var(--ink)]">{tunnel.running ? `Aktif (${tunnel.processes} proses)` : 'Tidak berjalan'}</span>
                       </div>
                       <p className="text-[11px] text-[var(--ink-2)]">ENABLE_TUNNEL: <strong className="text-[var(--ink)] font-mono">{tunnel.enabled ? '1' : '0'}</strong> · Kredensial: <strong className="text-[var(--ink)]">{tunnel.configured ? 'Lengkap' : 'Belum lengkap'}</strong></p>
@@ -673,7 +696,7 @@ export default function Settings({ toast }) {
                     <div className="min-w-0">
                       <p className="text-[11px] font-bold text-[var(--ink)]">Pratinjau GIF aktif</p>
                       <button type="button" onClick={() => set('heroGifUrl', '')}
-                        className="mt-1 px-2 py-1 rounded text-[10px] font-bold bg-bad/15 text-bad border border-bad/30">HAPUS</button>
+                        className="btn btn-danger mt-1 rounded text-[10px]">HAPUS</button>
                     </div>
                   </div>
                 )}
@@ -970,11 +993,11 @@ export default function Settings({ toast }) {
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button type="button" onClick={doBackup} disabled={backupBusy}
-              className="px-4 py-3 rounded-[var(--r-soft)] text-xs font-bold bg-[var(--paper-2)] hover:bg-[var(--paper-2)] text-[var(--ink)] border border-[var(--edge)] hover:border-[var(--edge)] transition-all flex items-center justify-center gap-2 active:scale-95">
+              className="btn btn-quiet rounded-[var(--r-soft)] text-xs text-[var(--ink)] gap-2 active:scale-95">
               <i className={`fa-brands fa-github ${backupBusy ? 'fa-spin' : ''}`} />
               <span>Backup GitHub</span>
             </button>
-            <button type="submit" disabled={busy}
+            <button type="submit" disabled={busy} aria-busy={busy}
               className="btn btn-primary flex-1 sm:flex-initial">
               <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
               {busy ? 'Menyimpan…' : 'Simpan Perubahan'}
