@@ -458,21 +458,13 @@ function lajuMbps(file) {
  *                = 93,6% dari batas Level 4.2 (522.240 MB/detik)
  *
  * Decoder perangkat keras dijamin sampai batas level, tidak di atasnya. Jalan di
- * 93,6% berarti nol cadangan untuk adegan ramai. Yang meringankannya CAVLC
- * (`-coder 0`, lihat argsEnc), bukan laju.
+ * 93,6% berarti nol cadangan untuk adegan ramai — tapi CAVLC yang sempat dipasang
+ * untuk meringankannya sudah DICABUT karena menurunkan mutu (lihat argsEnc).
  *
- * Dengan CAVLC dipakai, laju justru harus DIKEMBALIKAN: CAVLC ~10-15% kurang
- * efisien dari CABAC, jadi pada laju yang dipotong mutunya yang turun, bukan
- * ukurannya. Terukur pada potongan 14 detik, SSIM terhadap acuan CRF 0 dengan
- * rantai warna identik:
- *
- *   CABAC crf21 8,99M   15,71 MB  puncak 11,3M  3,25x  SSIM 0,9545
- *   CAVLC crf21 8,99M   15,71 MB  puncak 11,0M  4,29x  SSIM 0,9483  ← mutu turun
- *   CAVLC crf21 11,0M   19,14 MB  puncak 14,7M  4,40x  SSIM 0,9567  ← dipakai
- *
- * Baris terakhir: decode 1-thread +35% DAN mutu sedikit lebih baik dari CABAC.
- * 11,0 Mbps untuk 1080x1920@60 setara koefisien 0,088 — praktis sama dengan
- * 0,09 semula. Jadi angka lamanya memang benar; yang salah cuma diagnosisnya.
+ * Laju TIDAK diturunkan untuk mengejar keluhan ini. Dua percobaan menurunkannya
+ * (0,09 → 0,062, batas 14 → 10) gagal: puncak turun dari 16,5 ke 11,4 Mbps dan
+ * keluhan "patah tipis di WA" tetap ada. Jadi angkanya dikembalikan ke 0,09 —
+ * menurunkan laju hanya mengurangi mutu tanpa membayar apa pun.
  *
  * Batas atas 12 Mbps (bukan 14): 14 tidak pernah tercapai rumus ini pada
  * 1080p60, jadi itu pagar mati. 12 memberi ruang untuk 4K/klip laju tinggi
