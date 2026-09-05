@@ -243,7 +243,39 @@ function filterHdrKeSdr(jenis = "hdr", info = {}) {
     if (jenis === "gamut") {
       return depan + "zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p";
     }
-    return depan + "zscale=t=linear:npl=100,tonemap=tonemap=hable:desat=0," +
+    // ═══ KENAPA npl=1000 mobius, BUKAN npl=100 hable ═══
+    //
+    // Dipilih user dari tiga kandidat yang dibuat dengan setelan produksi
+    // identik (hanya kurvanya beda). Ini bukan angka yang bisa disimpulkan dari
+    // standar, karena dua standar yang berlaku saling menolak:
+    //
+    //   BT.2100 kompatibilitas balik: layar SDR 100 nit → system gamma
+    //     γ = 1.2 + 0.42·log10(100/1000) = 0.78, yaitu PERSIS npl=100.
+    //   BT.2408 diffuse white: sinyal 75% harus mendarat di putih SDR 235 —
+    //     dan itu LEBIH terang lagi (npl=100 menaruh 75% di 182).
+    //
+    // Kriteria "75%→235 sambil sorotan tetap terpisah" terbukti MUSTAHIL pada
+    // SDR: 235 memang batas putih. Diukur dengan petak HLG berkode eksak, tiga
+    // varian yang tepat 235 (mobius param=1.2, param=2.0, clip) semuanya membuat
+    // 90%/100% menempel; param=2.0 malah berbalik turun (90%=255, 100%=207).
+    //
+    // Peta pendaratan (sinyal HLG → kode luma 8-bit SDR):
+    //
+    //   npl=100 hable      25%=72  50%=123  65%=156  75%=182  90%=217  100%=235
+    //   npl=203 hable      25%=58  50%= 98  65%=126  75%=151  90%=191  100%=215
+    //   npl=1000 mobius    25%=48  50%= 79  65%=104  75%=129  90%=176  100%=201
+    //
+    // npl=1000 adalah puncak nominal HLG, jadi varian ini menafsirkan sinyalnya
+    // pada jangkauan penuh HLG lalu mengompresnya — mendekati apa yang pemutar
+    // HDR sungguhan lakukan. `mobius` menahan bagian bawah lurus dan hanya
+    // menggulung sorotan, jadi sorotan tetap punya detail (75→90 masih berjarak
+    // 47 kode, 90→100 masih 25).
+    //
+    // JANGAN geser angka ini dari ingatan atau "biar lebih pas". Tiga ronde
+    // pengukuran sudah terbuang karena menilai warna dengan membandingkan luma
+    // keluaran ke luma sumber dibaca apa adanya — pemutar tidak menampilkan
+    // nilai kode HLG apa adanya, jadi acuan itu tidak pernah ada di layar.
+    return depan + "zscale=t=linear:npl=1000,tonemap=tonemap=mobius:desat=0," +
       "zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p";
   }
   // Cadangan tanpa libzimg. `colorspace` bawaan ffmpeg bisa memindahkan
@@ -407,38 +439,44 @@ function lajuMbps(file) {
  * 576x1024 30 fps, dan mencekik klip 1080p60. Jadi batas dihitung dari dua
  * petunjuk, lalu diambil yang lebih besar:
  *
- *   a) laju sumber x 1,35 — H.264 butuh lebih banyak bit daripada HEVC untuk
+ *   a) laju sumber x 1,6 — H.264 butuh lebih banyak bit daripada HEVC untuk
  *      mutu yang sama, jadi ini lantai yang menjaga mutu tidak turun.
- *   b) piksel per detik x 0,062 bit — kebutuhan wajar H.264 pada mutu bagus.
+ *   b) piksel per detik x 0,09 bit — kebutuhan wajar H.264 pada mutu bagus.
  *
- * Lalu dijepit 2-10 Mbps.
+ * Lalu dijepit 2-12 Mbps.
  *
- * ═══ KENAPA ANGKANYA DITURUNKAN DARI 1,6 / 0,09 / 14 (terukur) ═══
+ * ═══ RALAT: PENURUNAN LAJU SEBELUMNYA SALAH ARAH (terukur) ═══
  *
- * Keluhan lanjutan: hasil aman di Telegram tapi "patah dikit tipis" di
- * WhatsApp. Media WA terenkripsi ujung-ke-ujung sehingga server WA TIDAK BISA
- * meng-encode ulang isinya, dan jalur kirim kita cuma `video: { url: path }`
- * tanpa transcode — jadi fps-nya tidak diturunkan oleh siapa pun. Yang berbeda
- * adalah pemutarnya: pemutar dalam WhatsApp punya anggaran jauh lebih ketat
- * daripada Telegram.
+ * Angka ini sempat saya turunkan dua kali (0,09 → 0,062, batas 14 → 10 Mbps)
+ * untuk mengejar keluhan "patah tipis di WA". Puncak laju turun dari 16,5 ke
+ * 11,4 Mbps dan keluhannya TETAP ADA. Dua percobaan gagal pada tuas yang sama
+ * sudah cukup untuk menyatakan laju bit BUKAN pengikatnya.
  *
- * Sapuan pada potongan 14 detik dari sumber yang sama, warna dipatok identik
- * supaya yang dibandingkan murni lajunya, mutu diukur SSIM terhadap acuan CRF 0
- * dengan rantai warna yang sama (bukan terhadap sumber HDR — itu pernah
- * menghasilkan SSIM 0,55 dan 0,33 yang keduanya mustahil):
+ * Pengikat yang sebenarnya beban macroblock:
  *
- *   1,6 / 0,09 / 14   11,20 Mbps   19,25 MB   puncak 16,5 Mbps   3,09x   SSIM 0,9641
- *   1,35 / 0,062 / 10  8,99 Mbps   15,59 MB   puncak 12,3 Mbps   3,47x   SSIM 0,9566
- *   1,2 / 0,05 / 9     7,99 Mbps   13,88 MB   puncak 11,4 Mbps   3,55x   SSIM 0,9517
+ *   1080x1920@60 = 8160 MB/frame x 59,88 = 488.621 MB/detik
+ *                = 93,6% dari batas Level 4.2 (522.240 MB/detik)
  *
- * Yang dipilih baris tengah: puncak turun 25% (16,5 → 12,3 Mbps), decode 1-thread
- * naik 12%, ukuran turun 19%, dengan biaya SSIM 0,0075 — masih di bawah ambang
- * yang terlihat mata (~0,01). Baris ketiga menghemat lebih banyak tapi biaya
- * mutunya mulai nyata (0,0124) dengan tambahan keringanan yang kecil.
+ * Decoder perangkat keras dijamin sampai batas level, tidak di atasnya. Jalan di
+ * 93,6% berarti nol cadangan untuk adegan ramai. Yang meringankannya CAVLC
+ * (`-coder 0`, lihat argsEnc), bukan laju.
  *
- * Batas atas 14 → 10 Mbps: 14 Mbps tidak pernah tercapai oleh rumus ini pada
- * 1080p60 (11,20 yang menang), jadi angka itu cuma pagar yang tidak pernah
- * dipakai. 10 Mbps membuatnya mengikat pada kasus yang justru bermasalah.
+ * Dengan CAVLC dipakai, laju justru harus DIKEMBALIKAN: CAVLC ~10-15% kurang
+ * efisien dari CABAC, jadi pada laju yang dipotong mutunya yang turun, bukan
+ * ukurannya. Terukur pada potongan 14 detik, SSIM terhadap acuan CRF 0 dengan
+ * rantai warna identik:
+ *
+ *   CABAC crf21 8,99M   15,71 MB  puncak 11,3M  3,25x  SSIM 0,9545
+ *   CAVLC crf21 8,99M   15,71 MB  puncak 11,0M  4,29x  SSIM 0,9483  ← mutu turun
+ *   CAVLC crf21 11,0M   19,14 MB  puncak 14,7M  4,40x  SSIM 0,9567  ← dipakai
+ *
+ * Baris terakhir: decode 1-thread +35% DAN mutu sedikit lebih baik dari CABAC.
+ * 11,0 Mbps untuk 1080x1920@60 setara koefisien 0,088 — praktis sama dengan
+ * 0,09 semula. Jadi angka lamanya memang benar; yang salah cuma diagnosisnya.
+ *
+ * Batas atas 12 Mbps (bukan 14): 14 tidak pernah tercapai rumus ini pada
+ * 1080p60, jadi itu pagar mati. 12 memberi ruang untuk 4K/klip laju tinggi
+ * tanpa membiarkan angkanya lepas.
  *
  * `-level` TIDAK dipatok di sini; dihitung dari ukuran+fps lewat levelH264().
  * Patokan 4.0 sempat dipakai dan itu keliru untuk 1080x1920@60 (butuh 4.2).
@@ -447,11 +485,11 @@ function batasLaju(file, info, fpsEfektif) {
   const sumber = lajuMbps(file);
   const px = (Number(info.width) || 0) * (Number(info.height) || 0);
   const pps = px * (fpsEfektif > 0 ? fpsEfektif : 30);
-  const dariSumber = sumber * 1.35;
-  const dariPiksel = (pps * 0.062) / 1e6;
+  const dariSumber = sumber * 1.6;
+  const dariPiksel = (pps * 0.09) / 1e6;
   let mbps = Math.max(dariSumber, dariPiksel);
   if (!(mbps > 0)) return null;
-  mbps = Math.min(10, Math.max(2, mbps));
+  mbps = Math.min(12, Math.max(2, mbps));
   return {
     maxrate: mbps.toFixed(2) + "M",
     // ═══ KENAPA BUFSIZE = MAXRATE (1x), BUKAN 2x ═══
@@ -666,22 +704,42 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
     ...fpsArgs,
     "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
     "-preset", "fast", "-crf", "21",
-    // ═══ KENAPA refs 2 / bf 2 (terukur) ═══
+    // ═══ INI TUAS YANG SEBENARNYA MENYELESAIKAN "PATAH TIPIS DI WA" ═══
     //
-    // Keluhan "di WA patah dikit tipis, di Telegram aman" bukan soal berkasnya:
-    // media WA terenkripsi ujung-ke-ujung sehingga tidak ada transcode di sisi
-    // server, dan jalur kirim kita tidak menyentuh video. Yang berbeda adalah
-    // pemutarnya — pemutar dalam WhatsApp punya anggaran lebih ketat.
+    // `-coder 0` = CAVLC, bukan CABAC.
     //
-    // x264 `preset fast` memakai 3 frame acuan dan 3 B-frame. Tiap frame acuan
-    // tambahan memaksa decoder menahan satu gambar lagi di memori dan menambah
-    // ketergantungan antar frame, dan itu bagian yang paling menyiksa decoder
-    // lemah. Dibatasi 2/2: masih cukup untuk efisiensi kompresi, tapi kebutuhan
-    // buffernya turun.
+    // Keluhan bertahan setelah laju bit diturunkan DUA KALI (puncak 16,5 → 12,3
+    // → 11,4 Mbps). Dua kegagalan pada tuas yang sama = tuasnya salah. Yang
+    // mengikat ternyata beban macroblock, bukan laju:
     //
-    // Diukur pada potongan 14 detik, 1 thread (proksi HP kelas menengah),
-    // sisanya identik: ukuran nyaris tidak berubah (13,92 → 13,91 MB) sementara
-    // beban decode-nya ikut turun bersama penurunan laju di batasLaju().
+    //   1080x1920@60 = 8160 MB/frame x 59,88 = 488.621 MB/detik
+    //                = 93,6% batas Level 4.2 (522.240 MB/detik)
+    //
+    // Decoder perangkat keras dijamin sampai batas level, tidak di atasnya, jadi
+    // 93,6% berarti nol cadangan untuk adegan ramai. Pemutar Telegram punya
+    // cadangan itu; pemutar dalam WhatsApp tidak.
+    //
+    // CABAC (entropy coding aritmetik) adalah bagian termahal dari decode H.264
+    // dan TIDAK bisa diparalelkan. CAVLC jauh lebih murah. Diukur 1-thread pada
+    // potongan 14 detik, sisanya identik:
+    //
+    //   1080x1920 CABAC   3,48x realtime   ← sebelum
+    //   1080x1920 CAVLC   4,83x realtime   = +39%, resolusi & fps UTUH
+    //   864x1536  CABAC   4,57x            = +31%, harus turunkan resolusi
+    //   720x1280  CABAC   5,98x            = +72%, resolusi turun jauh
+    //
+    // CAVLC memberi keringanan LEBIH BESAR daripada menurunkan resolusi ke
+    // 864x1536, tanpa menyentuh resolusi maupun fps. Itu sebabnya dipilih:
+    // user menyatakan kualitasnya sudah bagus dan hanya fps yang bermasalah,
+    // jadi menukar resolusi atau fps = merusak yang sudah benar.
+    //
+    // Biayanya ~10-15% efisiensi bit. Karena laju dibatasi, biaya itu muncul
+    // sebagai MUTU turun (SSIM 0,9545 → 0,9483), bukan berkas lebih besar. Itu
+    // dibayar dengan mengembalikan batas laju ke 0,09 (lihat batasLaju): pada
+    // 11,0 Mbps CAVLC mencapai SSIM 0,9567, sedikit LEBIH BAIK dari CABAC 8,99M.
+    "-coder", "0",
+    // refs/bf dibatasi 2 (preset fast defaultnya 3/3): tiap frame acuan menambah
+    // gambar yang harus ditahan decoder. Ukuran nyaris tidak berubah.
     "-refs", "2", "-bf", "2",
     ...argWarna,
     ...argLaju,
