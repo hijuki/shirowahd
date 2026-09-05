@@ -214,18 +214,18 @@ function BrandGallery({ data, set }) {
                   <div className="flex items-center justify-between gap-1 pt-1 border-t border-[var(--edge)]">
                     <div className="flex gap-1">
                       <button type="button" onClick={() => applyTo('logoUrl', f.url)}
-                        className={`px-2 py-1 rounded-[var(--r-xs)] text-[10px] font-bold transition-all border ${isLogo ? 'bg-[var(--sunk)] text-[var(--ink)] border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border-transparent hover:border-[var(--edge)]'}`}>Logo</button>
+                        aria-pressed={!!isLogo} className={`seg-btn ${isLogo ? 'seg-btn-on' : ''}`}>Logo</button>
                       {/* Dua tombol MODE, bukan "Hero" + "GIF". Jenis file dipilih
                           sistem dari ekstensi; admin cuma menentukan aset ini
                           tampil di mode terang atau gelap. */}
                       <button type="button" onClick={() => pasangMode(f, 'light')} title="Pakai sebagai hero mode terang"
-                        className={`px-2 py-1 rounded-[var(--r-xs)] text-[10px] font-bold transition-all border ${isTerang ? 'bg-[var(--sunk)] text-[var(--ink)] border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border-transparent hover:border-[var(--edge)]'}`}>
+                        aria-pressed={!!isTerang} className={`seg-btn ${isTerang ? 'seg-btn-on' : ''}`}>
                         <i className="fa-solid fa-sun text-[9px] mr-1" />Terang</button>
                       <button type="button" onClick={() => pasangMode(f, 'dark')} title="Pakai sebagai hero mode gelap"
-                        className={`px-2 py-1 rounded-[var(--r-xs)] text-[10px] font-bold transition-all border ${isGelap ? 'bg-[var(--sunk)] text-[var(--ink)] border-[var(--edge)]' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border-transparent hover:border-[var(--edge)]'}`}>
+                        aria-pressed={!!isGelap} className={`seg-btn ${isGelap ? 'seg-btn-on' : ''}`}>
                         <i className="fa-solid fa-moon text-[9px] mr-1" />Gelap</button>
                     </div>
-                    <button type="button" onClick={() => onDelete(f.name)} className="btn btn-danger w-6 h-6 rounded text-bad/60 hover:text-bad text-[10px]"><i className="fa-solid fa-trash" /></button>
+                    <button type="button" onClick={() => onDelete(f.name)} aria-label={`Hapus ${f.name}`} className="btn btn-icon btn-danger !w-8 !h-8 !min-w-8 !text-[10px]"><i className="fa-solid fa-trash" /></button>
                   </div>
                 </div>
               </div>
@@ -502,11 +502,14 @@ export default function Settings({ toast }) {
 
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={!!cf?.direct?.enabled}
                   disabled={cfBusy === 'direct' || !cf?.direct?.certReady}
+                  aria-busy={cfBusy === 'direct'}
                   onClick={toggleDirect}
-                  className={`shrink-0 px-4 py-2 rounded-[var(--r-soft)] text-xs font-extrabold transition-all active:scale-95 disabled:opacity-40 flex items-center gap-2 ${cf?.direct?.enabled
-                    ? 'bg-bad/15 text-bad border border-bad/30 hover:bg-bad/25'
-                    : 'bg-good/15 text-good border border-good/30 hover:bg-good/25'}`}
+                  className={`btn min-h-10 shrink-0 !text-[11px] font-extrabold gap-2 ${cf?.direct?.enabled
+                    ? 'btn-danger'
+                    : 'btn-quiet !text-[var(--good)] !border-[color-mix(in_srgb,var(--good)_30%,transparent)]'}`}
                 >
                   <i className={`fa-solid ${cfBusy === 'direct' ? 'fa-spinner fa-spin' : cf?.direct?.enabled ? 'fa-power-off' : 'fa-play'}`} />
                   {cfBusy === 'direct' ? 'Memproses…' : cf?.direct?.enabled ? 'Matikan Jalur Direct' : 'Nyalakan Jalur Direct'}
@@ -562,11 +565,15 @@ export default function Settings({ toast }) {
                         </div>
                         <button
                           type="button"
+                          role="switch"
+                          aria-checked={!!rec.proxied}
+                          aria-label={`Proxy Cloudflare untuk ${rec.name}`}
                           disabled={cfBusy === rec.id}
+                          aria-busy={cfBusy === rec.id}
                           onClick={() => toggleProxy(rec)}
-                          className={`shrink-0 px-3 py-1.5 rounded-[var(--r-soft)] text-[10px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 ${rec.proxied
-                            ? 'bg-[var(--paper-2)] text-[var(--acid)] border border-[var(--edge)] hover:bg-[var(--paper-2)]'
-                            : 'bg-[#fbbf24]/15 text-[var(--ink)] border border-[#fbbf24]/30 hover:bg-[#fbbf24]/25'}`}
+                          className={`btn min-h-9 shrink-0 !text-[10px] font-extrabold uppercase tracking-wider gap-1.5 ${rec.proxied
+                            ? 'btn-quiet !text-[var(--acid)]'
+                            : 'btn-warn'}`}
                         >
                           <i className={`fa-solid ${rec.proxied ? 'fa-shield-halved' : 'fa-bolt'}`} />
                           {cfBusy === rec.id ? '…' : rec.proxied ? 'Proxy ON' : 'Direct (Grey)'}
@@ -720,9 +727,7 @@ export default function Settings({ toast }) {
                     const on = (data.themeDefault || 'light') === o.v
                     return (
                       <button key={o.v} type="button" onClick={() => set('themeDefault', o.v)}
-                        className={`px-3.5 py-2.5 rounded-[var(--r-soft)] text-xs font-bold flex items-center gap-2 border transition-all ${on
-                          ? 'bg-[var(--accent)] text-[#06180d] border-[var(--edge)] shadow-[var(--sh-1)]'
-                          : 'bg-[var(--paper-2)] text-[var(--ink)] border-[var(--edge)] hover:bg-[var(--paper-2)]'}`}>
+                        aria-pressed={!!on} className={`seg-btn seg-btn-lg ${on ? 'seg-btn-on' : ''}`}>
                         <i className={`fa-solid ${o.i} text-[11px]`} />{o.l}
                       </button>
                     )
