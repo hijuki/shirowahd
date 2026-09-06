@@ -5,7 +5,7 @@ import config from '../../config.js'
 import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'savedb',
-    alias: ['backupdb', 'downloaddb', 'getdb'],
+    alias: ['downloaddb', 'getdb'],  // 'backupdb' dihapus: tabrakan dengan backupdb.js
     category: 'owner',
     description: 'Download file database',
     usage: '.savedb',

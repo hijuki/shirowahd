@@ -4,7 +4,7 @@ import config from '../../config.js'
 import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
   name: "autobackup",
-  alias: ["backup", "ab"],
+  alias: ["ab"],  // "backup" dihapus: tabrakan dengan backupsc.js yang kirim zip
   category: "owner",
   description: "Kelola sistem auto backup",
   usage: ".autobackup <on/off/status/now> [interval]",
