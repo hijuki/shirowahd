@@ -297,42 +297,53 @@ export default function Dashboard({ toast }) {
       {/* Analytics Chart & System Monitor */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* 7-Day Chart */}
-        <div className="p-6 rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] lg:col-span-3 space-y-6 flex flex-col justify-between">
+        <div className="plate plate-flat p-5 sm:p-6 lg:col-span-3 flex flex-col justify-between space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xs font-extrabold tracking-wider uppercase text-[var(--ink)] flex items-center gap-2">
-                <i className="fa-solid fa-chart-simple text-[var(--volt)]" /> Volume Upload 7 Hari Terakhir
+                <i className="fa-solid fa-chart-simple text-[var(--accent)]" /> Volume Upload 7 Hari Terakhir
               </h3>
               <p className="text-xs text-[var(--ink-2)] mt-0.5">Statistik jumlah media yang masuk per hari</p>
             </div>
-            <span className="text-[11px] font-mono text-[var(--volt)] bg-[var(--paper-2)] px-2.5 py-1 rounded-full border border-[var(--edge)]">
+            <span className="text-[11px] font-mono text-[var(--accent)] bg-[var(--paper-2)] px-2.5 py-1 rounded-full border border-[var(--edge)]">
               Peak: {Math.max(0, ...days.map(d => d.count))} files
             </span>
           </div>
 
-          <div className="flex items-end justify-between gap-2.5 h-48 pt-4">
-            {days.map(d => {
-              const heightPct = Math.max(8, (d.count / maxCount) * 100)
-              const isToday = d.date === new Date().toISOString().slice(0, 10)
-              return (
-                <div key={d.date} className="flex-1 flex flex-col items-center gap-2.5 h-full justify-end group">
-                  <span className={`text-[11px] font-mono font-bold transition-transform group-hover:scale-110 ${d.count > 0 ? (isToday ? 'text-[var(--volt)]' : 'text-[var(--ink)]') : 'text-[var(--ink-3)]'}`}>
-                    {d.count}
-                  </span>
-                  <div className="w-full max-w-[42px] rounded-[var(--r-soft)] bg-[var(--paper-2)] p-1 flex items-end h-full">
-                    <div
-                      className={`w-full rounded-[var(--r-soft)] transition-all duration-300 ${isToday
-                        ? 'bg-gradient-to-t from-[var(--ink)] to-[var(--ink)] shadow-[var(--sh-1)]'
-                        : 'bg-[var(--paper-2)] group-hover:bg-[var(--paper-2)]'}`}
-                      style={{ height: `${heightPct}%` }}
-                    />
+          {/* Neo-brutalism Bar Chart dengan kontras tinggi dan garis dasar jelas */}
+          <div className="pt-4 border-b-2 border-[var(--edge)] pb-2">
+            <div className="flex items-end justify-between gap-2 sm:gap-3 h-48">
+              {days.map(d => {
+                const heightPct = maxCount > 0 ? Math.max(6, (d.count / maxCount) * 100) : 6
+                const isToday = d.date === new Date().toISOString().slice(0, 10)
+                return (
+                  <div key={d.date} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                    <span className={`text-[11px] font-mono font-bold transition-transform group-hover:scale-110 ${d.count > 0 ? (isToday ? 'text-[var(--accent)] font-extrabold' : 'text-[var(--ink)]') : 'text-[var(--ink-3)]'}`}>
+                      {d.count}
+                    </span>
+                    {/* Track Batang dengan border hitam tegas neo-brutalism */}
+                    <div className="w-full max-w-[46px] rounded-t-md bg-[var(--sunk)] border-2 border-[var(--edge)] p-0.5 flex items-end h-full relative overflow-hidden shadow-[var(--sh-press)]">
+                      <div
+                        className={`w-full rounded-t-[3px] transition-all duration-300 relative ${isToday
+                          ? 'bg-[var(--accent)] shadow-[0_0_12px_rgba(37,211,102,0.4)]'
+                          : d.count > 0
+                            ? 'bg-[var(--ink)] group-hover:bg-[var(--accent)]'
+                            : 'bg-transparent'}`}
+                        style={{ height: `${heightPct}%` }}
+                      >
+                        {/* Top Accent Line */}
+                        {d.count > 0 && (
+                          <span className="absolute top-0 inset-x-0 h-1 bg-white/40 rounded-t-[3px]" />
+                        )}
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-mono whitespace-nowrap ${isToday ? 'text-[var(--accent)] font-extrabold' : 'text-[var(--ink-2)]'}`}>
+                      {d.date.slice(8)}/{d.date.slice(5, 7)}
+                    </span>
                   </div>
-                  <span className={`text-[10px] font-mono whitespace-nowrap ${isToday ? 'text-[var(--volt)] font-bold' : 'text-[var(--ink-2)]'}`}>
-                    {d.date.slice(8)}/{d.date.slice(5, 7)}
-                  </span>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
 
