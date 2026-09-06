@@ -33,32 +33,42 @@ const KIND = {
    tetap jadi subjek; titik nilai terakhir dipasang sebagai elemen DOM di luar
    SVG karena `preserveAspectRatio="none"` akan memipihkan <circle> jadi elips. */
 function Spark({ series }) {
-  const W = 300, H = 46
+  const W = 300, H = 52
   const max = Math.max(1, ...series)
   const pts = series.map((v, i) => {
     const x = (i / Math.max(1, series.length - 1)) * W
-    const y = H - (v / max) * (H - 6) - 3
+    const y = H - (v / max) * (H - 8) - 4
     return [x, y]
   })
-  const line = pts.map(([x, y], i) => (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ')
+  
+  // Smooth Bezier Curve Path
+  let line = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const xMid = ((pts[i][0] + pts[i + 1][0]) / 2).toFixed(1)
+    const yMid = ((pts[i][1] + pts[i + 1][1]) / 2).toFixed(1)
+    const cpX1 = ((xMid + pts[i][0]) / 2).toFixed(1)
+    const cpX2 = ((xMid + pts[i + 1][0]) / 2).toFixed(1)
+    line += ` Q ${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)} ${xMid} ${yMid}`
+  }
+  const lastPt = pts[pts.length - 1]
+  line += ` L ${lastPt[0].toFixed(1)} ${lastPt[1].toFixed(1)}`
+
   const area = line + ` L${W} ${H} L0 ${H} Z`
-  const last = pts[pts.length - 1] || [W, H]
-  // Titik akhir diposisikan dalam PERSEN tinggi, bukan piksel viewBox — itu satu
-  // -satunya cara agar dia tetap menempel di garis setelah SVG direntang.
-  const topPct = (last[1] / H) * 100
+  const topPct = (lastPt[1] / H) * 100
+
   return (
-    <div className="spark-wrap">
-      <svg className="spark w-full h-[46px]" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
+    <div className="spark-wrap relative overflow-hidden rounded-[8px] bg-gradient-to-b from-transparent to-[var(--accent)]/[0.04]">
+      <svg className="spark w-full h-[52px]" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
         <defs>
-          <linearGradient id="sparkFade" x1="0" y1="0" x2="0" y2="1">
-            <stop className="spark-stop-a" offset="0%" />
-            <stop className="spark-stop-b" offset="100%" />
+          <linearGradient id="sparkNeon" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.0" />
           </linearGradient>
         </defs>
-        <path className="spark-area" d={area} />
-        <path className="spark-draw" d={line} />
+        <path d={area} fill="url(#sparkNeon)" />
+        <path d={line} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="spark-dot" style={{ top: `${topPct}%` }} />
+      <span className="spark-dot shadow-[0_0_8px_var(--accent)]" style={{ top: `${topPct}%`, backgroundColor: 'var(--accent)' }} />
     </div>
   )
 }
@@ -169,54 +179,79 @@ export default function LiveStats() {
 
       <div className="rule-dash mx-4" />
 
-      {/* ── Angka ringkas: 3 kolom, tetap ada tapi bukan satu-satunya ──
-          Ukuran & font diatur lewat `.stat-num` / `.stat-num-word`, BUKAN
-          utility Tailwind. Versi sebelumnya menulis `data
-          font-[family-name:var(--font-display)]` dan font efektifnya terukur
-          JetBrains Mono — `.data` ada di luar @layer sehingga menang atas
-          utility. Satu kelas = satu sumber kebenaran. */}
-      <div className="grid grid-cols-3 split-x border-b-2 border-[var(--edge)]">
+      {/* ── Angka ringkas: 3 kolom dengan kontras cerah & aksen dinamis ── */}
+      <div className="grid grid-cols-3 split-x border-b-2 border-[var(--edge)] bg-[var(--paper-2)]">
         {[
-          { k: 'HARI INI', v: today, s: 'upload', hot: today > 0 },
-          { k: 'AKTIF', v: active, s: 'kode', hot: active > 0 },
-          { k: 'JALUR', v: d.direct ? '100MB+' : 'STANDAR', s: d.direct ? 'aktif' : 'normal', wide: true, hot: !!d.direct },
+          { k: 'HARI INI', v: today, s: 'upload', hot: today > 0, col: 'var(--accent)', icon: 'fa-bolt' },
+          { k: 'AKTIF', v: active, s: 'kode', hot: active > 0, col: 'var(--volt)', icon: 'fa-circle-check' },
+          { k: 'JALUR', v: d.direct ? '100MB+' : 'STANDAR', s: d.direct ? 'cepat' : 'stabil', wide: true, hot: !!d.direct, col: '#ffb020', icon: 'fa-network-wired' },
         ].map(c => (
-          <div key={c.k} className="stat-cell px-3 pt-3 pb-[26px]" data-hot={c.hot ? '1' : '0'}>
-            <p className="kicker !text-[8px]">{c.k}</p>
-            <p className={`mt-1.5 ${c.wide ? 'stat-num-word' : 'stat-num'}`}>{c.v}</p>
-            <p className="kicker !text-[8px] !tracking-[0.1em] mt-[5px]">{c.s}</p>
+          <div key={c.k} className="stat-cell px-3 pt-3 pb-[22px] flex flex-col justify-between" data-hot={c.hot ? '1' : '0'}>
+            <div className="flex items-center justify-between">
+              <p className="kicker !text-[8px]">{c.k}</p>
+              {c.hot && <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-ping" />}
+            </div>
+            <p className={`mt-1 font-bold ${c.wide ? 'stat-num-word' : 'stat-num'} ${c.hot ? '!text-[var(--accent)]' : 'text-[var(--ink)]'}`}>
+              {c.v}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className={`kicker !text-[8px] !tracking-[0.1em] font-mono ${c.hot ? '!text-[var(--accent)]' : '!text-[var(--ink-2)]'}`}>
+                {c.s}
+              </span>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* ── Grafik batang per jam ── */}
+      {/* ── Grafik batang per jam: Neobrutalism bars dengan border & neon accents ── */}
       <div className="px-4 pt-4">
         <div className="flex items-baseline justify-between mb-2">
-          <span className="kicker">UPLOAD / JAM</span>
-          <span className="kicker !text-[9px]">PUNCAK {peak}</span>
+          <span className="kicker font-bold text-[var(--ink)] flex items-center gap-1.5">
+            <i className="fa-solid fa-chart-column text-[10px] text-[var(--accent)]" />
+            UPLOAD / JAM
+          </span>
+          <span className="kicker !text-[9px] font-mono px-2 py-0.5 rounded bg-[var(--paper-2)] border border-[var(--edge)]">
+            PUNCAK: <strong className="text-[var(--accent)]">{peak}</strong>
+          </span>
         </div>
-        <div className="bars">
-          {d.buckets.map((v, i) => (
-            <span key={i} className={`bar ${i === 23 ? 'bar-now' : ''}`} style={{ animationDelay: i * 18 + 'ms' }}
-              title={`${hourLabel(i)}:00 — ${v} upload`}>
-              <span className="bar-fill" style={{ height: Math.max(v > 0 ? 12 : 0, (v / peak) * 100) + '%' }} />
-            </span>
-          ))}
+        <div className="bars border-b-2 border-[var(--edge)] pb-1">
+          {d.buckets.map((v, i) => {
+            const isNow = i === 23
+            const pct = Math.max(v > 0 ? 15 : 6, (v / peak) * 100)
+            return (
+              <span key={i} className={`bar border border-[var(--edge)] rounded-t-[4px] relative overflow-hidden ${isNow ? 'bg-[var(--accent)]/10 ring-1 ring-[var(--accent)]' : 'bg-[var(--sunk)]'}`}
+                title={`${hourLabel(i)}:00 — ${v} upload`}>
+                <span
+                  className={`bar-fill transition-all duration-300 rounded-t-[3px] ${isNow ? '!bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]' : v > 0 ? '!bg-[var(--ink)]' : '!bg-transparent'}`}
+                  style={{ height: `${pct}%` }}
+                >
+                  {v > 0 && <span className="absolute top-0 inset-x-0 h-1 bg-white/40 rounded-t-[2px]" />}
+                </span>
+              </span>
+            )
+          })}
         </div>
-        <div className="flex justify-between mt-1.5">
+        <div className="flex justify-between mt-2">
           {[0, 6, 12, 18, 23].map(h => (
-            <span key={h} className="kicker !text-[8px]">{hourLabel(h)}</span>
+            <span key={h} className={`kicker !text-[8px] font-mono ${h === 23 ? '!text-[var(--accent)] font-bold' : ''}`}>
+              {hourLabel(h)}:00
+            </span>
           ))}
         </div>
       </div>
 
-      {/* ── Sparkline volume ── */}
-      <div className="px-4 pt-4">
-        <div className="flex items-baseline justify-between mb-1">
-          <span className="kicker">VOLUME DATA</span>
-          <span className="data text-[11px]">{fmtSize(d.bytes.reduce((a, b) => a + b, 0))}</span>
+      {/* ── Sparkline volume: Smooth Bezier Glow & Neon ── */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-baseline justify-between mb-1.5">
+          <span className="kicker font-bold text-[var(--ink)] flex items-center gap-1.5">
+            <i className="fa-solid fa-wave-square text-[10px] text-[var(--volt)]" />
+            VOLUME DATA
+          </span>
+          <span className="data text-xs font-mono font-bold text-[var(--accent)] bg-[var(--paper-2)] px-2 py-0.5 rounded border border-[var(--edge)]">
+            {fmtSize(d.bytes.reduce((a, b) => a + b, 0))}
+          </span>
         </div>
-        <div className="plate-sunk px-1 pt-1">
+        <div className="plate-sunk p-1 border-2 border-[var(--edge)] rounded-[var(--r-soft)] shadow-inner">
           <Spark series={d.bytes} />
         </div>
       </div>
@@ -230,24 +265,35 @@ export default function LiveStats() {
 
       {/* ── Feed aktivitas ── */}
       {d.events?.length > 0 && (
-        <div className="mt-4 border-t-2 border-[var(--edge)] rounded-b-[14px] overflow-hidden">
+        <div className="mt-3 border-t-2 border-[var(--edge)] rounded-b-[14px] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--paper-2)] border-b-2 border-[var(--edge)]">
-            <span className="kicker">ALIRAN AKTIVITAS</span>
-            <span className="kicker !text-[8px]">ANONIM</span>
+            <span className="kicker font-bold text-[var(--ink)] flex items-center gap-1.5">
+              <i className="fa-solid fa-list-check text-[10px] text-[var(--accent)]" />
+              ALIRAN AKTIVITAS
+            </span>
+            <span className="kicker !text-[8px] font-mono px-2 py-0.5 rounded bg-[var(--sunk)] border border-[var(--edge)]">
+              REALTIME
+            </span>
           </div>
-          <div className="max-h-[196px] overflow-y-auto scroll-hide">
+          <div className="max-h-[220px] overflow-y-auto scroll-hide divide-y divide-[var(--edge)]/20">
             {d.events.map((e, i) => {
               const k = KIND[e.kind] || KIND.video
               return (
-                <div key={e.t + '-' + i} className="logline" style={{ animationDelay: Math.min(i, 8) * 45 + 'ms' }}>
-                  <span className="flex items-center gap-2">
-                    <i className={`fa-solid ${k.i} text-[10px] opacity-70`} />
-                    <span className="font-bold tracking-[0.08em] text-[9px]">{k.l}</span>
+                <div key={e.t + '-' + i} className="flex items-center justify-between px-3 py-2 bg-[var(--paper)] hover:bg-[var(--sunk)] transition-colors text-xs font-mono">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-6 h-6 rounded grid place-items-center bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 shrink-0">
+                      <i className={`fa-solid ${k.i} text-[10px]`} />
+                    </span>
+                    <span className="font-bold text-[var(--ink)] truncate max-w-[120px] sm:max-w-[180px]">
+                      {e.ext}{e.count > 1 ? ` ×${e.count}` : ''}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--volt)]/10 text-[var(--volt)] font-bold shrink-0">
+                      {fmtSize(e.size)}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-[var(--ink-2)] shrink-0 font-mono">
+                    {timeShort(e.t)}
                   </span>
-                  <span className="truncate opacity-70">
-                    {e.ext}{e.count > 1 ? ` ×${e.count}` : ''} · {fmtSize(e.size)}
-                  </span>
-                  <span className="opacity-50 text-[10px]">{timeShort(e.t)}</span>
                 </div>
               )
             })}
