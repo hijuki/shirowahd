@@ -67,7 +67,9 @@ export const execCommand = (code, target) => api('/api/bot/exec', { method: 'POS
 export const backupToGithub = () => api('/api/backup', { method: 'POST' })
 export const getBackupHistory = () => api('/api/backup/history')
 export const restartBot = () => api('/api/bot/restart', { method: 'POST' })
-export const getLogs = (type = 'out', lines = 200) => api(`/api/logs?type=${type}&lines=${lines}`)
+export const restartWeb = () => api('/api/web/restart', { method: 'POST' })
+export const restartAll = () => api('/api/all/restart', { method: 'POST' })
+export const getLogs = (type = 'out', lines = 200, target = 'main') => api(`/api/logs?type=${type}&lines=${lines}&target=${target}`)
 export const getTunnelStatus = () => api('/api/tunnel')
 // Kendali Cloudflare + jalur upload langsung
 export const getCfDns = () => api('/api/cf/dns')
@@ -94,6 +96,3 @@ export async function uploadGalleryFile(file) {
   }
   return data
 }
-
-export const restartWeb = () => api("/api/web/restart", { method: "POST" })
-export const restartAll = () => api("/api/all/restart", { method: "POST" })

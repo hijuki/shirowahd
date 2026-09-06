@@ -1820,7 +1820,9 @@ async function handleRequest(req, res) {
     try {
       const q = new URLSearchParams((req.url.split('?')[1] || ''));
       const lines = Math.min(Math.max(parseInt(q.get('lines') || '200', 10) || 200, 10), 2000);
-      const which = q.get('type') === 'error' ? 'main-error.log' : 'main-out.log';
+      const target = q.get('target') === 'web' ? 'web' : 'main';
+      const isErr = q.get('type') === 'error';
+      const which = `${target}-${isErr ? 'error' : 'out'}.log`;
       const candidates = [
         join(process.env.HOME || '/root', '.pm2', 'logs', which),
         join(__dirname, 'logs', which),
@@ -1828,7 +1830,7 @@ async function handleRequest(req, res) {
       let file = candidates.find(f => existsSync(f));
       if (!file) { jsonRes(res, 200, { ok: true, lines: [], note: 'File log tidak ditemukan' }); return; }
       const out = execSync(`tail -n ${lines} ${JSON.stringify(file)}`, { encoding: 'utf8', timeout: 10000, maxBuffer: 8 * 1024 * 1024 });
-      jsonRes(res, 200, { ok: true, file, lines: out.split('\n') });
+      jsonRes(res, 200, { ok: true, file, target, which, lines: out.split('\n') });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;
   }
@@ -1986,12 +1988,34 @@ async function handleRequest(req, res) {
       const diskRaw = execSync("df -B1 / | awk 'NR==2{print $2,$3,$4,$5}'", { timeout: 3000 }).toString().trim().split(' ');
       const uptime = execSync('cat /proc/uptime', { timeout: 2000 }).toString().trim().split(' ')[0];
       const loadavg = execSync('cat /proc/loadavg', { timeout: 2000 }).toString().trim().split(' ').slice(0, 3).join(' ');
+
+      // Info proses PM2 untuk bot (main) dan uploader (web)
+      let pm2Processes = [];
+      try {
+        const rawPm2 = execSync('pm2 jlist', { timeout: 3000 }).toString();
+        const parsed = JSON.parse(rawPm2);
+        if (Array.isArray(parsed)) {
+          pm2Processes = parsed
+            .filter(p => ['web', 'main'].includes(p.name))
+            .map(p => ({
+              name: p.name,
+              status: p.pm2_env?.status || 'unknown',
+              pid: p.pid || 0,
+              uptime: p.pm2_env?.pm_uptime ? Math.floor((Date.now() - p.pm2_env.pm_uptime) / 1000) : 0,
+              restarts: p.pm2_env?.restart_time || 0,
+              memory: p.monit?.memory || 0,
+              cpu: p.monit?.cpu || 0,
+            }));
+        }
+      } catch { /* PM2 jlist opsional bila gagal */ }
+
       jsonRes(res, 200, {
         ok: true,
         mem: { total: +memRaw[0], used: +memRaw[1], free: +memRaw[2] },
         disk: { total: +diskRaw[0], used: +diskRaw[1], free: +diskRaw[2], pct: diskRaw[3] },
         uptime: +uptime,
-        loadavg
+        loadavg,
+        processes: pm2Processes
       });
     } catch (e) { jsonRes(res, 500, { ok: false, error: e.message }); }
     return;

@@ -1,6 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { getStats, getAnalytics, getSystem, setMaintenance, restartWeb, restartBot, restartAll } from '@/lib/admin-api'
+import { useEffect, useState, useRef } from 'react'
+import { getStats, getAnalytics, getSystem, setMaintenance, restartWeb, restartBot, restartAll, getLogs, getUploadLog } from '@/lib/admin-api'
 
 function StatCard({ icon, label, value, subtext, color }) {
   return (
@@ -28,12 +28,28 @@ const fmtBytes = (b) => {
   return `${b.toFixed(i ? 1 : 0)} ${u[i]}`
 }
 
+const fmtTime = (ts) => {
+  if (!ts) return '—'
+  const d = new Date(ts)
+  return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 export default function Dashboard({ toast }) {
   const [stats, setStats] = useState(null)
   const [analytics, setAnalytics] = useState(null)
   const [system, setSystem] = useState(null)
   const [maint, setMaint] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  // Live Console & Log Monitor
+  const [logTab, setLogTab] = useState('web') // 'web' | 'bot' | 'upload'
+  const [logType, setLogType] = useState('out') // 'out' | 'error'
+  const [logLines, setLogLines] = useState([])
+  const [uploadLogs, setUploadLogs] = useState([])
+  const [logAuto, setLogAuto] = useState(true)
+  const [logBusy, setLogBusy] = useState(false)
+  const [logFilter, setLogFilter] = useState('')
+  const logBoxRef = useRef(null)
 
   const load = async () => {
     try {
@@ -44,11 +60,43 @@ export default function Dashboard({ toast }) {
     } catch { /* retry on next poll */ }
   }
 
+  const fetchCurrentLogs = async () => {
+    if (logTab === 'upload') {
+      try {
+        const uLogs = await getUploadLog()
+        setUploadLogs(Array.isArray(uLogs) ? uLogs : [])
+      } catch { }
+      return
+    }
+
+    setLogBusy(true)
+    try {
+      const target = logTab === 'web' ? 'web' : 'main'
+      const r = await getLogs(logType, 300, target)
+      setLogLines(Array.isArray(r?.lines) ? r.lines : [])
+    } catch (e) {
+      /* ignore poll error */
+    } finally {
+      setLogBusy(false)
+    }
+  }
+
   useEffect(() => {
     load()
-    const iv = setInterval(load, 15000)
+    fetchCurrentLogs()
+    const iv = setInterval(load, 10000)
     return () => clearInterval(iv)
   }, [])
+
+  useEffect(() => {
+    fetchCurrentLogs()
+  }, [logTab, logType])
+
+  useEffect(() => {
+    if (!logAuto) return
+    const iv = setInterval(fetchCurrentLogs, 4000)
+    return () => clearInterval(iv)
+  }, [logAuto, logTab, logType])
 
   const toggleMaint = async () => {
     setBusy(true)
@@ -76,6 +124,20 @@ export default function Dashboard({ toast }) {
     return d ? `${d}h ${h}j ${m}m` : h ? `${h}j ${m}m` : `${m}m`
   }
 
+  const filteredLines = logLines.filter(line => !logFilter.trim() || line.toLowerCase().includes(logFilter.toLowerCase()))
+  const filteredUploads = uploadLogs.filter(l => !logFilter.trim() || (l.filename || '').toLowerCase().includes(logFilter.toLowerCase()) || (l.ip || '').includes(logFilter) || (l.code || '').toLowerCase().includes(logFilter.toLowerCase()))
+
+  const copyLogs = () => {
+    let text = ''
+    if (logTab === 'upload') {
+      text = filteredUploads.map(l => `[${new Date(l.timestamp).toISOString()}] ${l.code} ${l.filename} (${fmtBytes(l.filesize)}) IP: ${l.ip}`).join('\n')
+    } else {
+      text = filteredLines.join('\n')
+    }
+    navigator.clipboard?.writeText(text)
+    toast('Log disalin ke clipboard!', 'success')
+  }
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
       {/* Header Info */}
@@ -98,7 +160,7 @@ export default function Dashboard({ toast }) {
               try {
                 toast('Me-restart Web Uploader...', 'info')
                 await restartWeb()
-                setTimeout(() => toast('Web Uploader siap!', 'success'), 1500)
+                setTimeout(() => { toast('Web Uploader siap!', 'success'); load(); fetchCurrentLogs(); }, 1500)
               } catch (e) { toast('Error: ' + e.message, 'error') }
             }}
             className="btn btn-quiet rounded-[var(--r-soft)] text-xs text-[var(--ink)] hover:text-[var(--volt)] gap-1.5 active:scale-95"
@@ -113,6 +175,7 @@ export default function Dashboard({ toast }) {
                 toast('Me-restart Bot WA...', 'info')
                 await restartBot()
                 toast('Bot WA di-restart!', 'success')
+                setTimeout(() => { load(); fetchCurrentLogs(); }, 3000)
               } catch (e) { toast('Error: ' + e.message, 'error') }
             }}
             className="btn btn-quiet rounded-[var(--r-soft)] text-xs text-[var(--ink)] hover:text-[var(--acid)] gap-1.5 active:scale-95"
@@ -126,7 +189,7 @@ export default function Dashboard({ toast }) {
               try {
                 toast('Me-restart Semua Service...', 'info')
                 await restartAll()
-                setTimeout(() => toast('Semua service online!', 'success'), 2000)
+                setTimeout(() => { toast('Semua service online!', 'success'); load(); fetchCurrentLogs(); }, 2500)
               } catch (e) { toast('Error: ' + e.message, 'error') }
             }}
             className="btn btn-primary min-h-10 !text-[11px] font-extrabold gap-1.5 !bg-[var(--accent)] hover:!bg-[var(--acid)] !text-[#06180d]"
@@ -137,15 +200,77 @@ export default function Dashboard({ toast }) {
         </div>
       </div>
 
+      {/* Process Status Indicators (PM2 Services) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {(() => {
+          const procs = system?.processes || []
+          const webP = procs.find(p => p.name === 'web')
+          const mainP = procs.find(p => p.name === 'main')
+
+          return (
+            <>
+              {/* Web Uploader Service */}
+              <div className="plate plate-flat p-3.5 flex items-center justify-between border-l-4 !border-l-[var(--volt)]">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-9 h-9 rounded-[var(--r-soft)] grid place-items-center bg-[var(--paper-2)] border border-[var(--edge)] shrink-0">
+                    <i className="fa-solid fa-globe text-[14px] text-[var(--volt)]" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold font-mono text-[var(--ink)]">Web Uploader (:80)</span>
+                      <span className={`chip !px-1.5 !py-[1px] !text-[8px] uppercase ${webP?.status === 'online' ? '!bg-good/20 !text-good !border-good/40' : '!bg-bad/20 !text-bad'}`}>
+                        {webP?.status || (system ? 'OFFLINE' : 'CHECKING')}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-mono text-[var(--ink-2)] mt-0.5 truncate">
+                      PID: {webP?.pid || '—'} · RAM: {fmtBytes(webP?.memory)} · Up: {fmtUptime(webP?.uptime)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setLogTab('web'); }}
+                  className="btn btn-quiet !px-2.5 !py-1 text-[10px] font-mono shrink-0 ml-2"
+                >
+                  <i className="fa-solid fa-terminal mr-1 text-[9px]" /> Log
+                </button>
+              </div>
+
+              {/* Bot WA Service */}
+              <div className="plate plate-flat p-3.5 flex items-center justify-between border-l-4 !border-l-[var(--accent)]">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-9 h-9 rounded-[var(--r-soft)] grid place-items-center bg-[var(--paper-2)] border border-[var(--edge)] shrink-0">
+                    <i className="fa-brands fa-whatsapp text-[16px] text-wa" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold font-mono text-[var(--ink)]">Bot WhatsApp (:8081)</span>
+                      <span className={`chip !px-1.5 !py-[1px] !text-[8px] uppercase ${mainP?.status === 'online' ? '!bg-good/20 !text-good !border-good/40' : '!bg-bad/20 !text-bad'}`}>
+                        {mainP?.status || (system ? 'OFFLINE' : 'CHECKING')}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-mono text-[var(--ink-2)] mt-0.5 truncate">
+                      PID: {mainP?.pid || '—'} · RAM: {fmtBytes(mainP?.memory)} · Up: {fmtUptime(mainP?.uptime)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setLogTab('bot'); }}
+                  className="btn btn-quiet !px-2.5 !py-1 text-[10px] font-mono shrink-0 ml-2"
+                >
+                  <i className="fa-solid fa-terminal mr-1 text-[9px]" /> Log
+                </button>
+              </div>
+            </>
+          )
+        })()}
+      </div>
+
       {/* Stat Cards Grid */}
       {!stats ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[...Array(6)].map((_, i) => (
-            /* Skeleton bermuatan, bukan kotak abu berdenyut. Bentuknya meniru
-               StatCard sungguhan (label atas, kotak ikon, angka besar, subteks)
-               supaya tidak ada lompatan tata letak saat data tiba, dan kilau
-               `shimmer` bergerak melintang dengan jeda bertahap sehingga
-               terbaca sebagai "sedang memuat", bukan "gagal render". */
             <div key={i} className="plate plate-flat p-4 flex flex-col justify-between gap-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="sk sk-line w-[54%] h-[9px]" style={{ '--d': `${i * 90}ms` }} />
@@ -223,8 +348,6 @@ export default function Dashboard({ toast }) {
           </div>
 
           {!system ? (
-            /* Skeleton monitor: dua meter + tiga baris angka, persis susunan
-               yang akan muncul. Sebelumnya tiga balok abu tanpa bentuk. */
             <div className="space-y-4">
               {[0, 1].map(i => (
                 <div key={i} className="space-y-1.5">
@@ -297,8 +420,6 @@ export default function Dashboard({ toast }) {
                   aria-checked={!!maint}
                   onClick={toggleMaint}
                   disabled={busy} aria-busy={busy}
-                  /* min-h-10: tinggi sebelumnya 30px, di bawah ambang sentuh 40px
-                     — pada layar sentuh tombol ini gampang meleset. */
                   className={`btn min-h-10 px-3.5 !text-[11px] font-extrabold uppercase tracking-wider ${maint
                     ? 'btn-danger'
                     : 'btn-quiet !text-[var(--ink-2)]'}`}
@@ -307,6 +428,185 @@ export default function Dashboard({ toast }) {
                 </button>
               </div>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* ══ LIVE CONSOLE & LOG MONITOR ══ */}
+      <div className="card p-5 sm:p-6 space-y-4 border-2 border-[var(--edge)] shadow-[var(--sh-1)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--edge)]">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-[var(--r-soft)] grid place-items-center bg-[var(--ink)] text-[var(--paper)]">
+              <i className="fa-solid fa-terminal text-[13px]" />
+            </span>
+            <div>
+              <h2 className="font-[family-name:var(--font-display)] font-bold text-base text-[var(--ink)] flex items-center gap-2">
+                <span>Real-Time Logs &amp; Activity Stream</span>
+                {logAuto && <span className="w-1.5 h-1.5 rounded-full bg-good animate-ping" />}
+              </h2>
+              <p className="text-[11px] text-[var(--ink-2)] font-mono">
+                Pantau log langsung Web Uploader, Bot WA, atau riwayat unggahan media
+              </p>
+            </div>
+          </div>
+
+          {/* Log Controls */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="flex items-center gap-1.5 text-xs text-[var(--ink-2)] cursor-pointer select-none bg-[var(--paper-2)] border border-[var(--edge)] px-2.5 py-1.5 rounded-[var(--r-soft)]">
+              <input
+                type="checkbox"
+                checked={logAuto}
+                onChange={e => setLogAuto(e.target.checked)}
+                className="accent-[var(--accent)] cursor-pointer"
+              />
+              <span className="font-mono text-[11px]">Auto (4s)</span>
+            </label>
+            <button
+              type="button"
+              onClick={fetchCurrentLogs}
+              disabled={logBusy}
+              className="btn btn-quiet !px-2.5 !py-1.5 text-xs font-mono gap-1"
+            >
+              <i className={`fa-solid fa-rotate ${logBusy ? 'fa-spin' : ''} text-[10px]`} />
+              <span>Refresh</span>
+            </button>
+            <button
+              type="button"
+              onClick={copyLogs}
+              className="btn btn-quiet !px-2.5 !py-1.5 text-xs font-mono gap-1"
+            >
+              <i className="fa-regular fa-copy text-[10px]" />
+              <span>Copy</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Selection & Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Target Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-[var(--paper-2)] rounded-[var(--r-soft)] border border-[var(--edge)] w-fit">
+            <button
+              type="button"
+              onClick={() => setLogTab('web')}
+              className={`px-3 py-1.5 rounded-[calc(var(--r-soft)-2px)] text-xs font-bold font-mono transition-colors ${logTab === 'web' ? 'bg-[var(--ink)] text-[var(--paper)] shadow-[var(--sh-press)]' : 'text-[var(--ink-2)] hover:text-[var(--ink)]'}`}
+            >
+              <i className="fa-solid fa-globe mr-1.5 text-[10px]" />
+              Web Uploader
+            </button>
+            <button
+              type="button"
+              onClick={() => setLogTab('bot')}
+              className={`px-3 py-1.5 rounded-[calc(var(--r-soft)-2px)] text-xs font-bold font-mono transition-colors ${logTab === 'bot' ? 'bg-[var(--ink)] text-[var(--paper)] shadow-[var(--sh-press)]' : 'text-[var(--ink-2)] hover:text-[var(--ink)]'}`}
+            >
+              <i className="fa-brands fa-whatsapp mr-1.5 text-[11px]" />
+              Bot WA
+            </button>
+            <button
+              type="button"
+              onClick={() => setLogTab('upload')}
+              className={`px-3 py-1.5 rounded-[calc(var(--r-soft)-2px)] text-xs font-bold font-mono transition-colors ${logTab === 'upload' ? 'bg-[var(--ink)] text-[var(--paper)] shadow-[var(--sh-press)]' : 'text-[var(--ink-2)] hover:text-[var(--ink)]'}`}
+            >
+              <i className="fa-solid fa-cloud-arrow-up mr-1.5 text-[10px]" />
+              Upload Feed
+            </button>
+          </div>
+
+          {/* Sub Filters */}
+          <div className="flex items-center gap-2">
+            {logTab !== 'upload' && (
+              <div className="flex items-center rounded-[var(--r-soft)] border border-[var(--edge)] overflow-hidden text-xs font-mono">
+                <button
+                  type="button"
+                  onClick={() => setLogType('out')}
+                  className={`px-2.5 py-1.5 ${logType === 'out' ? 'bg-[var(--accent)] text-[#06180d] font-bold' : 'bg-[var(--paper-2)] text-[var(--ink-2)]'}`}
+                >
+                  stdout
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogType('error')}
+                  className={`px-2.5 py-1.5 ${logType === 'error' ? 'bg-bad text-[#fff] font-bold' : 'bg-[var(--paper-2)] text-[var(--ink-2)]'}`}
+                >
+                  stderr (error)
+                </button>
+              </div>
+            )}
+
+            <div className="relative">
+              <i className="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[var(--ink-3)]" />
+              <input
+                type="text"
+                value={logFilter}
+                onChange={e => setLogFilter(e.target.value)}
+                placeholder="Filter log..."
+                className="pl-7 pr-2.5 py-1.5 rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] text-xs font-mono outline-none text-[var(--ink)] w-36 sm:w-44 focus:border-[var(--accent)]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Console Display Screen */}
+        <div
+          ref={logBoxRef}
+          className="rounded-[var(--r-soft)] bg-[#0c1015] border-2 border-[var(--edge)] p-4 text-[#e2e8f0] font-mono text-[11px] leading-relaxed max-h-[420px] overflow-y-auto overflow-x-auto shadow-inner"
+        >
+          {logTab === 'upload' ? (
+            /* Upload Activity Log View */
+            filteredUploads.length === 0 ? (
+              <div className="py-12 text-center text-[#64748b]">
+                <i className="fa-solid fa-inbox text-3xl mb-2" />
+                <p>Belum ada rekaman upload media yang cocok.</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {filteredUploads.map((l, idx) => (
+                  <div key={idx} className="flex flex-wrap items-center justify-between gap-2 py-1 px-2 rounded bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.07] transition-colors">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-[var(--accent)] font-bold">[{fmtTime(l.timestamp)}]</span>
+                      <span className="px-1.5 py-0.5 rounded bg-[var(--volt)]/20 text-[var(--volt)] text-[10px] font-extrabold border border-[var(--volt)]/40">
+                        {l.code}
+                      </span>
+                      <span className="truncate max-w-[200px] sm:max-w-xs text-white font-medium">
+                        {l.filename}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] text-[#94a3b8] shrink-0 font-mono">
+                      <span>{fmtBytes(l.filesize || l.size)}</span>
+                      <span>IP: {l.ip}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            /* Standard Stream Log (Web / Bot) */
+            filteredLines.length === 0 ? (
+              <div className="py-12 text-center text-[#64748b]">
+                <i className="fa-solid fa-terminal text-3xl mb-2" />
+                <p>{logBusy ? 'Memuat log proses...' : 'Tidak ada baris log yang tersedia atau cocok dengan filter.'}</p>
+              </div>
+            ) : (
+              <pre className="whitespace-pre-wrap word-break space-y-0.5">
+                {filteredLines.map((line, idx) => {
+                  let colorClass = 'text-[#cbd5e1]'
+                  if (line.includes('error') || line.includes('Error') || line.includes('ERR') || line.includes('fail') || line.includes('❌')) {
+                    colorClass = 'text-[#f87171]'
+                  } else if (line.includes('warn') || line.includes('WARN') || line.includes('⚠️')) {
+                    colorClass = 'text-[#fbbf24]'
+                  } else if (line.includes('ready') || line.includes('Ready') || line.includes('Online') || line.includes('200') || line.includes('OK') || line.includes('🚀')) {
+                    colorClass = 'text-[#34d399]'
+                  } else if (line.includes('http') || line.includes('GET') || line.includes('POST')) {
+                    colorClass = 'text-[#38bdf8]'
+                  }
+
+                  return (
+                    <div key={idx} className={`${colorClass} hover:bg-white/[0.04] px-1 py-0.5 rounded transition-colors`}>
+                      {line}
+                    </div>
+                  )
+                })}
+              </pre>
+            )
           )}
         </div>
       </div>
