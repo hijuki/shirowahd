@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { changePassword, blacklistAction, getBlacklist, getStats, setMaintenance, getSettings } from '@/lib/admin-api'
+import { changePassword, blacklistAction, getBlacklist, getSettings } from '@/lib/admin-api'
 
 export default function Security({ toast }) {
   const [cur, setCur] = useState('')
@@ -11,21 +11,17 @@ export default function Security({ toast }) {
 
   const [blInput, setBlInput] = useState('')
   const [blacklist, setBlacklist] = useState([])
-  const [maint, setMaint] = useState(false)
-  const [busy, setBusy] = useState(false)
   // Benderanya dari backend (`passwordBocor` di GET /admin/api/settings): password
   // aktif masih sama dengan default yang pernah ter-commit ke repo publik.
   const [pwBocor, setPwBocor] = useState(false)
 
   const load = async () => {
     try {
-      const [b, s, st] = await Promise.all([
+      const [b, st] = await Promise.all([
         getBlacklist().catch(() => []),
-        getStats(),
         getSettings().catch(() => null),
       ])
       setBlacklist(Array.isArray(b) ? b : [])
-      if (s?.maintenance != null) setMaint(s.maintenance)
       setPwBocor(!!st?.passwordBocor)
     } catch { }
   }
@@ -59,17 +55,11 @@ export default function Security({ toast }) {
     catch (e) { toast(`Error: ${e.message}`, 'error') }
   }
 
-  const toggleMaint = async () => {
-    setBusy(true)
-    try { await setMaintenance(!maint); setMaint(!maint); toast(maint ? 'Maintenance dimatikan' : 'Maintenance dinyalakan', maint ? 'success' : 'warn') } catch (e) { toast(`Error: ${e.message}`, 'error') }
-    setBusy(false)
-  }
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-[family-name:var(--font-display)] font-bold text-2xl md:text-3xl grad-text">Security</h1>
-        <p className="text-[var(--ink-2)] text-sm mt-1">Password, blacklist IP &amp; maintenance</p>
+        <p className="text-[var(--ink-2)] text-sm mt-1">Password &amp; blacklist IP</p>
       </div>
 
       {/* Peringatan password bawaan: nilainya ada di repo publik, jadi ini
@@ -130,23 +120,6 @@ export default function Security({ toast }) {
             })}
           </div>
         )}
-      </div>
-
-      {/* Maintenance toggle */}
-      <div className="card p-6 md:p-8 flex items-center justify-between">
-        <div>
-          <h2 className="font-[family-name:var(--font-display)] font-bold text-base"><i className="fa-solid fa-screwdriver-wrench text-[#b45309] mr-2" />Mode Maintenance</h2>
-          <p className="text-[var(--ink-2)] text-sm mt-0.5">Saat aktif, upload dinonaktifkan untuk semua pengguna</p>
-        </div>
-        {/* Area sentuh 40px datang dari `.sw::after` di globals.css, bukan dari
-            utilitas after:* inline — supaya semua saklar di panel memakai satu
-            aturan yang sama, bukan tiap tempat menulis ulang sendiri. */}
-        <button onClick={toggleMaint} disabled={busy} aria-busy={busy} aria-label="Mode maintenance"
-          type="button" role="switch" aria-checked={!!maint}
-          className={`sw relative w-14 h-8 rounded-full transition-all duration-[250ms] shrink-0 ml-4 ${maint ? 'bg-gradient-to-r from-[#fbbf24] to-[#fb7185] shadow-[0_0_18px_rgba(251,113,133,.45)]' : 'bg-[var(--paper-2)]'}`}
-          style={{ transitionTimingFunction: 'var(--ease-out)' }}>
-          <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-[250ms] ${maint ? 'translate-x-6' : ''}`} style={{ transitionTimingFunction: 'var(--ease-out)' }} />
-        </button>
       </div>
     </div>
   )

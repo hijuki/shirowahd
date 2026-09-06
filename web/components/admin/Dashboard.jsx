@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
-import { getStats, getAnalytics, getSystem, setMaintenance, restartWeb, restartBot, restartAll, getLogs, getUploadLog } from '@/lib/admin-api'
+import { getStats, getAnalytics, getSystem, restartWeb, restartBot, restartAll, getLogs, getUploadLog } from '@/lib/admin-api'
 
 function StatCard({ icon, label, value, subtext, color }) {
   return (
@@ -38,8 +38,6 @@ export default function Dashboard({ toast }) {
   const [stats, setStats] = useState(null)
   const [analytics, setAnalytics] = useState(null)
   const [system, setSystem] = useState(null)
-  const [maint, setMaint] = useState(false)
-  const [busy, setBusy] = useState(false)
 
   // Live Console & Log Monitor
   const [logTab, setLogTab] = useState('web') // 'web' | 'bot' | 'upload'
@@ -55,8 +53,6 @@ export default function Dashboard({ toast }) {
     try {
       const [s, a, sys] = await Promise.all([getStats(), getAnalytics(), getSystem()])
       setStats(s); setAnalytics(a); setSystem(sys)
-      if (s?.maintenance != null) setMaint(s.maintenance)
-      if (sys?.maintenance != null) setMaint(sys.maintenance)
     } catch { /* retry on next poll */ }
   }
 
@@ -417,26 +413,6 @@ export default function Dashboard({ toast }) {
                   <span className="text-[var(--ink-2)] flex items-center gap-1.5"><i className="fa-solid fa-gauge-high text-[10px]" />CPU Load Average</span>
                   <span className="text-[var(--ink)] font-bold">{(typeof system.loadavg === "string" ? system.loadavg.split(" ") : (system.loadavg || [])).map(l => Number(l).toFixed(2)).join(' · ') || '0.12 · 0.08'}</span>
                 </div>
-              </div>
-
-              {/* Maintenance Mode Quick Toggle */}
-              <div className="pt-3 border-t border-[var(--edge)] flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-[var(--ink)]">Mode Maintenance</p>
-                  <p className="text-[10px] text-[var(--ink-2)]">Kunci uploader sementara</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={!!maint}
-                  onClick={toggleMaint}
-                  disabled={busy} aria-busy={busy}
-                  className={`btn min-h-10 px-3.5 !text-[11px] font-extrabold uppercase tracking-wider ${maint
-                    ? 'btn-danger'
-                    : 'btn-quiet !text-[var(--ink-2)]'}`}
-                >
-                  {maint ? 'AKTIF (Locked)' : 'OFF (Normal)'}
-                </button>
               </div>
             </div>
           )}
