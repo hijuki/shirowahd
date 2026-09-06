@@ -66,3 +66,7 @@ admin-settings.sanitized.json
 # Skrip audit/uji lokal — tidak untuk repo publik.
 # Ditaruh di luar tmp/ karena hillz-temp-cleaner.js menyapu tmp/ tiap 30 menit.
 .audit/
+
+# Token sesi admin aktif (persisten lokal)
+.admin-tokens.json
+

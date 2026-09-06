@@ -405,20 +405,52 @@ function recordLoginFail(ip) {
 
 function recordLoginSuccess(ip) { loginAttempts.delete(ip); }
 
-// --- Token store ---
+// --- Token store (tersimpan ke disk agar tidak logout saat PM2 restart) ---
+const TOKENS_FILE = join(__dirname, '.admin-tokens.json');
 const tokens = new Map();
+
+function loadSavedTokens() {
+  try {
+    if (existsSync(TOKENS_FILE)) {
+      const arr = JSON.parse(readFileSync(TOKENS_FILE, 'utf8'));
+      const now = Date.now();
+      for (const [t, exp] of arr) {
+        if (exp > now) tokens.set(t, exp);
+      }
+    }
+  } catch (e) {
+    console.error('Gagal memuat token tersimpan:', e.message);
+  }
+}
+
+function persistTokens() {
+  try {
+    const arr = [...tokens.entries()].filter(([_, exp]) => exp > Date.now());
+    writeFileSync(TOKENS_FILE, JSON.stringify(arr), 'utf8');
+  } catch (e) {
+    console.error('Gagal menyimpan token:', e.message);
+  }
+}
+
+// Muat token saat startup
+loadSavedTokens();
 
 function genToken() {
   const t = crypto.randomBytes(24).toString('hex');
-  tokens.set(t, Date.now() + 24 * 3600 * 1000);
+  tokens.set(t, Date.now() + 7 * 24 * 3600 * 1000); // 7 hari
+  persistTokens();
   return t;
 }
 
 function validToken(req) {
   const auth = req.headers['authorization'] || '';
-  const t = auth.replace('Bearer ', '');
+  const t = auth.replace('Bearer ', '').trim();
   if (!t || !tokens.has(t)) return false;
-  if (Date.now() > tokens.get(t)) { tokens.delete(t); return false; }
+  if (Date.now() > tokens.get(t)) {
+    tokens.delete(t);
+    persistTokens();
+    return false;
+  }
   return true;
 }
 
@@ -1556,6 +1588,7 @@ async function handleRequest(req, res) {
       for (const t of [...tokens.keys()]) {
         if (t !== tokenSaya) { tokens.delete(t); dicabut++; }
       }
+      persistTokens();
       jsonRes(res, 200, { ok: true, sesiLainDicabut: dicabut });
     } catch (e) {
       jsonRes(res, 400, { ok: false, error: e.message });

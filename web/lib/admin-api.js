@@ -7,11 +7,15 @@ async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...opts.headers }
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(`${BASE}${path}`, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
-  // 401 pada endpoint ber-token = sesi mati -> paksa balik ke login.
-  // TAPI /login sendiri memakai 401 untuk "password salah"; kalau ikut
-  // di-reload, halaman cuma berkedip dan pesan error tidak pernah terlihat.
+  // 401 pada endpoint ber-token = token tidak sah -> paksa logout.
+  // Tapi abaikan jika path adalah /login (karena 401 di login adalah password salah)
   if (res.status === 401 && path !== '/login') {
-    localStorage.removeItem('admin_token'); window.location.reload(); return null
+    localStorage.removeItem('admin_token')
+    // Beri jeda sangat singkat dan jangan panggil reload jika kita sudah di halaman login
+    if (typeof window !== 'undefined' && !window.location.pathname.endsWith('/login')) {
+      window.location.reload()
+    }
+    return null
   }
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
