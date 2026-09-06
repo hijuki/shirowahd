@@ -28,8 +28,8 @@ export default function Hero({ settings }) {
   const aktif = isDark ? darkSrc : lightSrc
 
   const title = settings?.heroTitle || 'KIRIM MEDIA'
-  const highlight = settings?.heroSubtitle || 'TANPA TURUN MUTU'
-  const desc = settings?.heroDesc || 'Upload video atau foto, ambil kode klaim, tempel di grup WhatsApp. Bot yang mengirim filenya.'
+  const highlight = settings?.heroSubtitle || 'KUALITAS ASLI'
+  const desc = settings?.heroDesc || 'Upload video atau foto kamu di sini, ambil kodenya, terus kirim ke grup WhatsApp. Biar bot yang anterin filenya tanpa dikompres.'
 
   /* Sel kanan baris meta membawa ANGKA NYATA dari settings, bukan hiasan.
      Sebelumnya di sini ada plat WhatsApp 72px — dan itu mark hijau KETIGA

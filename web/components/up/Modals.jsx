@@ -120,9 +120,9 @@ export function IntroModal({ onDone, onStart, settings }) {
   }, [])
 
   const steps = [
-    { n: '01', i: 'fa-cloud-arrow-up', t: 'Upload', d: 'Pilih video atau foto dari perangkat.' },
-    { n: '02', i: 'fa-key', t: 'Ambil kode', d: 'Kode singkat, contoh: .claim A7' },
-    { n: '03', i: 'fa-paper-plane', t: 'Kirim di grup', d: 'Tempel kodenya — bot yang kirim filenya.' },
+    { n: '01', i: 'fa-cloud-arrow-up', t: 'Pilih File', d: 'Tinggal pilih video atau foto dari galeri HP kamu.' },
+    { n: '02', i: 'fa-key', t: 'Dapet Kode', d: 'Langsung keluar kode klaim unik, contoh: .claim A7' },
+    { n: '03', i: 'fa-paper-plane', t: 'Kirim ke Grup', d: 'Ketik kodenya di grup WA, bot langsung kirimin filenya.' },
   ]
 
   const st = n => ({
@@ -152,7 +152,7 @@ export function IntroModal({ onDone, onStart, settings }) {
       </div>
 
       <p className="text-[13px] leading-[1.6] text-[var(--ink-2)] mt-4" style={st(2)}>
-        {settings?.welcomeText || 'Upload media ke grup WhatsApp lewat bot. Tanpa turun mutu, tanpa aplikasi tambahan.'}
+        {settings?.welcomeText || 'Kirim foto & video ke grup WhatsApp lewat bot. File kamu tetep jernih tanpa dikompres, ga perlu install aplikasi ribet.'}
       </p>
 
       <div className="rule-dash my-4" style={st(2)} />
@@ -181,7 +181,7 @@ export function IntroModal({ onDone, onStart, settings }) {
         {/* CTA mengantar ke panel upload, bukan sekadar menutup popup. */}
         <button onClick={onStart || onDone} className="btn btn-primary w-full">
           <span className="btn-cap"><i className="fa-solid fa-arrow-right text-[10px]" /></span>
-          {settings?.welcomeCta || 'MULAI UPLOAD'}
+          {settings?.welcomeCta || 'GAS MULAI UPLOAD'}
         </button>
 
         {(settings?.channels?.length || settings?.claimGroups?.length || settings?.popupButtons?.length || settings?.ownerWhatsapp) ? (
@@ -212,17 +212,17 @@ export function FaqModal({ onClose, settings }) {
     : m >= 60 ? (m / 60 % 1 === 0 ? (m / 60) + ' jam' : m + ' menit') : m + ' menit'
 
   const faqs = [
-    { q: 'Bagaimana cara upload?', a: 'Pilih tab Video atau Foto, tap area upload (atau drag & drop di desktop), pilih file, lalu tekan tombol upload.', i: 'fa-cloud-arrow-up' },
-    { q: 'Format apa yang didukung?', a: 'Video: MP4, MOV, MKV, AVI, WEBM, M4V, 3GP, FLV, TS, WMV. Foto: JPG, PNG, GIF, WEBP, HEIC, AVIF, BMP, TIFF. Video H.264 dikirim apa adanya tanpa dikompres; format lain dikonversi dulu ke H.264 agar bisa diputar di semua HP.', i: 'fa-file-video' },
-    { q: 'Berapa lama kode berlaku?', a: 'Sesuai pengaturan admin, saat ini ' + expText + '. Hitungan waktunya kelihatan di popup setelah upload berhasil.', i: 'fa-hourglass-half' },
-    { q: 'Kenapa upload lambat?', a: 'Paling berpengaruh: kecepatan internet kamu. Di server, video H.264 hanya dirapikan wadahnya (cepat); format lain harus dikonversi dulu sehingga lebih lama.', i: 'fa-gauge-high' },
-    { q: 'Bisa upload di atas 100 MB?', a: 'Bisa. Admin dapat menyalakan jalur langsung yang tidak lewat batas 100 MB. Kalau jalur itu mati, batas standar berlaku.', i: 'fa-boxes-stacked' },
-    { q: 'Kenapa unduhan di WhatsApp kadang gagal?', a: 'Biasanya karena file bukan H.264 standar. Server merapikan video ke H.264 8-bit dan menaruh indeks di awal file, supaya penerima bisa langsung memutar tanpa menunggu penuh.', i: 'fa-circle-down' },
-    { q: 'Apakah data saya aman?', a: 'File disimpan sementara lalu terhapus otomatis setelah kedaluwarsa atau setelah diklaim sekali.', i: 'fa-shield-halved' },
+    { q: 'Gimana cara uploadnya?', a: 'Tinggal pilih tab Video atau Foto, tap kotak upload, pilih file dari HP atau PC kamu, terus pencet tombol upload.', i: 'fa-cloud-arrow-up' },
+    { q: 'Format apa aja yang bisa?', a: 'Video: MP4, MOV, MKV, AVI, WEBM, dll. Foto: JPG, PNG, GIF, WEBP, HEIC. Kalau video kamu udah H.264 bakal langsung dikirim tanpa kompres; kalau format lain dibantu konversi dulu biar bisa diputer di semua HP.', i: 'fa-file-video' },
+    { q: 'Berapa lama kodenya aktif?', a: 'Sesuai setelan admin, saat ini ' + expText + '. Bakal ada hitungan mundur di layar setelah upload beres.', i: 'fa-hourglass-half' },
+    { q: 'Kok uploadnya berasa lama?', a: 'Pengaruh paling gede dari koneksi internet kamu ya. Di server, video standar langsung diproses cepet; kalau file gede atau format aneh butuh waktu ekstra buat disiapin.', i: 'fa-gauge-high' },
+    { q: 'Bisa upload file di atas 100 MB ga?', a: 'Bisa banget! Kalau admin lagi nyalain jalur khusus, kamu bisa kirim file besar tanpa batasan ketat.', i: 'fa-boxes-stacked' },
+    { q: 'Kenapa download di WhatsApp kadang gagal?', a: 'Biasanya karena format videonya ga didukung sama WA. Di sini server otomatis ngerapihin file kamu biar pas dan langsung bisa disetel tanpa ngelag.', i: 'fa-circle-down' },
+    { q: 'File aku aman ga di sini?', a: 'Aman dong! File cuma numpang lewat sebentar terus bakal otomatis dihapus permanen begitu kodenya kamu klaim atau expired.', i: 'fa-shield-halved' },
   ]
 
   return (
-    <Sheet onClose={onClose} title="FAQ" kicker="PERTANYAAN UMUM">
+    <Sheet onClose={onClose} title="Tanya Jawab" kicker="PERTANYAAN SANTAI">
       <div className="space-y-1.5 max-h-[62vh] overflow-y-auto scroll-hide">
         {faqs.map((f, i) => (
           <div key={f.q} className={`border-2 border-[var(--edge)] transition-[background-color] duration-200 ${open === i ? 'bg-[var(--paper-2)]' : 'bg-transparent'}`}>
@@ -253,26 +253,26 @@ export function FaqModal({ onClose, settings }) {
    ══════════════════════════════════════════════════════════════ */
 export function AboutModal({ onClose, settings }) {
   return (
-    <Sheet onClose={onClose} title="Tentang" kicker="INFORMASI">
+    <Sheet onClose={onClose} title="Tentang Web" kicker="INFO SINGKAT">
       <div className="plate-sunk p-4 text-center">
         <span className="badge-h inline-grid! w-14 h-14 !border-[3px] !rounded-[var(--r-soft)] stack-shadow">
           <span className="text-[22px] leading-none relative z-[2]">H</span>
         </span>
         <p className="display-m !text-[18px] mt-3">SWHDHLZ</p>
-        <p className="kicker mt-1.5">DEVELOPED BY HILLZ</p>
+        <p className="kicker mt-1.5">BIKINAN HILLZ</p>
       </div>
 
       <p className="text-[12px] leading-[1.65] text-[var(--ink-2)] mt-4">
-        Upload media ke grup WhatsApp via bot. Upload file, dapatkan kode klaim, lalu kirim{' '}
+        Web uploader simpel buat ngirim video & foto ke grup WhatsApp lewat bot. Tinggal upload file, ambil kodenya, terus kirim{' '}
         <code className="inline-block align-middle font-[family-name:var(--font-mono)] text-[11px] leading-[15px] px-1.5 py-[2px] rounded-[var(--r-xs)] border-2 border-[var(--edge)] bg-[var(--accent)] text-[#06180d]">.claim KODE</code>{' '}
-        di grup.
+        di grup WA kamu.
       </p>
 
       <div className="grid grid-cols-3 gap-1.5 mt-4">
         {[
-          { i: 'fa-bolt', t: 'CEPAT' },
+          { i: 'fa-bolt', t: 'CEPET' },
           { i: 'fa-lock', t: 'AMAN' },
-          { i: 'fa-hand-sparkles', t: 'MUDAH' },
+          { i: 'fa-hand-sparkles', t: 'PRAKTIS' },
         ].map(f => (
           <div key={f.t} className="flex flex-col items-center gap-1.5 py-3 rounded-[var(--r-soft)] border-2 border-[var(--edge)] bg-[var(--paper-2)]">
             <i className={`fa-solid ${f.i} text-[12px]`} />
@@ -284,7 +284,7 @@ export function AboutModal({ onClose, settings }) {
       <div className="ticket !py-2.5 mt-4">
         <span className="ticket-notch" />
         <i className="fa-solid fa-shield-halved text-[11px] shrink-0" />
-        <span className="text-[11px] leading-snug">File tersimpan sementara — terhapus otomatis setelah kedaluwarsa.</span>
+        <span className="text-[11px] leading-snug">File kamu cuma numpang lewat — otomatis dihapus pas expired atau udah diklaim.</span>
       </div>
 
       {settings?.footerText && (

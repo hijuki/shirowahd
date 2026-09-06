@@ -49,7 +49,7 @@ export default function HistorySection() {
           <span className="icon-tile !w-8 !h-8"><i className="fa-solid fa-clock-rotate-left text-[11px]" /></span>
           <span className="min-w-0 text-left">
             <span className="block display-m !text-[15px]">Riwayat</span>
-            <span className="kicker !text-[9px] block mt-[2px]">{history.length} UPLOAD DI PERANGKAT INI</span>
+            <span className="kicker !text-[9px] block mt-[2px]">{history.length} FILE DI HP/LAPTOP INI</span>
           </span>
         </span>
         <span className="flex items-center gap-2 shrink-0">

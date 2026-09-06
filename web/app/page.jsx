@@ -68,9 +68,9 @@ function Skeleton() {
 }
 
 const STEPS = [
-  { n: '01', t: 'UPLOAD', d: 'Pilih video atau foto dari perangkat.', i: 'fa-cloud-arrow-up' },
-  { n: '02', t: 'AMBIL KODE', d: 'Kode klaim singkat, sekali pakai.', i: 'fa-key' },
-  { n: '03', t: 'KIRIM', d: 'Tempel di grup — bot yang mengirim.', i: 'fa-paper-plane' },
+  { n: '01', t: 'PILIH MEDIA', d: 'Pilih video atau foto dari galeri HP / file laptop kamu.', i: 'fa-cloud-arrow-up' },
+  { n: '02', t: 'AMBIL KODE', d: 'Tunggu bentar, dapet kode klaim unik sekali pakai.', i: 'fa-key' },
+  { n: '03', t: 'TEMPEL DI WA', d: 'Ketik di grup WA, bot langsung kirim filenya.', i: 'fa-paper-plane' },
 ]
 
 export default function UploaderPage() {

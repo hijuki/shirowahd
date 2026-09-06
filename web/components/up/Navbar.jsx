@@ -160,10 +160,10 @@ export default function Navbar({ settings, onFaq, onAbout, onStats, onUpload }) 
                  Terukur setelah klik: scrollY=0, panel masih 1467px di bawah,
                  `panelTerlihat: false`. Jadi tombol "Upload" tidak pernah
                  membawa siapa pun ke uploader. Sekarang menuju #upload. */
-              { t: 'Upload', d: '0ms', i: 'fa-cloud-arrow-up', fn: onUpload },
-              { t: 'Statistik', d: '60ms', i: 'fa-chart-column', fn: onStats },
-              { t: 'FAQ', d: '120ms', i: 'fa-circle-question', fn: onFaq },
-              { t: 'Tentang', d: '180ms', i: 'fa-circle-info', fn: onAbout },
+              { t: 'Upload File', d: '0ms', i: 'fa-cloud-arrow-up', fn: onUpload },
+              { t: 'Lihat Statistik', d: '60ms', i: 'fa-chart-column', fn: onStats },
+              { t: 'Tanya Jawab (FAQ)', d: '120ms', i: 'fa-circle-question', fn: onFaq },
+              { t: 'Tentang Web', d: '180ms', i: 'fa-circle-info', fn: onAbout },
             ].map(item => (
               <button key={item.t} className="drawer-link" style={{ '--d': item.d }} onClick={() => go(item.fn)}>
                 <span>{item.t}</span>

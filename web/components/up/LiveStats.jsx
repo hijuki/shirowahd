@@ -170,11 +170,11 @@ export default function LiveStats() {
             {/* Judul dinaikkan 15→17px dan diberi jarak huruf negatif: pada 15px
                 Archivo Black, judul panel berbobot sama dengan chip LIVE di
                 sebelahnya, jadi hierarkinya rata. */}
-            <p className="display-m !text-[17px] !tracking-[-0.02em]">Statistik</p>
-            <p className="kicker !text-[9px] mt-[3px]">24 JAM TERAKHIR</p>
+            <p className="display-m !text-[17px] !tracking-[-0.02em]">Statistik Live</p>
+            <p className="kicker !text-[9px] mt-[3px]">PANTAUAN 24 JAM TERAKHIR</p>
           </div>
         </div>
-        <span className="chip"><span className="dot-live" />LIVE</span>
+        <span className="chip"><span className="dot-live" />REALTIME</span>
       </div>
 
       <div className="rule-dash mx-4" />
@@ -269,10 +269,10 @@ export default function LiveStats() {
           <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--paper-2)] border-b-2 border-[var(--edge)]">
             <span className="kicker font-bold text-[var(--ink)] flex items-center gap-1.5">
               <i className="fa-solid fa-list-check text-[10px] text-[var(--accent)]" />
-              ALIRAN AKTIVITAS
+              AKTIVITAS TERBARU
             </span>
             <span className="kicker !text-[8px] font-mono px-2 py-0.5 rounded bg-[var(--sunk)] border border-[var(--edge)]">
-              REALTIME
+              TERUS UPDATE
             </span>
           </div>
           <div className="max-h-[220px] overflow-y-auto scroll-hide divide-y divide-[var(--edge)]/20">

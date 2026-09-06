@@ -16,7 +16,7 @@ const CELLS = 24
 // Tahap pertama dulu bernama 'ANTRE' — kata yang menyiratkan pengguna sedang
 // menunggu giliran di belakang orang lain, padahal yang terjadi adalah berkasnya
 // mulai dikirim. 'UPLOAD' menyebut apa yang benar-benar berlangsung.
-const STAGES = ['UPLOAD', 'KIRIM', 'PERIKSA', 'PROSES', 'SELESAI']
+const STAGES = ['PILIH', 'KIRIM', 'CEK FILE', 'RAPIHIN', 'BERES']
 
 /* ══════════════════════════════════════════════════════════════
    REACTOR — indikator proses. Tiga lapis informasi sekaligus:
@@ -205,7 +205,7 @@ export default function UploadPanel({ settings, toast }) {
         // Begitu XHR selesai, tahap jaringan sudah 100%. Tampilkan tahap 2 SEGERA
         // dengan label jujur — dulu `encode` masih null sampai poll pertama datang,
         // jadi loader tertahan di "MENGIRIM 99%" selama ~400 ms tanpa alasan.
-        setEncode({ stage: 'Memeriksa video…', pct: 0, startedAt: Date.now(), needsEncode: null })
+        setEncode({ stage: 'Cek video dulu bentar…', pct: 0, startedAt: Date.now(), needsEncode: null })
         final = await new Promise((resolve, reject) => {
           let stop = false
           let miss = 0
@@ -220,14 +220,14 @@ export default function UploadPanel({ settings, toast }) {
               // ditemukan'}. Kalau s.error diperiksa lebih dulu, toleransi
               // 404-sesaat di bawah tidak akan pernah terpakai.
               if (s.ok === false) {
-                if (++miss > 12) { stop = true; reject(new Error(s.error || 'Job hilang di server')); return }
+                if (++miss > 12) { stop = true; reject(new Error(s.error || 'Yah, file hilang di server')); return }
                 setTimeout(tick, 350)
                 return
               }
               if (s.error) { stop = true; reject(new Error(s.error)); return }
               if (s.result) {
                 stop = true
-                setEncode({ stage: 'Selesai', pct: 100, startedAt: started, needsEncode: s.needsEncode })
+                setEncode({ stage: 'Udah beres!', pct: 100, startedAt: started, needsEncode: s.needsEncode })
                 // Beri satu frame agar cincin benar-benar sampai 100 sebelum
                 // modal menutupi loader. Tanpa ini, 100% tidak pernah terlihat.
                 setTimeout(() => resolve(s.result), 260)
@@ -235,12 +235,12 @@ export default function UploadPanel({ settings, toast }) {
               }
               miss = 0
               if (s.stage || typeof s.pct === 'number') {
-                setEncode({ stage: s.stage || 'Memproses…', pct: s.pct || 0, startedAt: started, needsEncode: s.needsEncode })
+                setEncode({ stage: s.stage || 'Lagi diproses…', pct: s.pct || 0, startedAt: started, needsEncode: s.needsEncode })
               }
               setTimeout(tick, 350)
             } catch {
               // Jaringan goyang bukan alasan menyatakan gagal — job jalan di server.
-              if (++miss > 12) { stop = true; reject(new Error('Koneksi ke server terputus')); return }
+              if (++miss > 12) { stop = true; reject(new Error('Koneksi ke server keputus nih')); return }
               setTimeout(tick, 700)
             }
           }
@@ -347,16 +347,16 @@ export default function UploadPanel({ settings, toast }) {
             <span className="relative tile w-14 h-14 mx-auto mb-3.5">
               <i className={`fa-solid ${isImg ? 'fa-images' : 'fa-cloud-arrow-up'} text-[19px]`} />
             </span>
-            <p className="display-m !text-[17px] relative">{tab === 'video' ? 'LEPAS VIDEO DI SINI' : 'LEPAS FOTO DI SINI'}</p>
+            <p className="display-m !text-[17px] relative">{tab === 'video' ? 'TARUH VIDEO DI SINI' : 'TARUH FOTO DI SINI'}</p>
             <p className="text-[12px] text-[var(--ink-2)] mt-1.5 relative">
-              atau <span className="font-bold underline decoration-2 underline-offset-[3px]">pilih dari perangkat</span>
+              atau <span className="font-bold underline decoration-2 underline-offset-[3px]">klik buat pilih dari galeri</span>
             </p>
 
             <button type="button"
               onClick={(e) => { e.stopPropagation(); setSemuaFile(v => !v); setTimeout(() => fileRef.current?.click(), 0) }}
               className="btn btn-sm btn-ghost mt-4 relative">
               <i className="fa-solid fa-folder-open text-[10px]" />
-              {semuaFile ? 'KEMBALI KE FILTER' : 'FILE TIDAK MUNCUL?'}
+              {semuaFile ? 'Balik ke mode biasa' : 'File ga kebaca? Klik ini'}
             </button>
           </div>
 
@@ -447,7 +447,7 @@ export default function UploadPanel({ settings, toast }) {
                 // tawarkan tombol yang berbohong.
                 encode ? (
                   <div className="plate-flat p-3 text-center">
-                    <p className="kicker">DIPROSES DI SERVER — JANGAN TUTUP HALAMAN</p>
+                    <p className="kicker">LAGI DIPROSES SERVER — JANGAN DITUTUP DULU YA</p>
                   </div>
                 ) : (
                 // Dibungkus flex + justify-center, dan `w-full` dibuang: tombol
@@ -456,14 +456,14 @@ export default function UploadPanel({ settings, toast }) {
                 <div className="flex justify-center">
                   <button onClick={cancelUpload} className="btn btn-stop">
                     <span className="btn-cap"><i className="fa-solid fa-stop text-[8px]" /></span>
-                    BATALKAN UPLOAD
+                    GAK JADI UPLOAD
                   </button>
                 </div>
                 )
               ) : (
                 <button onClick={doUpload} className="btn btn-primary w-full">
                   <span className="btn-cap"><i className="fa-solid fa-arrow-up text-[10px]" /></span>
-                  UPLOAD {files.length} {tab === 'video' ? 'VIDEO' : 'FOTO'}
+                  KIRIM {files.length} {tab === 'video' ? 'VIDEO' : 'FOTO'} SEKARANG
                 </button>
               )}
             </div>

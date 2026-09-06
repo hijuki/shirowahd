@@ -84,7 +84,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
           <i className="fa-solid fa-check text-[34px] text-[#06180d]" />
         </span>
         <p className="kicker mt-3.5" style={st(1)}>
-          {result.bundle ? `${result.count} FOTO · 1 BUNDLE` : 'FILE SIAP DIKLAIM'}
+          {result.bundle ? `${result.count} FOTO · 1 PAKET` : 'FILE UDAH SIAP DIKLAIM!'}
         </p>
         <span className="inline-flex items-center gap-2 mt-3 px-2 py-1 border-2 border-[var(--edge)] bg-[var(--paper-2)]"
           style={st(1)}>
@@ -92,7 +92,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
             <i className="fa-brands fa-whatsapp text-[10px] text-[#06180d]" />
           </span>
           <span className="badge-h w-[16px] h-[16px] !border text-[8px]">H</span>
-          <span className="kicker !text-[8px]">DIKIRIM LEWAT BOT SWHDHLZ</span>
+          <span className="kicker !text-[8px]">DIKIRIM LEWAT BOT WA</span>
         </span>
       </div>
 
@@ -103,10 +103,10 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
             {c.name && <p className="kicker !text-[8px] mb-1 truncate">{c.name}</p>}
             <button onClick={() => copy(c.code)} className="code-plate w-full block"
               aria-label={'Salin perintah klaim ' + c.code}>
-              <span className="kicker !text-[8px] block mb-1.5">TEMPEL DI GRUP WHATSAPP</span>
+              <span className="kicker !text-[8px] block mb-1.5">KIRIM KODE INI KE GRUP WA KAMU</span>
               <span className="code-text block">.claim {c.code}</span>
               <span className="kicker !text-[8px] block mt-2">
-                {copied === c.code ? '✓ TERSALIN' : 'TAP UNTUK MENYALIN'}
+                {copied === c.code ? '✓ UDAH TERSALIN' : 'TINGGAL TAP BUAT SALIN'}
               </span>
             </button>
             <div className="grid grid-cols-2 gap-1.5 mt-1.5">
@@ -129,7 +129,7 @@ export default function SuccessModal({ result, settings, expireMinutes, onClose 
         </div>
         <div className="gauge"><span style={{ width: pct + '%' }} /></div>
         <p className="text-[10px] leading-snug text-[var(--ink-2)] mt-2">
-          Kode hangus setelah waktu habis atau setelah diklaim sekali.
+          Kodenya bakal hangus kalau waktu habis atau udah diklaim sekali ya.
         </p>
       </div>
 
