@@ -25,12 +25,23 @@ export const EXCLUDE_DIRS = new Set([
   // Sesi WhatsApp. Ini kredensial login perangkat: siapa pun yang memegangnya
   // bisa memakai identitas bot. Zip backup dikirim lewat chat, jadi sesi TIDAK
   // BOLEH ikut. Untuk pindah VPS pakai `migrate.sh` yang lewat scp, bukan chat.
-  "storage", "storages", "session", "sessions", "auth",
+  //
+  // DIPERBAIKI 2026-09-05: dulu di sini ada "storage" dan "storages", yang
+  // membuang SELURUH folder storage/ — padahal isinya bukan cuma sesi.
+  // `storage/pairing-state.json` ikut hilang tanpa alasan. Sekarang yang dibuang
+  // hanya folder sesinya sendiri.
+  "session", "sessions", "auth",
   // Sampah runtime.
   "tmp", "temp", "logs", "__pycache__", ".hillz-temp", ".vscode", ".gemini",
-  "backups", "backup", "autoreply_media",
-  // Aset upload user: bukan kode, ukurannya bisa ratusan MB.
-  "brand-assets", "uploads", "vids",
+  "backups", "backup",
+  // Skrip audit sekali pakai + keluaran pengukuran. 329 berkas / 7,45 MB terukur
+  // ikut masuk zip sebelum ini: bukan data bot, dan bisa memuat cuplikan hasil
+  // grep atas berkas rahasia.
+  ".audit",
+  // Ruang antar upload web: berkas video yang sedang diproses, bisa ratusan MB
+  // dan lahir kembali setiap kali ada upload. Kalau ini ikut, zip melewati batas
+  // kirim WhatsApp (90 MB) dan backup gagal total.
+  "uploads", "vids",
   // Repo bot lain yang pernah ditaruh di sini.
   "Baileys-master", "HillzGlitch-Baileys-main", "starseed-main", "fischit-main",
   "ALYA V8", "DHX-pro", "RTXZY-MD-pro", "BETABOTZ-MD2-pro", "KazzTzyCanvs",
@@ -56,7 +67,12 @@ export const EXCLUDE_FILES = new Set([
   // versi basi.
   "admin-settings.sanitized.json",
   ".pair-number",
-  "package-lock.json", "yarn.lock", ".npmrc",
+  // `package-lock.json` / `web/package-lock.json` DULU dikecualikan demi ukuran.
+  // Dikembalikan 2026-09-06: gabungannya cuma 412 KB dari zip 20 MB, dan tanpa
+  // lockfile pemulihan memasang versi dependensi yang berbeda — itu justru sumber
+  // "di VPS lama jalan, di VPS baru rusak". Lockfile bukan rahasia.
+  // `.npmrc` TETAP dibuang: berkas itu bisa memuat token registry.
+  "yarn.lock", ".npmrc",
   "boot_final.log", "bot_log.txt", "error.txt", "changelog.txt",
   "cloudflared",
 ]);
@@ -74,6 +90,9 @@ export const WAJIB = [
   ["config bot", "config.js"],
   ["installer", "install.sh"],
   ["template env", ".env.example"],
+  ["aturan git", ".gitignore"],
+  // Lockfile: menjamin VPS baru memasang versi dependensi yang SAMA.
+  ["lockfile bot", "package-lock.json"],
   ["web frontend", path.join("web", "app")],
   ["panel admin", path.join("web", "components", "admin")],
   ["web build", path.join("web", "out")],
@@ -81,25 +100,51 @@ export const WAJIB = [
   ["plugins", "plugins"],
   ["src", "src"],
   ["database", "database"],
+  // Data yang paling mahal kalau hilang: saldo, premium, level, sewa, toko.
+  // Dicantumkan sebagai berkas TERSENDIRI, bukan cuma "database", karena folder
+  // `database/` bisa ada tapi kosong dan laporan tetap bilang lengkap.
+  ["data user", path.join("database", "main", "users.json")],
+  ["data grup", path.join("database", "main", "groups.json")],
 ];
 
 export function shouldExclude(filePath, basePath) {
   const rel = path.relative(basePath, filePath);
   if (!rel || rel.startsWith("..")) return true;
-  for (const bagian of rel.split(path.sep)) {
+  const bagianRel = rel.split(path.sep);
+  for (const bagian of bagianRel) {
     if (EXCLUDE_DIRS.has(bagian)) return true;
-    if (bagian.startsWith(".git")) return true;
+    // DIPERBAIKI 2026-09-05: dulu `bagian.startsWith(".git")` membuang
+    // `.gitignore` dan `.gitattributes` juga — dua berkas konfigurasi yang WAJIB
+    // ada di backup, karena tanpa `.gitignore` pemulihan berikutnya bisa
+    // meng-commit `.env` dan sesi WA. Yang perlu dibuang cuma folder `.git`.
+    if (bagian === ".git") return true;
   }
+  // `storage/` ikut, KECUALI folder sesi WhatsApp di dalamnya. Sesi = kredensial
+  // perangkat; sisanya (mis. pairing-state.json) data biasa yang boleh dibawa.
+  if (bagianRel[0] === "storage" && /^session/i.test(bagianRel[1] || "")) return true;
   const nama = path.basename(rel);
   if (EXCLUDE_FILES.has(nama)) return true;
   if (nama.startsWith(".env.bak")) return true;
   if (nama.endsWith(".tar.gz")) return true;
   const ext = path.extname(nama).toLowerCase();
   if (EXCLUDE_EXTENSIONS.has(ext)) {
+    // Folder yang isinya memang media/aset: ekstensi besar tetap boleh ikut,
+    // karena di sini berkas ITULAH datanya, bukan sampah build.
+    // `brand-assets` = gambar & GIF yang tuan unggah lewat panel (logo, hero).
+    // `database/autoreply_media` = media balasan otomatis yang diunggah member.
+    // Keduanya tidak bisa dibangun ulang dari mana pun.
     const aset =
       rel.startsWith("assets" + path.sep) ||
-      rel.startsWith("database" + path.sep);
-    if (!aset) return true;
+      rel.startsWith("database" + path.sep) ||
+      rel.startsWith("brand-assets" + path.sep);
+    // Media di AKAR proyek yang dilayani langsung oleh web-uploader (mis.
+    // `header-video.mp4` di rute GET /header-video.mp4). Terukur 2026-09-06:
+    // berkas ini satu-satunya berkas TER-TRACK GIT yang hilang dari zip, jadi
+    // memulihkan backup menghasilkan hero web tanpa video. Batas ukurannya
+    // dijaga MAX_FILE_SIZE, jadi tidak bisa membengkakkan zip.
+    const mediaAkar = !rel.includes(path.sep) && ext !== ".zip" && ext !== ".log" &&
+      ext !== ".bak" && ext !== ".lock" && ext !== ".pack";
+    if (!aset && !mediaAkar) return true;
   }
   return false;
 }
@@ -107,6 +152,11 @@ export function shouldExclude(filePath, basePath) {
 /** Kumpulkan daftar berkas yang akan masuk zip. Tidak menulis apa pun. */
 export function kumpulkanBerkas(root) {
   const hasil = [];
+  // Berkas yang lolos semua aturan tapi terlalu besar. DULU dibuang tanpa jejak:
+  // kalau tuan mengunggah GIF brand 12 MB lewat panel, ia hilang dari backup dan
+  // laporan tetap berbunyi "lengkap". Sekarang dicatat dan dilaporkan di caption,
+  // supaya kehilangan data tidak pernah senyap.
+  hasil.terlewat = [];
   (function jalan(dir) {
     let isi;
     try { isi = fs.readdirSync(dir); } catch { return; }
@@ -116,8 +166,10 @@ export function kumpulkanBerkas(root) {
       let st;
       try { st = fs.statSync(penuh); } catch { continue; }
       if (st.isDirectory()) jalan(penuh);
-      else if (st.isFile() && st.size < MAX_FILE_SIZE) {
-        hasil.push({ rel: path.relative(root, penuh), penuh, size: st.size });
+      else if (st.isFile()) {
+        const rel = path.relative(root, penuh);
+        if (st.size < MAX_FILE_SIZE) hasil.push({ rel, penuh, size: st.size });
+        else hasil.terlewat.push({ rel, size: st.size });
       }
     }
   })(root);
@@ -133,8 +185,14 @@ export function pengaturanTersanitasi(root) {
     const p = path.join(root, "admin-settings.json");
     if (!fs.existsSync(p)) return null;
     const j = JSON.parse(fs.readFileSync(p, "utf8"));
-    for (const k of ["adminPassword", "telegramBotToken", "gitToken", "telegramChatId"]) {
-      if (j[k]) j[k] = "__DIISI_LEWAT_ENV__";
+    // DIPERBAIKI 2026-09-06: dulu hanya 4 nama kunci yang ditulis manual di sini.
+    // Zip backup dikirim lewat chat, jadi satu kunci rahasia baru yang lupa
+    // didaftarkan = kebocoran. Sekarang penyensoran berdasarkan POLA nama, jadi
+    // kunci rahasia yang ditambahkan nanti tersensor otomatis tanpa perlu ingat
+    // memperbarui daftar ini.
+    const POLA_RAHASIA = /pass|token|secret|apikey|api_key|webhook|chatid|chat_id|credential|auth|cookie|private|signature/i;
+    for (const k of Object.keys(j)) {
+      if (POLA_RAHASIA.test(k) && j[k]) j[k] = "__DIISI_LEWAT_ENV__";
     }
     return JSON.stringify(j, null, 2);
   } catch {
@@ -158,6 +216,9 @@ export function ringkas(berkas, root) {
   return {
     perBagian: [...per].sort((a, b) => b[1].bytes - a[1].bytes),
     hilang,
+    // Berkas yang sengaja dilewati karena >= MAX_FILE_SIZE. Diteruskan ke caption
+    // supaya tuan tahu ada yang tidak ikut, bukan menduga backup sudah utuh.
+    terlewat: berkas.terlewat || [],
     total: berkas.length,
     bytes: berkas.reduce((a, b) => a + b.size, 0),
   };

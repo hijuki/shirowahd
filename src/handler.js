@@ -1720,7 +1720,11 @@ async function messageHandler(msg, sock, options = {}) {
 
     const permission = checkPermission(m, plugin.config);
     if (!permission.allowed) {
-      await m.reply(permission.reason);
+      // `reason: null` = tolak TANPA membalas. Dipakai gerbang newsletter:
+      // membalas ke chat saluran hanya memberi umpan balik ke penyerang dan
+      // mengotori saluran. Tanpa pemeriksaan ini, m.reply(null) mengirim
+      // "null" sebagai pesan.
+      if (permission.reason) await m.reply(permission.reason);
       return;
     }
 

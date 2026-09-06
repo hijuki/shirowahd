@@ -40,7 +40,15 @@ async function handler(m, { sock }) {
       return m.reply(`❌ *Tidak ditemukan hasil untuk:* ${query}`);
     }
 
-    const results = data.data.slice(0, 10);
+    // Artwork R-18 (xRestrict > 0) disaring habis, bukan cuma diberi tanda 🔞.
+    // Ikut penghapusan fitur NSFW 2026-09-05: memberi label tapi tetap
+    // mengirimkan tautannya sama saja dengan menyediakan jalurnya.
+    const aman = data.data.filter((a) => !(a.xRestrict > 0));
+    if (aman.length === 0) {
+      await m.react("❌");
+      return m.reply(`❌ *Tidak ditemukan hasil untuk:* ${query}`);
+    }
+    const results = aman.slice(0, 10);
 
     const saluranId = config.saluran?.id || "120363413208281480@newsletter";
     const saluranName = config.saluran?.name || config.bot?.name || "SHIROWAHD";
@@ -51,8 +59,7 @@ async function handler(m, { sock }) {
 
     results.forEach((art, i) => {
       const aiLabel = art.aiType === 2 ? " 🤖" : "";
-      const isNsfw = art.xRestrict > 0 ? " 🔞" : "";
-      caption += `*${i + 1}.* ${art.title}${aiLabel}${isNsfw}\n`;
+      caption += `*${i + 1}.* ${art.title}${aiLabel}\n`;
       caption += `   👤 ${art.userName}\n`;
       caption += `   📐 ${art.width}x${art.height} • 📄 ${art.pageCount} page\n`;
       caption += `   🔗 ${art.url}\n\n`;

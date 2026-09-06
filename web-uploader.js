@@ -1,5 +1,5 @@
 import http from 'http';
-import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync, openSync, closeSync, writeSync, renameSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync, readdirSync, statSync, openSync, closeSync, writeSync, renameSync, rmSync, chmodSync } from 'fs';
 import { storeVideo, storeBundle, storeVideoFile, storeBundleFiles, getBundle, isBundle, deleteVideo, extendVideo, listVideos, getStats, getTotalStorage, setTTL, getTTL, cleanOrphans } from './src/lib/vid-store.js';
 import { join, dirname, extname } from 'path';
 import { rencanaFps, filterFps, argKeluaranFps, FFMPEG_PUNYA_FPS_MODE } from './src/lib/hillz-fps.js';
@@ -215,8 +215,18 @@ function saveSettings(data) {
     welcomeText: data.welcomeText ?? cur.welcomeText ?? '',
     welcomeCta: data.welcomeCta ?? cur.welcomeCta ?? ''
   };
-  writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2), 'utf8');
+  tulisSettings(s);
   return s;
+}
+
+// Berkas ini memuat adminPassword PLAINTEXT, jadi izinnya harus 600 setiap kali
+// ditulis — bukan sekali saat setup. Diukur di produksi: berkasnya 644, artinya
+// user mana pun di VPS bisa membacanya. Node menulis dengan 644 (umask) dan
+// TIDAK mempertahankan mode lama saat menimpa, jadi satu `chmod` manual akan
+// hilang begitu admin menyimpan pengaturan lewat panel.
+function tulisSettings(objek) {
+  writeFileSync(SETTINGS_FILE, JSON.stringify(objek, null, 2), 'utf8');
+  try { chmodSync(SETTINGS_FILE, 0o600); } catch { /* fs tanpa chmod (mis. mount aneh) */ }
 }
 
 // Password bawaan yang PERNAH ter-commit ke repo publik. Nilainya bukan lagi
@@ -255,7 +265,7 @@ function getAdminPassword() {
   try {
     const s = loadSettings();
     s.adminPassword = acak;
-    writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2), 'utf8');
+    tulisSettings(s);
   } catch (e) {
     console.error('[ADMIN] gagal menyimpan password acak:', e.message);
   }

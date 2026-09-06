@@ -73,7 +73,6 @@ const CATEGORY_EMOJIS = {
   convert: "🔄",
   berita: "📰",
   rpg: "🗡️",
-  nsfw: "🔞",
   linode: "☁️",
   primbon: "🔮",
   cecan: "💃",
@@ -194,7 +193,7 @@ function getSortedCategories(m, botMode) {
     pushkontak: ["main", "group", "sticker", "owner", "pushkontak"],
   };
   let modeExcludeMap = {
-    md: ["panel", "pushkontak", "store", "nsfw"],
+    md: ["panel", "pushkontak", "store"],
     cpanel: null,
     store: null,
     pushkontak: null,
@@ -329,7 +328,7 @@ async function buildMenuText(
     pushkontak: ["main", "group", "sticker", "owner", "pushkontak"],
   };
   let modeExcludeMap = {
-    md: ["panel", "pushkontak", "store", "nsfw"],
+    md: ["panel", "pushkontak", "store"],
     cpanel: null,
     store: null,
     pushkontak: null,

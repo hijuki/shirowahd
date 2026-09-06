@@ -172,6 +172,139 @@ for (const s of ['install.sh', 'migrate.sh']) {
   catch (e) { cek(`bash -n ${s}`, false, (e.stderr || '').toString().slice(0, 70)); }
 }
 
+// ═══ 8. KEAMANAN: gerbang izin tidak boleh bisa dilewati ═══
+// Uji regresi untuk lubang yang ditemukan 2026-09-05: pesan dari chat
+// `@newsletter` mendapat m.isOwner = true (serialize:610) DAN m.sender dipalsukan
+// jadi nomor bot (serialize:543), sehingga lolos `if (m.isOwner) return
+// { allowed: true }` di middleware — termasuk untuk `.eval` dan `.exec`.
+// Uji ini akan MERAH lagi kalau pagarnya hilang saat refactor.
+bagian('═══ 8. Keamanan: gerbang izin ═══');
+try {
+  const { checkPermission } = await import(pathToFileURL('src/lib/hillz-middleware.js').href);
+  const { initDatabase } = await import(pathToFileURL('src/lib/hillz-database.js').href);
+  const { mkdtempSync } = await import('fs');
+  initDatabase(join(os.tmpdir(), 'ujiperm-') + Date.now());
+
+  const pesan = (tambahan) => ({
+    sender: '628999@s.whatsapp.net', chat: '1@newsletter', isGroup: false,
+    isOwner: false, isPremium: false, isPartner: false, isNewsletter: false,
+    fromMe: false, isBot: false, isCommand: true, command: 'eval',
+    reply: async () => {}, ...tambahan,
+  });
+  const kOwner = { name: 'eval', isOwner: true, isPremium: false, isGroup: false };
+
+  // Inilah lubangnya: apa yang serialize berikan untuk pesan newsletter.
+  const dariSaluran = await checkPermission(
+    pesan({ isNewsletter: true, isOwner: true, sender: '6285624537308@s.whatsapp.net' }), kOwner);
+  cek('perintah owner dari @newsletter DITOLAK', dariSaluran.allowed === false);
+
+  const orangBiasa = await checkPermission(pesan({ isGroup: true }), kOwner);
+  cek('perintah owner dari orang biasa DITOLAK', orangBiasa.allowed === false);
+
+  const ownerAsli = await checkPermission(pesan({ isOwner: true, isGroup: true }), kOwner);
+  cek('owner asli tetap DIIZINKAN', ownerAsli.allowed === true);
+} catch (e) {
+  cek('gerbang izin', false, (e.message || '').split('\n')[0].slice(0, 70));
+}
+
+// ═══ 9. KEAMANAN: berkas rahasia tidak boleh ter-track git ═══
+bagian('═══ 9. Keamanan: rahasia tidak ter-track ═══');
+if (!daftar.length) lewati('sapuan rahasia', 'git tidak tersedia');
+else {
+  let semua = [];
+  try {
+    semua = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+  } catch { /* abaikan */ }
+  const terlarang = semua.filter((f) =>
+    /(^|\/)\.env$/.test(f) || /admin-settings\.json/.test(f) ||
+    /^storage\/session/.test(f) || /\.bak\.\d/.test(f) || /creds\.json$/.test(f));
+  cek('nol berkas rahasia ter-track', terlarang.length === 0, terlarang.slice(0, 4).join(', '));
+
+  // Password bawaan pabrik tidak boleh muncul di berkas selain web-uploader.js
+  // (di sana ia sengaja ada sebagai daftar-tolak, bukan sebagai kredensial).
+  const { readFileSync: rf2 } = await import('fs');
+  const bocor = [];
+  for (const f of daftar) {
+    if (f === 'web-uploader.js') continue;
+    let isi = '';
+    try { isi = rf2(f, 'utf8'); } catch { continue; }
+    if (/adminPassword\s*[:=]\s*["'][^"']{4,}/.test(isi)) bocor.push(f);
+  }
+  cek('nol password admin hardcoded', bocor.length === 0, bocor.slice(0, 3).join(', '));
+}
+
+// ═══ 10. BACKUP: cakupan penuh kecuali sesi WhatsApp ═══
+// Permintaan tetap tuan: backup memuat SELURUH data, satu-satunya yang
+// dikecualikan adalah sesi WhatsApp (kredensial perangkat — zip dikirim lewat
+// chat). Uji ini mengunci dua arah sekaligus supaya refactor nanti tidak
+// diam-diam membuang data user atau diam-diam memasukkan rahasia.
+bagian('═══ 10. Backup: cakupan & kebocoran ═══');
+try {
+  const { shouldExclude, pengaturanTersanitasi } = await import(
+    pathToFileURL(join(process.cwd(), 'src/lib/hillz-backup-rules.js')).href);
+  const root = process.cwd();
+  const buang = (f) => shouldExclude(join(root, f), root);
+
+  // Data yang tidak bisa dibangun ulang dari mana pun — wajib ikut.
+  const wajibIkut = ['database/main/users.json', 'database/main/groups.json',
+    'database/autoreply_media/a.mp3', 'brand-assets/logo.gif',
+    '.gitignore', 'storage/pairing-state.json', 'plugins/main/menu.js',
+    'package-lock.json', 'web/package-lock.json'];
+  const hilang = wajibIkut.filter(buang);
+  cek('data user & aset ikut backup', hilang.length === 0, hilang.join(', '));
+
+  // Sesi WhatsApp — satu-satunya yang dikecualikan atas permintaan tuan.
+  const sesi = ['storage/session/creds.json', 'storage/sessions/app-state.json'];
+  cek('sesi WhatsApp dikecualikan', sesi.every(buang));
+
+  // Rahasia tidak boleh masuk zip yang dikirim lewat chat.
+  //
+  // KOREKSI ALAT UKUR (2026-09-06): versi pertama uji ini juga menuntut
+  // `backup-history.json` dibuang, dan uji itu GAGAL. Saya hampir menambal
+  // aturan backup-nya. Salah: setelah diperiksa, isi berkas itu cuma
+  // [ts, ok, changed, pushed, message] — nol kunci sensitif. Ia memang boleh
+  // ikut backup. Yang keliru adalah uji-nya, bukan kodenya. Menambal aturan
+  // demi menyenangkan uji yang salah = menghapus data tanpa alasan.
+  const rahasia = ['.env', '.env.bak-1', 'admin-settings.json',
+    'admin-settings.sanitized.json', '.git/config', 'storage/session/creds.json'];
+  const lolos = rahasia.filter((f) => !buang(f));
+  cek('rahasia tidak masuk zip', lolos.length === 0, lolos.join(', '));
+
+  // Sampah yang membuat zip melewati batas kirim WhatsApp.
+  cek('sampah build dibuang', ['node_modules/x/y.js', 'web/.next/a.js',
+    '.audit/B1.sh', 'uploads/besar.mp4', 'cloudflared',
+    'backup.zip', 'besar.tar.gz', 'boot_final.log'].every(buang));
+
+  // Media yang DILAYANI web-uploader wajib ikut, kalau tidak hero web kosong
+  // setelah pulih. Sekaligus penjaga: aturan mediaAkar tidak boleh melonggar
+  // sampai memasukkan arsip/log.
+  cek('media web ikut backup', ['header-video.mp4', 'assets/video/hillz-mp4.mp4',
+    'assets/audio/hillz-mp3.mp3'].every((f) => !buang(f)));
+
+  // Uji paling tajam untuk "cakupan seluruhnya": tidak boleh ada berkas
+  // ter-track git yang hilang dari zip. Ini yang menangkap nama folder umum
+  // (auth/build/dist/logs) membuang folder proyek yang sah.
+  try {
+    const track = execFileSync('git', ['ls-files'], { encoding: 'utf8', maxBuffer: 64e6 })
+      .split('\n').filter(Boolean);
+    const lenyap = track.filter((rel) => existsSync(rel) && buang(rel));
+    cek('nol berkas ter-track hilang dari backup', lenyap.length === 0,
+      lenyap.slice(0, 4).join(', '));
+  } catch {
+    lewati('cakupan ter-track', 'git tidak tersedia');
+  }
+
+  // Salinan settings di dalam zip wajib tanpa nilai kredensial.
+  const bersih = pengaturanTersanitasi(root);
+  const kunciBocor = bersih === null ? [] : Object.entries(JSON.parse(bersih))
+    .filter(([k, v]) => /password|token|secret|chatid/i.test(k) &&
+      typeof v === 'string' && v && v !== '__DIISI_LEWAT_ENV__')
+    .map(([k]) => k);
+  cek('settings di zip tersanitasi', kunciBocor.length === 0, kunciBocor.join(', '));
+} catch (e) {
+  cek('aturan backup', false, (e.message || '').split('\n')[0].slice(0, 70));
+}
+
 // ═══ Ringkasan ═══
 console.log(`\n${'═'.repeat(52)}`);
 console.log(`  LULUS ${lulus}   GAGAL ${gagal}   DILEWATI ${dilewati}`);

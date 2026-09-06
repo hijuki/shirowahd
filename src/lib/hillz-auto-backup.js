@@ -123,6 +123,9 @@ async function createBackup() {
         fileCount,
         timestamp,
         hilang: info.hilang,
+        // Sejalan dengan `.backupsc`: berkas >=10 MB yang dilewati ikut
+        // dilaporkan, supaya backup otomatis tidak diam-diam kehilangan aset.
+        terlewat: info.terlewat,
         perBagian: info.perBagian,
       });
     });
@@ -205,7 +208,10 @@ async function sendBackupToOwner(backupInfo) {
       (bagian ? `╭┈┈⬡「 📂 *ɪsɪ* 」\n${bagian}\n╰┈┈⬡\n\n` : "") +
       (backupInfo.hilang?.length
         ? `⚠ bagian hilang: ${backupInfo.hilang.join(", ")}\n\n`
-        : `✓ lengkap: bot + web + panel admin\n\n`) +
+        : `✓ lengkap: bot + web + panel admin + data\n\n`) +
+      (backupInfo.terlewat?.length
+        ? `⚠ dilewati (>10 MB): ${backupInfo.terlewat.length} berkas\n\n`
+        : "") +
       `> Sesi WA & .env TIDAK ikut (kredensial).\n` +
       `> ${config.bot?.name || "SHIROWAHD"} Auto Backup System`;
 

@@ -51,6 +51,32 @@ function checkPermission(m, pluginConfig) {
     }
   }
 
+  // ── GERBANG: chat @newsletter TIDAK boleh menjalankan perintah ──────────────
+  // DIPERBAIKI 2026-09-05 setelah diukur, bukan dugaan. Rantainya:
+  //
+  //   hillz-serialize.js:543  senderJid = sock.user.id   ← untuk newsletter,
+  //                                      pengirim DIGANTI jadi nomor bot sendiri
+  //   hillz-serialize.js:610  m.isOwner = m.isNewsletter || m.fromMe ? true : …
+  //   config.js isOwner()     nomor bot sendiri SELALU owner
+  //   middleware:55           if (m.isOwner) return { allowed: true }
+  //
+  // Akibatnya pesan apa pun dari chat berakhiran `@newsletter` lolos SEMUA
+  // gerbang izin, termasuk `.eval` dan `.exec` yang menjalankan perintah shell
+  // di VPS. Diuji dengan checkPermission sungguhan (.audit/B19): plugin
+  // `isOwner: true` mengembalikan `allowed=true` untuk pesan newsletter.
+  //
+  // Membuang `m.isNewsletter ||` di serialize:610 TIDAK cukup — m.sender sudah
+  // dipalsukan jadi nomor bot, jadi isOwner(m.sender) tetap true. Pagarnya harus
+  // di sini, di titik keputusan izin.
+  //
+  // Nol plugin bergantung pada perintah dari newsletter (diukur: nol berkas di
+  // plugins/ menyebut isNewsletter/isChannel), jadi menutup ini tidak
+  // menghilangkan fungsi apa pun. Bot tetap bisa MENGIRIM ke saluran seperti
+  // biasa; yang diblokir hanya perintah yang MASUK dari sana.
+  if (m.isNewsletter && !m.fromMe) {
+    return { allowed: false, reason: null };
+  }
+
   // Owner bypass ALL restrictions
   if (m.isOwner) return { allowed: true };
 

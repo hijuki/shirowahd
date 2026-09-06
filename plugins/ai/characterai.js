@@ -48,23 +48,33 @@ async function handler(m, { sock, args, text }) {
                 return m.reply(`Karakter "${query}" tidak ditemukan.`);
             }
 
-            const maxResults = Math.min(resData.data.length, 10);
+            // Karakter berlabel NSFW disaring habis, tidak cuma dilabeli 🔞.
+            // Sebelumnya bot menampilkannya dengan tanda peringatan — itu tetap
+            // menyediakan jalur NSFW, yang sudah dihapus dari bot ini.
+            const kandidat = resData.data
+                .map((d) => d.document)
+                .filter((d) => d && !d.is_nsfw);
+
+            if (kandidat.length === 0) {
+                await m.react("❌");
+                return m.reply(`Karakter "${query}" tidak ditemukan.`);
+            }
+
+            const maxResults = Math.min(kandidat.length, 10);
             let listTxt = `🤖 *HASIL PENCARIAN KARAKTER: ${query.toUpperCase()}*\n\n`;
             listTxt += `Pilih salah satu karakter di bawah ini:\n\n`;
 
             const searchResults = [];
 
             for (let i = 0; i < maxResults; i++) {
-                const item = resData.data[i].document;
+                const item = kandidat[i];
                 searchResults.push({
                     character_id: item.character_id,
                     name: item.name,
                     title: item.title,
                     creator: item.creator_username,
-                    is_nsfw: item.is_nsfw
                 });
-                const nsfwTag = item.is_nsfw ? " 🔞" : "";
-                listTxt += `*${i + 1}.* ${item.name}${nsfwTag}\n`;
+                listTxt += `*${i + 1}.* ${item.name}\n`;
                 listTxt += `> ${item.title}\n`;
                 listTxt += `> 👤 by ${item.creator_username}\n\n`;
             }
@@ -157,7 +167,6 @@ async function caiAnswerHandler(m, sock) {
         enabled: true,
         character_id: selected.character_id,
         name: selected.name,
-        is_nsfw: selected.is_nsfw,
         conversation_id: null,
         activatedAt: Date.now(),
         activatedBy: m.sender
@@ -165,8 +174,7 @@ async function caiAnswerHandler(m, sock) {
     db.save();
 
     await m.react("✅");
-    const nsfwWarning = selected.is_nsfw ? "\n⚠️ *WARNING: Karakter ini berlabel NSFW.*" : "";
-    await m.reply(`🤖 *CHARACTER AI DIAKTIFKAN*\n\nKarakter *${selected.name}* telah terpilih! Mulai sekarang, AI akan merespons semua pesan biasa di chat ini.\n\n> Ketik \`.character-ai off\` untuk mematikan.${nsfwWarning}`);
+    await m.reply(`🤖 *CHARACTER AI DIAKTIFKAN*\n\nKarakter *${selected.name}* telah terpilih! Mulai sekarang, AI akan merespons semua pesan biasa di chat ini.\n\n> Ketik \`.character-ai off\` untuk mematikan.`);
 
     return true;
 }
@@ -203,8 +211,10 @@ async function caiChatHandler(m, sock) {
             }
 
             let replyText = resData.data.content || "";
+            // Balasan yang ditandai NSFW oleh API tidak dikirim sama sekali.
+            // Sebelumnya cuma diberi awalan `🔞 [NSFW]` lalu tetap dikirim.
             if (resData.data.is_nsfw) {
-                replyText = `🔞 [NSFW]\n` + replyText;
+                return;
             }
 
             await m.reply(replyText);

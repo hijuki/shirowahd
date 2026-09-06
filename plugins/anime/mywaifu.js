@@ -6,9 +6,9 @@ const pluginConfig = {
     name: 'mywaifu',
     alias: ['waifuim', 'waifu', 'waifus'],
     category: 'anime',
-    description: 'Mencari sekumpulan gambar waifu (SFW / NSFW) menggunakan API Waifu.im.',
-    usage: '.mywaifu sfw\nAtau\n.mywaifu nsfw',
-    example: '.mywaifu sfw',
+    description: 'Mencari sekumpulan gambar waifu (SFW) menggunakan API Waifu.im.',
+    usage: '.mywaifu',
+    example: '.mywaifu',
     isOwner: false,
     isPremium: false,
     isGroup: false,
@@ -18,24 +18,21 @@ const pluginConfig = {
     isEnabled: true
 };
 
+// Mode `nsfw` DIHAPUS 2026-09-05 atas permintaan pemilik bot, bersama seluruh
+// kategori plugins/nsfw. Yang penting: bukan cuma teks bantuannya yang dibuang —
+// parameter `isNsfw` ke api.waifu.im dipaku ke "false" di bawah, supaya tidak ada
+// jalan memintanya lagi lewat argumen apa pun.
 async function handler(m, { sock, args }) {
-    const mode = args[0] ? args[0].toLowerCase() : "";
+    const mode = 'sfw';
 
-    if (mode !== 'sfw' && mode !== 'nsfw') {
-        return m.reply(
-            `🌸 *PENCARI WAIFU* 🌸\n\n` +
-            `Fitur ini akan mencarikan 10 gambar waifu spesial untukmu langsung dari Waifu.im dan menyatukannya dalam satu album rapi!\n\n` +
-            `*CARA PENGGUNAAN:*\n` +
-            `- Ketik \`${m.prefix}mywaifu sfw\` untuk gambar waifu yang aman.\n` +
-            `- Ketik \`${m.prefix}mywaifu nsfw\` untuk gambar waifu versi dewasa (NSFW).\n\n` +
-            `_Pastikan kamu memilih mode yang sesuai dengan seleramu ya!_`
-        );
+    if (args[0] && args[0].toLowerCase() === 'nsfw') {
+        return m.reply('🚫 Mode NSFW sudah dihapus dari bot ini.');
     }
 
     try {
         await m.react('🕕');
 
-        const isNsfw = mode === 'nsfw';
+        const isNsfw = false;
         const pageSize = 10;
 
         const params = new URLSearchParams({

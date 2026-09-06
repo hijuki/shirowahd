@@ -129,18 +129,20 @@ async function handler(m, { sock }) {
           `Berkas  : ${fileCount}`,
           "",
           "Isi zip: kode bot, web frontend (Next.js), panel admin, plugins,",
-          "database, installer, dan template .env.",
+          "database (user/grup/toko), aset brand yang diunggah lewat panel,",
+          "media autoreply, installer, dan template .env.",
           "",
           "TIDAK ADA di zip ini (memang disengaja):",
           "  - .env                  → kredensial; salin manual",
           "  - admin-settings.json   → password admin; lihat versi .sanitized",
           "  - storage/session       → sesi WhatsApp; pakai migrate.sh (scp)",
           "  - node_modules          → jalankan `npm install`",
+          "  - berkas >10 MB         → dilaporkan di caption, ambil lewat scp",
           "",
           "Langkah:",
           "  1. Ekstrak zip ke folder tujuan",
-          "  2. npm install --omit=dev",
-          "  3. cd web && npm install && npx next build",
+          "  2. npm ci --omit=dev   (lockfile ikut di zip; pakai `npm install` bila gagal)",
+          "  3. cd web && npm ci && npx next build",
           "  4. cp .env.example .env  lalu isi",
           "  5. mv admin-settings.sanitized.json admin-settings.json",
           "     (ganti __DIISI_LEWAT_ENV__ dengan nilai asli, atau isi lewat .env)",
@@ -200,7 +202,15 @@ async function handler(m, { sock }) {
           `╭┈┈⬡「 📂 *ɪsɪ* 」\n${bagian}\n╰┈┈⬡\n\n` +
           (info.hilang.length
             ? `⚠ bagian hilang: ${info.hilang.join(", ")}\n\n`
-            : `✓ lengkap: bot + web + panel admin\n\n`) +
+            : `✓ lengkap: bot + web + panel admin + data\n\n`) +
+          // Berkas >=10 MB dilewati. Dulu senyap; sekarang dilaporkan supaya tuan
+          // tidak menyangka backup utuh padahal ada aset besar yang tertinggal.
+          (info.terlewat.length
+            ? `⚠ dilewati (>10 MB, ambil manual):\n` +
+              info.terlewat.slice(0, 4)
+                .map((t) => `┃ ${t.rel} ${(t.size / 1048576).toFixed(1)} MB`)
+                .join("\n") + `\n\n`
+            : "") +
           `> Sesi WA & .env TIDAK ikut (kredensial).\n` +
           `> Baca \`CARA-PULIHKAN.txt\` di dalam zip.`,
         contextInfo: {

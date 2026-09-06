@@ -22,7 +22,7 @@ const ICONS = {
     main: '🏠', tools: '🔧', downloader: '📥', download: '📥', sticker: '🎨',
     ai: '🤖', media: '📷', game: '🎮', rpg: '⚔️', maker: '🖼️', fun: '🎭',
     group: '👥', owner: '👑', premium: '💎', info: '📊', search: '🔍',
-    canvas: '🎨', anime: '🌸', nsfw: '🔞', utility: '🛠️', economy: '💰',
+    canvas: '🎨', anime: '🌸', utility: '🛠️', economy: '💰',
     stalker: '🔎', random: '🎲', religi: '🕌', islamic: '☪️', cek: '✅',
     store: '🛒', panel: '🖥️', convert: '🔄', primbon: '🔮', tts: '🗣️',
     otp: '🔑', vps: '☁️', pushkontak: '📱', jpm: '🎰', ephoto: '📸',
