@@ -407,7 +407,6 @@ async function main() {
         startTempCleaner();
         startDailyPruner();
         logger.success("YEYYYY", `Semua sistem udah jalan mantap, langsug saja🚀`);
-        logger.success("NOTE", `Kalau ada error. mohon dimaklumi, soalnnya bukan bot bagus :)`);
         divider();
       }
     },

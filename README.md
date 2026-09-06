@@ -68,8 +68,14 @@ main.js            bootloader bot          → pm2: main
 index.js           core WhatsApp (Baileys multi-device)
 web-uploader.js    HTTP server :80         → pm2: web
 web/               frontend Next.js        → static export ke web/out/
-plugins/           command modular per kategori
-src/lib/           helper bersama
+plugins/           command modular per kategori (34 folder, 821 plugin)
+src/lib/           helper bersama (68 modul)
+src/scraper/       scraper pihak ketiga (35 modul)
+case/hillz.js      hardcoded command handler (legacy)
+config.js          konfigurasi bot (baca .env + default)
+install.sh         installer VPS baru (303 baris)
+migrate.sh         bundel pindah VPS (56 baris)
+test/jalankan.mjs  uji otomatis (37 pemeriksaan, `npm test`)
 ```
 
 Dua proses, satu repo. Keduanya berbagi berkas di disk — itu sebabnya papan status pairing berupa berkas, bukan variabel:
@@ -81,7 +87,33 @@ Dua proses, satu repo. Keduanya berbagi berkas di disk — itu sebabnya papan st
 | `database/main/bots.json` | web | bot | daftar bot tambahan + role |
 | `database/main/groups-off.json` | web | bot | grup yang dimatikan admin |
 
-Semuanya gitignored, jadi aman dari `git reset --hard` yang dijalankan bot saat boot.
+Semuanya gitignored, jadi aman dari `git reset --hard`.
+
+### Folder data (gitignored)
+
+| Folder | Isi |
+|---|---|
+| `database/main/` | User, grup, sewa, premium, partner, statistik |
+| `database/cpanel/` | Reseller, CEO, owner per versi |
+| `database/autoreply_media/` | Media autoreply member |
+| `storage/session/` | Sesi WhatsApp (kredensial perangkat) |
+| `storage/pairing-state.json` | Papan status pairing |
+| `brand-assets/` | Logo, hero yang diunggah lewat panel |
+| `vids/` | Video upload user |
+| `backups/` | Hasil zip backup |
+| `.audit/` | Skrip audit sekali pakai (gitignored) |
+
+### Berkas penting di akar
+
+| Berkas | Keterangan |
+|---|---|
+| `.env` | Kredensial, mode 600, JANGAN commit |
+| `.env.example` | Template tanpa nilai, ter-commit |
+| `admin-settings.json` | Pengaturan panel, mode 600, gitignored |
+| `.gitignore` | 30+ entri termasuk semua data sensitif |
+| `config.js` | Konfigurasi bot, baca `.env` + default |
+| `package.json` + `package-lock.json` | Dependensi (lockfile ikut backup) |
+| `header-video.mp4` + `header-poster.jpg` | Aset hero web |
 
 ---
 
@@ -93,6 +125,7 @@ Semuanya gitignored, jadi aman dari `git reset --hard` yang dijalankan bot saat 
 |---|---|
 | `ADMIN_PASSWORD` | Password panel. Di-generate acak oleh installer. Kalah dari password yang di-set lewat panel. |
 | `DOMAIN` | Domain publik, dipakai untuk og:image dan tautan |
+| `GIT_AUTO_SYNC` | `1` = bot `git reset --hard` setiap start. Default MATI — edit lokal bertahan. |
 | `GIT_ADDRESS` + `GIT_TOKEN` + `BRANCH` | Tombol Backup di panel |
 | `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | Notifikasi upload/claim/error |
 | `WATCHDOG_MINUTES` | Reconnect paksa kalau tidak ada pesan masuk. `0` = mati, default 180 |
@@ -112,6 +145,50 @@ Semuanya gitignored, jadi aman dari `git reset --hard` yang dijalankan bot saat 
 - **Settings** — limit, branding, backup GitHub, status tunnel
 - **Security** — blacklist IP, log upload
 - **Bot** — pairing, multi-bot, status koneksi, grup, broadcast, log, exec
+
+### Endpoint publik
+
+| Path | Method | Keterangan |
+|---|---|---|
+| `/` | GET | Landing page (static export Next.js) |
+| `/admin` | GET | Panel admin (login dulu) |
+| `/admin/login` | POST | Login, rate-limit 5 gagal → 429 blokir 15 menit/IP |
+| `/upload` | POST | Upload video (multipart, field `video`/`image`/`file`) |
+| `/upload/status/:id` | GET | Status encode async |
+| `/api/settings/public` | GET | Pengaturan publik (tanpa token) |
+| `/api/stats/public` | GET | Statistik publik |
+| `/brand/*` | GET | Aset brand dari panel (logo, hero) |
+
+### Endpoint admin (semua butuh token dari `/admin/login`)
+
+47 rute di bawah `/admin/api/*`, semua memerlukan header token. Daftar lengkap bisa diekstrak dari `web-uploader.js`:
+
+```bash
+node -e "const s=require('fs').readFileSync('web-uploader.js','utf8');[...s.matchAll(/url\s*===\s*['\"]([^'\"]+)['\"]/g),...s.matchAll(/url\.startsWith\(['\"]([^'\"]+)['\"]/g)].map(m=>m[1]).filter(r=>r.startsWith('/admin/api')).sort().forEach(r=>console.log(r))"
+```
+
+### Bot API internal (127.0.0.1:8081, tidak dibuka ke publik)
+
+| Path | Method | Keterangan |
+|---|---|---|
+| `/status` | GET | Status koneksi bot |
+| `/send` | POST | Kirim pesan (`{jid, text}`) |
+| `/exec` | POST | Eval JS (`{code, target?}`) |
+| `/plugins` | GET | Daftar plugin termuat |
+| `/bots` | GET | Daftar bot + role |
+| `/pair/request` | POST | Minta kode pairing |
+| `/pair/state` | GET | Status pairing |
+| `/groups` | GET | Daftar grup |
+| `/broadcast` | POST | Siaran ke semua grup |
+
+### Backup dari bot
+
+| Perintah | Fungsi |
+|---|---|
+| `.backup` / `.backupsc` | Kirim zip backup (kode + web + data, tanpa sesi WA) |
+| `.autobackup` / `.ab` | Toggle auto-backup on/off |
+| `.backupdb` | Kirim database mentah |
+| `.savedb` / `.downloaddb` / `.getdb` | Download berkas database |
 
 ### Multi-bot
 
@@ -136,17 +213,19 @@ pm2 restart web          # aman
 pm2 restart main         # bot terputus ~30 detik
 ```
 
-### Urutan wajib saat mengubah kode di server
-
-`main.js` menjalankan `git fetch` + `git reset --hard origin/main` setiap bot start. Berkas yang diubah di server tapi belum di-push akan hilang saat `pm2 restart main`.
+### Urutan saat mengubah kode di server
 
 ```
 1. edit          →  2. node --check / npx next build
-3. git push      ←  WAJIB sebelum langkah 4
+3. git push      ←  disarankan supaya remote tidak ketinggalan
 4. pm2 restart
 ```
 
-`database/`, `storage/`, `.env`, `admin-settings.json` gitignored, jadi tidak ikut ter-reset.
+> **Git auto-sync default MATI** (sejak v2). Edit di server bertahan walau belum di-push.
+> Untuk mengaktifkan kembali (bot otomatis `git reset --hard` tiap start):
+> tambah `GIT_AUTO_SYNC=1` di `.env`, lalu `pm2 restart main --update-env`.
+
+`database/`, `storage/`, `.env`, `admin-settings.json` gitignored — tidak terpengaruh `git reset` dalam kasus apa pun.
 
 ---
 
