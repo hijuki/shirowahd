@@ -319,19 +319,18 @@ const config = {
   //  APIkey
   APIkey: {
     // kalian bisa daftar di https://api.lolhuman.xyz, lalu ambil apikeynya
-    lolhuman: process.env.APIKEY_LOLHUMAN || "",
+    lolhuman: process.env.APIKEY_LOLHUMAN || "APIKey-Milik-Bot-OurinMD(Zann,HyuuSATANN,Keisya,Danzz)",
     // kalian bisa daftar di https://api.neoxr.eu, lalu ambil apikeynya
-    neoxr: process.env.APIKEY_NEOXR || "",
-    fgsi: process.env.APIKEY_FGSI || "",
+    neoxr: process.env.APIKEY_NEOXR || "Milik-Bot-OurinMD",
+    fgsi: process.env.APIKEY_FGSI || "fgsiapi-20c1605c-6d",
     google: process.env.APIKEY_GOOGLE || "",
-    groq: process.env.APIKEY_GROQ || "", // API Key Groq untuk fitur transkrip (gratis di console.groq.com)
-    betabotz: process.env.APIKEY_BETABOTZ || "",
-    // kalian bisa daftar di https://covenant.sbs, dan ambil apikeynya
-    covenant: process.env.APIKEY_COVENANT || "",
-    onlym: process.env.APIKEY_ONLYM || "",
-    obscura: process.env.APIKEY_OBSCURA || "",
-    firefly: process.env.APIKEY_FIREFLY || "",
-    cuki: process.env.APIKEY_CUKI || ""
+    groq: process.env.APIKEY_GROQ || "",
+    betabotz: process.env.APIKEY_BETABOTZ || "Btz-67YfP",
+    covenant: process.env.APIKEY_COVENANT || "cov_live_bb660c9e5f735e46d808b7ae362914cfe35c2936739ee2b2",
+    onlym: process.env.APIKEY_ONLYM || "ONLym-783d29",
+    obscura: process.env.APIKEY_OBSCURA || "obs-byOn9RVGMzvPXZQTsP9W",
+    firefly: process.env.APIKEY_FIREFLY || "OurinNextGen",
+    cuki: process.env.APIKEY_CUKI || "cuki-x"
   },
 };
 
