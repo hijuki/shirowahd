@@ -1,28 +1,30 @@
-import os from "os";
-import te from "../../src/lib/hillz-error.js";
+import os from 'os';
+import config from '../../config.js';
+import te from '../../src/lib/hillz-error.js';
+import { AIRich } from '../../src/lib/hillz-builder.js';
 
 const pluginConfig = {
-  name: "stats",
-  alias: ["botstats", "status", "stat"],
-  category: "main",
-  description: "Menampilkan statistik bot",
-  usage: ".stats",
-  example: ".stats",
+  name: 'stats',
+  alias: ['botstats', 'serverstats', 'stat'],
+  category: 'main',
+  description: 'Menampilkan statistik performa bot (AIRich Table)',
+  usage: '.stats',
+  example: '.stats',
   isOwner: false,
   isPremium: false,
   isGroup: false,
   isPrivate: false,
-  cooldown: 10,
+  cooldown: 5,
   energi: 0,
-  isEnabled: true,
+  isEnabled: true
 };
 
 function formatBytes(bytes) {
-  if (bytes === 0) return "0 B";
+  if (!bytes || bytes === 0) return '0 B';
   const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
+  const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 function formatUptime(ms) {
@@ -31,20 +33,20 @@ function formatUptime(ms) {
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-
   const parts = [];
   if (days > 0) parts.push(`${days}d`);
   if (hours > 0) parts.push(`${hours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
   if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
-
-  return parts.join(" ");
+  return parts.join(' ');
 }
 
-async function handler(m, { sock, db, uptime, config: botConfig }) {
+async function handler(m, { sock, db, uptime }) {
   try {
-    const users = db.db?.data?.users || {};
-    const groups = db.db?.data?.groups || {};
+    await m.react('📊');
+
+    const users = db?.db?.data?.users || {};
+    const groups = db?.db?.data?.groups || {};
     const memUsed = process.memoryUsage();
     const cpuUsage = os.loadavg()[0].toFixed(2);
     const totalMem = os.totalmem();
@@ -54,42 +56,37 @@ async function handler(m, { sock, db, uptime, config: botConfig }) {
     const totalUsers = Object.keys(users).length;
     const totalGroups = Object.keys(groups).length;
     const premiumUsers = Object.values(users).filter((u) => u.premium).length;
+    const upTimeStr = formatUptime(uptime || (process.uptime() * 1000));
 
-    const statsObj = {
-      bot: botConfig?.bot?.name || "SHIROWAHD",
-      version: `v${botConfig?.bot?.version || "1.0.0"}`,
-      uptime: formatUptime(uptime),
-      database: {
-        users: totalUsers,
-        premium: premiumUsers,
-        groups: totalGroups,
-      },
-      system: {
-        platform: `${os.platform()} ${os.arch()}`,
-        node: process.version,
-        cpuLoad: `${cpuUsage}%`,
-        ram: `${formatBytes(usedMem)} / ${formatBytes(totalMem)}`,
-        heap: `${formatBytes(memUsed.heapUsed)} / ${formatBytes(memUsed.heapTotal)}`,
-      },
-      updated: new Date().toLocaleTimeString("id-ID", {
-        timeZone: "Asia/Jakarta",
-      }),
-    };
-
-    const table = [
-      "📊 Bot Statistics",
-      "Key | Value",
-      `Bot | ${statsObj.bot};;Version | ${statsObj.version};;Uptime | ${statsObj.uptime}`,
-      `Users | ${statsObj.database.users};;Premium | ${statsObj.database.premium};;Groups | ${statsObj.database.groups}`,
-      `Platform | ${statsObj.system.platform};;Node | ${statsObj.system.node};;CPU Load | ${statsObj.system.cpuLoad}`,
-      `RAM | ${statsObj.system.ram};;Heap | ${statsObj.system.heap};;Updated | ${statsObj.updated}`,
+    const rows = [
+      ['Bot Name', config.bot?.name || 'SHIROWAHD'],
+      ['Version', `v${config.bot?.version || '1.0.0'}`],
+      ['Uptime', upTimeStr],
+      ['Total Users', totalUsers.toString()],
+      ['Premium Users', premiumUsers.toString()],
+      ['Total Groups', totalGroups.toString()],
+      ['Platform / Arch', `${os.platform()} ${os.arch()}`],
+      ['Node.js Engine', process.version],
+      ['CPU Load', `${cpuUsage}%`],
+      ['RAM VPS', `${formatBytes(usedMem)} / ${formatBytes(totalMem)}`],
+      ['Process Heap', `${formatBytes(memUsed.heapUsed)} / ${formatBytes(memUsed.heapTotal)}`]
     ];
 
-    await sock.sendTableV2(m.chat, table, m, {
-      title: "📊 Berikut ini adalah statistik dari bot kami",
-      footer: botConfig?.bot?.name,
-    });
+    const aiRich = new AIRich(sock);
+    aiRich.addHeader(`📊 *STATISTIK BOT & SERVER*`);
+    aiRich.addText(`Informasi diagnostik performa server dan database bot realtime.\n`);
+    aiRich.addTable('Server & Bot Metrics', ['Parameter', 'Value'], rows);
+    aiRich.addFooter(`⚡ Powered by ${config.bot?.name || 'SHIROWAHD'}`);
+
+    try {
+      await aiRich.send(m.chat, m);
+    } catch (e) {
+      let textOut = `📊 *STATISTIK BOT & SERVER*\n\n` +
+        rows.map(r => `• *${r[0]}*: \`${r[1]}\``).join('\n');
+      await m.reply(textOut);
+    }
   } catch (error) {
+    await m.react('❌');
     m.reply(te(m.prefix, m.command, m.pushName));
   }
 }
