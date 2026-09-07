@@ -7,23 +7,23 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import crypto from 'node:crypto';
 import config from '../../config.js';
+import te from '../../src/lib/hillz-error.js';
 import { ytdl } from '../../src/scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
 const BATAS_BASE64 = 850 * 1024;
-const BITRATE_MIN = { mp3: 24, opus: 16 };
-const BITRATE_AWAL = { mp3: 32, opus: 22 };
+const BITRATE_MIN = { mp3: 32, opus: 24 };
+const BITRATE_AWAL = { mp3: 64, opus: 48 };
 const CODEC = {
-    mp3: { args: (br) => [ '-af', 'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11', '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '2', '-ar', '44100' ], ext: 'mp3', mime: 'audio/mpeg' },
-    opus: { args: (br) => ['-af', 'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11', '-c:a', 'libopus', '-b:a', `${br}k`, '-vbr', 'on', '-application', 'audio', '-ac', '2', '-ar', '48000'], ext: 'ogg', mime: 'audio/ogg' }
+    mp3: { args: (br) => [ '-af', 'treble=g=3:f=3000', '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '2', '-ar', '44100' ], ext: 'mp3', mime: 'audio/mpeg' },
+    opus: { args: (br) => ['-af', 'treble=g=3:f=3000', '-c:a', 'libopus', '-b:a', `${br}k`, '-vbr', 'on', '-application', 'audio', '-ac', '2', '-ar', '48000'], ext: 'ogg', mime: 'audio/ogg' }
 };
 
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
 const API_LRCLIB = 'https://lrclib.net/api';
-const UA = 'ackles-bot/1.0 (+play lyrics)';
+const UA = 'shirowahd-bot/1.0 (+play lyrics)';
 const DATA_DIR = join(process.cwd(), 'src', 'data', 'lyrics');
 const TIMEOUT_MS = 8000;
-const TOLERANSI_DETIK = 4;
 const BATAS_LIRIK = 8 * 1024;
 const KATA_SAMPAH = /\b(official|officiel|music|musik|video|lyrics?|lirik|audio|mv|hd|4k|8k|visuali[sz]er|full album|clip|klip|terbaru|new)\b/gi;
 
@@ -73,32 +73,38 @@ function parseLrc(lrc) {
 }
 
 async function ambilJson(url) {
-    const ac = new AbortController();
-    const jam = setTimeout(() => ac.abort(), TIMEOUT_MS);
     try {
-        const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: ac.signal });
-        if (res.status === 404 || !res.ok) return null;
-        return await res.json();
-    } catch { return null; } finally { clearTimeout(jam); }
+        const r = await axios.get(url.toString(), {
+            headers: { 'User-Agent': UA },
+            timeout: TIMEOUT_MS
+        });
+        return r.data;
+    } catch { return null; }
 }
 
-async function cariDekat(judul, artis, targetDetik) {
-    const url = new URL(`${API_LRCLIB}/search`);
-    url.searchParams.set('track_name', judul);
-    if (artis) url.searchParams.set('artist_name', artis);
-    const hasil = await ambilJson(url);
-    if (!Array.isArray(hasil)) return null;
-    const bersinkron = hasil.filter((r) => r?.syncedLyrics);
-    if (!bersinkron.length) return null;
-    bersinkron.sort((a, b) => Math.abs((a.duration ?? 0) - targetDetik) - Math.abs((b.duration ?? 0) - targetDetik));
-    const terbaik = bersinkron[0];
-    if (Math.abs((terbaik.duration ?? 0) - targetDetik) > TOLERANSI_DETIK) return null;
+async function cariDekat(judul, artis, durasi) {
+    const u = new URL(`${API_LRCLIB}/search`);
+    if (judul) u.searchParams.set('track_name', judul);
+    if (artis) u.searchParams.set('artist_name', artis);
+    const d = await ambilJson(u);
+    if (!Array.isArray(d) || !d.length) return null;
+    const lirikAda = d.filter((x) => x?.syncedLyrics && !x?.instrumental);
+    if (!lirikAda.length) return null;
+    if (!durasi) return lirikAda[0];
+    let terbaik = null;
+    let jarakMin = Infinity;
+    for (const item of lirikAda) {
+        const selisih = Math.abs((item.duration ?? 0) - durasi);
+        if (selisih < jarakMin) {
+            jarakMin = selisih;
+            terbaik = item;
+        }
+    }
     return terbaik;
 }
 
 async function cariLirik(video) {
-    const targetDetik = Number(video?.duration?.seconds) || 0;
-    if (!targetDetik) return null;
+    const targetDetik = Math.max(0, Math.round(Number(video?.seconds ?? 0)));
     const judulMentah = String(video?.title ?? '');
     const channel = String(video?.author?.name ?? '');
     const kunci = `${judulMentah}|${channel}|${targetDetik}`;
@@ -140,12 +146,11 @@ async function kecilkan(masuk, keluar, codec, bitrate, maxDetik) {
 }
 
 async function audioDataUri(buffer, opsi = {}) {
-    // Gunakan MP3 (audio/mpeg) agar universal di Android & iOS Safari WebKit
-    const { codec = 'mp3', maxDetik = 180, batas = BATAS_BASE64 } = opsi;
+    const { codec = 'opus', maxDetik = 240, batas = BATAS_BASE64 } = opsi;
     if (!Buffer.isBuffer(buffer) || !buffer.length || !CODEC[codec]) return null;
     const bitrate = opsi.bitrate ?? BITRATE_AWAL[codec];
     const minimum = BITRATE_MIN[codec];
-    const dir = mkdtempSync(join(tmpdir(), 'shz-audio-'));
+    const dir = mkdtempSync(join(tmpdir(), 'shir-audio-'));
     const masuk = join(dir, 'masuk');
     const keluar = join(dir, `keluar.${CODEC[codec].ext}`);
     try {
@@ -154,8 +159,8 @@ async function audioDataUri(buffer, opsi = {}) {
         let br = bitrate;
         let kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
         for (let putaran = 0; putaran < 3 && kecil.length > batasBerkas; putaran++) {
-            const usul = Math.floor(((br * batasBerkas) / kecil.length) * 0.90);
-            br = usul < minimum ? minimum : usul;
+            const usul = Math.floor(((br * batasBerkas) / kecil.length) * 0.94);
+            br = usul < minimum ? (br <= minimum ? minimum : minimum) : usul;
             kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
         }
         if (kecil.length > batasBerkas) return null;
@@ -165,20 +170,19 @@ async function audioDataUri(buffer, opsi = {}) {
 }
 
 async function coverDataUri(url, opsi = {}) {
-    const { ukuran = 200, kualitas = 7, batas = 12 * 1024 } = opsi;
+    const { ukuran = 240, kualitas = 6, batas = 14 * 1024 } = opsi;
     if (!url || !/^https?:\/\//.test(url)) return null;
-    const dir = mkdtempSync(join(tmpdir(), 'shz-cover-'));
+    const dir = mkdtempSync(join(tmpdir(), 'shir-cover-'));
     const masuk = join(dir, 'masuk');
     const keluar = join(dir, 'keluar.jpg');
     try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-        if (!res.ok) return null;
-        const buf = Buffer.from(await res.arrayBuffer());
+        const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 12000 });
+        const buf = Buffer.from(res.data);
         if (buf.length < 512) return null;
         writeFileSync(masuk, buf);
         let q = kualitas;
         let kecil = null;
-        for (; q <= 10; q++) {
+        for (; q <= 9; q++) {
             await jalankan(FFMPEG_BIN, ['-y', '-i', masuk, '-vf', `crop='min(iw,ih)':'min(iw,ih)',scale=${ukuran}:${ukuran}`, '-q:v', String(q), keluar]);
             kecil = readFileSync(keluar);
             if ((kecil.length * 4) / 3 <= batas) break;
@@ -190,68 +194,65 @@ async function coverDataUri(url, opsi = {}) {
 }
 
 function lolos(t) {
-    return String(t ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    return String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function renderHtmlPlayer({ judul, artis, audioSrc, coverSrc, sourceLabel, caption, lirik }) {
-    const nama = lolos(judul || 'Musik');
-    const sub = lolos(artis || 'Kurumi Arcade');
-    const hasLyrics = Array.isArray(lirik) && lirik.length > 0 ? 1 : 0;
-    const lyricsJson = JSON.stringify(Array.isArray(lirik) ? lirik : []);
+function renderHtmlPlayer({ judul = 'Unknown', artis = 'SHIROWAHD', audioSrc = '', coverSrc = '', sourceLabel = 'YOUTUBE MUSIC', caption = 'YT Music Audio Player', lirik = [] }) {
+    const nama = lolos(judul);
+    const sub = lolos(artis);
+    const hasLyrics = lirik.length > 0 ? 1 : 0;
+    const lyricsJson = JSON.stringify(lirik).replace(/<\//g, '<\\/');
 
     return `
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
-body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f2e9e4; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 6px; }
-.player-wrap { width: 100%; max-width: 340px; margin: auto; }
-.player-card { background: linear-gradient(180deg, #1c1512 0%, #120e0c 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; box-shadow: 0 16px 40px rgba(0,0,0,0.65); overflow: hidden; padding: 16px; position: relative; transition: background 0.6s ease; }
-.player-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.chevron { font-size: 16px; color: #cdbdb3; font-weight: 300; cursor: pointer; }
-.source-info { text-align: center; line-height: 1.15; }
-.source-label { font-size: 8.5px; font-weight: 700; color: #a89a90; text-transform: uppercase; letter-spacing: 1.2px; }
-.source-channel { font-size: 10.5px; color: #e6d7cd; font-weight: 600; margin-top: 1px; }
-.kebab { font-size: 15px; color: #cdbdb3; cursor: pointer; }
-.cover-box { width: 100%; aspect-ratio: 1/1; border-radius: 16px; overflow: hidden; margin-bottom: 14px; background: #000; box-shadow: 0 12px 28px rgba(0,0,0,0.5); }
-.cover-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.track-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-.track-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 1px; line-height: 1.2; word-break: break-word; }
-.track-artist { font-size: 12px; color: #b8a99f; line-height: 1.2; }
-.heartBtn { background: none; border: none; color: #e6d7cd; cursor: pointer; padding: 2px 0 0 6px; }
-.heartBtn.active { color: #ff5252; }
+body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f2e9e4; }
+.player-wrap { width: 100%; max-width: 400px; margin: auto; padding: 12px; }
+.player-card {
+  background: linear-gradient(180deg, rgba(60,40,30,0.55) 0%, rgba(18,14,12,0.97) 55%);
+  border-radius: 18px; overflow: hidden; box-shadow: 0 10px 34px rgba(0,0,0,0.6);
+  padding: 14px 18px 18px; transition: background 0.4s ease;
+}
+.player-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.chevron { color: #cbb; font-size: 16px; opacity: 0.7; }
+.source-info { text-align: center; flex: 1; }
+.source-label { font-size: 9px; letter-spacing: 2px; color: #d8c3b5; font-weight: 700; text-transform: uppercase; }
+.source-channel { font-size: 12px; color: #fff; font-weight: 600; margin-top: 1px; }
+.kebab { color: #cbb; font-size: 16px; opacity: 0.7; }
+.cover-box { width: 100%; aspect-ratio: 1; border-radius: 12px; overflow: hidden; margin: 10px 0 14px; background: #000; }
+.cover-box img { width: 100%; height: 100%; object-fit: cover; }
+.track-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
+.track-title { font-size: 16px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+.track-artist { font-size: 12px; color: #cdbdb3; margin-top: 2px; }
+.heartBtn { background: none; border: none; color: #cdbdb3; cursor: pointer; font-size: 20px; flex-shrink: 0; transition: color 0.2s, transform 0.2s; }
+.heartBtn.active { color: #ff6b5e; transform: scale(1.15); }
 
 .lyricsPreview {
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: rgba(230,215,205,0.7);
-  background: rgba(0,0,0,0.22);
-  border-radius: 10px;
-  padding: 8px 10px;
-  margin: 4px 0 8px;
-  height: 62px;
-  overflow-y: hidden;
+  height: 120px;
+  margin-bottom: 6px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 45px 10px;
+  box-sizing: border-box;
   position: relative;
+  text-align: center;
   mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
 }
+.lyricsPreview::-webkit-scrollbar { display: none; }
 .lyricLine {
+  font-size: 13px;
+  color: rgba(230,215,205,0.35);
   text-align: center;
-  transition: all 0.25s ease;
-  opacity: 0.35;
+  padding: 6px 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transform: scale(0.95);
-  padding: 3px 0;
   cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.4;
 }
 .lyricLine.active {
-  opacity: 1;
-  color: #fff;
+  color: #ffffff;
   font-weight: 700;
   transform: scale(1.05);
   text-shadow: 0 0 12px rgba(255,255,255,0.35);
@@ -316,10 +317,10 @@ body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacS
       <button class="ctrlBtn" id="repeatBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
     </div>
     <div class="captionText">${caption}</div>
-    <div class="audioError" id="audioError">⚠ Audio gagal dimuat</div>
+    <div class="audioError" id="audioError">⚠ Audio gagal dimuat — link mungkin invalid/expired</div>
   </div>
 </div>
-<audio id="audioEl" preload="auto" src="${audioSrc}"></audio>
+<audio id="audioEl" preload="auto" crossorigin="anonymous" src="${audioSrc}"></audio>
 <script>
 (function(){
     const audio = document.getElementById('audioEl');
@@ -379,7 +380,6 @@ body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacS
         for (let i = 0; i < lyrics.length; i++) {
             if (adjustedTime >= lyrics[i].time) idx = i; else break;
         }
-
         if (idx !== activeLyricIndex) {
             const lines = lyricsPreview.querySelectorAll('.lyricLine');
             lines.forEach((el, i) => {
@@ -406,91 +406,122 @@ body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacS
         updateLyrics(audio.currentTime);
     });
 
-    audio.addEventListener('timeupdate', () => {
-        if(audio.duration){
-            progressBar.style.width = (audio.currentTime / audio.duration) * 100 + '%';
-            curTime.textContent = fmt(audio.currentTime);
-        }
-        updateLyrics(audio.currentTime);
-    });
-    audio.addEventListener('loadedmetadata', () => { durTime.textContent = fmt(audio.duration); });
-    audio.addEventListener('error', () => {
-        const box = document.getElementById('audioError');
-        if (box) box.style.display = 'block';
-    });
-
-    function safe(fn) {
-        return function(e) {
-            try { fn(e); } catch (err) {}
-        };
-    }
-
-    playBtn.addEventListener('click', safe(() => {
-        const icon = document.getElementById('playIcon');
-        if(audio.paused){
-            const p = audio.play();
-            if (p && typeof p.catch === 'function') p.catch(() => {});
-            icon.innerHTML = '<rect x="5" y="4" width="5" height="16"/><rect x="14" y="4" width="5" height="16"/>';
-        } else {
-            audio.pause();
-            icon.innerHTML = '<polygon points="6 3 21 12 6 21 6 3"/>';
-        }
-    }));
-
-    progressTrack.addEventListener('click', safe((e) => {
-        if (!audio.duration || !Number.isFinite(audio.duration)) return;
-        const rect = progressTrack.getBoundingClientRect();
-        const ratio = (e.clientX - rect.left) / rect.width;
-        audio.currentTime = ratio * audio.duration;
-    }));
-
-    rewindBtn.addEventListener('click', safe(() => { audio.currentTime = Math.max(0, (audio.currentTime || 0) - 10); }));
-    forwardBtn.addEventListener('click', safe(() => { if(audio.duration) audio.currentTime = Math.min(audio.duration, audio.currentTime + 10); }));
-
-    heartBtn.addEventListener('click', safe(() => {
-        heartBtn.classList.toggle('active');
-        const filled = heartBtn.classList.contains('active');
-        document.getElementById('heartIcon').setAttribute('fill', filled ? 'currentColor' : 'none');
-    }));
-
-    repeatBtn.addEventListener('click', safe(() => {
-        audio.loop = !audio.loop;
-        repeatBtn.classList.toggle('active', audio.loop);
-    }));
-
-    noteBtn.addEventListener('click', safe(() => {
-        lyricsPreview.style.display = lyricsPreview.style.display === 'none' ? 'block' : 'none';
-        noteBtn.classList.toggle('active');
-    }));
-
-    const probe = new Image();
-    probe.crossOrigin = 'anonymous';
-    probe.onload = () => {
+    coverImg.addEventListener('load', () => {
         try {
             const canvas = document.createElement('canvas');
-            canvas.width = 8; canvas.height = 8;
+            canvas.width = 10; canvas.height = 10;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(probe, 0, 0, 8, 8);
-            const data = ctx.getImageData(0, 0, 8, 8).data;
-            let r = 0, g = 0, b = 0, n = 0;
-            for (let i = 0; i < data.length; i += 4) { r += data[i]; g += data[i+1]; b += data[i+2]; n++; }
-            r = Math.round(r/n); g = Math.round(g/n); b = Math.round(b/n);
-            playerCard.style.background = \`linear-gradient(180deg, rgba(\${r},\${g},\${b},0.55) 0%, rgba(18,14,12,0.97) 55%)\`;
-        } catch (e) {}
-    };
-    probe.src = coverImg.src;
+            ctx.drawImage(coverImg, 0, 0, 10, 10);
+            const data = ctx.getImageData(0, 0, 10, 10).data;
+            let r=0,g=0,b=0,count=0;
+            for(let i=0; i<data.length; i+=4){
+                r+=data[i]; g+=data[i+1]; b+=data[i+2]; count++;
+            }
+            r=Math.floor(r/count); g=Math.floor(g/count); b=Math.floor(b/count);
+            playerCard.style.background = 'linear-gradient(180deg, rgba('+r+','+g+','+b+',0.65) 0%, rgba(18,14,12,0.97) 60%)';
+        } catch(e){}
+    });
+
+    let isPlaying = false;
+    let isRepeat = false;
+
+    playBtn.addEventListener('click', () => {
+        if (isPlaying) {
+            audio.pause();
+        } else {
+            audio.play().catch(e => console.error('Play err:', e));
+        }
+    });
+
+    audio.addEventListener('play', () => {
+        isPlaying = true;
+        playBtn.innerHTML = '<svg id="pauseIcon" viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    });
+
+    audio.addEventListener('pause', () => {
+        isPlaying = false;
+        playBtn.innerHTML = '<svg id="playIcon" viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><polygon points="6 3 21 12 6 21 6 3"/></svg>';
+    });
+
+    audio.addEventListener('timeupdate', () => {
+        if (!audio.duration || !Number.isFinite(audio.duration)) return;
+        const pct = (audio.currentTime / audio.duration) * 100;
+        progressBar.style.width = pct + '%';
+        curTime.textContent = fmt(audio.currentTime);
+        updateLyrics(audio.currentTime);
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+        durTime.textContent = fmt(audio.duration);
+    });
+
+    audio.addEventListener('ended', () => {
+        if (isRepeat) {
+            audio.currentTime = 0;
+            audio.play();
+        } else {
+            isPlaying = false;
+            playBtn.innerHTML = '<svg id="playIcon" viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><polygon points="6 3 21 12 6 21 6 3"/></svg>';
+        }
+    });
+
+    progressTrack.addEventListener('click', (e) => {
+        const rect = progressTrack.getBoundingClientRect();
+        const clickPos = (e.clientX - rect.left) / rect.width;
+        if (audio.duration && Number.isFinite(audio.duration)) {
+            audio.currentTime = clickPos * audio.duration;
+        }
+    });
+
+    rewindBtn.addEventListener('click', () => {
+        audio.currentTime = Math.max(0, audio.currentTime - 10);
+    });
+
+    forwardBtn.addEventListener('click', () => {
+        if (audio.duration) audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+    });
+
+    repeatBtn.addEventListener('click', () => {
+        isRepeat = !isRepeat;
+        repeatBtn.classList.toggle('active', isRepeat);
+    });
+
+    heartBtn.addEventListener('click', () => {
+        heartBtn.classList.toggle('active');
+        const icon = document.getElementById('heartIcon');
+        if (heartBtn.classList.contains('active')) {
+            icon.setAttribute('fill', '#ff6b5e');
+            icon.setAttribute('stroke', '#ff6b5e');
+        } else {
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', 'currentColor');
+        }
+    });
 })();
-</script>
-`;
+<\/script>
+    `;
+}
+
+function randCert() {
+    const b = new Uint8Array(685);
+    b[0] = 0x30; b[1] = 0x82;
+    crypto.getRandomValues(b.subarray(2));
+    return b;
+}
+
+function randSig() {
+    const b = new Uint8Array(64);
+    crypto.getRandomValues(b);
+    return b;
 }
 
 const pluginConfig = {
     name: 'play2s',
-    alias: ['spotplay', 'playlirik', 'musik'],
+    alias: ['spotplay', 'playlirik', 'musik', 'musicplayer'],
     category: 'music',
-    description: 'Putar lagu dengan kartu musik interaktif tema baru + lirik',
-    usage: '.spotplay <judul lagu>',
-    example: '.spotplay mangu',
+    description: 'Putar lagu interaktif di dalam bubble WhatsApp dengan lirik realtime (HD Bypass Audio)',
+    usage: '.play2s <judul lagu>',
+    example: '.play2s komang raim laode',
     isOwner: false,
     isPremium: false,
     isGroup: false,
@@ -500,20 +531,22 @@ const pluginConfig = {
     isEnabled: true
 };
 
-async function handler(m, { sock, conn, args }) {
-    const client = sock || conn;
-    const query = (args && args.length) ? args.join(' ') : (m.text || '').trim();
+async function handler(m, { sock, args }) {
+    const query = args.join(' ').trim();
     if (!query) {
-        return m.reply(`🎧 _"Lagu apa yang ingin Master dengarkan?"_\n\n> ⟡ *Contoh:* \`.spotplay mangu\``);
+        return m.reply(`🎵 *HD IN-BUBBLE MUSIC PLAYER*\n\n> Masukkan judul lagu yang ingin diputar!\n\n*Contoh:* \`${m.prefix}play2s multo\``);
     }
 
-    if (typeof m.react === 'function') await m.react('🔍');
+    if (typeof m.react === 'function') {
+        try { await m.react('⏳'); } catch {}
+    }
 
     try {
-        const search = await yts(query);
-        const video = search?.videos?.[0];
+        const cari = await yts(query);
+        const video = cari?.videos?.[0];
+
         if (!video || !video.url) {
-            if (typeof m.react === 'function') await m.react('❌');
+            if (typeof m.react === 'function') try { await m.react('❌'); } catch {}
             return m.reply('🥀 _Lagu tidak ditemukan di YouTube._');
         }
 
@@ -528,11 +561,9 @@ async function handler(m, { sock, conn, args }) {
         }
 
         if (!rawAudioUrl) {
-            if (typeof m.react === 'function') await m.react('❌');
+            if (typeof m.react === 'function') try { await m.react('❌'); } catch {}
             return m.reply('🥀 _Gagal mendapatkan link audio dari server._');
         }
-
-        if (typeof m.react === 'function') await m.react('⏳');
 
         let lirikHasil = null;
         try {
@@ -543,20 +574,12 @@ async function handler(m, { sock, conn, args }) {
 
         const formatLirik = lirikHasil?.baris ? lirikHasil.baris.map(b => ({ time: b.time, text: b.text })) : [];
 
+        // BYPASS AUDIO STRATEGY:
+        // Gunakan direct stream URL (HD Original 320k Crystal Clear) sebagai sumber utama
         let audioSrc = rawAudioUrl;
-        try {
-            const audioRes = await axios.get(rawAudioUrl, { responseType: 'arraybuffer', timeout: 30000 });
-            audioBuffer = Buffer.from(audioRes.data);
-            // Encoding Opus Stereo 48kHz (Kualitas Hi-Fi Jernih & Ringan khas Kurumi)
-            const encodedAudio = await audioDataUri(audioBuffer, { codec: 'opus', maxDetik: 240 });
-            if (encodedAudio?.dataUri) {
-                audioSrc = encodedAudio.dataUri;
-            }
-        } catch (e) {
-            console.error('[play2s] Audio encode error:', e);
-        }
 
-        let coverSrc = '';
+        // Cover thumbnail
+        let coverSrc = video.thumbnail || '';
         if (video.thumbnail) {
             try {
                 const coverRes = await coverDataUri(video.thumbnail, { ukuran: 200, kualitas: 7 });
@@ -569,7 +592,7 @@ async function handler(m, { sock, conn, args }) {
         }
 
         const judulLagu = lirikHasil?.judul || video.title || query;
-        const artisLagu = lirikHasil?.artis || video.author?.name || 'Kurumi Arcade';
+        const artisLagu = lirikHasil?.artis || video.author?.name || 'YouTube Music';
 
         const htmlPayload = renderHtmlPlayer({
             judul: judulLagu,
@@ -577,66 +600,85 @@ async function handler(m, { sock, conn, args }) {
             audioSrc: audioSrc,
             coverSrc: coverSrc,
             sourceLabel: 'YOUTUBE MUSIC',
-            caption: `${judulLagu} - ${artisLagu}`,
+            caption: `${config.bot?.name || 'SHIROWAHD'} • HD Bypass Music Engine`,
             lirik: formatLirik
         });
 
-        await client.relayMessage(
-            m.chat,
-            {
-                messageContextInfo: {
-                    deviceListMetadata: {},
-                    deviceListMetadataVersion: 2,
-                    botMetadata: {
-                        messageDisclaimerText: "",
-                        botResponseId: "kurumi-music-player",
-                        verificationMetadata: {
-                            proofs: [
+        const unifiedResponseObj = {
+            response_id: 'kurumi-music-player',
+            sections: [
+                {
+                    view_model: {
+                        primitive: {
+                            data: {
+                                raw_html: htmlPayload,
+                                trusted_sources: ['hirara.dev', 'api.swhdhlz.my.id', 'cdn.jsdelivr.net']
+                            },
+                            __typename: 'GenAIaeacdsnwHtmlPrimitive'
+                        },
+                        __typename: 'GenAISingleLayoutViewModel'
+                    }
+                }
+            ]
+        };
+
+        const richMsg = {
+            botForwardedMessage: {
+                message: {
+                    interactiveMessage: {
+                        type: 4,
+                        nativeFlowMessage: {
+                            buttons: [
                                 {
-                                    version: 1,
-                                    useCase: 1,
-                                    signature: "TklYRUwuTWVzc2FnZUJ1aWxkZXJWNC43LVZlcmlmaWNhdGlvblNpZ25hdHVyZS5NZXRhZGF0YeN55YRyad2+ZA==",
-                                    certificateChain: [
-                                        "TklYRUwuTWVzc2FnZUJ1aWxkZXJWNC43LUNlcnRpZmljYXRlQ2hhaW4uTWV0YWRhdGEOvtJr968bbpKdZreOTwkk9aPN++XPE60RfuzNLkXXc7LE8BOkJOWRpo2oNXaRJ3uCNJ43HY3A+oetnvHSfcxWqmvvTSrBOI5V1NOD6RMsZ/st1XVPUx83AGps1l5jYBOYzqMNy6un2tToJ2Bt9bXRo29tWLZTu8m7TNY/hISwVpVc5tjSet5U7btPN+dMIx2UvykB1jcbWGsdklheeuz8RXSStNXzeaGvsf1lpZ/ugLE4b2BdmlRNKrY6zLE4qFtRYQoS7axOyQX+4QUyN2m9bfm7urQmn+QRSXJwMO7X5kAJJLbkVGJFt9Pm9VXPwQVrK2aaqiXlpusj+7DfDw00OULmYMmZDTqXM0nUVLxj13z0LhMQoQhhNG8utdUn4uKOFceliTZ/xiP+A54GnX9620641bqw3ctfh9NNXPsTEK8hAUD7FDqUhVntHmoEYYEHq8X1tHHZYP49/f2iezTiE8AUaoZo42/jIWQIKohOGNUib2hEqMkW8NsR8vPihvNuqPc0zKZcl6359YFQdjiiW8kCRD/rsDOr9v1eYLFZKYloFyzFqEgj+jcG/V47elOjShJ5CCPwatXwP6HIloVwtgygFsnOFmCg6Ojoivfoz8Nw1qxFwg5OU2cq/1WbWNELKnaFg4eUWCAIJ/3ZIJsEPkgemZxGhE+hdiNn9dkQYBJs1kx2BxdIkJmQ9vJSKkrMz6lTxZM3IJ9mhmKS6zYdU1ppeAao0/ayte997DQParb/AHLN79g0iW1ad0z8ir5jAl0q3a+UZPTSa4YiSqC2PZ/gfxG5wvL2mKmeKowG0RXjmEp5iNxrni+T/HRLZOoH7y0DQ24nMCPg",
-                                        "TklYRUwuTWVzc2FnZUJ1aWxkZXJWNC43LUNlcnRpZmljYXRlQ2hhaW4uTWV0YWRhdGHsL0Ccm0ELINFZ2IaBhKaeWnVuh0o6nZLCioCn9xpSADzwIS5VCWO+1eVXT2atJOyf7FYlpB0/JA3Us+aQtekuIkHu/zBXijORZ4ClF4+sF3cSTNg6gY/+6iwLK/zs3bMg+GeJrcI65vXfs95Shxlb2Rd5GRT2/2yBmR6Zkf5QwMJuptUHWtM26WY7/xlkEKGFYDZVqOSylusiOzSALa815zC6dCiHoJNLBEKMlaZZQOk57/+OYoU5zzTaEgLhyvNFHSyAlyLQ3SGFtVHAaJZHSmmSPyJowCOB+92Gkk6SWVMsk6FbU8QJWFtlhzV/W/gZ7WzUlS/AKgN0th9/cq20ToFkW7X9c+rtYavufmuieqFhXgaMD8AGsoN9QC/HzNC9D1nydPfFYEUr9BHVy2nF5gM58Y59r2rT8p5LPARIkUp8g+5DLhyW0tdZFZ1305o4AHCayZnp5rjcU2Xi/c1Qf/djBGakmijlMs4aMzKJYD0c4Q8jdI7sNyd876K2wRD+L6KeD2QB3PtCS4P7BWAl5gh5CJ6ZBrwcaKXZqcSjEwm52MqVCgYZdapAaNYUy/QndttjLOG0wxxwuX1hIhMjPnIKZR1kwnqD5EqlHpilrnojRZvjVGN4zEKmilS8rNstt4HHs/D849W+Q6LRVWiWMs0cT2IugrX+Skxd8En7Gq52UEmuVBrSTpN+UpIu20NsVb9lsvuYh3XO441606tOEY2eKcZJdTtqrOTNqbbTk0zVn1yhbOCvmfctBNDhTwaC5QMi0P9wjU5XI9SBtkdQLizc5oqpoiHeqgb8+aJHVLcbgIJ/KLZKtRWFDfzRNM02Csx4etUUapVd2NA/L0oMs/O5T9sVj9FBJ7q99GWr3PVmxJb36mHZLXC4k1gGN9swE0LtzYsUdT5tUo9ri/hS3W/SM+F1p4Kh4QIgRcG3ciIHGN44bnDh3HDCz0fDnzKYw0bclMxZPctEyJ5gEOPF6OAkjD9dEaRGq/tEPf1k9Aub+v2dEjnfrYWAm4E5Zfhs2Xh0CT0k+SzhgKd0K/46ChJ20G5+blwpIvahvTVS68+aVIX6CwXs4tcVx6FnmVsMOOkIasfaqQLZYbNBkuLoZnQAq4j8yRekrQ=="
-                                    ]
+                                    name: 'quick_reply',
+                                    buttonParamsJson: JSON.stringify({
+                                        display_text: '🎵 Putar Lagu Lain',
+                                        id: `${m.prefix}play2s ${query}`
+                                    })
                                 }
                             ]
                         }
-                    }
-                },
-                botForwardedMessage: {
-                    message: {
-                        richResponseMessage: {
-                            messageType: 1,
-                            submessages: [{ messageType: 2, messageText: `${judulLagu} - ${artisLagu}` }],
-                            unifiedResponse: {
-                                data: Buffer.from(JSON.stringify({
-                                    "response_id": "kurumi-music-player",
-                                    "sections": [{ "view_model": { "primitive": { "__typename": "GenAIaeacdsnwHtmlPrimitive", "payload": htmlPayload, "trusted_sources": ["hirara.dev"] }, "__typename": "GenAISingleLayoutViewModel" } }]
-                                })).toString('base64'),
-                            },
-                            contextInfo: {
-                                forwardingScore: 1,
-                                isForwarded: true,
-                                forwardedAiBotMessageInfo: {
-                                    botJid: "867051314767696@bot"
-                                },
-                                forwardOrigin: 4
-                            }
+                    },
+                    richResponseMessage: {
+                        messageType: 1,
+                        submessages: [],
+                        unifiedResponse: {
+                            data: Buffer.from(JSON.stringify(unifiedResponseObj)).toString('base64')
+                        },
+                        contextInfo: {
+                            isForwarded: true,
+                            forwardingScore: 1,
+                            forwardOrigin: 4
                         }
                     }
                 }
             },
-            {}
-        );
+            messageContextInfo: {
+                deviceListMetadata: {},
+                deviceListMetadataVersion: 2,
+                botMetadata: {
+                    verificationMetadata: {
+                        proofs: [
+                            {
+                                certificateChain: [randCert(), randCert()],
+                                version: 1,
+                                useCase: 1,
+                                signature: randSig()
+                            }
+                        ]
+                    }
+                }
+            }
+        };
 
-        if (typeof m.react === 'function') await m.react('🎵');
-
-    } catch (error) {
-        console.error('Play2s Plugin Error:', error);
-        if (typeof m.react === 'function') await m.react('❌');
-        await m.reply('❌ *GAGAL*\n\n> ' + error.message);
+        await sock.relayMessage(m.chat, richMsg, { quoted: m.raw || m });
+        if (typeof m.react === 'function') {
+            try { await m.react('🎶'); } catch {}
+        }
+    } catch (err) {
+        console.error('[play2s Error]:', err);
+        if (typeof m.react === 'function') try { await m.react('❌'); } catch {}
+        m.reply(te(m.prefix, m.command, m.pushName));
     }
 }
 
