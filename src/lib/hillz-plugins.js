@@ -773,7 +773,8 @@ function getDetailedPluginsList() {
     visitedPaths.add(filePath);
 
     const relPath = path.relative(process.cwd(), plugin.filePath).replace(/\\/g, "/");
-    const name = plugin.config?.name || path.basename(plugin.filePath, ".js");
+    const rawName = Array.isArray(plugin.config?.name) ? plugin.config.name[0] : plugin.config?.name;
+    const name = String(rawName || path.basename(plugin.filePath, ".js")).trim();
     const isOff = apakahPluginMati(name) || apakahPluginMati(relPath) || disabledSet.has(name);
     const isUnreachable = unreachables.has(filePath);
     const loadErr = loadErrorsMap.get(filePath) || null;
