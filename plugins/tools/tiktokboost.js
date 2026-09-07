@@ -15,54 +15,131 @@ const pluginConfig = {
   isPrivate: false,
   cooldown: 15,
   energi: 2,
-  isEnabled: true
+  isEnabled: true,
 };
 
+/**
+ * Resolve shortlink TikTok (vt.tiktok.com / vm.tiktok.com) ke canonical URL
+ */
+async function resolveTikTokUrl(url) {
+  if (!url.includes('vt.tiktok.com') && !url.includes('vm.tiktok.com') && !url.includes('/t/')) {
+    return url;
+  }
+  try {
+    const res = await axios.get(url, {
+      maxRedirects: 10,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      },
+      timeout: 8000,
+      validateStatus: (status) => status >= 200 && status < 400,
+    });
+    return res.request?.res?.responseUrl || res.config?.url || url;
+  } catch (err) {
+    if (err.response?.headers?.location) {
+      return err.response.headers.location;
+    }
+    return url;
+  }
+}
+
+/**
+ * Ekstraksi video ID dari berbagai bentuk URL TikTok
+ */
+function extractVideoId(url) {
+  const match = url.match(/\/video\/(\d+)/i) || url.match(/\/v\/(\d+)/i) || url.match(/item_id=(\d+)/i);
+  return match ? match[1] : null;
+}
+
+/**
+ * Mengambil metadata TikTok menggunakan TikWM API dengan parameter lengkap
+ */
 async function getTikTokDetails(url) {
   try {
-    const res = await axios.post('https://tikwm.com/api/', new URLSearchParams({ url, count: '12', cursor: '0', web: '1', hd: '1' }), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-      timeout: 10000
-    });
-    if (res.data?.code === 0 && res.data?.data) {
-      return res.data.data;
+    const balasan = (
+      await axios.post(
+        'https://www.tikwm.com/api/',
+        {},
+        {
+          headers: {
+            Accept: 'application/json, text/javascript, */*; q=0.01',
+            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            Origin: 'https://www.tikwm.com',
+            Referer: 'https://www.tikwm.com/',
+            'Sec-Ch-Ua': '"Not)A;Brand" ;v="24" , "Chromium" ;v="116"',
+            'Sec-Ch-Ua-Mobile': '?1',
+            'Sec-Ch-Ua-Platform': 'Android',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'User-Agent':
+              'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          params: { url, count: 12, cursor: 0, web: 1, hd: 1 },
+          timeout: 8000,
+        }
+      )
+    ).data;
+
+    if (balasan?.code === 0 && balasan?.data) {
+      return balasan.data;
     }
-  } catch {}
+  } catch (e) {}
   return null;
 }
 
-async function injectViews(videoUrl, videoId) {
+/**
+ * Engine injection view & traffic ping ke CDN TikTok & booster services
+ */
+async function injectViews(resolvedUrl, videoId, videoPlayUrl) {
   const userAgents = [
-    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
-    'Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet',
-    'com.zhiliaoapp.musically/2022600030 (Linux; U; Android 12; en_US; Pixel 6; Build/SQ3A.220705.004)'
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+    'TikTok 31.5.3 rv:315303 (iPhone; iOS 16.6; en_US) Cronet',
+    'com.zhiliaoapp.musically/2023405030 (Linux; U; Android 13; id_ID; SM-G998B; Build/TP1A.220624.014)',
   ];
 
-  const boosterApis = [
-    `https://omegatech-api.dixonomega.tech/api/Fun/Tiktok-booster?action=boost&url=${encodeURIComponent(videoUrl)}`,
-    `https://api.vreden.my.id/api/tiktok/boost?url=${encodeURIComponent(videoUrl)}`
-  ];
+  // Target injection endpoints
+  const targets = [];
+  if (videoPlayUrl) targets.push(videoPlayUrl);
+  if (resolvedUrl) targets.push(resolvedUrl);
 
-  // 1. Kirim ke booster API queue eksternal jika ada yang responsif
-  for (const api of boosterApis) {
-    axios.get(api, { timeout: 5000 }).catch(() => null);
+  // 1. Concurrent Traffic Packets ke CDN & Link Page
+  const pings = [];
+  for (const target of targets) {
+    for (const ua of userAgents) {
+      pings.push(
+        axios
+          .get(target, {
+            headers: {
+              'User-Agent': ua,
+              Referer: 'https://www.tiktok.com/',
+              Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+              'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8',
+            },
+            timeout: 5000,
+            maxRedirects: 3,
+          })
+          .catch(() => null)
+      );
+    }
   }
 
-  // 2. Dispatch multi-stream view ping batch langsung ke server CDN
-  const pings = userAgents.map(async (ua) => {
-    try {
-      await axios.get(videoUrl, {
-        headers: {
-          'User-Agent': ua,
-          'Referer': 'https://www.tiktok.com/',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-        },
-        timeout: 4000
-      });
-    } catch {}
-  });
+  // 2. Micro booster trigger API
+  if (videoId) {
+    const boosterServices = [
+      `https://api.vreden.my.id/api/tiktok/boost?url=${encodeURIComponent(resolvedUrl)}`,
+      `https://omegatech-api.dixonomega.tech/api/Fun/Tiktok-booster?action=boost&url=${encodeURIComponent(resolvedUrl)}`,
+    ];
+    for (const api of boosterServices) {
+      pings.push(axios.get(api, { timeout: 4000 }).catch(() => null));
+    }
+  }
 
   await Promise.allSettled(pings);
   return true;
@@ -70,52 +147,78 @@ async function injectViews(videoUrl, videoId) {
 
 async function handler(m, { sock, args }) {
   const textMsg = m.text || '';
-  const text = (args && args.length) ? args.join(' ') : textMsg.trim().split(/ +/).slice(1).join(' ');
+  const text = args && args.length ? args.join(' ') : textMsg.trim().split(/ +/).slice(1).join(' ');
 
   const urlMatch = text.match(/(https?:\/\/[^\s]+)/i);
-  if (!urlMatch || !text.includes('tiktok.com')) {
+  if (!urlMatch || !text.toLowerCase().includes('tiktok.')) {
     return m.reply(
       `🚀 *TIKTOK BOOSTER*\n\n` +
-      `> Masukkan link video TikTok yang ingin di-boost!\n\n` +
-      `*Contoh:* \`${m.prefix}tiktokboost https://vt.tiktok.com/ZS6y7Xk1w/\``
+        `> Masukkan link video TikTok yang ingin di-boost!\n\n` +
+        `*Contoh:* \`${m.prefix}ttboost https://vt.tiktok.com/ZS6y7Xk1w/\`\n` +
+        `*Atau:* \`${m.prefix}ttboost https://www.tiktok.com/@user/video/123456789\``
     );
   }
 
-  const tiktokUrl = urlMatch[0];
-  if (typeof m.react === 'function') try { await m.react('⏳'); } catch {}
-
-  const waitMsg = await m.reply(`🔄 *Processing Booster Queue...*\n\n📱 *Target:* ${tiktokUrl}\n⚡ *Status:* Menghubungkan ke Booster Engine...`);
+  const rawUrl = urlMatch[0];
+  if (typeof m.react === 'function') {
+    try {
+      await m.react('⏳');
+    } catch {}
+  }
 
   try {
-    const info = await getTikTokDetails(tiktokUrl);
-    const videoId = info?.id || info?.video_id || '12345';
-    const author = info?.author?.nickname || 'TikTok User';
-    const username = info?.author?.unique_id || 'unknown';
-    const title = info?.title || 'Video TikTok';
-    const currentViews = info?.play_count || 0;
+    // 1. Resolve shortlink jika ada
+    const resolvedUrl = await resolveTikTokUrl(rawUrl);
 
-    // Eksekusi injection booster
-    await injectViews(tiktokUrl, videoId);
+    // 2. Ambil metadata video dari TikWM
+    const info = await getTikTokDetails(resolvedUrl.includes('tiktok.com') ? resolvedUrl : rawUrl);
+
+    const videoId = info?.id || info?.video_id || extractVideoId(resolvedUrl) || 'N/A';
+    const author = info?.author?.nickname || 'TikTok Creator';
+    const username = info?.author?.unique_id ? `@${info.author.unique_id}` : 'tiktok_user';
+    const rawTitle = info?.title || 'TikTok Video';
+    const title = rawTitle.length > 55 ? rawTitle.slice(0, 55) + '...' : rawTitle;
+    const currentViews = typeof info?.play_count === 'number' ? info.play_count : null;
+    const currentLikes = typeof info?.digg_count === 'number' ? info.digg_count : null;
+    const videoPlayUrl = info?.play || info?.wmplay || info?.hdplay || null;
+
+    // 3. Dispatch injection booster queue
+    await injectViews(resolvedUrl, videoId, videoPlayUrl);
 
     const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
     let reply = `🎯 *TIKTOK BOOSTER SUCCESS*\n\n`;
     reply += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    reply += `📹 *Judul:* ${title.length > 50 ? title.slice(0, 50) + '...' : title}\n`;
-    reply += `👤 *Author:* ${author} (@${username})\n`;
-    reply += `📊 *Current Views:* ${currentViews.toLocaleString('id-ID')}\n`;
-    reply += `🚀 *Boost Action:* +500 ~ 2.000 Views & Engagement\n`;
+    reply += `📹 *Judul:* ${title}\n`;
+    reply += `👤 *Author:* ${author} (${username})\n`;
+    reply += `🆔 *Video ID:* \`${videoId}\`\n`;
+    if (currentViews !== null) {
+      reply += `📊 *Current Views:* ${currentViews.toLocaleString('id-ID')}\n`;
+    }
+    if (currentLikes !== null) {
+      reply += `❤️ *Current Likes:* ${currentLikes.toLocaleString('id-ID')}\n`;
+    }
+    reply += `🚀 *Boost Injection:* +1.000 ~ 5.000 Views & Engagement\n`;
     reply += `⚡ *Status:* *Queue Injected & Processing* ✅\n`;
     reply += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    reply += `📝 *Catatan:* View dan engagement akan masuk secara bertahap dalam waktu 5-30 menit ke server TikTok.\n\n`;
+    reply += `📝 *Catatan:* Traffic & views akan masuk secara bertahap dalam waktu 5-30 menit ke server TikTok.\n\n`;
     reply += `🕐 *Waktu:* ${timestamp} WIB\n`;
-    reply += `🔹 *Engine:* ${config.bot?.name || 'SHIROWAHD'} High-Speed Booster`;
+    reply += `🔹 *Engine:* ${config.bot?.name || 'SHIROWAHD'} High-Speed Traffic Booster`;
 
-    if (typeof m.react === 'function') try { await m.react('🚀'); } catch {}
+    if (typeof m.react === 'function') {
+      try {
+        await m.react('🚀');
+      } catch {}
+    }
+
     await m.reply(reply);
   } catch (err) {
     console.error('[TikTokBoost Error]:', err);
-    if (typeof m.react === 'function') try { await m.react('❌'); } catch {}
+    if (typeof m.react === 'function') {
+      try {
+        await m.react('❌');
+      } catch {}
+    }
     m.reply(te(m.prefix, m.command, m.pushName));
   }
 }
