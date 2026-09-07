@@ -20,9 +20,10 @@ import { getSystem } from '@/lib/admin-api'
 const tabs = [
   { id: 'dashboard', n: '01', label: 'RINGKASAN', icon: 'fa-chart-pie' },
   { id: 'files', n: '02', label: 'BERKAS', icon: 'fa-folder-open' },
-  { id: 'settings', n: '03', label: 'PENGATURAN', icon: 'fa-sliders' },
-  { id: 'security', n: '04', label: 'KEAMANAN', icon: 'fa-shield-halved' },
-  { id: 'bot', n: '05', label: 'BOT WA', icon: 'fa-robot' },
+  { id: 'plugins', n: '03', label: 'MONTIR PLUGIN', icon: 'fa-screwdriver-wrench' },
+  { id: 'settings', n: '04', label: 'PENGATURAN', icon: 'fa-sliders' },
+  { id: 'security', n: '05', label: 'KEAMANAN', icon: 'fa-shield-halved' },
+  { id: 'bot', n: '06', label: 'BOT WA', icon: 'fa-robot' },
 ]
 
 export default function Layout({ active, setActive, children }) {
@@ -142,8 +143,8 @@ export default function Layout({ active, setActive, children }) {
       {/* Tab bar bawah: sudut atas dibulatkan (16px) supaya sinkron dgn skala
           radius global; bagian bawah tetap rata karena menempel tepi layar. */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[var(--plate-fill)]
-        border-t-[3px] border-[var(--edge)] rounded-t-[16px] px-1.5 pt-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom))]
-        grid grid-cols-5 gap-1.5">
+        border-t-[3px] border-[var(--edge)] rounded-t-[16px] px-1 pt-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom))]
+        grid grid-cols-6 gap-1">
         {tabs.map(t => {
           const on = active === t.id
           return (

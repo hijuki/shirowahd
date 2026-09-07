@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { theme, chalk, logger, setPluginTotal } from "./hillz-logger.js";
+import { apakahPluginMati, daftarPluginMati, ambilStatistikPlugin } from "./hillz-plugin-state.js";
 /**
  * @typedef {Object} PluginConfig
  * @property {string} name - Nama command (tanpa prefix)
@@ -86,6 +87,8 @@ const pluginOwnership = [];
 // alias → { filePath, primaryName } pendeklarasinya. Dipakai mendeteksi alias
 // yang dibajak: masih hidup, tapi mengeksekusi plugin lain.
 const aliasOrigin = new Map();
+// Catatan berkas yang gagal dimuat (load error)
+const loadErrorsMap = new Map();
 
 const normalizePluginNames = (name) => {
   const values = Array.isArray(name) ? name : [name];
@@ -169,10 +172,12 @@ async function loadPlugin(filePath, bustCache = false) {
     }
 
     if (!plugin.config || !plugin.handler) {
+      loadErrorsMap.set(path.resolve(filePath), "No valid config or handler exported");
       return null;
     }
 
     if (typeof plugin.handler !== "function") {
+      loadErrorsMap.set(path.resolve(filePath), "Exported handler is not a function");
       return null;
     }
 
@@ -186,9 +191,11 @@ async function loadPlugin(filePath, bustCache = false) {
       pInfo.config.name = path.basename(filePath, path.extname(filePath));
     }
 
+    loadErrorsMap.delete(path.resolve(filePath));
     return pInfo;
   } catch (error) {
     const fileName = path.basename(filePath);
+    loadErrorsMap.set(path.resolve(filePath), error.message);
     if (process.env.DEBUG_PLUGINS === "true" || true) {
       logger.error("plugin", `failed ${fileName} - ${error.message}`);
     }
@@ -750,6 +757,327 @@ function getHijackedAliases() {
   return hasil;
 }
 
+/**
+ * Mengambil daftar seluruh plugin secara detail untuk dashboard montir admin
+ */
+function getDetailedPluginsList() {
+  const stats = ambilStatistikPlugin();
+  const disabledSet = daftarPluginMati();
+  const unreachables = new Set(getUnreachablePlugins().map((p) => path.resolve(p.filePath)));
+  const list = [];
+  const visitedPaths = new Set();
+
+  for (const [cmd, plugin] of pluginStore.commands.entries()) {
+    const filePath = plugin.filePath ? path.resolve(plugin.filePath) : null;
+    if (!filePath || visitedPaths.has(filePath)) continue;
+    visitedPaths.add(filePath);
+
+    const relPath = path.relative(process.cwd(), plugin.filePath).replace(/\\/g, "/");
+    const name = plugin.config?.name || path.basename(plugin.filePath, ".js");
+    const isOff = apakahPluginMati(name) || apakahPluginMati(relPath) || disabledSet.has(name);
+    const isUnreachable = unreachables.has(filePath);
+    const loadErr = loadErrorsMap.get(filePath) || null;
+    const pStat = stats[name.toLowerCase()] || { runs: 0, success: 0, errors: 0, lastRun: 0, lastError: null };
+
+    let status = "online";
+    if (loadErr) {
+      status = "error";
+    } else if (isOff) {
+      status = "disabled";
+    } else if (isUnreachable) {
+      status = "shadowed";
+    } else if (pStat.errors > 0 && pStat.errors >= pStat.runs) {
+      status = "error";
+    }
+
+    list.push({
+      name,
+      aliases: normalizePluginAliases(plugin.config?.alias),
+      category: plugin.config?.category || "uncategorized",
+      description: plugin.config?.description || "",
+      usage: plugin.config?.usage || "",
+      example: plugin.config?.example || "",
+      filePath: relPath,
+      isOwner: !!plugin.config?.isOwner,
+      isPremium: !!plugin.config?.isPremium,
+      isGroup: !!plugin.config?.isGroup,
+      isAdmin: !!plugin.config?.isAdmin,
+      cooldown: plugin.config?.cooldown || 0,
+      limit: plugin.config?.limit || 0,
+      isEnabled: !isOff,
+      status, // 'online' | 'error' | 'disabled' | 'shadowed'
+      runs: pStat.runs || 0,
+      success: pStat.success || 0,
+      errors: pStat.errors || 0,
+      lastRun: pStat.lastRun || 0,
+      lastError: pStat.lastError || (loadErr ? { message: loadErr, time: Date.now() } : null),
+    });
+  }
+
+  // Tambahkan file-file yang gagal di-load
+  for (const [errPath, errMsg] of loadErrorsMap.entries()) {
+    if (!visitedPaths.has(errPath)) {
+      const relPath = path.relative(process.cwd(), errPath).replace(/\\/g, "/");
+      const name = path.basename(errPath, ".js");
+      list.push({
+        name,
+        aliases: [],
+        category: "error",
+        description: "Gagal dimuat saat startup / import",
+        usage: "",
+        example: "",
+        filePath: relPath,
+        isOwner: false,
+        isPremium: false,
+        isGroup: false,
+        isAdmin: false,
+        cooldown: 0,
+        limit: 0,
+        isEnabled: false,
+        status: "error",
+        runs: 0,
+        success: 0,
+        errors: 1,
+        lastRun: 0,
+        lastError: { message: errMsg, time: Date.now() },
+      });
+    }
+  }
+
+  // Sort by category then name
+  list.sort((a, b) => {
+    if (a.status === "error" && b.status !== "error") return -1;
+    if (b.status === "error" && a.status !== "error") return 1;
+    const catComp = a.category.localeCompare(b.category);
+    return catComp !== 0 ? catComp : a.name.localeCompare(b.name);
+  });
+
+  return {
+    ok: true,
+    total: list.length,
+    onlineCount: list.filter((p) => p.status === "online").length,
+    errorCount: list.filter((p) => p.status === "error").length,
+    disabledCount: list.filter((p) => p.status === "disabled").length,
+    shadowedCount: list.filter((p) => p.status === "shadowed").length,
+    categoriesCount: new Set(list.map((p) => p.category)).size,
+    plugins: list,
+  };
+}
+
+/**
+ * Diagnostic & Audit menyeluruh semua file plugin di folder plugins/
+ */
+async function auditAllPlugins(pluginsDir = "./plugins") {
+  const root = path.resolve(pluginsDir);
+  const files = [];
+
+  function scan(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, f.name);
+      if (f.isDirectory()) {
+        scan(full);
+      } else if (f.name.endsWith(".js") && !f.name.startsWith("_")) {
+        files.push(full);
+      }
+    }
+  }
+  scan(root);
+
+  const commandMap = new Map();
+  const aliasMap = new Map();
+  const errors = [];
+  const results = [];
+  const duplicateCmds = [];
+  const duplicateAlis = [];
+
+  for (const file of files) {
+    const rel = path.relative(process.cwd(), file).replace(/\\/g, "/");
+    try {
+      const fileUrl = pathToFileURL(file).href + "?audit=" + Date.now();
+      let mod = await import(fileUrl);
+      let p = mod;
+      if ((!p.config || !p.handler) && p.default) p = p.default;
+
+      if (!p.config && !p.handler) {
+        errors.push({ file: rel, error: "Tidak mengekspor config maupun handler" });
+        results.push({ file: rel, status: "error", error: "Missing config & handler" });
+        continue;
+      }
+
+      if (!p.handler || typeof p.handler !== "function") {
+        errors.push({ file: rel, error: "Handler bukan merupakan fungsi yang valid" });
+        results.push({ file: rel, status: "error", error: "Invalid handler function" });
+        continue;
+      }
+
+      const cfg = p.config || {};
+      const name = cfg.name || path.basename(file, ".js");
+      const names = normalizePluginNames(name);
+      const aliases = normalizePluginAliases(cfg.alias);
+
+      for (const n of names) {
+        if (commandMap.has(n)) {
+          duplicateCmds.push({ command: n, kept: rel, shadowed: commandMap.get(n) });
+        } else {
+          commandMap.set(n, rel);
+        }
+      }
+
+      for (const a of aliases) {
+        if (aliasMap.has(a)) {
+          duplicateAlis.push({ alias: a, kept: rel, shadowed: aliasMap.get(a) });
+        } else {
+          aliasMap.set(a, rel);
+        }
+      }
+
+      results.push({
+        file: rel,
+        name,
+        category: cfg.category || "uncategorized",
+        aliases,
+        status: "ok",
+      });
+    } catch (err) {
+      errors.push({ file: rel, error: err.message });
+      results.push({ file: rel, status: "error", error: err.message });
+    }
+  }
+
+  return {
+    ok: true,
+    scannedFiles: files.length,
+    validCount: results.filter((r) => r.status === "ok").length,
+    errorCount: errors.length,
+    errors,
+    duplicateCommandsCount: duplicateCmds.length,
+    duplicateCommands: duplicateCmds,
+    duplicateAliasesCount: duplicateAlis.length,
+    duplicateAliases: duplicateAlis,
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Hot-reload satu file plugin dari disk
+ */
+async function reloadSinglePlugin(filePathOrName) {
+  if (!filePathOrName) return { success: false, error: "Nama atau file path wajib diisi" };
+
+  let targetPath = null;
+  const clean = String(filePathOrName).trim();
+
+  if (fs.existsSync(clean)) {
+    targetPath = path.resolve(clean);
+  } else if (fs.existsSync(path.join(process.cwd(), clean))) {
+    targetPath = path.resolve(path.join(process.cwd(), clean));
+  } else {
+    // Cari di pluginStore berdasarkan nama atau alias
+    const p = getPlugin(clean);
+    if (p && p.filePath) {
+      targetPath = path.resolve(p.filePath);
+    }
+  }
+
+  if (!targetPath || !fs.existsSync(targetPath)) {
+    return { success: false, error: `File plugin tidak ditemukan: ${clean}` };
+  }
+
+  try {
+    // Hapus plugin lama dari store jika ada
+    const oldPlugin = findRegisteredPluginByFilePath(targetPath);
+    if (oldPlugin) {
+      removePluginFromStore(oldPlugin);
+    }
+
+    // Muat ulang dengan cache busting
+    const newPlugin = await loadPlugin(targetPath, true);
+    if (!newPlugin) {
+      const errMsg = loadErrorsMap.get(targetPath) || "Format plugin tidak valid";
+      return { success: false, error: errMsg };
+    }
+
+    const reg = registerPlugin(newPlugin);
+    if (!reg) {
+      return { success: false, error: "Gagal mendaftarkan plugin ke registry" };
+    }
+
+    return {
+      success: true,
+      name: newPlugin.config.name,
+      category: newPlugin.config.category,
+      filePath: path.relative(process.cwd(), targetPath).replace(/\\/g, "/"),
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Hot-reload seluruh plugin tanpa merestart koneksi WhatsApp
+ */
+async function reloadAllPlugins(pluginsDir = "./plugins") {
+  try {
+    const count = await loadPlugins(pluginsDir);
+    return {
+      success: true,
+      count,
+      unreachable: getUnreachablePlugins().length,
+      duplicates: getDuplicateCommands().length,
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Uji syntax dan validitas ekspor plugin
+ */
+async function testPlugin(filePathOrName) {
+  if (!filePathOrName) return { valid: false, error: "Path atau nama plugin wajib diisi" };
+  let targetPath = null;
+  const clean = String(filePathOrName).trim();
+
+  if (fs.existsSync(clean)) {
+    targetPath = path.resolve(clean);
+  } else if (fs.existsSync(path.join(process.cwd(), clean))) {
+    targetPath = path.resolve(path.join(process.cwd(), clean));
+  } else {
+    const p = getPlugin(clean);
+    if (p && p.filePath) targetPath = path.resolve(p.filePath);
+  }
+
+  if (!targetPath || !fs.existsSync(targetPath)) {
+    return { valid: false, error: `Berkas tidak ditemukan: ${clean}` };
+  }
+
+  try {
+    const fileUrl = pathToFileURL(targetPath).href + "?test=" + Date.now();
+    let mod = await import(fileUrl);
+    let p = mod;
+    if ((!p.config || !p.handler) && p.default) p = p.default;
+
+    if (!p.config && !p.handler) {
+      return { valid: false, error: "Tidak mengekspor config maupun handler" };
+    }
+    if (!p.handler || typeof p.handler !== "function") {
+      return { valid: false, error: "Exported handler bukan fungsi" };
+    }
+
+    return {
+      valid: true,
+      name: p.config?.name || path.basename(targetPath, ".js"),
+      category: p.config?.category || "uncategorized",
+      aliases: normalizePluginAliases(p.config?.alias),
+      description: p.config?.description || "",
+      filePath: path.relative(process.cwd(), targetPath).replace(/\\/g, "/"),
+    };
+  } catch (err) {
+    return { valid: false, error: err.message, stack: err.stack };
+  }
+}
+
 export {
   loadPlugin,
   loadPlugins,
@@ -774,4 +1102,9 @@ export {
   getDuplicateAliases,
   getHijackedAliases,
   getUnreachablePlugins,
+  getDetailedPluginsList,
+  auditAllPlugins,
+  reloadSinglePlugin,
+  reloadAllPlugins,
+  testPlugin,
 };

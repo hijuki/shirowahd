@@ -10,7 +10,13 @@ import {
   getHijackedAliases,
   getUnreachablePlugins,
   getCategories,
+  getDetailedPluginsList,
+  auditAllPlugins,
+  reloadSinglePlugin,
+  reloadAllPlugins,
+  testPlugin,
 } from './hillz-plugins.js';
+import { setelPluginMati, ambilRiwayatErrorPlugin, bersihkanRiwayatErrorPlugin } from './hillz-plugin-state.js';
 import { daftarGrupMati, toggleGrup } from './hillz-group-state.js';
 import { statusPairing, statusSub, mintaPairing } from './hillz-pairing.js';
 import {
@@ -112,6 +118,97 @@ export function startBotApi() {
         });
       } catch (e) {
         json(res, 500, { error: e.message });
+      }
+      return;
+    }
+
+    // ═══ MONTIR & MANAJEMEN PLUGIN LIVE ═══
+    if (req.method === 'GET' && url === '/plugins/list') {
+      try {
+        const detail = getDetailedPluginsList();
+        json(res, 200, detail);
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url === '/plugins/audit') {
+      try {
+        const report = await auditAllPlugins();
+        json(res, 200, report);
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/plugins/toggle') {
+      try {
+        const body = await parseBody(req);
+        if (!body.target) {
+          json(res, 400, { ok: false, error: 'Target plugin wajib diisi' });
+          return;
+        }
+        const disabled = typeof body.disabled === 'boolean' ? body.disabled : true;
+        const ok = setelPluginMati(body.target, disabled);
+        json(res, 200, { ok, target: body.target, disabled });
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/plugins/reload') {
+      try {
+        const body = await parseBody(req);
+        if (body.all) {
+          const resAll = await reloadAllPlugins();
+          json(res, 200, { ok: resAll.success, ...resAll });
+        } else if (body.target || body.path) {
+          const resOne = await reloadSinglePlugin(body.target || body.path);
+          json(res, resOne.success ? 200 : 400, { ok: resOne.success, ...resOne });
+        } else {
+          json(res, 400, { ok: false, error: 'Target atau flag all wajib diisi' });
+        }
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/plugins/test') {
+      try {
+        const body = await parseBody(req);
+        const target = body.target || body.path;
+        if (!target) {
+          json(res, 400, { ok: false, error: 'Target plugin wajib diisi' });
+          return;
+        }
+        const testRes = await testPlugin(target);
+        json(res, testRes.valid ? 200 : 400, { ok: testRes.valid, ...testRes });
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && url === '/plugins/errors') {
+      try {
+        const errors = ambilRiwayatErrorPlugin();
+        json(res, 200, { ok: true, count: errors.length, errors });
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/plugins/errors/clear') {
+      try {
+        const ok = bersihkanRiwayatErrorPlugin();
+        json(res, 200, { ok });
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
       }
       return;
     }

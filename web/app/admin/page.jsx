@@ -7,9 +7,10 @@ import Files from '@/components/admin/Files'
 import Settings from '@/components/admin/Settings'
 import Security from '@/components/admin/Security'
 import Bot from '@/components/admin/Bot'
+import PluginsManager from '@/components/admin/PluginsManager'
 import Toasts, { useToasts } from '@/components/up/Toasts'
 
-const pages = { dashboard: Dashboard, files: Files, settings: Settings, security: Security, bot: Bot }
+const pages = { dashboard: Dashboard, files: Files, plugins: PluginsManager, settings: Settings, security: Security, bot: Bot }
 
 export default function AdminPage() {
   const [mounted, setMounted] = useState(false)

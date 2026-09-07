@@ -179,9 +179,15 @@ export default function Bot({ toast }) {
 
       {/* Plugin registry — angka dari registry bot, bukan hitungan baris log */}
       <div className="card p-6 md:p-8">
-        <h2 className="font-[family-name:var(--font-display)] font-bold mb-4 text-base">
-          <i className="fa-solid fa-puzzle-piece text-[var(--volt)] mr-2" />Plugin
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="font-[family-name:var(--font-display)] font-bold text-base flex items-center gap-2">
+            <i className="fa-solid fa-puzzle-piece text-[var(--volt)]" />
+            <span>Plugin Bot</span>
+          </h2>
+          <span className="text-xs text-[var(--ink-2)]">
+            Buka tab <b>03 MONTIR PLUGIN</b> di navigasi untuk kontrol &amp; diagnosa penuh.
+          </span>
+        </div>
         {!plug?.ok ? (
           <p className="text-[var(--ink-2)] text-sm">Data plugin belum tersedia. Bot mungkin sedang booting.</p>
         ) : (

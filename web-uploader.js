@@ -2250,6 +2250,49 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // Montir & Manajemen Plugin Detail
+  if (url === '/admin/api/bot/plugins/list' && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'GET', '/plugins/list');
+    return;
+  }
+
+  if (url === '/admin/api/bot/plugins/audit' && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'GET', '/plugins/audit');
+    return;
+  }
+
+  if (url === '/admin/api/bot/plugins/toggle' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/plugins/toggle');
+    return;
+  }
+
+  if (url === '/admin/api/bot/plugins/reload' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/plugins/reload');
+    return;
+  }
+
+  if (url === '/admin/api/bot/plugins/test' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/plugins/test');
+    return;
+  }
+
+  if (url === '/admin/api/bot/plugins/errors' && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'GET', '/plugins/errors');
+    return;
+  }
+
+  if (url === '/admin/api/bot/plugins/errors/clear' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/plugins/errors/clear');
+    return;
+  }
+
   if (url === '/admin/api/bot/features' && req.method === 'GET') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     proxyBotApi(req, res, 'GET', '/features');

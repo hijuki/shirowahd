@@ -16,6 +16,7 @@ import {
 } from "./lib/hillz-similarity.js";
 import { getDatabase } from "./lib/hillz-database.js";
 import { pasangReaksi, AMBANG_BAKU, JEDA_BAKU, GAYA_BAKU } from "./lib/hillz-reaksi.js";
+import { apakahPluginMati, catatEksekusiPlugin, catatErrorPlugin } from "./lib/hillz-plugin-state.js";
 import {
   formatUptime,
   createWaitMessage,
@@ -1833,6 +1834,15 @@ async function messageHandler(msg, sock, options = {}) {
       // Owner tetap bisa memakai bot untuk menyalakannya kembali.
       if (!m.isOwner) return;
     }
+
+    // ═══ GERBANG PLUGIN DISABLED PER-KOMAND / BERKAS ═══
+    if (apakahPluginMati(plugin.config?.name) || apakahPluginMati(plugin.filePath)) {
+      if (!m.isOwner) {
+        if (m.isCommand) await m.reply("🚫 Perintah/plugin ini sedang dinonaktifkan sementara oleh admin.");
+        return;
+      }
+    }
+
     {
       const idBot = isJadibot && jadibotId ? jadibotId : "main";
       const gerbang = bolehJalan(idBot, plugin.config?.category);
@@ -1867,10 +1877,21 @@ async function messageHandler(msg, sock, options = {}) {
     try {
       await plugin.handler(m, context);
       await indikator?.selesai();
+      catatEksekusiPlugin(plugin.config?.name || m.command, true);
     } catch (galatPlugin) {
       // ❌ dulu, baru lempar ulang — supaya penanganan galat di bawah (log +
       // incrementStat + pesan ke user) tetap jalan apa adanya.
       await indikator?.gagal();
+      catatEksekusiPlugin(plugin.config?.name || m.command, false, galatPlugin);
+      catatErrorPlugin({
+        command: m.command,
+        pluginName: plugin.config?.name || m.command,
+        filePath: plugin.filePath,
+        errorMsg: galatPlugin.message,
+        errorStack: galatPlugin.stack,
+        sender: m.sender,
+        chat: m.chat,
+      });
       throw galatPlugin;
     }
 
