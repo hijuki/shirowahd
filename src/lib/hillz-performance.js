@@ -1,5 +1,6 @@
 const userCache = new Map();
 const groupCache = new Map();
+const settingCache = new Map();
 const messageDebounce = new Map();
 const DEBOUNCE_MS = 100;
 let _lastDebounceClean = 0;
@@ -35,4 +36,12 @@ function getCachedGroup(jid, db, ttl = 300000) {
   return data;
 }
 
-export { debounceMessage, getCachedUser, getCachedGroup };
+function getCachedSetting(key, getter, ttl = 60000) {
+  const cached = settingCache.get(key);
+  if (cached && (Date.now() - cached.time) < ttl) return cached.data;
+  const data = typeof getter === 'function' ? getter() : getter;
+  settingCache.set(key, { data, time: Date.now() });
+  return data;
+}
+
+export { debounceMessage, getCachedUser, getCachedGroup, getCachedSetting };
