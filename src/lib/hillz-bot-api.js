@@ -1,4 +1,6 @@
 import http from 'http';
+import { readdirSync } from 'fs';
+import { join } from 'path';
 import { getSocket, isConnected } from '../connection.js';
 import {
   getPluginCount,
@@ -89,14 +91,7 @@ export function startBotApi() {
       try {
         const names = getAllCommandNames();
         const dups = getDuplicateCommands();
-        // `unreachable` ≠ `duplicates`. Tabrakan nama sering tidak berbahaya
-        // (plugin yang kalah masih punya nama lain), tapi plugin yang seluruh
-        // nama + aliasnya direbut benar-benar tidak bisa dipanggil. Panel perlu
-        // membedakan keduanya supaya angka "14 tabrakan" tidak dibaca sebagai
-        // "14 plugin rusak".
         const mati = getUnreachablePlugins();
-        // Alias dibajak: lebih berbahaya daripada plugin mati karena tidak ada
-        // gejala apa pun — command jalan, hasilnya salah.
         const bajak = getHijackedAliases();
         json(res, 200, {
           ok: true,
@@ -114,6 +109,49 @@ export function startBotApi() {
           })),
           hijackedAliasCount: bajak.length,
           hijackedAliases: bajak,
+        });
+      } catch (e) {
+        json(res, 500, { error: e.message });
+      }
+      return;
+    }
+
+    // Daftar scraper, infra, dan fitur bot — untuk admin panel
+    if (req.method === 'GET' && url === '/features') {
+      try {
+        const scraperDir = join(process.cwd(), 'src', 'scraper');
+        const libDir = join(process.cwd(), 'src', 'lib');
+        const scrapers = [];
+        try {
+          for (const f of readdirSync(scraperDir).filter(f => f.endsWith('.js'))) {
+            scrapers.push(f.replace('.js', ''));
+          }
+        } catch {}
+        const infra = [];
+        try {
+          for (const f of readdirSync(libDir).filter(f => f.startsWith('hillz-') && f.endsWith('.js'))) {
+            infra.push(f.replace('hillz-', '').replace('.js', ''));
+          }
+        } catch {}
+        json(res, 200, {
+          ok: true,
+          scrapers: scrapers.sort(),
+          scraperCount: scrapers.length,
+          infrastructure: infra.sort(),
+          infraCount: infra.length,
+          features: [
+            { name: 'AIRich', desc: 'Markdown → rich message (tabel, kode, gambar)', status: 'active' },
+            { name: 'Auto-AI', desc: 'AI chat otomatis dengan rich response', status: 'active' },
+            { name: 'Auto-Download', desc: 'Deteksi link → auto download media', status: 'active' },
+            { name: 'Anti-Status', desc: 'Auto hapus status WA di grup', status: 'active' },
+            { name: 'Memory Monitor', desc: 'Auto restart kalau RAM > 5GB', status: 'active' },
+            { name: 'Temp Cleaner', desc: 'Auto hapus file temp tiap 30 menit', status: 'active' },
+            { name: 'Level System', desc: 'Sistem level per user di grup', status: 'active' },
+            { name: 'Welcome Card', desc: 'Kartu welcome dengan avatar & gradient', status: 'active' },
+            { name: 'Group Protection', desc: 'Antilink, antijudol, antiphising, dll', status: 'active' },
+            { name: 'Brat Sticker', desc: 'Custom sticker dari teks', status: 'active' },
+            { name: 'View-Once Bypass', desc: 'Baca pesan sekali lihat (.rvo)', status: 'active' },
+          ],
         });
       } catch (e) {
         json(res, 500, { error: e.message });

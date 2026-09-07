@@ -2250,6 +2250,12 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (url === '/admin/api/bot/features' && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'GET', '/features');
+    return;
+  }
+
   if (url === '/admin/api/bot/internal-status' && req.method === 'GET') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     proxyBotApi(req, res, 'GET', '/status');

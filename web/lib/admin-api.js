@@ -47,6 +47,7 @@ export const getBotStatus = () => api('/api/bot/status')
 export const getBlacklist = () => api('/api/blacklist')
 export const getBotInternalStatus = () => api('/api/bot/internal-status')
 export const getBotPlugins = () => api('/api/bot/plugins')
+export const getBotFeatures = () => api('/api/bot/features')
 export const pairBot = (number, force = false) => api('/api/bot/pair', { method: 'POST', body: { number, force } })
 // Papan status pairing: dibaca dari berkas oleh proses web, jadi tetap terbaca
 // walau proses bot belum pernah hidup (kondisi VPS baru).

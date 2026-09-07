@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getBotStatus, getBotInternalStatus, getBotPlugins, getBotGroups, leaveGroup, toggleGroup, broadcast, cancelBroadcast, sendMessage, execCommand, restartBot, getLogs } from '@/lib/admin-api'
+import { getBotStatus, getBotInternalStatus, getBotPlugins, getBotFeatures, getBotGroups, leaveGroup, toggleGroup, broadcast, cancelBroadcast, sendMessage, execCommand, restartBot, getLogs } from '@/lib/admin-api'
 import Pairing from './Pairing'
 import Bots from './Bots'
 
@@ -13,6 +13,8 @@ export default function Bot({ toast }) {
   const [showBajak, setShowBajak] = useState(false)
   const [groups, setGroups] = useState([])
   const [busy, setBusy] = useState(false)
+  const [feat, setFeat] = useState(null)
+  const [featTab, setFeatTab] = useState('features')
 
   // pairing dipindah ke komponen Pairing.jsx (papan status + polling kode)
 
@@ -48,6 +50,7 @@ export default function Bot({ toast }) {
     } catch { }
     getBotInternalStatus().then(r => setInternal(r)).catch(() => { })
     getBotPlugins().then(r => setPlug(r)).catch(() => { })
+    getBotFeatures().then(r => setFeat(r)).catch(() => { })
   }
   useEffect(() => {
     load()
@@ -289,6 +292,72 @@ export default function Bot({ toast }) {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Fitur & Scraper — ringkasan semua yang dimiliki bot */}
+      <div className="card p-6 md:p-8">
+        <h2 className="font-[family-name:var(--font-display)] font-bold mb-4 text-base">
+          <i className="fa-solid fa-bolt text-[var(--volt)] mr-2" />Fitur & Scraper
+        </h2>
+        {!feat?.ok ? (
+          <p className="text-[var(--ink-2)] text-sm">Memuat data fitur...</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2.5 mb-5">
+              <div className="rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] p-3 text-center">
+                <p className="text-lg font-bold text-[var(--volt)]">{feat.features?.length || 0}</p>
+                <p className="text-[10px] text-[var(--ink-2)] mt-0.5">Fitur Aktif</p>
+              </div>
+              <div className="rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] p-3 text-center">
+                <p className="text-lg font-bold text-[#22d3ee]">{feat.scraperCount || 0}</p>
+                <p className="text-[10px] text-[var(--ink-2)] mt-0.5">Scraper</p>
+              </div>
+              <div className="rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] p-3 text-center">
+                <p className="text-lg font-bold text-[#a78bfa]">{feat.infraCount || 0}</p>
+                <p className="text-[10px] text-[var(--ink-2)] mt-0.5">Infra</p>
+              </div>
+            </div>
+
+            <div className="flex gap-1.5 mb-4 flex-wrap">
+              {['features', 'scrapers', 'infra'].map(t => (
+                <button key={t} onClick={() => setFeatTab(t)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all ${featTab === t ? 'bg-[var(--volt)] text-black' : 'bg-[var(--paper-2)] text-[var(--ink-2)] border border-[var(--edge)]'}`}>
+                  {t === 'features' ? '🚀 Fitur' : t === 'scrapers' ? '📥 Scraper' : '⚙️ Infra'}
+                </button>
+              ))}
+            </div>
+
+            {featTab === 'features' && (
+              <div className="space-y-2">
+                {feat.features.map((f, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-[var(--r-soft)] bg-[var(--paper-2)] border border-[var(--edge)] px-3 py-2.5">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${f.status === 'active' ? 'bg-[var(--volt)]' : 'bg-red-500'}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{f.name}</p>
+                      <p className="text-xs text-[var(--ink-2)] truncate">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {featTab === 'scrapers' && (
+              <div className="flex flex-wrap gap-1.5">
+                {(feat.scrapers || []).map((s, i) => (
+                  <span key={i} className="inline-block text-xs px-2.5 py-1 rounded-full bg-[#22d3ee]/15 text-[#22d3ee] border border-[#22d3ee]/30 font-mono">{s}</span>
+                ))}
+              </div>
+            )}
+
+            {featTab === 'infra' && (
+              <div className="flex flex-wrap gap-1.5">
+                {(feat.infrastructure || []).map((s, i) => (
+                  <span key={i} className="inline-block text-xs px-2.5 py-1 rounded-full bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/30 font-mono">{s}</span>
+                ))}
               </div>
             )}
           </>
