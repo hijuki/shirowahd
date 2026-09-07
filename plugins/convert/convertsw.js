@@ -1,67 +1,28 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import os from 'os';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const execFileAsync = promisify(execFile);
+const FFMPEG_BIN = fs.existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
+const FFPROBE_BIN = fs.existsSync('/usr/bin/ffprobe') ? '/usr/bin/ffprobe' : 'ffprobe';
 
 const pluginConfig = {
     name: 'convertsw',
-    alias: ['convertsw', 'swconvert'],
+    alias: ['swconvert', 'statuswa', 'swvideo'],
     category: 'convert',
-    description: 'Convert video untuk status WhatsApp (Max 60 detik, Smooth)',
-    usage: '.convertsw (reply video / dokumen mp4)',
+    description: 'Convert video untuk status WhatsApp (Max 60 detik, Smooth & Kompatibel)',
+    usage: '.convertsw (reply / kirim video / dokumen mp4)',
     example: '.convertsw',
     isOwner: false,
     isPremium: false,
     isGroup: false,
     isPrivate: false,
-    cooldown: 15, 
-    energi: 3,
+    cooldown: 10,
+    energi: 2,
     isEnabled: true
 };
-
-function getMediaType(m) {
-    if (!m.quoted) return null;
-    const msg = m.quoted.message;
-    if (!msg) return null;
-
-    if (  
-        msg.videoMessage ||  
-        msg.viewOnceMessage?.message?.videoMessage ||  
-        msg.viewOnceMessageV2?.message?.videoMessage ||  
-        msg.ephemeralMessage?.message?.videoMessage ||  
-        m.quoted.isVideo  
-    ) return 'video';
-
-    const doc = msg.documentMessage;
-    if (doc) {  
-        const mime = (doc.mimetype || '').toLowerCase();
-        const name = (doc.fileName || '').toLowerCase();
-        if (  
-            mime.startsWith('video/') ||  
-            mime === 'application/mp4' ||  
-            name.endsWith('.mp4') ||  
-            name.endsWith('.mkv') ||  
-            name.endsWith('.mov')  
-        ) return 'document';
-    }  
-
-    return null;
-}
-
-async function downloadMediaToDisk(m, destPath) {
-    try {
-        const buf = await m.quoted.download();
-        if (buf && buf.length > 1000) {
-            fs.writeFileSync(destPath, buf);
-            return true;
-        }
-    } catch {}
-    return false;
-}
 
 function formatSize(bytes) {
     if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
@@ -70,7 +31,7 @@ function formatSize(bytes) {
 
 async function getVideoDuration(filePath) {
     try {
-        const { stdout } = await execFileAsync('ffprobe', [
+        const { stdout } = await execFileAsync(FFPROBE_BIN, [
             '-v', 'error',
             '-show_entries', 'format=duration',
             '-of', 'default=noprint_wrappers=1:nokey=1',
@@ -84,106 +45,107 @@ async function getVideoDuration(filePath) {
 }
 
 async function reencodeVideo(inputPath, outputPath) {
-    await execFileAsync('ffmpeg', [  
-        '-i', inputPath,  
-        '-t', '60',              
-        '-threads', '0',         
+    await execFileAsync(FFMPEG_BIN, [
+        '-y',
+        '-i', inputPath,
+        '-t', '60',
+        '-threads', '0',
         '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
         '-r', '30',
-        '-c:v', 'libx264',  
-        '-crf', '22',
-        '-preset', 'ultrafast',
-        '-sn',                  
+        '-c:v', 'libx264',
+        '-crf', '23',
+        '-preset', 'veryfast',
+        '-sn',
         '-profile:v', 'baseline',
-        '-level', '3.0',  
-        '-pix_fmt', 'yuv420p',  
-        '-c:a', 'aac',  
-        '-b:a', '128k',  
-        '-ar', '44100',  
-        '-ac', '2',  
-        '-movflags', '+faststart',  
-        '-avoid_negative_ts', 'make_zero',  
-        '-y', outputPath  
+        '-level', '3.0',
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-ar', '44100',
+        '-ac', '2',
+        '-movflags', '+faststart',
+        '-avoid_negative_ts', 'make_zero',
+        outputPath
     ], { timeout: 120000 });
 }
 
 async function handler(m, { sock, conn }) {
     const client = sock || conn;
 
-    if (!m.quoted) {  
-        return m.reply(  
-            `🎬 *CONVERT VIDEO STATUS WA*\n\n` +  
-            `Reply video atau dokumen MP4 lalu ketik:\n` +  
-            `\`${m.prefix || '.'}convertsw\`\n\n` +  
-            `• Batas Durasi: Max 60 Detik\n` +  
-            `• Batas File: 250 MB`  
-        );
-    }  
+    const isVideo = m.isVideo || (m.quoted && (m.quoted.isVideo || m.quoted.type === 'videoMessage' || String(m.quoted.mimetype || '').startsWith('video')));
+    const isDocVideo = (m.type === 'documentMessage' && String(m.message?.documentMessage?.mimetype || '').startsWith('video')) ||
+                      (m.quoted && (m.quoted.type === 'documentMessage' || String(m.quoted.mimetype || '').startsWith('video')));
 
-    const mediaType = getMediaType(m);
-    if (!mediaType) {  
-        return m.reply('Format tidak valid. Harap reply video atau dokumen MP4.');
-    }  
+    if (!isVideo && !isDocVideo) {
+        return m.reply(
+            `🎬 *CONVERT VIDEO STATUS WA*\n\n` +
+            `> Kirim atau balas video/dokumen MP4 lalu ketik \`${m.prefix || '.'}convertsw\`\n\n` +
+            `• Batas Durasi : Max 60 Detik\n` +
+            `• Format Target: H.264 Baseline (Kompatibel Status WA & iOS/Android)`
+        );
+    }
 
     if (typeof m.react === 'function') await m.react('⏳');
 
-    const tmpDir = path.join(__dirname, '../../tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
+    const tempDir = os.tmpdir();
     const ts = Date.now();
-    const inPath = path.join(tmpDir, `csw_in_${ts}.mp4`);
-    const outPath = path.join(tmpDir, `csw_out_${ts}.mp4`);
+    const inPath = path.join(tempDir, `csw_in_${ts}.mp4`);
+    const outPath = path.join(tempDir, `csw_out_${ts}.mp4`);
 
-    try {  
-        const successDownload = await downloadMediaToDisk(m, inPath);
-        if (!successDownload || !fs.existsSync(inPath)) {  
+    try {
+        const videoBuffer = (await m.quoted?.download?.()) || (await m.download?.());
+
+        if (!videoBuffer || !videoBuffer.length) {
             if (typeof m.react === 'function') await m.react('❌');
-            return m.reply('Gagal mengunduh file media.');
-        }  
+            return m.reply('❌ *GAGAL*\n\n> Gagal mengunduh file media. Coba kirim ulang videonya.');
+        }
 
-        const inStats = fs.statSync(inPath);
-        if (inStats.size > 250 * 1024 * 1024) {  
+        if (videoBuffer.length > 100 * 1024 * 1024) {
             if (typeof m.react === 'function') await m.react('❌');
-            if (fs.existsSync(inPath)) fs.unlinkSync(inPath);
-            return m.reply('Ukuran file terlalu besar. Batas maksimal adalah 250 MB.');
-        }  
+            return m.reply('❌ *FILE TERLALU BESAR*\n\n> Maksimal ukuran video adalah 100 MB.');
+        }
 
-        const inputSize = formatSize(inStats.size);
+        fs.writeFileSync(inPath, videoBuffer);
+        const inputSize = formatSize(videoBuffer.length);
 
         await reencodeVideo(inPath, outPath);
-        if (!fs.existsSync(outPath)) throw new Error('Gagal merender video');
+
+        if (!fs.existsSync(outPath) || fs.statSync(outPath).size === 0) {
+            throw new Error('Gagal merender video untuk status WA.');
+        }
 
         const videoDuration = await getVideoDuration(outPath);
         const outStats = fs.statSync(outPath);
         const outputSize = formatSize(outStats.size);
+        const outBuffer = fs.readFileSync(outPath);
 
-        await client.sendMessage(  
-            m.chat,  
-            {  
-                video: { url: outPath },  
-                mimetype: 'video/mp4',  
-                fileName: `status_${ts}.mp4`,  
-                caption:  
-                    `✅ *CONVERT SUCCESS*\n\n` +  
-                    `• Input Size  : ${inputSize}\n` +  
-                    `• Output Size : ${outputSize}\n` +  
-                    `• Durasi Video: ${videoDuration > 0 ? `${videoDuration} Detik` : '60 Detik'}\n\n` +  
-                    `Video siap dikirim ke status WhatsApp.`,  
-                gifPlayback: false,  
-                ptv: false  
-            },  
-            { quoted: m }  
+        await client.sendMessage(
+            m.chat,
+            {
+                video: outBuffer,
+                mimetype: 'video/mp4',
+                fileName: `status_${ts}.mp4`,
+                caption:
+                    `✅ *CONVERT SUCCESS*\n\n` +
+                    `• Input Size  : ${inputSize}\n` +
+                    `• Output Size : ${outputSize}\n` +
+                    `• Durasi Video: ${videoDuration > 0 ? `${videoDuration} Detik` : '60 Detik'}\n\n` +
+                    `_Video sudah dioptimalkan dan siap di-upload ke Status WhatsApp._`,
+                gifPlayback: false,
+                ptv: false
+            },
+            { quoted: m }
         );
 
         if (typeof m.react === 'function') await m.react('✅');
 
-    } catch (error) {  
-        console.error('[convertsw]', error.message);
+    } catch (error) {
+        console.error('[convertsw]', error);
         if (typeof m.react === 'function') await m.react('❌');
-        await m.reply(`Terjadi kesalahan: ${error.message?.slice(0, 150)}`);
-    } finally {  
-        if (fs.existsSync(inPath)) fs.unlinkSync(inPath);
-        if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
+        await m.reply(`❌ *ERROR*\n\n> Terjadi kesalahan: ${error.message?.slice(0, 150)}`);
+    } finally {
+        if (fs.existsSync(inPath)) try { fs.unlinkSync(inPath); } catch {}
+        if (fs.existsSync(outPath)) try { fs.unlinkSync(outPath); } catch {}
     }
 }
 
