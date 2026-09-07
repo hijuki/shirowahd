@@ -11,11 +11,11 @@ import { ytdl } from '../../src/scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
 const BATAS_BASE64 = 850 * 1024;
-const BITRATE_MIN = { mp3: 16, opus: 12 };
-const BITRATE_AWAL = { mp3: 24, opus: 16 };
+const BITRATE_MIN = { mp3: 24, opus: 16 };
+const BITRATE_AWAL = { mp3: 32, opus: 24 };
 const CODEC = {
-    mp3: { args: (br) => [ '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '1', '-ar', '22050' ], ext: 'mp3', mime: 'audio/mpeg' },
-    opus: { args: (br) => ['-c:a', 'libopus', '-b:a', `${br}k`, '-ac', '1', '-ar', '16000'], ext: 'ogg', mime: 'audio/ogg' }
+    mp3: { args: (br) => [ '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '2', '-ar', '44100' ], ext: 'mp3', mime: 'audio/mpeg' },
+    opus: { args: (br) => ['-c:a', 'libopus', '-b:a', `${br}k`, '-vbr', 'on', '-application', 'audio', '-ac', '2', '-ar', '48000'], ext: 'ogg', mime: 'audio/ogg' }
 };
 
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
@@ -547,8 +547,8 @@ async function handler(m, { sock, conn, args }) {
         try {
             const audioRes = await axios.get(rawAudioUrl, { responseType: 'arraybuffer', timeout: 30000 });
             audioBuffer = Buffer.from(audioRes.data);
-            // Kompresi ke MP3 24k agar universal di semua perangkat & ukuran <800KB
-            const encodedAudio = await audioDataUri(audioBuffer, { codec: 'mp3', maxDetik: 180 });
+            // Encoding Opus Stereo 48kHz (Kualitas Hi-Fi Jernih & Ringan khas Kurumi)
+            const encodedAudio = await audioDataUri(audioBuffer, { codec: 'opus', maxDetik: 240 });
             if (encodedAudio?.dataUri) {
                 audioSrc = encodedAudio.dataUri;
             }
