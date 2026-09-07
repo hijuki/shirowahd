@@ -64,8 +64,9 @@ function parseLrc(lrc) {
         const stempel = [...baris.matchAll(/\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g)];
         if (!stempel.length) continue;
         const teks = baris.replace(/\[[^\]]*\]/g, '').trim();
+        if (!teks) continue;
         for (const [, mm, ss, pecahan] of stempel) {
-            const ms = pecahan ? Number(pecahan.padEnd(3, '0')) : 0;
+            const ms = pecahan ? Number(pecahan.padEnd(3, '0').slice(0, 3)) : 0;
             keluar.push({ time: (Number(mm) * 60000 + Number(ss) * 1000 + ms) / 1000, text: teks });
         }
     }
@@ -216,10 +217,10 @@ function renderSpotifyPlayer({ judul = 'Unknown', artis = 'Spotify', audioSrc = 
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
-body { margin: 0; background: #121212; font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #FFFFFF; }
+body { margin: 0; background: #121212; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #FFFFFF; }
 .sp-wrap { width: 100%; max-width: 380px; margin: auto; padding: 8px; }
 .sp-card {
-  background: linear-gradient(180deg, #382c28 0%, #121212 45%, #121212 100%);
+  background: linear-gradient(180deg, #302620 0%, #121212 50%, #121212 100%);
   border-radius: 16px; overflow: hidden;
   padding: 16px 16px 20px; transition: background 0.5s ease;
   box-shadow: 0 12px 36px rgba(0,0,0,0.7);
@@ -251,8 +252,7 @@ body { margin: 0; background: #121212; font-family: 'Circular', -apple-system, B
 /* Progress Bar */
 .sp-progress-area { margin: 10px 0 6px; }
 .sp-progress-track { background: rgba(255,255,255,0.25); height: 4px; border-radius: 2px; cursor: pointer; position: relative; }
-.sp-progress-track:hover .sp-progress-bar { background: #1ed760; }
-.sp-progress-bar { background: #ffffff; height: 100%; border-radius: 2px; width: 0%; position: relative; pointer-events: none; transition: background 0.2s; }
+.sp-progress-bar { background: #ffffff; height: 100%; border-radius: 2px; width: 0%; position: relative; pointer-events: none; }
 .sp-progress-bar::after {
   content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
   width: 11px; height: 11px; border-radius: 50%; background: #ffffff;
@@ -263,54 +263,53 @@ body { margin: 0; background: #121212; font-family: 'Circular', -apple-system, B
 /* Control Buttons */
 .sp-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 16px; padding: 0 4px; }
 .sp-icon-btn { background: none; border: none; color: #b3b3b3; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.15s; }
-.sp-icon-btn:hover { color: #ffffff; }
 .sp-icon-btn.active { color: #1ed760; }
-.sp-icon-btn:active { transform: scale(0.9); }
 .sp-play-btn {
   background: #ffffff; color: #000000; border: none; border-radius: 50%;
   width: 54px; height: 54px; display: flex; justify-content: center; align-items: center;
-  cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.15s, background 0.2s;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.15s;
 }
-.sp-play-btn:active { transform: scale(0.92); background: #e0e0e0; }
+.sp-play-btn:active { transform: scale(0.92); }
 
 /* Spotify Realtime Lyrics Card */
 .sp-lyrics-card {
-  background: rgba(40, 40, 40, 0.7);
+  background: rgba(30, 30, 30, 0.85);
   border-radius: 12px;
   overflow: hidden;
   margin-top: 12px;
   padding: 14px 14px 16px;
   box-sizing: border-box;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
 }
-.sp-lyrics-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.sp-lyrics-tag { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: #1ed760; text-transform: uppercase; }
+.sp-lyrics-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.sp-lyrics-tag { font-size: 10.5px; font-weight: 800; letter-spacing: 1px; color: #1ed760; text-transform: uppercase; }
 .sp-sync-controls { display: flex; gap: 4px; align-items: center; }
-.sp-sync-btn { background: rgba(255,255,255,0.1); border: none; color: #b3b3b3; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; cursor: pointer; }
-.sp-sync-btn:active { background: rgba(255,255,255,0.25); color: #fff; }
+.sp-sync-btn { background: rgba(255,255,255,0.1); border: none; color: #b3b3b3; padding: 2px 7px; border-radius: 4px; font-size: 9.5px; cursor: pointer; font-weight: 600; }
+.sp-sync-btn:active { background: rgba(255,255,255,0.3); color: #fff; }
 .sp-lyrics-scroll {
-  height: 125px;
+  height: 140px;
   overflow-y: auto;
   scroll-behavior: smooth;
-  padding: 20px 4px;
+  padding: 10px 4px;
 }
 .sp-lyrics-scroll::-webkit-scrollbar { display: none; }
 .sp-lyric-line {
   font-size: 14px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.35);
   padding: 6px 0;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: color 0.2s ease, transform 0.2s ease, font-size 0.2s ease;
   line-height: 1.35;
 }
 .sp-lyric-line.active {
   color: #1ed760;
-  font-size: 16px;
-  transform: translateX(4px);
+  font-size: 16.5px;
+  font-weight: 800;
+  transform: scale(1.02);
   text-shadow: 0 0 16px rgba(30, 215, 96, 0.35);
 }
-.sp-lyrics-empty { font-size: 12px; color: #777777; font-style: italic; text-align: center; padding: 30px 0; }
+.sp-lyrics-empty { font-size: 12px; color: #777777; font-style: italic; text-align: center; padding: 35px 0; }
 
 /* Spotify Footer Info */
 .sp-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 0 2px; font-size: 10px; color: #b3b3b3; }
@@ -450,7 +449,8 @@ body { margin: 0; background: #121212; font-family: 'Circular', -apple-system, B
             div.textContent = item.text || '...';
             div.addEventListener('click', () => {
                 if (audio.duration && Number.isFinite(audio.duration)) {
-                    audio.currentTime = item.time;
+                    audio.currentTime = Math.max(0, item.time - lyricOffset);
+                    updateLyrics(audio.currentTime);
                 }
             });
             lyricsScroll.appendChild(div);
@@ -461,22 +461,29 @@ body { margin: 0; background: #121212; font-family: 'Circular', -apple-system, B
     let activeLyricIndex = -1;
     function updateLyrics(t) {
         if (!hasLyrics || !lyrics.length) return;
-        const adjustedTime = Math.max(0, t + lyricOffset);
-        let idx = 0;
+        const current = t + lyricOffset;
+
+        // Cari baris yang sedang aktif sesuai rentang waktu presisi
+        let targetIdx = -1;
         for (let i = 0; i < lyrics.length; i++) {
-            if (adjustedTime >= lyrics[i].time) idx = i; else break;
+            if (current >= lyrics[i].time) {
+                targetIdx = i;
+            } else {
+                break;
+            }
         }
-        if (idx !== activeLyricIndex) {
+
+        if (targetIdx !== activeLyricIndex) {
             const lines = lyricsScroll.querySelectorAll('.sp-lyric-line');
             lines.forEach((el, i) => {
-                if (i === idx) {
+                if (i === targetIdx) {
                     el.classList.add('active');
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
                     el.classList.remove('active');
                 }
             });
-            activeLyricIndex = idx;
+            activeLyricIndex = targetIdx;
         }
     }
 
@@ -490,7 +497,6 @@ body { margin: 0; background: #121212; font-family: 'Circular', -apple-system, B
         updateLyrics(audio.currentTime);
     });
 
-    // Dynamic background color tint dari cover album
     coverImg.addEventListener('load', () => {
         try {
             const canvas = document.createElement('canvas');
@@ -502,10 +508,10 @@ body { margin: 0; background: #121212; font-family: 'Circular', -apple-system, B
             for(let i=0; i<data.length; i+=4){
                 r+=data[i]; g+=data[i+1]; b+=data[i+2]; count++;
             }
-            r=Math.min(120, Math.floor(r/count));
-            g=Math.min(120, Math.floor(g/count));
-            b=Math.min(120, Math.floor(b/count));
-            card.style.background = 'linear-gradient(180deg, rgb('+r+','+g+','+b+') 0%, #121212 55%, #121212 100%)';
+            r=Math.min(100, Math.floor(r/count));
+            g=Math.min(100, Math.floor(g/count));
+            b=Math.min(100, Math.floor(b/count));
+            card.style.background = 'linear-gradient(180deg, rgb('+r+','+g+','+b+') 0%, #121212 50%, #121212 100%)';
         } catch(e){}
     });
 
@@ -557,15 +563,20 @@ body { margin: 0; background: #121212; font-family: 'Circular', -apple-system, B
         const clickPos = (e.clientX - rect.left) / rect.width;
         if (audio.duration && Number.isFinite(audio.duration)) {
             audio.currentTime = clickPos * audio.duration;
+            updateLyrics(audio.currentTime);
         }
     });
 
     rewindBtn.addEventListener('click', () => {
         audio.currentTime = Math.max(0, audio.currentTime - 10);
+        updateLyrics(audio.currentTime);
     });
 
     forwardBtn.addEventListener('click', () => {
-        if (audio.duration) audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+        if (audio.duration) {
+            audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+            updateLyrics(audio.currentTime);
+        }
     });
 
     repeatBtn.addEventListener('click', () => {
