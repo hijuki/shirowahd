@@ -1,7 +1,6 @@
 import { getAllPlugins } from '../../src/lib/hillz-plugins.js';
 import config from '../../config.js';
 import te from '../../src/lib/hillz-error.js';
-import { AIRich } from '../../src/lib/hillz-builder.js';
 
 const pluginConfig = {
   name: 'totalfitur',
@@ -27,12 +26,12 @@ const ICONS = {
   stalker: '🔎', random: '🎲', religi: '🕌', islamic: '☪️', cek: '✅',
   store: '🛒', panel: '🖥️', convert: '🔄', primbon: '🔮', tts: '🗣️',
   otp: '🔑', vps: '☁️', pushkontak: '📱', jpm: '🎰', ephoto: '📸',
-  other: '📦'
+  music: '🎵', other: '📦'
 };
 
 async function handler(m, { sock }) {
   try {
-    const allPlugins = getAllPlugins ? getAllPlugins() : [];
+    const allPlugins = getAllPlugins();
     const cats = {};
     let total = 0, enabled = 0;
 
@@ -48,11 +47,14 @@ async function handler(m, { sock }) {
       }
     }
 
-    await m.react('📊');
+    if (typeof m.react === 'function') {
+      try { await m.react('📊'); } catch {}
+    }
 
     const sorted = Object.entries(cats).sort((a, b) => b[1].total - a[1].total);
+
     const tableData = sorted.map(([cat, data]) => {
-      const pct = total > 0 ? ((data.total / total) * 100).toFixed(1) : '0';
+      const pct = ((data.total / total) * 100).toFixed(1);
       return [
         `${ICONS[cat] || '📦'} ${cat.toUpperCase()}`,
         data.total.toString(),
@@ -60,23 +62,33 @@ async function handler(m, { sock }) {
       ];
     });
 
-    const aiRich = new AIRich(sock);
-    aiRich.addHeader(`📊 *DISTRIBUSI FITUR ${config.bot?.name || 'SHIROWAHD'}*`);
-    aiRich.addText(`Total: *${total}* Fitur | Aktif: *${enabled}* | Kategori: *${sorted.length}*\n`);
-    aiRich.addTable('Distribusi Kategori Fitur', ['Kategori', 'Jumlah', 'Persen'], tableData);
-    aiRich.addFooter(`⚡ Powered by ${config.bot?.name || 'SHIROWAHD'}`);
-
-    try {
-      await aiRich.send(m.chat, m);
-    } catch (sendErr) {
-      // Fallback text jika AIRich tidak didukung
-      let textOut = `📊 *DISTRIBUSI FITUR ${config.bot?.name || 'SHIROWAHD'}*\n\n` +
-        `> Total: *${total}* | Aktif: *${enabled}* | Kategori: *${sorted.length}*\n\n` +
-        tableData.map(r => `• *${r[0]}*: ${r[1]} (${r[2]})`).join('\n');
-      await m.reply(textOut);
+    if (typeof sock.sendTable === 'function') {
+      try {
+        return await sock.sendTable(
+          m.chat,
+          'Distribusi Fitur',
+          ['Kategori', 'Jumlah', 'Persen'],
+          tableData,
+          m,
+          {
+            headerText: `Total: ${total} | Aktif: ${enabled} | Kategori: ${sorted.length}`
+          }
+        );
+      } catch (err) {
+        console.error('[TotalFitur] sendTable error:', err.message);
+      }
     }
+
+    // Fallback teks rapi
+    let textOut = `📊 *DISTRIBUSI FITUR ${config.bot?.name || 'SHIROWAHD'}*\n\n` +
+      `> Total: *${total}* | Aktif: *${enabled}* | Kategori: *${sorted.length}*\n\n` +
+      tableData.map(r => `• *${r[0]}*: ${r[1]} (${r[2]})`).join('\n');
+    await m.reply(textOut);
   } catch (error) {
-    await m.react('❌');
+    console.error('[TotalFitur] Handler error:', error);
+    if (typeof m.react === 'function') {
+      try { await m.react('❌'); } catch {}
+    }
     m.reply(te(m.prefix, m.command, m.pushName));
   }
 }
