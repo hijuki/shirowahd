@@ -6,15 +6,16 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync, existsSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import crypto from 'node:crypto';
+import config from '../../config.js';
 import { ytdl } from '../../src/scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
-const BATAS_BASE64 = 900 * 1024;
-const BITRATE_MIN = { mp3: 24, opus: 12 };
-const BITRATE_AWAL = { mp3: 64, opus: 32 };
+const BATAS_BASE64 = 850 * 1024;
+const BITRATE_MIN = { mp3: 16, opus: 12 };
+const BITRATE_AWAL = { mp3: 24, opus: 16 };
 const CODEC = {
-    mp3: { args: (br) => [ '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '1', '-ar', br < 32 ? '24000' : '32000' ], ext: 'mp3', mime: 'audio/mpeg' },
-    opus: { args: (br) => ['-c:a', 'libopus', '-b:a', `${br}k`, '-ac', '1', '-ar', '24000'], ext: 'ogg', mime: 'audio/ogg' }
+    mp3: { args: (br) => [ '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '1', '-ar', '22050' ], ext: 'mp3', mime: 'audio/mpeg' },
+    opus: { args: (br) => ['-c:a', 'libopus', '-b:a', `${br}k`, '-ac', '1', '-ar', '16000'], ext: 'ogg', mime: 'audio/ogg' }
 };
 
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
@@ -139,7 +140,8 @@ async function kecilkan(masuk, keluar, codec, bitrate, maxDetik) {
 }
 
 async function audioDataUri(buffer, opsi = {}) {
-    const { codec = 'opus', maxDetik = 360, batas = BATAS_BASE64 } = opsi;
+    // Gunakan MP3 (audio/mpeg) agar universal di Android & iOS Safari WebKit
+    const { codec = 'mp3', maxDetik = 180, batas = BATAS_BASE64 } = opsi;
     if (!Buffer.isBuffer(buffer) || !buffer.length || !CODEC[codec]) return null;
     const bitrate = opsi.bitrate ?? BITRATE_AWAL[codec];
     const minimum = BITRATE_MIN[codec];
@@ -152,8 +154,8 @@ async function audioDataUri(buffer, opsi = {}) {
         let br = bitrate;
         let kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
         for (let putaran = 0; putaran < 3 && kecil.length > batasBerkas; putaran++) {
-            const usul = Math.floor(((br * batasBerkas) / kecil.length) * 0.94);
-            br = usul < minimum ? (br <= minimum ? minimum : minimum) : usul;
+            const usul = Math.floor(((br * batasBerkas) / kecil.length) * 0.90);
+            br = usul < minimum ? minimum : usul;
             kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
         }
         if (kecil.length > batasBerkas) return null;
@@ -163,20 +165,20 @@ async function audioDataUri(buffer, opsi = {}) {
 }
 
 async function coverDataUri(url, opsi = {}) {
-    const { ukuran = 240, kualitas = 6, batas = 14 * 1024 } = opsi;
+    const { ukuran = 200, kualitas = 7, batas = 12 * 1024 } = opsi;
     if (!url || !/^https?:\/\//.test(url)) return null;
     const dir = mkdtempSync(join(tmpdir(), 'shz-cover-'));
     const masuk = join(dir, 'masuk');
     const keluar = join(dir, 'keluar.jpg');
     try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+        const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
         if (!res.ok) return null;
         const buf = Buffer.from(await res.arrayBuffer());
         if (buf.length < 512) return null;
         writeFileSync(masuk, buf);
         let q = kualitas;
         let kecil = null;
-        for (; q <= 9; q++) {
+        for (; q <= 10; q++) {
             await jalankan(FFMPEG_BIN, ['-y', '-i', masuk, '-vf', `crop='min(iw,ih)':'min(iw,ih)',scale=${ukuran}:${ukuran}`, '-q:v', String(q), keluar]);
             kecil = readFileSync(keluar);
             if ((kecil.length * 4) / 3 <= batas) break;
@@ -222,7 +224,6 @@ body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacS
 .heartBtn { background: none; border: none; color: #e6d7cd; cursor: pointer; padding: 2px 0 0 6px; }
 .heartBtn.active { color: #ff5252; }
 
-/* Wadah lirik tersinkronisasi */
 .lyricsPreview {
   font-size: 13.5px;
   line-height: 1.45;
@@ -315,7 +316,7 @@ body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacS
       <button class="ctrlBtn" id="repeatBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
     </div>
     <div class="captionText">${caption}</div>
-    <div class="audioError" id="audioError">⚠ Audio gagal dimuat — link mungkin invalid/expired</div>
+    <div class="audioError" id="audioError">⚠ Audio gagal dimuat</div>
   </div>
 </div>
 <audio id="audioEl" preload="auto" src="${audioSrc}"></audio>
@@ -516,7 +517,6 @@ async function handler(m, { sock, conn, args }) {
             return m.reply('🥀 _Lagu tidak ditemukan di YouTube._');
         }
 
-        // Ambil audio URL via ytdl kita yang terbukti cepat & reliable
         let rawAudioUrl = null;
         let audioBuffer = null;
 
@@ -547,7 +547,8 @@ async function handler(m, { sock, conn, args }) {
         try {
             const audioRes = await axios.get(rawAudioUrl, { responseType: 'arraybuffer', timeout: 30000 });
             audioBuffer = Buffer.from(audioRes.data);
-            const encodedAudio = await audioDataUri(audioBuffer, { codec: 'opus', maxDetik: 360 });
+            // Kompresi ke MP3 24k agar universal di semua perangkat & ukuran <800KB
+            const encodedAudio = await audioDataUri(audioBuffer, { codec: 'mp3', maxDetik: 180 });
             if (encodedAudio?.dataUri) {
                 audioSrc = encodedAudio.dataUri;
             }
@@ -558,7 +559,7 @@ async function handler(m, { sock, conn, args }) {
         let coverSrc = '';
         if (video.thumbnail) {
             try {
-                const coverRes = await coverDataUri(video.thumbnail, { ukuran: 240, kualitas: 7 });
+                const coverRes = await coverDataUri(video.thumbnail, { ukuran: 200, kualitas: 7 });
                 if (coverRes?.dataUri) {
                     coverSrc = coverRes.dataUri;
                 }
