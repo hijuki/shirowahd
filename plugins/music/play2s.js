@@ -6,23 +6,24 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import crypto from 'node:crypto';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import config from '../../config.js';
+import { ytdl } from '../../src/scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
-const BATAS_BASE64 = 900 * 1024;
+const BATAS_BASE64 = 600 * 1024;
 const BITRATE_MIN = { mp3: 24, opus: 12 };
-const BITRATE_AWAL = { mp3: 64, opus: 48 };
+const BITRATE_AWAL = { mp3: 48, opus: 16 };
 const CODEC = {
-  mp3: { args: (br) => ['-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '1', '-ar', br < 32 ? '24000' : '32000'], ext: 'mp3', mime: 'audio/mpeg' },
-  opus: { args: (br) => ['-c:a', 'libopus', '-b:a', `${br}k`, '-ac', '1', '-ar', '24000'], ext: 'ogg', mime: 'audio/ogg' }
+  mp3: { args: (br) => ['-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '1', '-ar', '22050'], ext: 'mp3', mime: 'audio/mpeg' },
+  opus: { args: (br) => ['-c:a', 'libopus', '-b:a', `${br}k`, '-ac', '1', '-ar', '16000'], ext: 'ogg', mime: 'audio/ogg' }
 };
 
 const API_LRCLIB = 'https://lrclib.net/api';
+const UA = 'shirowahd-bot/1.0 (+play lyrics)';
 const DATA_DIR = join(process.cwd(), 'src', 'data', 'lyrics');
 const TIMEOUT_MS = 8000;
 const TOLERANSI_DETIK = 4;
-const BATAS_LIRIK = 8 * 1024;
+const BATAS_LIRIK = 6 * 1024;
 const KATA_SAMPAH = /\b(official|officiel|music|musik|video|lyrics?|lirik|audio|mv|hd|4k|8k|visuali[sz]er|full album|clip|klip|terbaru|new)\b/gi;
 
 function berkasCache(kunci) {
@@ -70,10 +71,127 @@ function parseLrc(lrc) {
   return keluar.sort((a, b) => a.time - b.time);
 }
 
+async function ambilJson(url) {
+  const ac = new AbortController();
+  const jam = setTimeout(() => ac.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: ac.signal });
+    if (res.status === 404 || !res.ok) return null;
+    return await res.json();
+  } catch { return null; } finally { clearTimeout(jam); }
+}
+
+async function cariDekat(judul, artis, targetDetik) {
+  const url = new URL(`${API_LRCLIB}/search`);
+  url.searchParams.set('track_name', judul);
+  if (artis) url.searchParams.set('artist_name', artis);
+  const hasil = await ambilJson(url);
+  if (!Array.isArray(hasil)) return null;
+  const bersinkron = hasil.filter((r) => r?.syncedLyrics);
+  if (!bersinkron.length) return null;
+  bersinkron.sort((a, b) => Math.abs((a.duration ?? 0) - targetDetik) - Math.abs((b.duration ?? 0) - targetDetik));
+  const terbaik = bersinkron[0];
+  if (Math.abs((terbaik.duration ?? 0) - targetDetik) > TOLERANSI_DETIK) return null;
+  return terbaik;
+}
+
+async function cariLirik(video) {
+  const targetDetik = Number(video?.duration?.seconds) || 0;
+  if (!targetDetik) return null;
+  const judulMentah = String(video?.title ?? '');
+  const channel = String(video?.author?.name ?? '');
+  const kunci = `${judulMentah}|${channel}|${targetDetik}`;
+  const tersimpan = bacaCache(kunci);
+  if (tersimpan) return tersimpan.hasil;
+  const { artis, judul, tukar } = pecahJudul(judulMentah, channel);
+  let hit = null;
+  let sumber = '';
+  const urlGet = new URL(`${API_LRCLIB}/get`);
+  urlGet.searchParams.set('artist_name', artis);
+  urlGet.searchParams.set('track_name', judul);
+  urlGet.searchParams.set('duration', String(targetDetik));
+  const exact = await ambilJson(urlGet);
+  if (exact?.syncedLyrics && !exact?.instrumental) { hit = exact; sumber = 'get'; }
+  if (!hit) { const r = await cariDekat(judul, artis, targetDetik); if (r) { hit = r; sumber = 'search'; } }
+  if (!hit && tukar) { const r = await cariDekat(artis, judul, targetDetik); if (r) { hit = r; sumber = 'search-balik'; } }
+  if (!hit) {
+    const r = await cariDekat(judul, '', targetDetik);
+    const kataJudulVideo = new Set(normal(judulMentah).split(' '));
+    const kataArtisHit = normal(r?.artistName).split(' ').filter(Boolean);
+    const artisMasukAkal = kataArtisHit.length > 0 && (kataArtisHit.some((w) => w.length > 2 && kataJudulVideo.has(w)) || normal(channel).includes(kataArtisHit[0]));
+    if (r && artisMasukAkal) { hit = r; sumber = 'search-judul'; }
+  }
+  if (!hit?.syncedLyrics || hit?.instrumental) { tulisCache(kunci, { hasil: null }); return null; }
+  const baris = parseLrc(hit.syncedLyrics);
+  if (!baris.length) { tulisCache(kunci, { hasil: null }); return null; }
+  const hasil = { baris, artis: hit.artistName ?? artis, judul: hit.trackName ?? judul, durasi: hit.duration ?? 0, selisih: Math.round(Math.abs((hit.duration ?? 0) - targetDetik)), sumber };
+  while (JSON.stringify(hasil.baris).length > BATAS_LIRIK) {
+    hasil.baris = hasil.baris.slice(0, Math.floor(hasil.baris.length * 0.8));
+    if (hasil.baris.length < 4) { tulisCache(kunci, { hasil: null }); return null; }
+  }
+  tulisCache(kunci, { hasil });
+  return hasil;
+}
+
+async function kecilkan(masuk, keluar, codec, bitrate, maxDetik) {
+  await jalankan('/usr/bin/ffmpeg', ['-y', '-i', masuk, '-vn', '-t', String(maxDetik), ...CODEC[codec].args(bitrate), keluar]);
+  return readFileSync(keluar);
+}
+
+async function audioDataUri(buffer, opsi = {}) {
+  const { codec = 'opus', maxDetik = 240, batas = BATAS_BASE64 } = opsi;
+  if (!Buffer.isBuffer(buffer) || !buffer.length || !CODEC[codec]) return null;
+  const bitrate = opsi.bitrate ?? BITRATE_AWAL[codec];
+  const minimum = BITRATE_MIN[codec];
+  const dir = mkdtempSync(join(tmpdir(), 'shz-audio-'));
+  const masuk = join(dir, 'masuk');
+  const keluar = join(dir, `keluar.${CODEC[codec].ext}`);
+  try {
+    writeFileSync(masuk, buffer);
+    const batasBerkas = Math.floor((batas * 3) / 4);
+    let br = bitrate;
+    let kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
+    for (let putaran = 0; putaran < 3 && kecil.length > batasBerkas; putaran++) {
+      const usul = Math.floor(((br * batasBerkas) / kecil.length) * 0.90);
+      br = usul < minimum ? minimum : usul;
+      kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
+    }
+    if (kecil.length > batasBerkas) return null;
+    const b64 = kecil.toString('base64');
+    return { dataUri: `data:${CODEC[codec].mime};base64,${b64}`, byte: b64.length, bitrate: br, codec };
+  } catch { return null; } finally { rmSync(dir, { recursive: true, force: true }); }
+}
+
+async function coverDataUri(url, opsi = {}) {
+  const { ukuran = 180, kualitas = 8, batas = 10 * 1024 } = opsi;
+  if (!url || !/^https?:\/\//.test(url)) return null;
+  const dir = mkdtempSync(join(tmpdir(), 'shz-cover-'));
+  const masuk = join(dir, 'masuk');
+  const keluar = join(dir, 'keluar.jpg');
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 512) return null;
+    writeFileSync(masuk, buf);
+    let q = kualitas;
+    let kecil = null;
+    for (; q <= 12; q++) {
+      await jalankan('/usr/bin/ffmpeg', ['-y', '-i', masuk, '-vf', `crop='min(iw,ih)':'min(iw,ih)',scale=${ukuran}:${ukuran}`, '-q:v', String(q), keluar]);
+      kecil = readFileSync(keluar);
+      if ((kecil.length * 4) / 3 <= batas) break;
+    }
+    if (!kecil || (kecil.length * 4) / 3 > batas) return null;
+    const b64 = kecil.toString('base64');
+    return { dataUri: `data:image/jpeg;base64,${b64}`, byte: b64.length, kualitas: q };
+  } catch { return null; } finally { rmSync(dir, { recursive: true, force: true }); }
+}
+
 function renderHtmlPlayer({ judul, artis, audioSrc, coverSrc, sourceLabel, caption, lirik }) {
   const nama = String(judul || 'Musik').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
   const sub = String(artis || 'SHIROWAHD Audio').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-  const lirikJson = JSON.stringify(Array.isArray(lirik) ? lirik : []);
+  const hasLyrics = Array.isArray(lirik) && lirik.length > 0 ? 1 : 0;
+  const lyricsJson = JSON.stringify(Array.isArray(lirik) ? lirik : []);
 
   return `
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -81,7 +199,7 @@ function renderHtmlPlayer({ judul, artis, audioSrc, coverSrc, sourceLabel, capti
 * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
 body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f2e9e4; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 12px; }
 .player-wrap { width: 100%; max-width: 360px; margin: auto; }
-.player-card { background: linear-gradient(160deg, #111827 0%, #090d16 100%); border: 1px solid rgba(0,255,178,0.2); border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.85); overflow: hidden; padding: 18px; position: relative; }
+.player-card { background: linear-gradient(160deg, #111827 0%, #090d16 100%); border: 1px solid rgba(0,255,178,0.25); border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.85); overflow: hidden; padding: 18px; position: relative; }
 .player-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .source-label { font-size: 10px; font-weight: 700; color: #00ffb2; text-transform: uppercase; letter-spacing: 1px; }
 .source-channel { font-size: 11px; color: rgba(255,255,255,0.6); }
@@ -92,117 +210,205 @@ body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacS
 .lyricsPreview { height: 75px; overflow-y: auto; text-align: center; font-size: 13px; color: #cbd5e1; margin-bottom: 12px; scroll-behavior: smooth; }
 .lyricsLine { padding: 4px 0; transition: all 0.3s; opacity: 0.5; }
 .lyricsLine.active { opacity: 1; font-weight: 700; color: #00ffb2; transform: scale(1.05); }
+.lyricsEmpty { font-size: 12px; color: rgba(255,255,255,0.4); font-style: italic; padding: 25px 0; }
 .progressTrack { background: rgba(255,255,255,0.15); height: 4px; border-radius: 2px; cursor: pointer; position: relative; margin-bottom: 6px; }
 .progressBar { background: #00ffb2; height: 100%; border-radius: 2px; width: 0%; }
 .timeRow { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; }
 .controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 14px; }
 .playBtn { background: #00ffb2; color: #090d16; border: none; border-radius: 50%; width: 52px; height: 52px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 18px; font-weight: bold; }
+.audioError { font-size: 11px; color: #ff8a80; text-align: center; margin-top: 8px; display: none; }
 </style>
 
 <div class="player-wrap">
-  <div class="player-card">
+  <div class="player-card" id="playerCard">
     <div class="player-header">
-      <div class="source-label">${sourceLabel || 'SHIROWAHD MUSIC'}</div>
+      <div class="source-label">${sourceLabel}</div>
       <div class="source-channel">${sub}</div>
     </div>
-    <div class="cover-box"><img src="${coverSrc || 'https://i.ibb.co/vzN4n4W/thumb.jpg'}" alt="Cover"></div>
+    <div class="cover-box"><img id="coverImg" src="${coverSrc || ''}" alt="Cover"></div>
     <div class="track-title">${nama}</div>
     <div class="track-artist">${sub}</div>
-    <div class="lyricsPreview" id="lyricsBox">
-      <div class="lyricsLine active" id="currentLyric">Memutar audio...</div>
+    <div class="lyricsPreview" id="lyricsPreview">
+      <div class="lyricsEmpty">Lirik tidak tersedia</div>
     </div>
-    <div class="progressTrack" id="track"><div class="progressBar" id="bar"></div></div>
-    <div class="timeRow"><span id="curr">0:00</span><span id="dur">0:00</span></div>
+    <div class="progressTrack" id="progressTrack"><div class="progressBar" id="progressBar"></div></div>
+    <div class="timeRow"><span id="curTime">0:00</span><span id="durTime">0:00</span></div>
     <div class="controls">
-      <button class="playBtn" id="btnPlay">▶</button>
+      <button class="playBtn" id="playBtn">▶</button>
     </div>
+    <div class="audioError" id="audioError">⚠ Audio gagal diputar</div>
   </div>
 </div>
-<audio id="player" src="${audioSrc}"></audio>
+<audio id="audioEl" preload="auto" src="${audioSrc}"></audio>
 <script>
-  const aud = document.getElementById('player');
-  const btn = document.getElementById('btnPlay');
-  const bar = document.getElementById('bar');
-  const curr = document.getElementById('curr');
-  const dur = document.getElementById('dur');
-  const lrcBox = document.getElementById('currentLyric');
-  const lrc = ${lirikJson};
+(function(){
+  const audio = document.getElementById('audioEl');
+  const playBtn = document.getElementById('playBtn');
+  const progressBar = document.getElementById('progressBar');
+  const progressTrack = document.getElementById('progressTrack');
+  const curTime = document.getElementById('curTime');
+  const durTime = document.getElementById('durTime');
+  const lyricsPreview = document.getElementById('lyricsPreview');
+  const hasLyrics = ${hasLyrics} === 1;
+  const lyrics = ${lyricsJson};
 
-  function fmt(s) {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  function fmt(s){
+    if(!Number.isFinite(s)) return '0:00';
+    return Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
   }
 
-  btn.onclick = () => {
-    if (aud.paused) {
-      aud.play();
-      btn.innerText = '⏸';
-    } else {
-      aud.pause();
-      btn.innerText = '▶';
+  function buildLyricsDOM() {
+    lyricsPreview.innerHTML = '';
+    if (!hasLyrics || !lyrics.length) {
+      lyricsPreview.innerHTML = '<div class="lyricsEmpty">Lirik tidak tersedia</div>';
+      return;
     }
-  };
+    lyrics.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'lyricsLine';
+      div.textContent = item.text || '...';
+      lyricsPreview.appendChild(div);
+    });
+  }
+  buildLyricsDOM();
 
-  aud.ontimeupdate = () => {
-    curr.innerText = fmt(aud.currentTime);
-    dur.innerText = fmt(aud.duration || 0);
-    bar.style.width = ((aud.currentTime / (aud.duration || 1)) * 100) + '%';
-    if (lrc.length) {
-      const match = [...lrc].reverse().find(l => aud.currentTime >= l.time);
-      if (match) lrcBox.innerText = match.text;
+  let activeLyricIndex = -1;
+  function updateLyrics(t) {
+    if (!hasLyrics || !lyrics.length) return;
+    let idx = 0;
+    for (let i = 0; i < lyrics.length; i++) {
+      if (t >= lyrics[i].time) idx = i; else break;
     }
-  };
+    if (idx !== activeLyricIndex) {
+      const lines = lyricsPreview.querySelectorAll('.lyricsLine');
+      lines.forEach((el, i) => {
+        if (i === idx) {
+          el.classList.add('active');
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          el.classList.remove('active');
+        }
+      });
+      activeLyricIndex = idx;
+    }
+  }
+
+  audio.addEventListener('timeupdate', () => {
+    if(audio.duration){
+      progressBar.style.width = (audio.currentTime / audio.duration) * 100 + '%';
+      curTime.textContent = fmt(audio.currentTime);
+    }
+    updateLyrics(audio.currentTime);
+  });
+
+  audio.addEventListener('loadedmetadata', () => { durTime.textContent = fmt(audio.duration); });
+  audio.addEventListener('error', () => {
+    const box = document.getElementById('audioError');
+    if (box) box.style.display = 'block';
+  });
+
+  playBtn.addEventListener('click', () => {
+    if(audio.paused){
+      audio.play().then(() => {
+        playBtn.innerText = '⏸';
+      }).catch((e) => {
+        console.error(e);
+      });
+    } else {
+      audio.pause();
+      playBtn.innerText = '▶';
+    }
+  });
+
+  progressTrack.addEventListener('click', (e) => {
+    if (!audio.duration || !Number.isFinite(audio.duration)) return;
+    const rect = progressTrack.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = ratio * audio.duration;
+  });
+})();
 </script>
 `;
 }
 
 const pluginConfig = {
   name: 'play2s',
-  alias: ['playlirik', 'playmusic', 'player'],
+  alias: ['spotplay', 'playlirik', 'musik', 'player'],
   category: 'music',
-  description: 'In-Bubble Music Player dengan Live Lyrics & Custom Meta Primitive',
+  description: 'Putar lagu dengan kartu musik interaktif Meta HTML Primitive + Lirik live',
   usage: '.play2s <judul lagu>',
-  example: '.play2s Blue Bird Naruto',
+  example: '.play2s merry Christmas please don\'t call',
   isOwner: false,
   isPremium: false,
   isGroup: false,
   isPrivate: false,
-  cooldown: 8,
+  cooldown: 5,
   energi: 1,
   isEnabled: true
 };
 
-async function handler(m, { sock }) {
-  const query = m.text?.trim();
-  if (!query) return m.reply(`🎧 *Format:* \`${m.prefix}play2s <judul lagu / artis>\``);
+async function handler(m, { sock, args }) {
+  const query = (args && args.length) ? args.join(' ') : (m.text || '').trim();
+  if (!query) {
+    return m.reply(`🎧 *Format:* \`${m.prefix}play2s <judul lagu / artis>\`\n> Contoh: \`${m.prefix}play2s merry Christmas please don't call\``);
+  }
 
-  await m.react('🕕');
+  if (typeof m.react === 'function') await m.react('🔍');
 
   try {
-    const searchRes = await yts(query);
-    const video = searchRes?.videos?.[0];
-    if (!video) {
-      await m.react('❌');
-      return m.reply(`❌ Tidak ditemukan lagu untuk: *${query}*`);
+    const search = await yts(query);
+    const video = search?.videos?.[0];
+    if (!video || !video.url) {
+      if (typeof m.react === 'function') await m.react('❌');
+      return m.reply('❌ Lagu tidak ditemukan di YouTube.');
     }
 
-    const { downloadSpotify, aio } = await import('../../src/scraper/aio.js');
-    let rawAudioUrl = null;
+    if (typeof m.react === 'function') await m.react('⏳');
 
+    // 1. Dapatkan download URL audio
+    const dl = await ytdl(video.url, 'mp3');
+    const directAudioUrl = dl?.dl;
+    if (!directAudioUrl) {
+      if (typeof m.react === 'function') await m.react('❌');
+      return m.reply('❌ Gagal mendapatkan streaming audio dari server YouTube.');
+    }
+
+    // 2. Download audio buffer dan kompresi jadi Base64 DataURI (Opus 16kbps mono)
+    const audioRes = await axios.get(directAudioUrl, { responseType: 'arraybuffer', timeout: 30000 });
+    const encodedAudio = await audioDataUri(Buffer.from(audioRes.data), { codec: 'opus', maxDetik: 240 });
+
+    if (!encodedAudio?.dataUri) {
+      if (typeof m.react === 'function') await m.react('❌');
+      return m.reply('❌ Gagal mengompresi audio untuk WhatsApp player.');
+    }
+
+    // 3. Download dan kompresi cover thumbnail
+    let coverSrc = '';
+    if (video.thumbnail) {
+      const coverRes = await coverDataUri(video.thumbnail, { ukuran: 180, kualitas: 8 });
+      if (coverRes?.dataUri) coverSrc = coverRes.dataUri;
+    }
+
+    // 4. Cari lirik tersinkronisasi
+    let lirikHasil = null;
     try {
-      const sp = await downloadSpotify(video.title);
-      if (sp?.download_url || sp?.url) rawAudioUrl = sp.download_url || sp.url;
-    } catch (e) {}
+      lirikHasil = await cariLirik(video);
+    } catch (e) {
+      console.error('[play2s] Lirik error:', e);
+    }
+
+    const formatLirik = lirikHasil?.baris ? lirikHasil.baris.map(b => ({ time: b.time, text: b.text })) : [];
+    const judulLagu = lirikHasil?.judul || video.title || query;
+    const artisLagu = lirikHasil?.artis || video.author?.name || 'YouTube Music';
 
     const htmlPayload = renderHtmlPlayer({
-      judul: video.title,
-      artis: video.author?.name || 'YouTube Music',
-      audioSrc: rawAudioUrl || video.url,
-      coverSrc: video.thumbnail,
-      sourceLabel: 'SHIROWAHD MUSIC PLAYER',
-      caption: `${video.title} - ${video.author?.name || ''}`,
-      lirik: []
+      judul: judulLagu,
+      artis: artisLagu,
+      audioSrc: encodedAudio.dataUri,
+      coverSrc: coverSrc,
+      sourceLabel: 'SHIROWAHD MUSIC',
+      caption: `${judulLagu} - ${artisLagu}`,
+      lirik: formatLirik
     });
 
     const msgContent = {
@@ -231,7 +437,7 @@ async function handler(m, { sock }) {
         message: {
           richResponseMessage: {
             messageType: 1,
-            submessages: [{ messageType: 2, messageText: `Now Playing: ${video.title}` }],
+            submessages: [{ messageType: 2, messageText: `${judulLagu} - ${artisLagu}` }],
             unifiedResponse: {
               data: Buffer.from(JSON.stringify({
                 response_id: 'shirowahd-music-player',
@@ -259,10 +465,11 @@ async function handler(m, { sock }) {
     };
 
     await sock.relayMessage(m.chat, msgContent, {});
-    await m.react('🎶');
+    if (typeof m.react === 'function') await m.react('🎶');
   } catch (err) {
     console.error('Play2s error:', err);
-    await m.reply(`🎵 *Hasil Pencarian:*\nhttps://youtu.be/${video?.videoId || ''}`);
+    if (typeof m.react === 'function') await m.react('❌');
+    await m.reply(`❌ *Terjadi Kesalahan:* ${err.message}`);
   }
 }
 
