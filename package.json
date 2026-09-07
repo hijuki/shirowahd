@@ -25,6 +25,7 @@
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@hapi/boom": "^10.0.1",
+    "@luanxdd/snowkit": "^3.2.0",
     "@microlink/mql": "^0.16.1",
     "@napi-rs/canvas": "^0.1.88",
     "acorn": "^8.16.0",
@@ -61,7 +62,7 @@
     "qrcode": "^1.5.4",
     "qs": "^6.14.1",
     "rate-limiter-flexible": "^9.1.1",
-    "sharp": "^0.33.3",
+    "sharp": "^0.33.5",
     "skia-canvas": "^3.0.8",
     "ssh2": "^1.17.0",
     "tesseract.js": "^7.0.0",
