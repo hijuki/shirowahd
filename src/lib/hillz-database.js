@@ -12,7 +12,7 @@ const defaultSewa = { enabled: false, groups: {} };
 
 class Database {
   constructor(dbPath) {
-    this.dbPath = dbPath;
+    this.dbPath = dbPath || path.join(process.cwd(), "database", "main");
     this.stores = {};
     this.dirty = {
       users: false,
