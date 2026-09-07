@@ -1485,9 +1485,9 @@ class AIRich extends BaseBuilder {
         const qObj = quoted
             ? {
                 stanzaId: quoted?.key?.id || quoted?.id,
-                participant: quotedParticipant || quoted?.key?.participant || quoted?.key?.remoteJid,
+                participant: quotedParticipant || quoted?.key?.participant || quoted?.key?.remoteJid || (typeof quoted === 'string' ? quoted : undefined),
                 quotedType: 0,
-                quotedMessage: typeof quoted === 'object' && quoted !== null ? (quoted.message ?? quoted) : undefined,
+                quotedMessage: quoted?.message || quoted?.raw?.message || (quoted?.key ? { conversation: quoted?.body || '' } : undefined),
             }
             : {};
 

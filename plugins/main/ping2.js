@@ -3,13 +3,14 @@ import { performance } from 'perf_hooks'
 import { execSync } from 'child_process'
 import config from '../../config.js'
 import { getDatabase } from '../../src/lib/hillz-database.js'
+import { AIRich } from '../../src/lib/hillz-builder.js'
 import te from '../../src/lib/hillz-error.js'
 
 const pluginConfig = {
     name: 'ping2',
     alias: ['speed2', 'p2', 'latency2', 'sys2', 'status2'],
     category: 'main',
-    description: 'Cek performa dan status sistem bot secara real-time (Interactive Table)',
+    description: 'Cek performa dan status sistem bot secara real-time (AIRich Table)',
     usage: '.ping2',
     example: '.ping2',
     isOwner: false,
@@ -97,6 +98,7 @@ async function handler(m, { sock }) {
         const totalExec = Math.round(performance.now() - execStart)
 
         const tableData = [
+            ['Metric', 'Value'],
             ['WA Roundtrip', `${waRoundtrip} ms`],
             ['Kecepatan Respon', `${totalExec} ms`],
             ['Status', 'Online'],
@@ -117,28 +119,21 @@ async function handler(m, { sock }) {
             ['Uptime Server', fmtUp(os.uptime())],
         ]
 
-        let tableSuccess = false;
-        if (typeof sock.sendTable === 'function') {
-            try {
-                await sock.sendTable(
-                    m.chat,
-                    '⚡ System Performance',
-                    ['Metric', 'Value'],
-                    tableData,
-                    m?.raw || m,
-                    {
-                        headerText: `${config.bot?.name || 'SHIROWAHD'} *STATUS*\n\n- 📊 Statistik Realtime Server & Bot`,
-                        footer: '🍃 Realtime Monitoring'
-                    }
-                );
-                tableSuccess = true;
-            } catch (tableErr) {
-                console.warn('[ping2] sendTable fallback to text:', tableErr.message);
-            }
+        let sentSuccess = false;
+
+        // 1. Coba kirim via AIRich (GenATableUXPrimitive)
+        try {
+            const rich = new AIRich(sock);
+            rich.addText(`⚡ *${config.bot?.name || 'SHIROWAHD'} STATUS*\n\n> Realtime diagnostics & performance monitoring.`);
+            rich.addTable(tableData);
+            await rich.send(m.chat, { quoted: m?.raw || m });
+            sentSuccess = true;
+        } catch (richErr) {
+            console.warn('[ping2] AIRich send failed:', richErr.message);
         }
 
-        // Fallback jika WA client tidak render table atau sendTable gagal
-        if (!tableSuccess) {
+        // 2. Fallback jika gagal
+        if (!sentSuccess) {
             let textMsg = `⚡ *${config.bot?.name || 'SHIROWAHD'} STATUS*\n\n`;
             textMsg += `> ◦ *WA Roundtrip:* ${waRoundtrip} ms\n`;
             textMsg += `> ◦ *Respon Bot:* ${totalExec} ms\n`;
