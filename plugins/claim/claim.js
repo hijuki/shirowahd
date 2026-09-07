@@ -115,46 +115,69 @@ export async function handler(m, { sock }) {
 
   // .claim on
   if (text.toLowerCase() === 'on') {
-    if (!owner) return m.reply('\u26a0\ufe0f Hanya owner yang bisa mengaktifkan claim di grup ini.');
-    if (!isGc) return m.reply('\u26a0\ufe0f Kirim di grup, bukan di PC.');
+    if (!owner) return m.reply('⚠️ *Akses Ditolak:* Hanya owner yang dapat mengaktifkan fitur claim di grup ini.');
+    if (!isGc) return m.reply('⚠️ *Perhatian:* Perintah ini hanya dapat dijalankan di dalam grup WhatsApp.');
     try {
       const meta = await sock.groupMetadata(m.from);
-      const groupName = meta?.subject || 'Grup';
+      const groupName = meta?.subject || 'Grup WhatsApp';
       const inviteResp = await sock.groupInviteCode(m.from);
       const link = 'https://chat.whatsapp.com/' + inviteResp;
       const settings = loadSettings();
       const cgs = settings.claimGroups || (settings.claimGroup ? [settings.claimGroup] : []);
       if (cgs.some(g => g.link.includes(inviteResp))) {
-        return m.reply('\u2705 Grup *' + groupName + '* sudah terdaftar sebagai grup claim.');
+        let alreadyMsg = `ℹ️ *GRUP CLAIM SUDAH AKTIF*\n`;
+        alreadyMsg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        alreadyMsg += `👥 *Grup:* ${groupName}\n`;
+        alreadyMsg += `🔗 *Link:* ${link}\n`;
+        alreadyMsg += `⚡ *Status:* Sudah terdaftar & siap digunakan.\n`;
+        alreadyMsg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        alreadyMsg += `> Ketik \`.claim <KODE>\` untuk mengklaim video HD.`;
+        return m.reply(alreadyMsg);
       }
-      cgs.push({ name: groupName, link });
+      cgs.push({ name: groupName, link, visible: true });
       settings.claimGroups = cgs;
       saveSettings(settings);
       cachedGroupJids = {};
-      return m.reply('\u2705 Grup *' + groupName + '* ditambahkan sebagai grup claim!\n\nLink: ' + link);
+
+      let successMsg = `✅ *SUKSES MENDAFTARKAN GRUP CLAIM*\n`;
+      successMsg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+      successMsg += `👥 *Nama Grup:* ${groupName}\n`;
+      successMsg += `🔗 *Invite Link:* ${link}\n`;
+      successMsg += `⚡ *Status:* *Aktif & Terdaftar* 🟢\n`;
+      successMsg += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+      successMsg += `📝 *Petunjuk:*\n`;
+      successMsg += `> Member grup sekarang dapat mengunduh video HD dengan format: \`.claim <KODE>\`\n`;
+      successMsg += `> Cek daftar seluruh grup aktif: \`.listgrup\``;
+      return m.reply(successMsg);
     } catch (e) {
-      return m.reply('\u274c Gagal: ' + e.message);
+      return m.reply('❌ *Gagal mengaktifkan claim:* ' + e.message);
     }
   }
 
   // .claim off
   if (text.toLowerCase() === 'off') {
-    if (!owner) return m.reply('\u26a0\ufe0f Hanya owner yang bisa menonaktifkan claim di grup ini.');
-    if (!isGc) return m.reply('\u26a0\ufe0f Kirim di grup, bukan di PC.');
+    if (!owner) return m.reply('⚠️ *Akses Ditolak:* Hanya owner yang dapat menonaktifkan fitur claim di grup ini.');
+    if (!isGc) return m.reply('⚠️ *Perhatian:* Perintah ini hanya dapat dijalankan di dalam grup WhatsApp.');
     try {
       const settings = loadSettings();
       const cgs = settings.claimGroups || (settings.claimGroup ? [settings.claimGroup] : []);
       const inviteResp = await sock.groupInviteCode(m.from);
       const filtered = cgs.filter(g => !g.link.includes(inviteResp));
       if (filtered.length === cgs.length) {
-        return m.reply('\u26a0\ufe0f Grup ini tidak terdaftar sebagai grup claim.');
+        return m.reply('⚠️ *Grup ini belum terdaftar* di dalam daftar grup claim aktif.');
       }
       settings.claimGroups = filtered;
       saveSettings(settings);
       cachedGroupJids = {};
-      return m.reply('\u2705 Grup ini dihapus dari daftar grup claim.');
+
+      let offMsg = `🗑️ *GRUP CLAIM DINONAKTIFKAN*\n`;
+      offMsg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+      offMsg += `⚡ *Status:* Grup berhasil dihapus dari daftar claim.\n`;
+      offMsg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+      offMsg += `> Member tidak dapat lagi melakukan claim di grup ini.`;
+      return m.reply(offMsg);
     } catch (e) {
-      return m.reply('\u274c Gagal: ' + e.message);
+      return m.reply('❌ *Gagal menonaktifkan claim:* ' + e.message);
     }
   }
 
