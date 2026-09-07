@@ -1,67 +1,67 @@
-import crypto from "crypto";
 import {
   generateWAMessage,
   generateWAMessageFromContent,
-  jidNormalizedUser,
-} from "hillz";
-import te from "../../src/lib/hillz-error.js";
-import { tiktokSearchVideo } from "../../src/scraper/tiktoksearch.js";
+  jidNormalizedUser
+} from 'hillz';
+import axios from 'axios';
+import crypto from 'crypto';
+import te from '../../src/lib/hillz-error.js';
+import config from '../../config.js';
+
 const pluginConfig = {
-  name: "ttsearch",
-  alias: ["tiktoksearch", "tts", "searchtiktok"],
-  category: "search",
-  description: "Cari video TikTok",
-  usage: ".ttsearch <query>",
-  example: ".ttsearch jj epep",
+  name: 'ttsearch',
+  alias: ['tiktoksearch', 'tiktokcari', 'ttcari', 'ttfind'],
+  category: 'search',
+  description: 'Cari video TikTok dan kirimkan dalam album interaktif',
+  usage: '.ttsearch <kata kunci>',
+  example: '.ttsearch Jedag Jedug Anime',
   isOwner: false,
   isPremium: false,
   isGroup: false,
   isPrivate: false,
-  cooldown: 15,
+  cooldown: 8,
   energi: 1,
-  isEnabled: true,
+  isEnabled: true
 };
 
 async function handler(m, { sock }) {
-  const query = m.args.join(" ")?.trim();
+  const query = m.text?.trim();
+  if (!query) return m.reply(`🔍 *Format:* \`${m.prefix}ttsearch <kata kunci pencarian>\``);
 
-  if (!query) {
-    return m.reply(
-      `╭┈┈⬡「 🎵 *ᴛɪᴋᴛᴏᴋ sᴇᴀʀᴄʜ* 」
-┃
-㊗ ᴜsᴀɢᴇ: \`${m.prefix}ttsearch <query>\`
-┃
-╰┈┈⬡
-
-> \`Contoh: ${m.prefix}ttsearch anime\``,
-    );
-  }
-
-  m.react("🔍");
+  await m.react('🕕');
 
   try {
-    const videos = await tiktokSearchVideo(query);
+    const res = await axios.get(`https://api.tiklydown.eu.org/api/search?q=${encodeURIComponent(query)}`, { timeout: 20000 });
+    const items = res.data?.data?.videos || res.data?.data || [];
+    const valid = items.filter(v => v.cover || v.play || v.video).slice(0, 6);
 
-    if (!videos || videos.length === 0) {
-      m.react("❌");
-      return m.reply(`❌ Tidak ditemukan video untuk: ${query}`);
+    if (!valid.length) {
+      await m.react('❌');
+      return m.reply(`❌ Tidak ditemukan video TikTok untuk: *${query}*`);
     }
 
-    const maxShow = Math.min(videos.length, 5);
-    const mediaList = videos.slice(0, maxShow).map((video) => ({
-      video: { url: video.link },
-      mimetype: "video/mp4",
-      caption: `🎵 *TIKTOK SEARCH*
+    const mediaList = [];
+    for (const v of valid) {
+      const imgUrl = v.cover || v.origin_cover;
+      if (!imgUrl) continue;
+      try {
+        const imgRes = await axios.get(imgUrl, { responseType: 'arraybuffer', timeout: 15000 });
+        const imgBuffer = Buffer.from(imgRes.data);
+        if (imgBuffer.length > 1000) {
+          mediaList.push({
+            image: imgBuffer,
+            caption: `🎵 *${v.title || query}*\n👤 *Author:* ${v.author?.nickname || v.author?.unique_id || 'TikTok User'}\n🔗 *Link:* ${v.play || v.video || ''}`
+          });
+        }
+      } catch (e) {
+        continue;
+      }
+    }
 
-📌 ${video.title || "-"}
-👤 ${video.author?.nickname || "-"}
-👀 ${video.stats?.plays || 0} views
-❤️ ${video.stats?.likes || 0} likes`,
-      contextInfo: {
-        forwardingScore: 99,
-        isForwarded: true,
-      },
-    }));
+    if (!mediaList.length) {
+      await m.react('❌');
+      return m.reply('❌ Gagal memuat cover video TikTok.');
+    }
 
     try {
       const opener = generateWAMessageFromContent(
@@ -69,55 +69,53 @@ async function handler(m, { sock }) {
         {
           messageContextInfo: { messageSecret: crypto.randomBytes(32) },
           albumMessage: {
-            expectedImageCount: 0,
-            expectedVideoCount: mediaList.length,
-          },
+            expectedImageCount: mediaList.length,
+            expectedVideoCount: 0
+          }
         },
         {
           userJid: jidNormalizedUser(sock.user.id),
-          quoted: m,
-          upload: sock.waUploadToServer,
-        },
+          quoted: m.raw || m,
+          upload: sock.waUploadToServer
+        }
       );
 
       await sock.relayMessage(opener.key.remoteJid, opener.message, {
-        messageId: opener.key.id,
+        messageId: opener.key.id
       });
 
-      const generatedMessages = await Promise.all(
-        mediaList.map(async (content) => {
-          const msg = await generateWAMessage(opener.key.remoteJid, content, {
-            upload: sock.waUploadToServer,
-          });
+      for (const content of mediaList) {
+        const msg = await generateWAMessage(opener.key.remoteJid, content, {
+          upload: sock.waUploadToServer
+        });
 
-          msg.message.messageContextInfo = {
-            messageSecret: crypto.randomBytes(32),
-            messageAssociation: {
-              associationType: 1,
-              parentMessageKey: opener.key,
-            },
-          };
+        msg.message.messageContextInfo = {
+          messageSecret: crypto.randomBytes(32),
+          messageAssociation: {
+            associationType: 1,
+            parentMessageKey: opener.key
+          }
+        };
 
-          return msg;
-        }),
-      );
-
-      for (const msg of generatedMessages) {
         await sock.relayMessage(msg.key.remoteJid, msg.message, {
-          messageId: msg.key.id,
+          messageId: msg.key.id
         });
       }
-    } catch (albumError) {
-      for (const content of mediaList) {
-        await sock.sendMessage(m.chat, content, { quoted: m });
-      }
-    }
 
-    m.react("✅");
-  } catch (error) {
-    m.react("☢");
+      await m.react('✅');
+    } catch (err) {
+      // Fallback kirim single card
+      await sock.sendMessage(m.chat, {
+        image: mediaList[0].image,
+        caption: mediaList[0].caption
+      }, { quoted: m.raw || m });
+      await m.react('✅');
+    }
+  } catch (err) {
+    console.error('TTSearch Error:', err);
+    await m.react('❌');
     m.reply(te(m.prefix, m.command, m.pushName));
   }
 }
 
-export { pluginConfig as config, handler, tiktokSearchVideo };
+export { pluginConfig as config, handler };
