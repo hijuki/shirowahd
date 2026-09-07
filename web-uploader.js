@@ -1747,7 +1747,7 @@ async function handleRequest(req, res) {
       // jalan dan kegagalannya tidak terlihat sebagai masalah kredensial.
       // Untuk pesan/log tidak perlu URL tersendiri: `cuci()` di atas sudah
       // membuang token dari setiap keluaran git.
-      const authUrl = repo.replace(/^https:\/\/([^@]*@)?/, `https://${token}@`);
+      const authUrl = repo.replace(/^https:\/\/([^@]*@)?/, `https://${encodeURIComponent(token)}@`);
 
       // admin-settings.json TIDAK di-backup ke git sama sekali. Salinan
       // "tersanitasi" pun DIHENTIKAN dari jalur ini: repo `hijuki/shirowahd`
