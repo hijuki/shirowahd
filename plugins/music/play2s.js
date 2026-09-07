@@ -11,12 +11,12 @@ import te from '../../src/lib/hillz-error.js';
 import { ytdl } from '../../src/scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
-const BATAS_BASE64 = 850 * 1024;
-const BITRATE_MIN = { mp3: 32, opus: 24 };
-const BITRATE_AWAL = { mp3: 64, opus: 48 };
+const BATAS_BASE64 = 550 * 1024; // 550KB aman dari drop WhatsApp
+const BITRATE_MIN = { mp3: 18, opus: 16 };
+const BITRATE_AWAL = { mp3: 32, opus: 20 };
 const CODEC = {
-    mp3: { args: (br) => [ '-af', 'treble=g=3:f=3000', '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '2', '-ar', '44100' ], ext: 'mp3', mime: 'audio/mpeg' },
-    opus: { args: (br) => ['-af', 'treble=g=3:f=3000', '-c:a', 'libopus', '-b:a', `${br}k`, '-vbr', 'on', '-application', 'audio', '-ac', '2', '-ar', '48000'], ext: 'ogg', mime: 'audio/ogg' }
+    mp3: { args: (br) => ['-af', 'highpass=f=40,treble=g=3.5:f=3200', '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '2', '-ar', '44100'], ext: 'mp3', mime: 'audio/mpeg' },
+    opus: { args: (br) => ['-af', 'highpass=f=40,treble=g=3.5:f=3200', '-c:a', 'libopus', '-b:a', `${br}k`, '-vbr', 'on', '-application', 'audio', '-ac', '2', '-ar', '48000'], ext: 'ogg', mime: 'audio/ogg' }
 };
 
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
@@ -146,7 +146,7 @@ async function kecilkan(masuk, keluar, codec, bitrate, maxDetik) {
 }
 
 async function audioDataUri(buffer, opsi = {}) {
-    const { codec = 'opus', maxDetik = 240, batas = BATAS_BASE64 } = opsi;
+    const { codec = 'opus', maxDetik = 160, batas = BATAS_BASE64 } = opsi;
     if (!Buffer.isBuffer(buffer) || !buffer.length || !CODEC[codec]) return null;
     const bitrate = opsi.bitrate ?? BITRATE_AWAL[codec];
     const minimum = BITRATE_MIN[codec];
@@ -166,11 +166,16 @@ async function audioDataUri(buffer, opsi = {}) {
         if (kecil.length > batasBerkas) return null;
         const b64 = kecil.toString('base64');
         return { dataUri: `data:${CODEC[codec].mime};base64,${b64}`, byte: b64.length, bitrate: br, codec };
-    } catch { return null; } finally { rmSync(dir, { recursive: true, force: true }); }
+    } catch (e) {
+        console.error('[play2s audioDataUri error]:', e);
+        return null;
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
 }
 
 async function coverDataUri(url, opsi = {}) {
-    const { ukuran = 240, kualitas = 6, batas = 14 * 1024 } = opsi;
+    const { ukuran = 180, kualitas = 8, batas = 10 * 1024 } = opsi;
     if (!url || !/^https?:\/\//.test(url)) return null;
     const dir = mkdtempSync(join(tmpdir(), 'shir-cover-'));
     const masuk = join(dir, 'masuk');
@@ -182,7 +187,7 @@ async function coverDataUri(url, opsi = {}) {
         writeFileSync(masuk, buf);
         let q = kualitas;
         let kecil = null;
-        for (; q <= 9; q++) {
+        for (; q <= 10; q++) {
             await jalankan(FFMPEG_BIN, ['-y', '-i', masuk, '-vf', `crop='min(iw,ih)':'min(iw,ih)',scale=${ukuran}:${ukuran}`, '-q:v', String(q), keluar]);
             kecil = readFileSync(keluar);
             if ((kecil.length * 4) / 3 <= batas) break;
@@ -190,7 +195,11 @@ async function coverDataUri(url, opsi = {}) {
         if (!kecil || (kecil.length * 4) / 3 > batas) return null;
         const b64 = kecil.toString('base64');
         return { dataUri: `data:image/jpeg;base64,${b64}`, byte: b64.length, kualitas: q };
-    } catch { return null; } finally { rmSync(dir, { recursive: true, force: true }); }
+    } catch {
+        return null;
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
 }
 
 function lolos(t) {
@@ -264,7 +273,6 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
 .syncBtn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 10px; }
 .syncBtn:active { background: rgba(255,255,255,0.3); }
 
-.audioError { font-size: 11.5px; color: #ff8a80; text-align: center; margin: 8px 0 0; display: none; }
 .progressArea { margin: 4px 0 4px; }
 .progressTrack { background: rgba(255,255,255,0.2); height: 3px; border-radius: 2px; cursor: pointer; position: relative; }
 .progressBar { background: #f2e9e4; height: 100%; border-radius: 2px; width: 0%; position: relative; pointer-events: none; }
@@ -317,10 +325,9 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
       <button class="ctrlBtn" id="repeatBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
     </div>
     <div class="captionText">${caption}</div>
-    <div class="audioError" id="audioError">⚠ Audio gagal dimuat — link mungkin invalid/expired</div>
   </div>
 </div>
-<audio id="audioEl" preload="auto" crossorigin="anonymous" src="${audioSrc}"></audio>
+<audio id="audioEl" preload="auto" src="${audioSrc}"></audio>
 <script>
 (function(){
     const audio = document.getElementById('audioEl');
@@ -331,7 +338,6 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
     const durTime = document.getElementById('durTime');
     const heartBtn = document.getElementById('heartBtn');
     const repeatBtn = document.getElementById('repeatBtn');
-    const noteBtn = document.getElementById('noteBtn');
     const rewindBtn = document.getElementById('rewindBtn');
     const forwardBtn = document.getElementById('forwardBtn');
     const lyricsPreview = document.getElementById('lyricsPreview');
@@ -519,7 +525,7 @@ const pluginConfig = {
     name: 'play2s',
     alias: ['spotplay', 'playlirik', 'musik', 'musicplayer'],
     category: 'music',
-    description: 'Putar lagu interaktif di dalam bubble WhatsApp dengan lirik realtime (HD Bypass Audio)',
+    description: 'Putar lagu interaktif di dalam bubble WhatsApp dengan lirik realtime (HD Audio)',
     usage: '.play2s <judul lagu>',
     example: '.play2s komang raim laode',
     isOwner: false,
@@ -534,7 +540,7 @@ const pluginConfig = {
 async function handler(m, { sock, args }) {
     const query = args.join(' ').trim();
     if (!query) {
-        return m.reply(`🎵 *HD IN-BUBBLE MUSIC PLAYER*\n\n> Masukkan judul lagu yang ingin diputar!\n\n*Contoh:* \`${m.prefix}play2s multo\``);
+        return m.reply(`🎵 *IN-BUBBLE MUSIC PLAYER*\n\n> Masukkan judul lagu yang ingin diputar!\n\n*Contoh:* \`${m.prefix}play2s multo\``);
     }
 
     if (typeof m.react === 'function') {
@@ -574,15 +580,28 @@ async function handler(m, { sock, args }) {
 
         const formatLirik = lirikHasil?.baris ? lirikHasil.baris.map(b => ({ time: b.time, text: b.text })) : [];
 
-        // BYPASS AUDIO STRATEGY:
-        // Gunakan direct stream URL (HD Original 320k Crystal Clear) sebagai sumber utama
-        let audioSrc = rawAudioUrl;
+        let audioSrc = '';
+        try {
+            const audioRes = await axios.get(rawAudioUrl, { responseType: 'arraybuffer', timeout: 30000 });
+            audioBuffer = Buffer.from(audioRes.data);
+            const encodedAudio = await audioDataUri(audioBuffer, { codec: 'opus', maxDetik: 160, batas: BATAS_BASE64 });
+            if (encodedAudio?.dataUri) {
+                audioSrc = encodedAudio.dataUri;
+            }
+        } catch (e) {
+            console.error('[play2s] Audio encode error:', e);
+        }
+
+        if (!audioSrc) {
+            if (typeof m.react === 'function') try { await m.react('❌'); } catch {}
+            return m.reply('🥀 _Gagal memproses audio untuk player in-bubble._');
+        }
 
         // Cover thumbnail
         let coverSrc = video.thumbnail || '';
         if (video.thumbnail) {
             try {
-                const coverRes = await coverDataUri(video.thumbnail, { ukuran: 200, kualitas: 7 });
+                const coverRes = await coverDataUri(video.thumbnail, { ukuran: 180, kualitas: 8 });
                 if (coverRes?.dataUri) {
                     coverSrc = coverRes.dataUri;
                 }
@@ -600,7 +619,7 @@ async function handler(m, { sock, args }) {
             audioSrc: audioSrc,
             coverSrc: coverSrc,
             sourceLabel: 'YOUTUBE MUSIC',
-            caption: `${config.bot?.name || 'SHIROWAHD'} • HD Bypass Music Engine`,
+            caption: `${config.bot?.name || 'SHIROWAHD'} • In-Bubble Music Player`,
             lirik: formatLirik
         });
 
@@ -612,7 +631,7 @@ async function handler(m, { sock, args }) {
                         primitive: {
                             data: {
                                 raw_html: htmlPayload,
-                                trusted_sources: ['hirara.dev', 'api.swhdhlz.my.id', 'cdn.jsdelivr.net']
+                                trusted_sources: ['hirara.dev']
                             },
                             __typename: 'GenAIaeacdsnwHtmlPrimitive'
                         },

@@ -1,8 +1,8 @@
 import { downloadContentFromMessage } from 'hillz';
 
 const pluginConfig = {
-  name: 'rvo',
-  alias: ['openvo', 'readviewonce', 'lihatvo'],
+  name: 'openvo',
+  alias: ['rvo2', 'readviewonce', 'lihatvo'],
   category: 'group',
   description: 'Membuka pesan 1x lihat (ViewOnce) yang di-reply',
   usage: '.rvo (reply pesan 1x lihat)',

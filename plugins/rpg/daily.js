@@ -3,8 +3,8 @@ import { addExpWithLevelCheck } from "../../src/lib/hillz-level.js";
 import config from "../../config.js";
 
 const pluginConfig = {
-  name: "daily",
-  alias: ["harian", "claim"],
+  name: "dailyrpg",
+  alias: ["harianrpg", "claimrpg"],
   category: "rpg",
   description: "Klaim hadiah harian",
   usage: ".daily",
