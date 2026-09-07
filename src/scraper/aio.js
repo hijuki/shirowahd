@@ -1,6 +1,10 @@
 import instagramDownloader from "./ig.js";
 import scrapePinterest from "./pindl.js";
 import ytdl, { Youtube } from "./ytdl.js";
+import { downloadSpotify } from "./spotify.js";
+import { RedNoteDL } from "./rednote.js";
+import { douyinDl } from "./douyin.js";
+import { RedditDL } from "./reddit.js";
 import axios from "axios";
 import * as cheerio from "cheerio";
 
@@ -14,6 +18,9 @@ const PLATFORM_DETECT = [
   { key: "twitter", patterns: ["twitter.com", "x.com"] },
   { key: "threads", patterns: ["threads.net"] },
   { key: "reddit", patterns: ["reddit.com"] },
+  { key: "spotify", patterns: ["open.spotify.com"] },
+  { key: "rednote", patterns: ["xiaohongshu.com", "xhslink.com", "rednote"] },
+  { key: "douyin", patterns: ["douyin.com", "v.douyin.com"] },
 ];
 
 function detectPlatform(url) {
@@ -218,6 +225,48 @@ async function handleSavefbs(url) {
   };
 }
 
+async function handleSpotify(url) {
+  const result = await downloadSpotify(url);
+  if (!result.status) throw new Error(result.error || "Gagal download Spotify");
+  return {
+    platform: "spotify",
+    title: result.title + " - " + result.artist,
+    thumbnail: null,
+    media: [{ type: "audio", url: result.downloadUrl }],
+  };
+}
+
+async function handleRedNote(url) {
+  const result = await RedNoteDL(url);
+  if (!result.status) throw new Error(result.error || "Gagal download RedNote");
+  const media = result.results.map((u) => ({
+    type: result.type === "video" ? "video" : "image",
+    url: u,
+  }));
+  return {
+    platform: "rednote",
+    title: result.title || "RedNote",
+    thumbnail: null,
+    media,
+  };
+}
+
+async function handleDouyin(url) {
+  const result = await douyinDl(url);
+  const media = [];
+  if (result.video) media.push({ type: "video", url: result.video });
+  if (result.audio) media.push({ type: "audio", url: result.audio });
+  if (result.images?.length) {
+    for (const img of result.images) media.push({ type: "image", url: img });
+  }
+  return {
+    platform: "douyin",
+    title: result.title || "Douyin",
+    thumbnail: null,
+    media,
+  };
+}
+
 const PLATFORM_HANDLERS = {
   instagram: handleInstagram,
   youtube: handleYoutube,
@@ -228,6 +277,9 @@ const PLATFORM_HANDLERS = {
   twitter: handleSavefbs,
   threads: handleSavefbs,
   reddit: handleSavefbs,
+  spotify: handleSpotify,
+  rednote: handleRedNote,
+  douyin: handleDouyin,
 };
 
 async function aiodl(url) {

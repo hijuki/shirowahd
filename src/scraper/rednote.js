@@ -5,15 +5,13 @@ const generateRandomIP = () =>
 
 async function RedNoteDL(xhsUrl) {
   const fakeIP = generateRandomIP();
-
   const response = await axios.post(
     "https://rednote.savevideodown.com/api/download",
     { url: xhsUrl },
     {
       headers: {
         "Content-Type": "application/json",
-        "User-Agent":
-          "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
         Referer: "https://rednote.savevideodown.com/",
         Origin: "https://rednote.savevideodown.com",
         "X-Forwarded-For": fakeIP,
@@ -22,16 +20,10 @@ async function RedNoteDL(xhsUrl) {
       },
     },
   );
-
   const resData = response.data;
-
   if (!resData.success) {
-    return {
-      status: false,
-      error: resData.error || "Gagal mengambil data",
-    };
+    return { status: false, error: resData.error || "Gagal mengambil data" };
   }
-
   return {
     status: true,
     title: resData.title,
