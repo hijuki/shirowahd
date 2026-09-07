@@ -1,6 +1,7 @@
 import { getAllPlugins } from '../../src/lib/hillz-plugins.js';
 import config from '../../config.js';
 import te from '../../src/lib/hillz-error.js';
+import { AIRich } from '../../src/lib/hillz-builder.js';
 
 const pluginConfig = {
   name: 'totalfitur',
@@ -53,37 +54,45 @@ async function handler(m, { sock }) {
 
     const sorted = Object.entries(cats).sort((a, b) => b[1].total - a[1].total);
 
-    const tableData = sorted.map(([cat, data]) => {
-      const pct = ((data.total / total) * 100).toFixed(1);
-      return [
-        `${ICONS[cat] || '📦'} ${cat.toUpperCase()}`,
-        data.total.toString(),
-        `${pct}%`
-      ];
-    });
+    const tableData = [
+      ['Kategori', 'Jumlah', 'Persen'],
+      ...sorted.map(([cat, data]) => {
+        const pct = ((data.total / total) * 100).toFixed(1);
+        return [
+          `${ICONS[cat] || '📦'} ${cat.toUpperCase()}`,
+          data.total.toString(),
+          `${pct}%`
+        ];
+      })
+    ];
 
-    if (typeof sock.sendTable === 'function') {
-      try {
-        return await sock.sendTable(
-          m.chat,
-          'Distribusi Fitur',
-          ['Kategori', 'Jumlah', 'Persen'],
-          tableData,
-          m,
-          {
-            headerText: `Total: ${total} | Aktif: ${enabled} | Kategori: ${sorted.length}`
-          }
-        );
-      } catch (err) {
-        console.error('[TotalFitur] sendTable error:', err.message);
-      }
+    let sentSuccess = false;
+
+    // 1. Kirim via AIRich Meta Native Table
+    try {
+      const rich = new AIRich(sock);
+      rich.addText(`📊 *DISTRIBUSI FITUR ${config.bot?.name || 'SHIROWAHD'}*\n\n> Total: *${total}* Fitur | Aktif: *${enabled}* | Kategori: *${sorted.length}*`);
+      rich.addTable(tableData);
+      await rich.send(m.chat, { quoted: m.raw || m });
+      sentSuccess = true;
+    } catch (richErr) {
+      console.warn('[TotalFitur] AIRich send failed:', richErr.message);
     }
 
-    // Fallback teks rapi
-    let textOut = `📊 *DISTRIBUSI FITUR ${config.bot?.name || 'SHIROWAHD'}*\n\n` +
-      `> Total: *${total}* | Aktif: *${enabled}* | Kategori: *${sorted.length}*\n\n` +
-      tableData.map(r => `• *${r[0]}*: ${r[1]} (${r[2]})`).join('\n');
-    await m.reply(textOut);
+    // 2. Fallback text jika AIRich tidak didukung
+    if (!sentSuccess) {
+      let textOut = `📊 *DISTRIBUSI FITUR ${config.bot?.name || 'SHIROWAHD'}*\n\n` +
+        `> Total: *${total}* | Aktif: *${enabled}* | Kategori: *${sorted.length}*\n\n` +
+        sorted.map(([cat, data]) => {
+          const pct = ((data.total / total) * 100).toFixed(1);
+          return `• *${ICONS[cat] || '📦'} ${cat.toUpperCase()}*: ${data.total} (${pct}%)`;
+        }).join('\n');
+      await m.reply(textOut);
+    }
+
+    if (typeof m.react === 'function') {
+      try { await m.react('✅'); } catch {}
+    }
   } catch (error) {
     console.error('[TotalFitur] Handler error:', error);
     if (typeof m.react === 'function') {

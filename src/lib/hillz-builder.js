@@ -1531,7 +1531,7 @@ class AIRich extends BaseBuilder {
         };
     }
 
-    async send(jid, { forwarded, notification, includesUnifiedResponse, includesSubmessages, ...options } = {}) {
+    async send(jid, { forwarded = true, notification = false, includesUnifiedResponse = true, includesSubmessages = true, ...options } = {}) {
         const msg = await this.build({ forwarded, notification, includesUnifiedResponse, includesSubmessages, ...options });
 
         return await this.#client.relayMessage(jid, msg, { ...options });

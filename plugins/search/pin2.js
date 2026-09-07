@@ -1,100 +1,105 @@
-import {
-  generateWAMessageFromContent,
-  prepareWAMessageMedia,
-} from "hillz";
-import { f } from "../../src/lib/hillz-http.js";
+import { generateWAMessageFromContent, prepareWAMessageMedia } from 'hillz';
+import axios from 'axios';
+import te from '../../src/lib/hillz-error.js';
+import config from '../../config.js';
 
 const pluginConfig = {
-  name: "pin2",
-  alias: ["pinterest2"],
-  category: "search",
-  description: "Cari satu gambar acak di Pinterest dengan tombol next",
-  usage: ".pin2 <query>",
-  example: ".pin2 anime",
+  name: 'pin2',
+  alias: ['pinterest2', 'pinnext'],
+  category: 'search',
+  description: 'Cari gambar Pinterest dengan tombol interaktif Next',
+  usage: '.pin2 <query>',
+  example: '.pin2 anime aesthetic',
   isOwner: false,
   isPremium: false,
   isGroup: false,
   isPrivate: false,
   cooldown: 5,
   energi: 1,
-  isEnabled: true,
+  isEnabled: true
 };
 
-async function handler(m, { sock }) {
-  const query = m.text?.trim();
+async function getPinterestImages(query) {
+  try {
+    const res = await axios.get(`https://api.cuki.biz.id/api/search/pinterest?apikey=cuki-x&query=${encodeURIComponent(query)}&type=image`, { timeout: 10000 });
+    const results = res.data?.data?.results;
+    if (results && results.length > 0) {
+      return results.filter(item => item.image_url).map(item => item.image_url);
+    }
+  } catch {}
+  return [];
+}
 
+async function handler(m, { sock, args }) {
+  const query = args.join(' ').trim();
   if (!query) {
-    return m.reply(`❌ Masukkan kata kunci pencarian.\n\nContoh: \`${m.prefix}pin2 kucing\``);
+    return m.reply(`🔍 *PINTEREST INTERAKTIF*\n\n> Masukkan kata kunci pencarian!\n\n*Contoh:* \`${m.prefix}pin2 anime aesthetic\``);
   }
 
-  await m.react("🕕");
+  if (typeof m.react === 'function') {
+    try { await m.react('⏳'); } catch {}
+  }
 
   try {
-    const data = await f(
-      `https://api.cuki.biz.id/api/search/pinterest?apikey=cuki-x&query=${encodeURIComponent(query)}&type=image`
+    const images = await getPinterestImages(query);
+    if (!images || images.length === 0) {
+      if (typeof m.react === 'function') try { await m.react('❌'); } catch {}
+      return m.reply(`❌ *HASIL TIDAK DITEMUKAN*\n\n> Gambar tidak ditemukan untuk kata kunci: *${query}*`);
+    }
+
+    const randomImg = images[Math.floor(Math.random() * images.length)];
+    const imgRes = await axios.get(randomImg, { responseType: 'arraybuffer', timeout: 15000 });
+    const imgBuffer = Buffer.from(imgRes.data);
+
+    const media = await prepareWAMessageMedia(
+      { image: imgBuffer },
+      { upload: sock.waUploadToServer }
     );
 
-    const results = data?.data?.results?.filter(item => item.image_url);
-    if (!results || results.length === 0) {
-      await m.react("❌");
-      return m.reply(`❌ Waduh, pencarian untuk *${query}* tidak ditemukan. Coba kata kunci lain.`);
-    }
-
-    const randomItem = results[Math.floor(Math.random() * results.length)];
-    const imageUrl = randomItem.image_url;
-
-    if (!imageUrl) {
-      await m.react("❌");
-      return m.reply("⚠️ Gambar tidak tersedia.");
-    }
-
-    const mediaMessage = await prepareWAMessageMedia({
-      image: { url: imageUrl }
-    }, { upload: sock.waUploadToServer });
+    const buttons = [
+      {
+        name: 'quick_reply',
+        buttonParamsJson: JSON.stringify({
+          display_text: '🎲 Ambil Lagi (Next)',
+          id: `${m.prefix}pin2 ${query}`
+        })
+      },
+      {
+        name: 'quick_reply',
+        buttonParamsJson: JSON.stringify({
+          display_text: '📦 Album Versi (.pin)',
+          id: `${m.prefix}pin ${query}`
+        })
+      }
+    ];
 
     const msg = generateWAMessageFromContent(m.chat, {
       viewOnceMessage: {
         message: {
-          messageContextInfo: {},
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
           interactiveMessage: {
+            body: { text: `🎨 *PINTEREST EXPLORER*\n\n> 🔍 *Pencarian:* \`${query}\`\n> 📸 *Total Hasil:* ${images.length} Gambar` },
+            footer: { text: `${config.bot?.name || 'SHIROWAHD'} • Tap tombol untuk ganti gambar` },
             header: {
-              title: "",
-              subtitle: "",
+              title: '📌 *PINTEREST IMAGE*',
               hasMediaAttachment: true,
-              imageMessage: mediaMessage.imageMessage
+              imageMessage: media.imageMessage
             },
-            footer: {
-              text: "Klik tombol di bawah untuk gambar lain 👇"
-            },
-            body: {
-              text: `📸 *PINTEREST SEARCH*\n\n> Pencarian: *${query}*`
-            },
-            nativeFlowMessage: {
-              buttons: [
-                {
-                  name: "quick_reply",
-                  buttonParamsJson: JSON.stringify({
-                    display_text: "🔁 Next",
-                    id: `${m.prefix}pin2 ${query}`
-                  })
-                }
-              ]
-            }
+            nativeFlowMessage: { buttons }
           }
         }
       }
-    }, { quoted: m, userJid: sock.user.jid });
+    }, { quoted: m.raw || m });
 
-    await sock.relayMessage(m.chat, msg.message, {
-      messageId: msg.key.id,
-    });
-
-    await m.react("✅");
-
-  } catch (error) {
-    console.error("[PIN2 Search]", error.message);
-    await m.react("☢");
-    m.reply("😔 Gagal memuat pencarian Pinterest. Server mungkin sedang bermasalah.");
+    await sock.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
+    if (typeof m.react === 'function') try { await m.react('✅'); } catch {}
+  } catch (err) {
+    console.error('[Pin2 Error]:', err);
+    if (typeof m.react === 'function') try { await m.react('❌'); } catch {}
+    m.reply(te(m.prefix, m.command, m.pushName));
   }
 }
 
