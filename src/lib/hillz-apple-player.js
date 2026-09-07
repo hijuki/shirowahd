@@ -1,5 +1,4 @@
 import axios from 'axios';
-import sharp from 'sharp';
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
 import { execFile } from 'node:child_process';
@@ -11,19 +10,51 @@ import { ytdl } from '../scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
-const BATAS_BASE64 = 420 * 1024;
+const BATAS_BASE64 = 550 * 1024;
+const BITRATE_MIN = { mp3: 20, opus: 16 };
+const BITRATE_AWAL = { mp3: 32, opus: 24 };
+
+const CODEC = {
+  mp3: {
+    args: (br) => [
+      '-af',
+      'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11',
+      '-c:a',
+      'libmp3lame',
+      '-b:a',
+      `${br}k`,
+      '-ac',
+      '1',
+      '-ar',
+      '44100',
+    ],
+    ext: 'mp3',
+    mime: 'audio/mpeg',
+  },
+  opus: {
+    args: (br) => [
+      '-af',
+      'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11',
+      '-c:a',
+      'libopus',
+      '-b:a',
+      `${br}k`,
+      '-vbr',
+      'on',
+      '-application',
+      'audio',
+      '-ac',
+      '1',
+      '-ar',
+      '48000',
+    ],
+    ext: 'ogg',
+    mime: 'audio/ogg',
+  },
+};
+
 const API_LRCLIB = 'https://lrclib.net/api';
 const DATA_DIR = join(process.cwd(), 'src', 'data', 'lyrics');
-
-/**
- * Normalisasi query pencarian lirik
- */
-const normal = (t) =>
-  String(t ?? '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 
 function parseLrc(lrc) {
   const keluar = [];
@@ -79,110 +110,91 @@ async function getLyrics(judul, artis, durasiDetik) {
 }
 
 /**
- * Optimasi cover artwork menjadi WebP Base64 (~25KB)
+ * Cover Data URI sama persis seperti .play2s
  */
-async function processArtwork(url) {
-  if (!url) return '';
+async function coverDataUri(url, opsi = {}) {
+  const { ukuran = 240, kualitas = 7, batas = 14 * 1024 } = opsi;
+  if (!url || !/^https?:\/\//.test(url)) return '';
+  const dir = mkdtempSync(join(tmpdir(), 'shir-cover-'));
+  const masuk = join(dir, 'masuk');
+  const keluar = join(dir, 'keluar.jpg');
   try {
-    const res = await axios.get(url, {
-      responseType: 'arraybuffer',
-      headers: { 'User-Agent': 'SnowKitPlayer/1.0' },
-      timeout: 8000,
-    });
+    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 12000 });
     const buf = Buffer.from(res.data);
-    const webpBuf = await sharp(buf, { failOn: 'none' })
-      .rotate()
-      .resize(360, 360, { fit: 'cover' })
-      .webp({ quality: 78, effort: 4 })
-      .toBuffer();
-    return `data:image/webp;base64,${webpBuf.toString('base64')}`;
-  } catch (e) {
-    return url;
+    if (buf.length < 512) return '';
+    writeFileSync(masuk, buf);
+    let q = kualitas;
+    let kecil = null;
+    for (; q <= 10; q++) {
+      await jalankan(FFMPEG_BIN, [
+        '-y',
+        '-i',
+        masuk,
+        '-vf',
+        `crop='min(iw,ih)':'min(iw,ih)',scale=${ukuran}:${ukuran}`,
+        '-q:v',
+        String(q),
+        keluar,
+      ]);
+      kecil = readFileSync(keluar);
+      if ((kecil.length * 4) / 3 <= batas) break;
+    }
+    if (!kecil || (kecil.length * 4) / 3 > batas) return '';
+    const b64 = kecil.toString('base64');
+    return `data:image/jpeg;base64,${b64}`;
+  } catch {
+    return '';
+  } finally {
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {}
   }
 }
 
+async function kecilkan(masuk, keluar, codec, bitrate, maxDetik) {
+  await jalankan(FFMPEG_BIN, [
+    '-y',
+    '-i',
+    masuk,
+    '-vn',
+    '-t',
+    String(maxDetik),
+    ...CODEC[codec].args(bitrate),
+    keluar,
+  ]);
+  return readFileSync(keluar);
+}
+
 /**
- * Transcode audio stream ke Opus 48kHz Mono EBU R128 Base64
+ * Transcode audio stream ke Opus 48kHz Mono EBU R128 (sama seperti .play2s)
  */
-async function transcodeAudio(audioInput) {
-  const dirTmp = mkdtempSync(join(tmpdir(), 'apple-player-'));
-  const berkasMasuk = join(dirTmp, 'in.bin');
-  const berkasKeluar = join(dirTmp, 'out.ogg');
-
+async function audioDataUri(buffer, opsi = {}) {
+  const { codec = 'opus', maxDetik = 160, batas = BATAS_BASE64 } = opsi;
+  if (!Buffer.isBuffer(buffer) || !buffer.length || !CODEC[codec]) return null;
+  const bitrate = opsi.bitrate ?? BITRATE_AWAL[codec];
+  const minimum = BITRATE_MIN[codec];
+  const dir = mkdtempSync(join(tmpdir(), 'shir-audio-'));
+  const masuk = join(dir, 'masuk');
+  const keluar = join(dir, `keluar.${CODEC[codec].ext}`);
   try {
-    if (Buffer.isBuffer(audioInput)) {
-      writeFileSync(berkasMasuk, audioInput);
-    } else if (typeof audioInput === 'string' && existsSync(audioInput)) {
-      // copy or direct path
-      writeFileSync(berkasMasuk, readFileSync(audioInput));
-    } else if (typeof audioInput === 'string' && audioInput.startsWith('http')) {
-      const res = await axios.get(audioInput, {
-        responseType: 'arraybuffer',
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-        timeout: 15000,
-      });
-      writeFileSync(berkasMasuk, Buffer.from(res.data));
-    } else {
-      throw new Error('Invalid audio input');
+    writeFileSync(masuk, buffer);
+    const batasBerkas = Math.floor((batas * 3) / 4);
+    let br = bitrate;
+    let kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
+    for (let putaran = 0; putaran < 3 && kecil.length > batasBerkas; putaran++) {
+      const usul = Math.floor(((br * batasBerkas) / kecil.length) * 0.94);
+      br = usul < minimum ? (br <= minimum ? minimum : minimum) : usul;
+      kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
     }
-
-    // Transcode dengan bitrate adaptif
-    let bitrate = 18;
-    const args = [
-      '-y',
-      '-i',
-      berkasMasuk,
-      '-af',
-      'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11',
-      '-c:a',
-      'libopus',
-      '-b:a',
-      `${bitrate}k`,
-      '-vbr',
-      'on',
-      '-application',
-      'audio',
-      '-ac',
-      '1',
-      '-ar',
-      '48000',
-      berkasKeluar,
-    ];
-
-    await jalankan(FFMPEG_BIN, args);
-    let buf = readFileSync(berkasKeluar);
-
-    // Jika base64 terlalu besar, turunkan bitrate
-    if (buf.length * 1.37 > BATAS_BASE64) {
-      bitrate = 14;
-      const retryArgs = [
-        '-y',
-        '-i',
-        berkasMasuk,
-        '-af',
-        'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11',
-        '-c:a',
-        'libopus',
-        '-b:a',
-        `${bitrate}k`,
-        '-vbr',
-        'on',
-        '-application',
-        'audio',
-        '-ac',
-        '1',
-        '-ar',
-        '48000',
-        berkasKeluar,
-      ];
-      await jalankan(FFMPEG_BIN, retryArgs);
-      buf = readFileSync(berkasKeluar);
-    }
-
-    return `data:audio/ogg;base64,${buf.toString('base64')}`;
+    if (kecil.length > batasBerkas) return null;
+    const b64 = kecil.toString('base64');
+    return `data:${CODEC[codec].mime};base64,${b64}`;
+  } catch (e) {
+    console.error('[ApplePlayer audioDataUri error]:', e);
+    return null;
   } finally {
     try {
-      rmSync(dirTmp, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true });
     } catch {}
   }
 }
@@ -697,7 +709,6 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
   let artist = '';
   let durationSec = 0;
   let rawCoverUrl = '';
-  let audioStreamUrlOrBuf = null;
 
   // 1. Cek apakah query adalah URL Spotify dan SnowKit terkonfigurasi
   const isSpotify = /open\.spotify\.com\/track\/|spotify:track:/i.test(query);
@@ -719,9 +730,8 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
 
       const ready = await player.ready(track.id, { market: 'ID' });
       const lyrics = ready.lyrics?.lines || (await getLyrics(title, artist, durationSec));
-      const artworkDataUrl = await processArtwork(rawCoverUrl);
+      const artworkDataUrl = await coverDataUri(rawCoverUrl);
 
-      // Jika socketUrl/streamUrl tersedia
       const streamSrc = ready.audio?.socketUrl || ready.audio?.streamUrl;
       const htmlPayload = buildApplePlayerHtml({
         title,
@@ -753,24 +763,33 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
   rawCoverUrl = video.thumbnail || video.image || '';
 
   // Unduh audio YouTube
-  let audioDownloadUrl = null;
+  let audioBuffer = null;
   try {
     const dlResult = await ytdl(video.url, 'mp3');
-    audioDownloadUrl = dlResult?.dl || dlResult?.url || dlResult?.downloadUrl || (typeof dlResult === 'string' ? dlResult : null);
+    const rawAudioUrl =
+      dlResult?.dl || dlResult?.url || dlResult?.downloadUrl || (typeof dlResult === 'string' ? dlResult : null);
+    if (rawAudioUrl) {
+      const audioRes = await axios.get(rawAudioUrl, { responseType: 'arraybuffer', timeout: 30000 });
+      audioBuffer = Buffer.from(audioRes.data);
+    }
   } catch (e) {
     console.error('[ApplePlayer] Ytdl error:', e);
   }
 
-  if (!audioDownloadUrl) {
+  if (!audioBuffer) {
     throw new Error('Gagal mengambil audio stream dari server YouTube.');
   }
 
-  // Paralel: ambil lirik, transcode audio ke Opus Base64, dan optimasi artwork
+  // Paralel: ambil lirik, transcode audio ke Opus Base64 (persis .play2s), dan optimasi cover
   const [lyrics, audioBase64, artworkDataUrl] = await Promise.all([
     getLyrics(title, artist, durationSec),
-    transcodeAudio(audioDownloadUrl),
-    processArtwork(rawCoverUrl),
+    audioDataUri(audioBuffer, { codec: 'opus', maxDetik: 160 }),
+    coverDataUri(rawCoverUrl),
   ]);
+
+  if (!audioBase64) {
+    throw new Error('Gagal mengompresi audio stream.');
+  }
 
   const htmlPayload = buildApplePlayerHtml({
     title,
