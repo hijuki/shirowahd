@@ -11,9 +11,9 @@ import te from '../../src/lib/hillz-error.js';
 import { ytdl } from '../../src/scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
-const BATAS_BASE64 = 600 * 1024;
+const BATAS_BASE64 = 550 * 1024;
 const BITRATE_MIN = { mp3: 18, opus: 16 };
-const BITRATE_AWAL = { mp3: 32, opus: 22 };
+const BITRATE_AWAL = { mp3: 32, opus: 20 };
 const CODEC = {
     mp3: { args: (br) => ['-af', 'highpass=f=40,treble=g=3.5:f=3200', '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '2', '-ar', '44100'], ext: 'mp3', mime: 'audio/mpeg' },
     opus: { args: (br) => ['-af', 'highpass=f=40,treble=g=3.5:f=3200', '-c:a', 'libopus', '-b:a', `${br}k`, '-vbr', 'on', '-application', 'audio', '-ac', '2', '-ar', '48000'], ext: 'ogg', mime: 'audio/ogg' }
@@ -175,7 +175,7 @@ async function audioDataUri(buffer, opsi = {}) {
 }
 
 async function coverDataUri(url, opsi = {}) {
-    const { ukuran = 180, kualitas = 8, batas = 10 * 1024 } = opsi;
+    const { ukuran = 200, kualitas = 7, batas = 12 * 1024 } = opsi;
     if (!url || !/^https?:\/\//.test(url)) return null;
     const dir = mkdtempSync(join(tmpdir(), 'shir-cover-'));
     const masuk = join(dir, 'masuk');
@@ -216,74 +216,80 @@ function renderHtmlPlayer({ judul = 'Unknown', artis = 'SHIROWAHD', audioSrc = '
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
-body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f2e9e4; }
+body { margin: 0; background: #121016; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f2e9e4; }
 .player-wrap { width: 100%; max-width: 400px; margin: auto; padding: 12px; }
 .player-card {
-  background: linear-gradient(180deg, rgba(60,40,30,0.55) 0%, rgba(18,14,12,0.97) 55%);
-  border-radius: 18px; overflow: hidden; box-shadow: 0 10px 34px rgba(0,0,0,0.6);
-  padding: 14px 18px 18px; transition: background 0.4s ease;
+  background: linear-gradient(180deg, #2b1b22 0%, #151118 60%);
+  border-radius: 20px; overflow: hidden; box-shadow: 0 10px 34px rgba(0,0,0,0.6);
+  padding: 16px 18px 20px; transition: background 0.4s ease; border: 1px solid rgba(255,255,255,0.08);
 }
-.player-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.player-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .chevron { color: #cbb; font-size: 16px; opacity: 0.7; }
 .source-info { text-align: center; flex: 1; }
-.source-label { font-size: 9px; letter-spacing: 2px; color: #d8c3b5; font-weight: 700; text-transform: uppercase; }
+.source-label { font-size: 10px; letter-spacing: 2px; color: #d8c3b5; font-weight: 700; text-transform: uppercase; }
 .source-channel { font-size: 12px; color: #fff; font-weight: 600; margin-top: 1px; }
 .kebab { color: #cbb; font-size: 16px; opacity: 0.7; }
-.cover-box { width: 100%; aspect-ratio: 1; border-radius: 12px; overflow: hidden; margin: 10px 0 14px; background: #000; }
-.cover-box img { width: 100%; height: 100%; object-fit: cover; }
-.track-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
-.track-title { font-size: 16px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
-.track-artist { font-size: 12px; color: #cdbdb3; margin-top: 2px; }
-.heartBtn { background: none; border: none; color: #cdbdb3; cursor: pointer; font-size: 20px; flex-shrink: 0; transition: color 0.2s, transform 0.2s; }
-.heartBtn.active { color: #ff6b5e; transform: scale(1.15); }
 
+.cover-box { width: 100%; aspect-ratio: 1; border-radius: 14px; overflow: hidden; margin: 10px 0 14px; background: #222; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.cover-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.track-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 10px; }
+.track-title { font-size: 17px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+.track-artist { font-size: 13px; color: #cdbdb3; margin-top: 2px; }
+.heartBtn { background: none; border: none; color: #cdbdb3; cursor: pointer; font-size: 20px; flex-shrink: 0; transition: transform 0.2s; padding: 0; }
+.heartBtn.active { color: #ff5252; transform: scale(1.15); }
+
+/* --- AREA LIRIK SINKRON JERNIH DENGAN BACKGROUND TERPISAH --- */
 .lyricsPreview {
-  height: 120px;
-  margin-bottom: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  height: 130px;
+  margin-bottom: 10px;
   overflow-y: auto;
   scroll-behavior: smooth;
-  padding: 45px 10px;
+  padding: 16px 12px;
   box-sizing: border-box;
-  position: relative;
   text-align: center;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  border: 1px solid rgba(255,255,255,0.05);
 }
 .lyricsPreview::-webkit-scrollbar { display: none; }
 .lyricLine {
-  font-size: 13px;
-  color: rgba(230,215,205,0.35);
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.45);
   text-align: center;
-  padding: 6px 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: scale(0.95);
+  padding: 6px 4px;
+  transition: all 0.25s ease;
   cursor: pointer;
   line-height: 1.4;
+  font-weight: 500;
 }
 .lyricLine.active {
-  color: #ffffff;
+  color: #00ffcc;
   font-weight: 700;
-  transform: scale(1.05);
-  text-shadow: 0 0 12px rgba(255,255,255,0.35);
+  font-size: 15px;
+  transform: scale(1.04);
+  text-shadow: 0 0 14px rgba(0,255,204,0.4);
 }
-.lyricsEmpty { font-size: 12px; color: rgba(230,215,205,0.4); font-style: italic; text-align: center; padding: 35px 0; }
+.lyricsEmpty { font-size: 12px; color: rgba(230,215,205,0.5); font-style: italic; text-align: center; padding: 35px 0; }
 
-.lyricSyncBar { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #cdbdb3; margin-bottom: 4px; padding: 0 2px; }
+.lyricSyncBar { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #cdbdb3; margin-bottom: 6px; padding: 0 2px; }
 .syncGroup { display: flex; gap: 6px; align-items: center; }
-.syncBtn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 10px; }
+.syncBtn { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 600; }
 .syncBtn:active { background: rgba(255,255,255,0.3); }
 
-.progressArea { margin: 4px 0 4px; }
-.progressTrack { background: rgba(255,255,255,0.2); height: 3px; border-radius: 2px; cursor: pointer; position: relative; }
-.progressBar { background: #f2e9e4; height: 100%; border-radius: 2px; width: 0%; position: relative; pointer-events: none; }
-.progressBar::after { content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 50%; background: #fff; }
-.timeRow { display: flex; justify-content: space-between; font-size: 10.5px; color: #cdbdb3; margin-top: 4px; }
-.controls { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding: 0 2px; }
-.ctrlBtn { background: none; border: none; color: #f2e9e4; cursor: pointer; font-size: 15px; padding: 6px; display: flex; align-items: center; justify-content: center; position: relative; transition: color 0.2s; }
-.ctrlBtn.active { color: #ff9e6b; }
-.playBtn { background: #fff; color: #1a1310; border: none; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 17px; }
-.seekLabel { position: absolute; bottom: -2px; font-size: 7px; font-weight: 700; }
-.captionText { text-align: center; font-size: 11px; color: rgba(230,215,205,0.55); margin-top: 10px; font-style: italic; }
+.progressArea { margin: 6px 0 6px; }
+.progressTrack { background: rgba(255,255,255,0.18); height: 4px; border-radius: 2px; cursor: pointer; position: relative; }
+.progressBar { background: #00ffcc; height: 100%; border-radius: 2px; width: 0%; position: relative; pointer-events: none; }
+.progressBar::after { content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #00ffcc; }
+.timeRow { display: flex; justify-content: space-between; font-size: 11px; color: #cdbdb3; margin-top: 5px; font-weight: 500; }
+
+.controls { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 0 4px; }
+.ctrlBtn { background: none; border: none; color: #f2e9e4; cursor: pointer; font-size: 16px; padding: 8px; display: flex; align-items: center; justify-content: center; position: relative; transition: color 0.2s; }
+.ctrlBtn.active { color: #00ffcc; }
+.playBtn { background: #ffffff; color: #121016; border: none; border-radius: 50%; width: 52px; height: 52px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.3); transition: transform 0.15s; }
+.playBtn:active { transform: scale(0.94); }
+.seekLabel { position: absolute; bottom: -1px; font-size: 7.5px; font-weight: 800; }
+.captionText { text-align: center; font-size: 11px; color: rgba(230,215,205,0.55); margin-top: 12px; font-style: italic; }
 </style>
 <div class="player-wrap">
   <div class="player-card" id="playerCard">
@@ -295,16 +301,16 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
       </div>
       <span class="kebab">⋮</span>
     </div>
-    <div class="cover-box"><img id="coverImg" src="${coverSrc}" alt="Cover"></div>
+    <div class="cover-box" id="coverBox"><img id="coverImg" src="${coverSrc}" alt="Cover"></div>
     <div class="track-row">
       <div>
         <div class="track-title">${nama}</div>
         <div class="track-artist">${sub}</div>
       </div>
-      <button class="heartBtn" id="heartBtn"><svg id="heartIcon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></button>
+      <button class="heartBtn" id="heartBtn"><svg id="heartIcon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></button>
     </div>
     <div class="lyricsPreview" id="lyricsPreview">
-      <div class="lyricsEmpty">Lirik tidak tersedia</div>
+      <div class="lyricsEmpty">Memuat lirik...</div>
     </div>
     <div class="lyricSyncBar">
       <span id="syncLabel">Offset Lirik: 0.0s</span>
@@ -318,11 +324,11 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
       <div class="timeRow"><span id="curTime">0:00</span><span id="durTime">0:00</span></div>
     </div>
     <div class="controls">
-      <button class="ctrlBtn" id="noteBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
-      <button class="ctrlBtn" id="rewindBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span class="seekLabel">10</span></button>
-      <button class="playBtn" id="playBtn"><svg id="playIcon" viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><polygon points="6 3 21 12 6 21 6 3"/></svg></button>
-      <button class="ctrlBtn" id="forwardBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/></svg><span class="seekLabel">10</span></button>
-      <button class="ctrlBtn" id="repeatBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+      <button class="ctrlBtn" id="noteBtn"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+      <button class="ctrlBtn" id="rewindBtn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span class="seekLabel">10</span></button>
+      <button class="playBtn" id="playBtn"><svg id="playIcon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 3 21 12 6 21 6 3"/></svg></button>
+      <button class="ctrlBtn" id="forwardBtn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/></svg><span class="seekLabel">10</span></button>
+      <button class="ctrlBtn" id="repeatBtn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
     </div>
     <div class="captionText">${caption}</div>
   </div>
@@ -342,6 +348,7 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
     const rewindBtn = document.getElementById('rewindBtn');
     const forwardBtn = document.getElementById('forwardBtn');
     const lyricsPreview = document.getElementById('lyricsPreview');
+    const coverBox = document.getElementById('coverBox');
     const coverImg = document.getElementById('coverImg');
     const playerCard = document.getElementById('playerCard');
     const syncLabel = document.getElementById('syncLabel');
@@ -361,7 +368,7 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
     function buildLyricsDOM() {
         lyricsPreview.innerHTML = '';
         if (!hasLyrics || !lyrics.length) {
-            lyricsPreview.innerHTML = '<div class="lyricsEmpty">Lirik tidak tersedia</div>';
+            lyricsPreview.innerHTML = '<div class="lyricsEmpty">Lirik tidak ditemukan untuk lagu ini</div>';
             return;
         }
         lyrics.forEach((item, index) => {
@@ -413,20 +420,14 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
         updateLyrics(audio.currentTime);
     });
 
-    coverImg.addEventListener('load', () => {
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 10; canvas.height = 10;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(coverImg, 0, 0, 10, 10);
-            const data = ctx.getImageData(0, 0, 10, 10).data;
-            let r=0,g=0,b=0,count=0;
-            for(let i=0; i<data.length; i+=4){
-                r+=data[i]; g+=data[i+1]; b+=data[i+2]; count++;
-            }
-            r=Math.floor(r/count); g=Math.floor(g/count); b=Math.floor(b/count);
-            playerCard.style.background = 'linear-gradient(180deg, rgba('+r+','+g+','+b+',0.65) 0%, rgba(18,14,12,0.97) 60%)';
-        } catch(e){}
+    noteBtn.addEventListener('click', () => {
+        if (lyricsPreview.style.display === 'none') {
+            lyricsPreview.style.display = 'block';
+            noteBtn.classList.add('active');
+        } else {
+            lyricsPreview.style.display = 'none';
+            noteBtn.classList.remove('active');
+        }
     });
 
     let isPlaying = false;
@@ -442,12 +443,12 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
 
     audio.addEventListener('play', () => {
         isPlaying = true;
-        playBtn.innerHTML = '<svg id="pauseIcon" viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+        playBtn.innerHTML = '<svg id="pauseIcon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
     });
 
     audio.addEventListener('pause', () => {
         isPlaying = false;
-        playBtn.innerHTML = '<svg id="playIcon" viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><polygon points="6 3 21 12 6 21 6 3"/></svg>';
+        playBtn.innerHTML = '<svg id="playIcon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 3 21 12 6 21 6 3"/></svg>';
     });
 
     audio.addEventListener('timeupdate', () => {
@@ -468,7 +469,7 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
             audio.play();
         } else {
             isPlaying = false;
-            playBtn.innerHTML = '<svg id="playIcon" viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><polygon points="6 3 21 12 6 21 6 3"/></svg>';
+            playBtn.innerHTML = '<svg id="playIcon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 3 21 12 6 21 6 3"/></svg>';
         }
     });
 
@@ -497,8 +498,8 @@ body { margin: 0; background: transparent; font-family: 'Segoe UI', Roboto, Helv
         heartBtn.classList.toggle('active');
         const icon = document.getElementById('heartIcon');
         if (heartBtn.classList.contains('active')) {
-            icon.setAttribute('fill', '#ff6b5e');
-            icon.setAttribute('stroke', '#ff6b5e');
+            icon.setAttribute('fill', '#ff5252');
+            icon.setAttribute('stroke', '#ff5252');
         } else {
             icon.setAttribute('fill', 'none');
             icon.setAttribute('stroke', 'currentColor');
@@ -586,11 +587,11 @@ async function handler(m, { sock, conn, args }) {
             return m.reply('🥀 _Gagal memproses audio untuk player in-bubble._');
         }
 
-        // Cover thumbnail
-        let coverSrc = '';
+        // Cover thumbnail: Base64 dataURI + fallback HTTPS URL
+        let coverSrc = video.thumbnail || '';
         if (video.thumbnail) {
             try {
-                const coverRes = await coverDataUri(video.thumbnail, { ukuran: 180, kualitas: 8 });
+                const coverRes = await coverDataUri(video.thumbnail, { ukuran: 200, kualitas: 7 });
                 if (coverRes?.dataUri) {
                     coverSrc = coverRes.dataUri;
                 }
@@ -644,7 +645,7 @@ async function handler(m, { sock, conn, args }) {
                             unifiedResponse: {
                                 data: Buffer.from(JSON.stringify({
                                     "response_id": "kurumi-music-player",
-                                    "sections": [{ "view_model": { "primitive": { "__typename": "GenAIaeacdsnwHtmlPrimitive", "payload": htmlPayload, "trusted_sources": ["hirara.dev"] }, "__typename": "GenAISingleLayoutViewModel" } }]
+                                    "sections": [{ "view_model": { "primitive": { "__typename": "GenAIaeacdsnwHtmlPrimitive", "payload": htmlPayload, "trusted_sources": ["*", "swhdhlz.my.id", "hirara.dev", "i.ytimg.com"] }, "__typename": "GenAISingleLayoutViewModel" } }]
                                 })).toString('base64'),
                             },
                             contextInfo: {
