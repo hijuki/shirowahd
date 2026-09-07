@@ -24,14 +24,15 @@ const pluginConfig = {
   isEnabled: true
 };
 
-async function handler(m, { sock }) {
-  await m.react('🕕');
+async function handler(m, { sock, conn }) {
+  const client = sock || conn;
+  if (typeof m.react === 'function') { try { await m.react('🕕'); } catch {} }
 
   try {
     const res = await axios.get('https://raw.githubusercontent.com/iamriz7/hyouka-md/main/src/data/ppcouple.json', { timeout: 15000 });
     const data = res.data;
     if (!Array.isArray(data) || !data.length) {
-      await m.react('❌');
+      if (typeof m.react === 'function') { try { await m.react('❌'); } catch {} }
       return m.reply('❌ Gagal memuat database avatar couple.');
     }
 
@@ -49,6 +50,7 @@ async function handler(m, { sock }) {
       { image: Buffer.from(femaleRes.data), caption: '👧 *AVATAR FEMALE (CEWEK)*' }
     ];
 
+    let albumSuccess = false;
     try {
       const opener = generateWAMessageFromContent(
         m.chat,
@@ -60,19 +62,20 @@ async function handler(m, { sock }) {
           }
         },
         {
-          userJid: jidNormalizedUser(sock.user.id),
+          userJid: jidNormalizedUser(client.user?.id || ''),
           quoted: m.raw || m,
-          upload: sock.waUploadToServer
+          upload: client.waUploadToServer
         }
       );
 
-      await sock.relayMessage(opener.key.remoteJid, opener.message, {
-        messageId: opener.key.id
-      });
+      await Promise.race([
+        client.relayMessage(opener.key.remoteJid, opener.message, { messageId: opener.key.id }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Album timeout')), 4000))
+      ]);
 
       for (const content of mediaList) {
         const msg = await generateWAMessage(opener.key.remoteJid, content, {
-          upload: sock.waUploadToServer
+          upload: client.waUploadToServer
         });
 
         msg.message.messageContextInfo = {
@@ -83,21 +86,26 @@ async function handler(m, { sock }) {
           }
         };
 
-        await sock.relayMessage(msg.key.remoteJid, msg.message, {
+        await client.relayMessage(msg.key.remoteJid, msg.message, {
           messageId: msg.key.id
         });
       }
-
-      await m.react('💑');
-    } catch (err) {
-      await sock.sendMessage(m.chat, { image: mediaList[0].image, caption: mediaList[0].caption }, { quoted: m.raw || m });
-      await sock.sendMessage(m.chat, { image: mediaList[1].image, caption: mediaList[1].caption }, { quoted: m.raw || m });
-      await m.react('💑');
+      albumSuccess = true;
+    } catch (e) {
+      albumSuccess = false;
     }
+
+    if (!albumSuccess) {
+      await client.sendMessage(m.chat, { image: mediaList[0].image, caption: mediaList[0].caption }, { quoted: m.raw || m });
+      await client.sendMessage(m.chat, { image: mediaList[1].image, caption: mediaList[1].caption }, { quoted: m.raw || m });
+    }
+
+    if (typeof m.react === 'function') { try { await m.react('💑'); } catch {} }
+
   } catch (err) {
     console.error('PP Couple Error:', err);
-    await m.react('❌');
-    m.reply(te(m.prefix, m.command, m.pushName));
+    if (typeof m.react === 'function') { try { await m.react('❌'); } catch {} }
+    if (typeof m.reply === 'function') m.reply(te(m.prefix, m.command, m.pushName));
   }
 }
 

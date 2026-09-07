@@ -6,16 +6,15 @@ import {
 import axios from 'axios';
 import crypto from 'crypto';
 import te from '../../src/lib/hillz-error.js';
-import { f } from '../../src/lib/hillz-http.js';
 import config from '../../config.js';
 
 const pluginConfig = {
   name: 'pin',
   alias: ['pinsearch', 'pinterestsearch', 'pins', 'pinterest'],
   category: 'search',
-  description: 'Cari gambar di Pinterest dan kirimkan dalam album WhatsApp interaktif',
+  description: 'Cari foto di Pinterest dan kirim sebagai Album WhatsApp',
   usage: '.pin <query>',
-  example: '.pin Cyberpunk Anime',
+  example: '.pin anime aesthetic',
   isOwner: false,
   isPremium: false,
   isGroup: false,
@@ -25,89 +24,103 @@ const pluginConfig = {
   isEnabled: true
 };
 
-async function handler(m, { sock }) {
-  const query = m.text?.trim();
-  if (!query) {
+async function handler(m, { sock, conn, args }) {
+  const client = sock || conn;
+  const text = (args && args.length) ? args.join(' ') : (m.text || '').trim();
+
+  if (!text) {
     return m.reply(
-      `🔍 *ᴘɪɴᴛᴇʀᴇsᴛ sᴇᴀʀᴄʜ*\n\n` +
-      `> Format: \`${m.prefix}pin <kata kunci>\`\n` +
-      `> Contoh: \`${m.prefix}pin Cyberpunk City\``
+      `📌 *PINTEREST SEARCH*\n\n` +
+      `> Masukkan kata kunci gambar yang ingin dicari!\n\n` +
+      `*Contoh:* \`${m.prefix || '.'}pin anime aesthetic\``
     );
   }
 
-  await m.react('🕕');
+  if (typeof m.react === 'function') { try { await m.react('🔍'); } catch {} }
 
   try {
-    const data = await f(
-      `https://api.cuki.biz.id/api/search/pinterest?apikey=cuki-x&query=${encodeURIComponent(query)}&type=image`
-    ).catch(() => null);
+    let images = [];
 
-    let results = data?.data?.results?.filter(item => item.image_url)?.slice(0, 8);
-
-    // Fallback jika API pertama down
-    if (!results || results.length === 0) {
-      try {
-        const fallRes = await axios.get(`https://api.fdci.se/sosmed/repins?query=${encodeURIComponent(query)}`, { timeout: 15000 });
-        if (Array.isArray(fallRes.data) && fallRes.data.length > 0) {
-          results = fallRes.data.slice(0, 8).map(u => ({ image_url: u }));
-        }
-      } catch (e) {}
-    }
-
-    if (!results || results.length === 0) {
-      await m.react('❌');
-      return m.reply(`❌ Tidak ditemukan gambar untuk pencarian: *${query}*`);
-    }
-
-    const mediaList = [];
-    for (const item of results) {
-      const imageUrl = item.image_url;
-      if (!imageUrl) continue;
-      try {
-        const imgRes = await axios.get(imageUrl, {
-          responseType: 'arraybuffer',
-          timeout: 15000
-        });
-        const imgBuffer = Buffer.from(imgRes.data);
-        if (imgBuffer.length > 1000) {
-          mediaList.push({ image: imgBuffer });
-        }
-      } catch (e) {
-        continue;
+    // Provider 1: Siputzx Pinterest API
+    try {
+      const res = await axios.get(`https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(text)}`, { timeout: 10000 });
+      if (res.data?.status && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+        images = res.data.data;
       }
+    } catch {}
+
+    // Provider 2 Fallback: Vreden / Public Scraper
+    if (!images.length) {
+      try {
+        const res = await axios.get(`https://api.betabotz.eu.org/api/search/pinterest?text=${encodeURIComponent(text)}&apikey=${config.APIkey?.betabotz || 'betabotz'}`, { timeout: 10000 });
+        if (res.data?.status && Array.isArray(res.data?.result)) {
+          images = res.data.result;
+        }
+      } catch {}
     }
 
-    if (mediaList.length === 0) {
-      await m.react('❌');
-      return m.reply('❌ Gagal mengunduh gambar Pinterest.');
+    if (!images.length) {
+      if (typeof m.react === 'function') { try { await m.react('❌'); } catch {} }
+      return m.reply(`🥀 *Gambar tidak ditemukan* untuk kata kunci \`${text}\`.`);
     }
 
-    // Coba kirim via Album WhatsApp Message
+    const selectedUrls = images.slice(0, 5).map(x => (typeof x === 'string' ? x : (x.images_url || x.image || x.url))).filter(Boolean);
+
+    if (!selectedUrls.length) {
+      if (typeof m.react === 'function') { try { await m.react('❌'); } catch {} }
+      return m.reply('❌ Gagal mengurai link gambar.');
+    }
+
+    // Download buffer gambar secara paralel
+    const buffers = await Promise.all(
+      selectedUrls.map(async (u) => {
+        try {
+          const r = await axios.get(u, { responseType: 'arraybuffer', timeout: 12000 });
+          return Buffer.from(r.data);
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const validBuffers = buffers.filter(Boolean);
+    if (!validBuffers.length) {
+      if (typeof m.react === 'function') { try { await m.react('❌'); } catch {} }
+      return m.reply('❌ Gagal mengunduh gambar dari Pinterest.');
+    }
+
+    let albumSent = false;
     try {
       const opener = generateWAMessageFromContent(
         m.chat,
         {
           messageContextInfo: { messageSecret: crypto.randomBytes(32) },
           albumMessage: {
-            expectedImageCount: mediaList.length,
+            expectedImageCount: validBuffers.length,
             expectedVideoCount: 0
           }
         },
         {
-          userJid: jidNormalizedUser(sock.user.id),
+          userJid: jidNormalizedUser(client.user?.id || ''),
           quoted: m.raw || m,
-          upload: sock.waUploadToServer
+          upload: client.waUploadToServer
         }
       );
 
-      await sock.relayMessage(opener.key.remoteJid, opener.message, {
-        messageId: opener.key.id
-      });
+      await Promise.race([
+        client.relayMessage(opener.key.remoteJid, opener.message, { messageId: opener.key.id }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Album timeout')), 4000))
+      ]);
 
-      for (const content of mediaList) {
-        const msg = await generateWAMessage(opener.key.remoteJid, content, {
-          upload: sock.waUploadToServer
-        });
+      for (let i = 0; i < validBuffers.length; i++) {
+        const msg = await generateWAMessage(
+          opener.key.remoteJid,
+          {
+            image: validBuffers[i],
+            caption: i === 0 ? `📌 *Pinterest:* \`${text}\` (${validBuffers.length} Foto)` : ''
+          },
+          { upload: client.waUploadToServer }
+        );
 
         msg.message.messageContextInfo = {
           messageSecret: crypto.randomBytes(32),
@@ -117,28 +130,30 @@ async function handler(m, { sock }) {
           }
         };
 
-        await sock.relayMessage(msg.key.remoteJid, msg.message, {
-          messageId: msg.key.id
-        });
+        await client.relayMessage(msg.key.remoteJid, msg.message, { messageId: msg.key.id });
       }
-
-      await m.react('✅');
-    } catch (albumErr) {
-      // Fallback kirim foto biasa
-      for (const content of mediaList.slice(0, 3)) {
-        await sock.sendMessage(
-          m.chat,
-          {
-            image: content.image,
-            caption: `🔍 *Pinterest:* ${query}`
-          },
-          { quoted: m.raw || m }
-        );
-      }
-      await m.react('✅');
+      albumSent = true;
+    } catch {
+      albumSent = false;
     }
-  } catch (error) {
-    await m.react('❌');
+
+    if (!albumSent) {
+      // Fallback kirim single image terbaik
+      await client.sendMessage(
+        m.chat,
+        {
+          image: validBuffers[0],
+          caption: `📌 *Pinterest Result*\n\n> 🔍 *Query:* \`${text}\``
+        },
+        { quoted: m.raw || m }
+      );
+    }
+
+    if (typeof m.react === 'function') { try { await m.react('✅'); } catch {} }
+
+  } catch (err) {
+    console.error('Pinterest Search Error:', err);
+    if (typeof m.react === 'function') { try { await m.react('❌'); } catch {} }
     m.reply(te(m.prefix, m.command, m.pushName));
   }
 }

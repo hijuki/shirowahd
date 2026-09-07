@@ -58,7 +58,7 @@ function getNetwork() {
 
 async function handler(m, { sock }) {
     const execStart = performance.now()
-    if (m.react) await m.react('🕕').catch(() => {})
+    if (typeof m.react === 'function') { try { await m.react('🕕'); } catch {} }
 
     try {
         const t0 = m.messageTimestamp ? (m.messageTimestamp * 1000) : Date.now()
@@ -151,10 +151,10 @@ async function handler(m, { sock }) {
             await sock.sendMessage(m.chat, { text: textMsg }, { quoted: m?.raw || m });
         }
 
-        if (m.react) await m.react('✅').catch(() => {})
+        if (typeof m.react === 'function') { try { await m.react('✅'); } catch {} }
     } catch (error) {
         console.error('[ping2 error]', error);
-        if (m.react) await m.react('☢').catch(() => {})
+        if (typeof m.react === 'function') { try { await m.react('☢'); } catch {} }
         if (m.reply) m.reply(te(m.prefix, m.command, m.pushName));
     }
 }

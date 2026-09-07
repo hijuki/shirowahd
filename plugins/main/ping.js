@@ -274,7 +274,7 @@ async function handler(m, { sock }) {
         domain: config.domain || 'swhdhlz.my.id'
     };
 
-    if (m.react) await m.react('🕕').catch(() => {});
+    if (typeof m.react === 'function') { try { await m.react('🕕'); } catch {} }
 
     const imageBuffer = createEpicPingCanvas(data);
 
@@ -309,11 +309,11 @@ async function handler(m, { sock }) {
     // Quoted dibuat super aman: hanya pasang jika ada message valid
     const quoteOpt = (m?.message || m?.raw) ? { quoted: m.raw || m } : {};
     await sock.sendMessage(m.chat, { image: imageBuffer, caption: caption }, quoteOpt);
-    if (m.react) await m.react("✅").catch(() => {});
+    if (typeof m.react === 'function') { try { await m.react('✅'); } catch {} }
 
   } catch (error) {
     console.error('[ping-error]', error);
-    if (m.react) await m.react("❌").catch(() => {});
+    if (typeof m.react === 'function') { try { await m.react('❌'); } catch {} }
     if (m.reply) m.reply(te(m.prefix, m.command, m.pushName));
   }
 }
