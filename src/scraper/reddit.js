@@ -1,42 +1,30 @@
-import axios from "axios";
-import * as cheerio from "cheerio";
+import axios from 'axios';
 
-async function RedditDL(redditUrl) {
-  const ts = Date.now();
-  const apiUrl = "https://redvid.io/fetch?_=" + ts;
-  const headers = {
-    accept: "application/json, text/plain, */*",
-    "content-type": "application/json",
-    origin: "https://redvid.io",
-    referer: "https://redvid.io/",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "x-requested-with": "XMLHttpRequest",
-  };
+export async function reddit(url) {
   try {
-    const { data } = await axios.post(apiUrl, { url: redditUrl, lang: "en" }, { headers });
-    if (data.success && data.view) {
-      const $ = cheerio.load(data.view);
-      const results = [];
-      $(".response-cinema-gallery-item").each((i, el) => {
-        const thumb = $(el).find("img.thumbnail-image").attr("src");
-        const downloadBtn = $(el).find('a[href*="/download?token="]');
-        const downloadUrl = downloadBtn.attr("href");
-        const typeText = downloadBtn.text().trim();
-        if (downloadUrl) {
-          results.push({
-            item: i + 1,
-            type: typeText.toLowerCase().includes("video") ? "video" : "image",
-            thumbnail: thumb,
-            download_url: downloadUrl,
-          });
-        }
-      });
-      return { status: true, total: results.length, results };
-    }
-    return { status: false, error: "Gagal mengambil data dari Reddit" };
-  } catch (error) {
-    return { status: false, error: error.message };
+    const jsonUrl = url.replace(/\/$/, '') + '.json';
+    const res = await axios.get(jsonUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      timeout: 15000
+    });
+    const post = res.data[0]?.data?.children[0]?.data;
+    if (!post) throw new Error('Post not found');
+
+    const videoUrl = post.secure_media?.reddit_video?.fallback_url || post.media?.reddit_video?.fallback_url;
+    return {
+      title: post.title,
+      author: post.author,
+      ups: post.ups,
+      num_comments: post.num_comments,
+      url: post.url,
+      isVideo: !!videoUrl,
+      videoUrl: videoUrl || null,
+      thumbnail: post.thumbnail
+    };
+  } catch (e) {
+    throw new Error('Reddit scraper error: ' + e.message);
   }
 }
 
-export { RedditDL };
+export const RedditDL = reddit;
+export default reddit;

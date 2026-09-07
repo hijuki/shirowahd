@@ -1,25 +1,16 @@
-import axios from "axios";
-import fs from "fs";
+import axios from 'axios';
 
-async function imgtoprompt(media) {
+export async function img2prompt(imageUrl) {
   try {
-    const base64 = fs.readFileSync(media).toString("base64");
-    const r = await axios.post(
-      "https://imageprompt.org/api/ai/prompts/image",
-      { base64Url: "data:image/webp;base64," + base64, imageModelId: 0, language: "en" },
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Linux; Android 10)",
-          "Content-Type": "application/json",
-          origin: "https://imageprompt.org",
-          referer: "https://imageprompt.org/image-to-prompt",
-        },
-      }
-    );
-    return { prompt: r.data.prompt, generatedAt: r.data.generatedAt };
+    const res = await axios.post('https://api.replicate.com/v1/predictions', {
+      version: '50dbf9a38e10304a297cf21cefb11a80eada9709b0be700f6d3e9866e3a69530',
+      input: { image: imageUrl }
+    }, { timeout: 30000 });
+    return res.data;
   } catch (e) {
-    return { status: "error", msg: e.message };
+    throw new Error('Img2Prompt error: ' + e.message);
   }
 }
 
-export default imgtoprompt;
+export const imgtoprompt = img2prompt;
+export default img2prompt;
