@@ -8,25 +8,21 @@ import { isOwner as checkOwner } from "../../config.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SETTINGS_FILE = join(__dirname, "..", "..", "admin-settings.json");
 
-// Ambang kirim-sebagai-dokumen. Diukur langsung ke server WhatsApp:
-// 172 MB masih diterima sebagai video, 201 MB ditolak semua host. 180 MB
-// memberi sedikit ruang aman di bawah titik gagal yang terbukti.
-// Bisa ditimpa dari panel admin lewat setelan videoAsDocumentMB.
 const VIDEO_AS_DOCUMENT_DEFAULT_MB = 180;
 
 function loadSettings() {
   try {
     if (existsSync(SETTINGS_FILE)) return JSON.parse(readFileSync(SETTINGS_FILE, "utf8"));
-  } catch { /* parse skip */ }
+  } catch {}
   return {};
 }
+
 function saveSettings(s) {
   writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2), "utf8");
 }
 
 let cachedGroupJids = {};
 
-// Notif Telegram untuk event claim — toggle "telegramNotifyClaim" di panel admin.
 function sendTelegramClaim(text) {
   const s = loadSettings();
   if (!s.telegramBotToken || !s.telegramChatId || !s.telegramNotifyClaim) return;
@@ -46,7 +42,7 @@ async function getGroupJid(sock, inviteCode) {
   try {
     const info = await sock.groupGetInviteInfo(inviteCode);
     if (info && info.id) { cachedGroupJids[inviteCode] = info.id; return info.id; }
-  } catch { /* metadata optional */ }
+  } catch {}
   return null;
 }
 
@@ -90,11 +86,6 @@ function getImageMimeType(name) {
   return IMAGE_MIME_MAP[ext] || "image/jpeg";
 }
 
-// `command:`/`tag:` adalah format LAMA yang TIDAK PERNAH DIBACA loader
-// (`hillz-plugins.js` hanya melihat `name`/`alias`/`category`). Akibatnya nama
-// perintah jatuh ke nama berkas dan seluruh alias hilang senyap, lalu kategori
-// terisi dari nama folder — dulu "tools", yang tidak diizinkan role "claim"
-// sehingga bot ber-role itu justru diblokir dari perintah intinya sendiri.
 export const config = {
   name: "claim",
   alias: ["klaim", "ambil"],
@@ -106,7 +97,15 @@ export const config = {
 
 export async function handler(m, { sock }) {
   const text = m.text?.trim();
-  if (!text) return m.reply("\u26a0\ufe0f Masukkan kode file.\n\n\ud83d\udcdd Contoh: *.claim AB* atau *.claim AB CD EF*");
+  if (!text) {
+    return m.reply(
+      `🔑 *CARA KLAIM MEDIA HD*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `> Masukkan 6 digit kode yang kamu dapat dari web uploader.\n\n` +
+      `*Contoh:* \`${m.prefix}claim A8K2Z\`\n` +
+      `*Banyak:* \`${m.prefix}claim A8K2Z B9X1C\``
+    );
+  }
 
   const isGc = m.from?.endsWith("@g.us");
   const owner = isOwner(m);
@@ -190,14 +189,24 @@ export async function handler(m, { sock }) {
       if (jid === m.from) { allowed = true; break; }
     }
     if (!allowed) {
-      const groupLinks = claimGroups.map(g => g.name + ': ' + g.link).join('\n');
-      return m.reply('\u26a0\ufe0f *Claim tidak aktif di grup ini.*\n\nJoin salah satu grup claim:\n' + groupLinks);
+      const groupLinks = claimGroups.map(g => `> ◦ *${g.name}:* ${g.link}`).join('\n');
+      return m.reply(
+        `⚠️ *Claim Tidak Aktif di Grup Ini*\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `Silakan klaim di salah satu grup resmi berikut:\n\n` +
+        groupLinks
+      );
     }
   }
 
   if (!owner && !isGc) {
-    const groupLinks = claimGroups.map(g => g.name + ': ' + g.link).join('\n');
-    return m.reply('\u26a0\ufe0f *Claim hanya bisa di grup!*\n\nJoin salah satu grup claim:\n' + groupLinks);
+    const groupLinks = claimGroups.map(g => `> ◦ *${g.name}:* ${g.link}`).join('\n');
+    return m.reply(
+      `⚠️ *Klaim Hanya Berlaku di Grup*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Silakan bergabung ke salah satu grup claim di bawah:\n\n` +
+      groupLinks
+    );
   }
 
   const target = m.from;
@@ -208,9 +217,6 @@ export async function handler(m, { sock }) {
   const notFound = [];
   for (const code of codes) {
     if (isBundle(code)) {
-      // Hanya lokasi file yang diambil, bukan isinya. Pada video besar
-      // (170 MB) memuat isi ke memori di sini membuat proses bot melonjak
-      // ratusan MB sekaligus di box yang RAM-nya terbatas.
       const bundle = getBundleFiles(code);
       if (bundle) results.push({ code, bundle });
       else notFound.push(code);
@@ -222,24 +228,27 @@ export async function handler(m, { sock }) {
   }
 
   if (results.length === 0) {
-    if (codes.length === 1) {
-      return m.reply("\u274c Kode *" + codes[0] + "* tidak ditemukan atau sudah expired.\n\n\u23f3 Kode berlaku sesuai durasi yang diatur.");
-    }
-    return m.reply("\u274c Semua kode tidak ditemukan atau sudah expired: *" + codes.join(", ") + "*\n\n\u23f3 Kode berlaku sesuai durasi yang diatur.");
+    const codeList = codes.map(c => `\`${c}\``).join(', ');
+    return m.reply(
+      `❌ *KODE CLAIM TIDAK DITEMUKAN*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🔑 *Kode:* ${codeList}\n` +
+      `⚠️ Kode salah atau sudah kedaluwarsa (melebihi batas waktu simpan).\n\n` +
+      `💡 *Solusi:* Silakan upload ulang di web uploader lalu masukkan kode yang baru.`
+    );
   }
 
-  try { await sock.sendMessage(m.from, { react: { text: "\u23ec", key: m.key } }); } catch { /* send optional */ }
+  try { await sock.sendMessage(m.from, { react: { text: "⏳", key: m.key } }); } catch {}
 
   const settings = loadSettings();
-  const siteName = settings.siteName || "SHIROWAHD";
   const domain = settings.domain || "swhdhlz.my.id";
   const siteUrl = "https://" + domain;
   const docMB = Number(settings.videoAsDocumentMB);
   const VIDEO_AS_DOCUMENT_BYTES =
     (Number.isFinite(docMB) && docMB > 0 ? docMB : VIDEO_AS_DOCUMENT_DEFAULT_MB) * 1048576;
 
-  // 𝗗𝗘𝗩𝗘𝗟𝗢𝗣𝗘𝗗 𝗕𝗬 𝗛𝗜𝗟𝗟𝗭 — Unicode Mathematical Bold
-  const devTag = "\ud835\uddd7\ud835\uddd8\ud835\udde9\ud835\uddd8\ud835\udddf\ud835\udde2\ud835\udde3\ud835\uddd8\ud835\uddd7 \ud835\uddd5\ud835\uddec \ud835\udddb\ud835\udddc\ud835\udddf\ud835\udddf\ud835\udded";
+  // 𝗗𝗘𝗩𝗘𝗟𝗢𝗣𝗘𝗗 𝗕𝗬 𝗛𝗜𝗟𝗟𝗭
+  const devTag = "𝗗𝗘𝗩𝗘𝗟𝗢𝗣𝗘𝗗 𝗕𝗬 𝗛𝗜𝗟𝗟𝗭";
 
   for (const item of results) {
     const { code } = item;
@@ -250,16 +259,22 @@ export async function handler(m, { sock }) {
         const f = item.bundle[i];
         const sizeMB = (f.size / 1048576).toFixed(1);
         const mime = getImageMimeType(f.name);
-        const caption = i === 0
-          ? "\ud83d\udcf7 *Foto " + (i+1) + "/" + total + "* \u2022 " + sizeMB + " MB\n\n" + senderTag + " ini file kamu \u2705\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag
-          : "\ud83d\udcf7 *Foto " + (i+1) + "/" + total + "* \u2022 " + sizeMB + " MB";
+        
+        let caption = `📸 *ULTRA HD PHOTO READY*\n`;
+        caption += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        caption += `👤 *Penerima:* ${senderTag}\n`;
+        caption += `📦 *Ukuran:* \`${sizeMB} MB\` • *(Foto ${i + 1}/${total})*\n`;
+        caption += `⚡ *Kualitas:* 100% Original Resolution\n`;
+        caption += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        caption += `🔹 ${devTag}`;
+
         await sock.sendMessage(target, {
           image: { url: f.path },
           caption,
           mimetype: mime,
-          fileName: f.name || ("foto-" + (i + 1) + ".jpg"),
+          fileName: f.name || (`foto-${i + 1}.jpg`),
           fileLength: f.size,
-          mentions: i === 0 ? [sender] : [],
+          mentions: [sender],
         });
       }
       deleteVideo(code);
@@ -269,49 +284,58 @@ export async function handler(m, { sock }) {
 
       if (isImage(v.name)) {
         const mime = getImageMimeType(v.name);
+        let caption = `📸 *ULTRA HD PHOTO READY*\n`;
+        caption += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        caption += `👤 *Penerima:* ${senderTag}\n`;
+        caption += `📦 *Ukuran:* \`${sizeMB} MB\`\n`;
+        caption += `⚡ *Kualitas:* 100% Original Resolution\n`;
+        caption += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        caption += `🔹 ${devTag}`;
+
         await sock.sendMessage(target, {
           image: { url: v.path },
-          caption: "\ud83d\udcf7 " + sizeMB + " MB\n\n" + senderTag + " ini file kamu \u2705\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
+          caption,
           mimetype: mime,
           fileName: v.name || "foto.jpg",
           fileLength: v.size,
           mentions: [sender],
         });
       } else {
-        // fileName + fileLength dikirim eksplisit: tanpa keduanya sebagian klien
-        // WhatsApp menampilkan media tanpa ukuran dan unduhan penerima lebih
-        // sering menggantung/gagal. jpegThumbnail kosong dibiarkan agar WA
-        // membuat thumbnail sendiri dari file (lebih andal daripada tanpa apa pun).
-        //
-        // Media dikirim sebagai { url: path }: baileys membaca file itu bertahap
-        // dari disk saat mengenkripsi, jadi pemakaian memori tetap kecil berapa
-        // pun ukuran videonya. Sebelumnya seluruh isi file ditahan di memori.
-        //
-        // BATAS SERVER WHATSAPP (diukur langsung, bukan tebakan):
-        //   144 MB video -> sukses | 172 MB video -> sukses
-        //   201 MB video -> "Media upload failed on all hosts" (semua host tolak)
-        //   300 MB DOKUMEN -> sukses
-        // Jadi penolakan itu batas endpoint media /mms/video, bukan bug kita dan
-        // bukan soal memori. Untuk file di atas ambang, kirim sebagai DOKUMEN:
-        // file utuh tetap sampai tanpa dikompres sama sekali (justru lebih baik
-        // daripada video, karena WA tidak mengutak-atik dokumen), penerima
-        // tinggal simpan lalu buka dari galeri.
         const asDocument = v.size > VIDEO_AS_DOCUMENT_BYTES;
         const baseName = (v.name || "video").replace(/\.[^.]+$/, "") + ".mp4";
 
         if (asDocument) {
+          let caption = `📁 *ULTRA HD DOCUMENT (FULL QUALITY)*\n`;
+          caption += `━━━━━━━━━━━━━━━━━━━━━\n`;
+          caption += `👤 *Penerima:* ${senderTag}\n`;
+          caption += `📦 *Ukuran:* \`${sizeMB} MB\`\n`;
+          caption += `⚡ *Mode:* Dokumen Bebas Kompresi (100% Lossless)\n`;
+          caption += `━━━━━━━━━━━━━━━━━━━━━\n`;
+          caption += `ℹ️ *Catatan:* Ukuran file di atas ${Math.round(VIDEO_AS_DOCUMENT_BYTES / 1048576)} MB, dikirim sebagai dokumen agar kualitasnya tetap utuh tanpa disentuh kompresor WA.\n\n`;
+          caption += `💡 *Cara Pakai:* Unduh file ➔ Simpan ke Galeri ➔ Share ke Status WA.\n\n`;
+          caption += `🔹 ${devTag}`;
+
           await sock.sendMessage(target, {
             document: { url: v.path },
             mimetype: "video/mp4",
             fileName: baseName,
             fileLength: v.size,
-            caption: "\ud83c\udfac *Video HD siap!* \u00b7 " + sizeMB + " MB\n\n" + senderTag + " ini video kamu \u2705\n\n\u26a0\ufe0f Ukurannya di atas " + Math.round(VIDEO_AS_DOCUMENT_BYTES / 1048576) + " MB, jadi WhatsApp menolak mengirimnya sebagai video. Dikirim sebagai *dokumen* supaya kualitasnya utuh 100% tanpa dikompres.\n\n_Cara pakai: tap unduh \u2192 simpan \u2192 buka dari galeri._\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
+            caption,
             mentions: [sender],
           });
         } else {
+          let caption = `🎬 *ULTRA HD VIDEO READY*\n`;
+          caption += `━━━━━━━━━━━━━━━━━━━━━\n`;
+          caption += `👤 *Penerima:* ${senderTag}\n`;
+          caption += `📦 *Ukuran:* \`${sizeMB} MB\`\n`;
+          caption += `⚡ *Kualitas:* 100% Original High-FPS • Jernih\n`;
+          caption += `━━━━━━━━━━━━━━━━━━━━━\n`;
+          caption += `💡 *Tips:* Teruskan (*Share/Forward*) video ini langsung dari bot ke Status WhatsApp kamu agar resolusinya tetap HD dan tidak buram.\n\n`;
+          caption += `🔹 ${devTag}`;
+
           await sock.sendMessage(target, {
             video: { url: v.path },
-            caption: "\ud83c\udfac *Video HD siap!*\n\n" + senderTag + " ini video kamu \u2705\n\n_Agar SW kamu HD, share video ini langsung dari bot ke SW kamu._\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n" + devTag,
+            caption,
             mimetype: "video/mp4",
             fileName: baseName,
             fileLength: v.size,
@@ -324,38 +348,21 @@ export async function handler(m, { sock }) {
     }
   }
 
-  // Notif Telegram: file berhasil diklaim lewat bot WA
+  // Notif Telegram
   try {
     const claimed = results.map(r => r.code).join(", ");
     const totalFiles = results.reduce((n, r) => n + (r.bundle ? r.bundle.length : 1), 0);
     sendTelegramClaim(
-      "\ud83d\udce5 <b>Claim</b>\nKode: <code>" + claimed + "</code>\n" +
-      totalFiles + " file terkirim\nOleh: " + sender.replace(/@.+/, "") +
-      "\nDi: " + (isGc ? "grup" : "PC")
+      `📥 <b>Claim Berhasil</b>\nKode: <code>${claimed}</code>\n` +
+      `${totalFiles} file terkirim\nOleh: ${sender.replace(/@.+/, "")}\n` +
+      `Di: ${isGc ? "Grup" : "Private Chat"}`
     );
-  } catch { /* notif optional */ }
+  } catch {}
 
-  // Visit Website button — same pattern as .menu (interactiveButtons)
-  try {
-    await sock.sendMessage(target, {
-      text: "\ud83c\udf10 *WEBSITE UPLOADER*",
-      footer: devTag,
-      interactiveButtons: [
-        {
-          name: "cta_url",
-          buttonParamsJson: JSON.stringify({
-            display_text: "\ud83c\udf10 Visit Website",
-            url: siteUrl,
-            merchant_url: siteUrl
-          })
-        }
-      ]
-    });
-  } catch { /* send optional */ }
-
-  try { await sock.sendMessage(m.from, { react: { text: "\u2705", key: m.key } }); } catch { /* send optional */ }
+  try { await sock.sendMessage(m.from, { react: { text: "✅", key: m.key } }); } catch {}
 
   if (notFound.length > 0) {
-    await m.reply("\u26a0\ufe0f Kode tidak ditemukan: *" + notFound.join(", ") + "*");
+    const missingCodes = notFound.map(c => `\`${c}\``).join(', ');
+    await m.reply(`⚠️ *Beberapa kode tidak ditemukan:* ${missingCodes}`);
   }
 }
