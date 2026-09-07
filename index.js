@@ -39,9 +39,14 @@ await import("./src/lib/hillz-agent.js")
   .then((m) => m.initializeAgent())
   .catch(() => { });
 
-const LOG_NOISE = new Set([
-  "Closing",
-  "Opening",
+// ═════════════════════════════════════════════════════════════════════════════
+// 🛡️ ADVANCED NOISE FILTER & COMPACT ERROR FORMATTER
+// ═════════════════════════════════════════════════════════════════════════════
+const NOISE_PATTERNS = [
+  "Blocking on the main thread is very dangerous",
+  "emscripten.org/docs/porting/pthreads",
+  "Closing session: SessionEntry",
+  "Session already",
   "prekey",
   "_chains",
   "registrationId",
@@ -53,36 +58,90 @@ const LOG_NOISE = new Set([
   "currentRatchet",
   "baseKey",
   "privKey",
-  "Session already",
-  "SessionEntry",
-]);
+  "ExperimentalWarning",
+  "punycode",
+  "DEP0040",
+  "rate-overlimit",
+];
 
-function _isNoise(args) {
-  const first = typeof args[0] === "string" ? args[0] : "";
-  for (const noise of LOG_NOISE) {
-    if (first.includes(noise)) return true;
+function isLogNoise(str) {
+  if (typeof str !== "string") return false;
+  for (const pattern of NOISE_PATTERNS) {
+    if (str.includes(pattern)) return true;
   }
   return false;
 }
 
+function formatArg(arg) {
+  if (!arg) return arg;
+  if (arg.isAxiosError || (arg.config && arg.name === "AxiosError")) {
+    const url = arg.config?.url || "Unknown URL";
+    const method = (arg.config?.method || "GET").toUpperCase();
+    const status = arg.response?.status ? `HTTP ${arg.response.status}` : (arg.code || "Network Error");
+    return `[Axios] ${method} ${url} -> ${status}: ${arg.message}`;
+  }
+  if (arg instanceof Error) {
+    if (arg.code === "ENOTFOUND" || arg.code === "ECONNRESET" || arg.code === "ETIMEDOUT") {
+      return `[Network ${arg.code}] ${arg.message}`;
+    }
+  }
+  return arg;
+}
+
+// Intercept low-level stderr write (menangkap output C++/Emscripten/WASM noise)
+const originalStderrWrite = process.stderr.write.bind(process.stderr);
+process.stderr.write = (chunk, encoding, callback) => {
+  const str = typeof chunk === "string" ? chunk : chunk?.toString() || "";
+  if (isLogNoise(str)) {
+    if (typeof callback === "function") callback();
+    return true;
+  }
+  return originalStderrWrite(chunk, encoding, callback);
+};
+
 const _log = console.log;
 const _info = console.info;
 const _warn = console.warn;
+const _error = console.error;
 
 console.log = (...args) => {
-  if (_isNoise(args)) return;
-  _log.apply(console, args);
+  const first = typeof args[0] === "string" ? args[0] : "";
+  if (isLogNoise(first)) return;
+  _log.apply(console, args.map(formatArg));
 };
 
 console.info = (...args) => {
-  if (_isNoise(args)) return;
-  _info.apply(console, args);
+  const first = typeof args[0] === "string" ? args[0] : "";
+  if (isLogNoise(first)) return;
+  _info.apply(console, args.map(formatArg));
 };
 
 console.warn = (...args) => {
-  if (_isNoise(args)) return;
-  _warn.apply(console, args);
+  const first = typeof args[0] === "string" ? args[0] : "";
+  if (isLogNoise(first)) return;
+  _warn.apply(console, args.map(formatArg));
 };
+
+console.error = (...args) => {
+  const first = typeof args[0] === "string" ? args[0] : "";
+  if (isLogNoise(first)) return;
+  _error.apply(console, args.map(formatArg));
+};
+
+// Tangkap unhandled errors agar tidak merusak console
+process.on("unhandledRejection", (reason) => {
+  const msg = reason?.message || String(reason || "Unknown Rejection");
+  if (!isLogNoise(msg)) {
+    logger.warn("UNHANDLED", formatArg(reason));
+  }
+});
+
+process.on("uncaughtException", (err) => {
+  const msg = err?.message || String(err || "Unknown Exception");
+  if (!isLogNoise(msg)) {
+    logger.error("FATAL", `${err.name}: ${err.message}`);
+  }
+});
 
 const startTime = Date.now();
 
@@ -98,224 +157,81 @@ function startDevWatcher(pluginsPath) {
   pluginWatcher = fs.watch(
     pluginsPath,
     { recursive: true },
-    (eventType, filename) => {
+    async (eventType, filename) => {
       if (!filename || !filename.endsWith(".js")) return;
+      if (filename.includes(".test.") || filename.includes(".spec.")) return;
 
-      const existingTimeout = reloadDebounce.get(filename);
-      if (existingTimeout) clearTimeout(existingTimeout);
+      const fullPath = path.join(pluginsPath, filename);
 
-      const timeout = setTimeout(async () => {
-        reloadDebounce.delete(filename);
-        const fullPath = path.join(pluginsPath, filename);
-
-        if (!fs.existsSync(fullPath)) {
-          fileStatCache.delete(fullPath);
-          const pluginName = path.basename(filename, ".js");
-          const { unloadPlugin } = await import("./src/lib/hillz-plugins.js");
-          const result = unloadPlugin(pluginName);
-          if (result.success) logger.warn("plugin", `removed ${filename}`);
-          return;
-        }
-
-        try {
-          const stats = fs.statSync(fullPath);
-          const cached = fileStatCache.get(fullPath);
-          const changed =
-            !cached ||
-            cached.mtimeMs !== stats.mtimeMs ||
-            cached.size !== stats.size;
-          if (!changed) return;
-
-          fileStatCache.set(fullPath, {
-            mtimeMs: stats.mtimeMs,
-            size: stats.size,
-          });
-
-          const { hotReloadPlugin } =
-            await import("./src/lib/hillz-plugins.js");
-          const result = await hotReloadPlugin(fullPath);
-          if (!result.success) {
-            logger.error(
-              "plugin",
-              `reload failed: ${filename}: ${result.error}`,
-            );
-          }
-        } catch (error) {
-          logger.error(
-            "plugin",
-            `reload failed: ${filename}: ${error.message}`,
-          );
-        }
-      }, 500);
-
-      reloadDebounce.set(filename, timeout);
-    },
-  );
-
-  logger.debug("dev", `Monitoring directory: ${pluginsPath}`);
-}
-
-let srcWatcher = null;
-
-function startSrcWatcher(srcPath) {
-  if (srcWatcher) srcWatcher.close();
-
-  logger.system("dev", "Pantauan hot-reload buat src udah jalan bosku");
-
-  srcWatcher = fs.watch(srcPath, { recursive: true }, (eventType, filename) => {
-    if (!filename || !filename.endsWith(".js")) return;
-
-    const existingTimeout = reloadDebounce.get("src_" + filename);
-    if (existingTimeout) clearTimeout(existingTimeout);
-
-    const timeout = setTimeout(() => {
-      reloadDebounce.delete("src_" + filename);
-      const fullPath = path.join(srcPath, filename);
-      if (!fs.existsSync(fullPath)) {
-        logger.warn("dev", `src file removed: ${filename}`);
+      try {
+        if (!fs.existsSync(fullPath)) return;
+        const stat = fs.statSync(fullPath);
+        const lastMtime = fileStatCache.get(fullPath);
+        if (lastMtime && stat.mtimeMs === lastMtime) return;
+        fileStatCache.set(fullPath, stat.mtimeMs);
+      } catch {
         return;
       }
-      logger.success("dev", `src changed: ${filename}`);
-    }, 500);
 
-    reloadDebounce.set("src_" + filename, timeout);
-  });
+      if (reloadDebounce.has(fullPath)) {
+        clearTimeout(reloadDebounce.get(fullPath));
+      }
 
-  logger.debug("dev", `Monitoring directory: ${srcPath}`);
+      reloadDebounce.set(
+        fullPath,
+        setTimeout(async () => {
+          reloadDebounce.delete(fullPath);
+          const relativePath = path.relative(pluginsPath, fullPath);
+          const parts = relativePath.split(path.sep);
+          const category = parts.length > 1 ? parts[0] : "uncategorized";
+          const file = parts[parts.length - 1];
+
+          logger.system(
+            "reload",
+            `Change detected: ${c.yellow(file)} in ${c.purple(category)}`,
+          );
+
+          try {
+            await loadPlugins(pluginsPath);
+            logger.success("reload", `Plugin reloaded successfully`);
+          } catch (err) {
+            logger.error("reload", `Failed: ${err.message}`);
+          }
+        }, 300),
+      );
+    },
+  );
 }
 
-function setupAntiCrash() {
-  process.on("uncaughtException", (error, origin) => {
-    const ignoredErrors = [
-      "write EOF",
-      "ECONNRESET",
-      "EPIPE",
-      "ETIMEDOUT",
-      "ENOTFOUND",
-      "ECONNREFUSED",
-      "read ECONNRESET",
-    ];
-    const isIgnored = ignoredErrors.some(
-      (msg) => error.message?.includes(msg) || error.code === msg,
-    );
-    if (isIgnored) return;
-
-    logErrorBox("uncaught exception", error.message);
-    console.error(c.gray(error.stack));
-    logger.system("system", "Engine is still running");
-  });
-
-  process.on("unhandledRejection", (reason, promise) => {
-    logErrorBox("unhandled rejection", String(reason));
-    console.error(c.gray("Promise:"), promise);
-    logger.system("system", "Engine is still running");
-  });
-
-  process.on("warning", (warning) => {
-    logger.warn("system", `${warning.name}: ${warning.message}`);
-  });
-
-  process.on("SIGINT", async () => {
-    console.log("");
-    logger.system("system", "Received STOP signal (SIGINT)");
-    logger.info("database", "Saving data to local storage...");
-    try {
-      const db = getDatabase();
-      db.save();
-      logger.success("database", "All data successfully saved");
-    } catch (error) {
-      logger.warn("database", `save failed: ${error.message}`);
-    }
-    logger.info("system", "Engine stopped safely");
+async function main() {
+  process.on("SIGINT", () => {
+    logger.system("SHUTDOWN", "Stopping bot gracefully...");
+    if (pluginWatcher) pluginWatcher.close();
     process.exit(0);
   });
 
   process.on("SIGTERM", () => {
-    console.log("");
-    logger.system("system", "Received TERMINATE signal (SIGTERM)");
+    logger.system("SHUTDOWN", "Received SIGTERM, exiting...");
+    if (pluginWatcher) pluginWatcher.close();
     process.exit(0);
   });
 
-  logger.success("system", "Sistem anti-crash nyala, aman terkendali 😎");
-}
-
-async function main() {
-  await playBootSequence({
-    name: config.bot?.name || "SHIROWAHD",
-    version: config.bot?.version || "1.0.0",
-    developer: config.bot?.developer || "Developer",
-    mode: config.mode || "public",
-  });
-  setupAntiCrash();
-
-  const dbPath = path.join(
-    process.cwd(),
-    config.database?.path || "./database/main",
-  );
-  await initDatabase(dbPath);
-  const db = getDatabase();
-
-  await spinText("system", "Lagi muat aset lokal bentar...", { tone: "accent" });
-  await preloadAssets(config.assets);
-
-  const savedMode = db.setting("botMode");
-  if (savedMode && (savedMode === "self" || savedMode === "public"))
-    config.mode = savedMode;
-  const savedPremium = db.setting("premiumUsers");
-  if (Array.isArray(savedPremium)) config.premiumUsers = savedPremium;
-  const savedBanned = db.setting("bannedUsers");
-  if (Array.isArray(savedBanned)) config.bannedUsers = savedBanned;
-
-  const pCount = Array.isArray(savedPremium) ? savedPremium.length : 0;
-  const bCount = Array.isArray(savedBanned) ? savedBanned.length : 0;
-  logger.success(
-    "database",
-    `Database sukses ke-load | Mode: ${config.mode} | Premium: ${pCount} | Banned: ${bCount}`,
-  );
-
   const pluginsPath = path.join(process.cwd(), "plugins");
-  const pluginCount = await loadPlugins(pluginsPath);
-  logger.success("plugin", `Sukses muat ${pluginCount} plugin!`);
+  await loadPlugins(pluginsPath);
 
-  if (config.dev?.enabled && config.dev?.watchPlugins)
+  if (config.dev?.hotReload) {
     startDevWatcher(pluginsPath);
-  if (config.dev?.enabled && config.dev?.watchSrc) {
-    const srcPath = path.join(process.cwd(), "src");
-    startSrcWatcher(srcPath);
   }
 
-  initScheduler(config);
+  await initDatabase();
+  preloadAssets();
 
-  const bootTime = Date.now() - startTime;
-  logger.success("boot", `Bot nyala mantap dalam ${bootTime}ms 🚀`);
-  divider();
-  await spinText("network", "Opening WhatsApp connection tunnel...", {
-    duration: 900,
-    tone: "accent",
-  });
-  logConnection("connecting", "Lagi nyambungin ke WhatsApp nih...");
-  console.log("");
-
-  await startConnection({
-    onRawMessage: async (msg, sock) => {
+  startConnection({
+    onMessage: async (m, sock) => {
       try {
-        const db = getDatabase();
-        await handleAntiTagSW(msg, sock, db);
-      } catch (error) { }
-    },
-
-    onMessage: async (msg, sock) => {
-      try {
-        const handlerPromise = messageHandler(msg, sock);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Handler timeout")), 60000),
-        );
-        await Promise.race([handlerPromise, timeoutPromise]);
+        await messageHandler(m, sock);
       } catch (error) {
-        if (error.message !== "Handler timeout") {
-          logger.error("HANDLER", error.message);
-          if (config.dev?.debugLog) console.error(c.gray(error.stack));
-        }
+        logger.error("HANDLER", error.message);
       }
     },
 
@@ -327,11 +243,11 @@ async function main() {
       }
     },
 
-    onMessageUpdate: async (updates, sock) => {
+    onMessageUpdate: async (update, sock) => {
       try {
-        await messageUpdateHandler(updates, sock);
+        await messageUpdateHandler(update, sock);
       } catch (error) {
-        logger.error("MSG", error.message);
+        logger.error("MSG_UPDATE", error.message);
       }
     },
 
@@ -339,14 +255,21 @@ async function main() {
       try {
         await groupSettingsHandler(update, sock);
       } catch (error) {
-        logger.error("GROUP", error.message);
+        logger.error("GROUP_SETTINGS", error.message);
       }
     },
 
-    onStubMessage: async (msg, sock) => {
+    onAntiTagSW: async (m, sock) => {
       try {
-        const db = getDatabase();
-        await handleAntiRemoveFromUpsert(msg, sock, db);
+        await handleAntiTagSW(m, sock);
+      } catch (error) {
+        logger.error("ANTITAG_SW", error.message);
+      }
+    },
+
+    onAntiDeleteFromUpsert: async (m, sock) => {
+      try {
+        await handleAntiRemoveFromUpsert(m, sock);
       } catch (error) {
         logger.error("ANTIDELETE", error.message);
       }
@@ -373,7 +296,6 @@ async function main() {
             await import("./plugins/religi/autosahur.js");
           initSahurCron(sock);
         } catch { }
-        // ponytail: startOrderPoller removed — function never existed. Re-add when hillz-order-poller.js is created.
         try {
           const { startOtpPoller: _startOtp } =
             await import("./src/lib/hillz-otp-poller.js");
