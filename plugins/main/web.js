@@ -11,7 +11,7 @@ const pluginConfig = {
   name: 'web',
   alias: ['website', 'upload', 'panel', 'dashboard', 'portaluploader', 'webhd'],
   category: 'main',
-  description: 'Info portal web uploader HD & admin panel',
+  description: 'Info portal web uploader HD & panduan upload',
   usage: '.web',
   example: '.web',
   isPremium: false,
@@ -62,13 +62,12 @@ async function handler(m, { sock }) {
   }
 
   const webUrl = `https://${domain}`;
-  const adminUrl = `${webUrl}/admin`;
 
   const caption = `🌐 *${siteName} — ULTRA HD WEB PORTAL*
 ━━━━━━━━━━━━━━━━━━━━━
 *Simpan Kualitas Asli • Bypass Kompresi WA • 60 FPS*
 
-Platform uploader video & foto beresolusi tinggi tanpa buram. Video diproses dengan engine transmisi khusus agar tetap jernih 100% saat dipasang di Status WhatsApp.
+Platform uploader video & foto beresolusi tinggi tanpa buram. Media diproses dengan pipeline khusus agar tetap jernih 100% saat dipasang di Status WhatsApp.
 
 📊 *STATUS SERVER & MEDIA*
 > ◦ *Video Aktif:* \`${vidStats.totalActive.toLocaleString('id-ID')} file\`
@@ -78,20 +77,19 @@ Platform uploader video & foto beresolusi tinggi tanpa buram. Video diproses den
 > ◦ *Direct Upload:* \`Active (Bypass Limit)\`
 
 ⚡ *CARA PENGGUNAAN (4 LANGKAH)*
-> 1️⃣ *Buka Web Portal:* Masuk ke tautan uploader di bawah.
+> 1️⃣ *Buka Web Portal:* Klik tombol upload atau tautan di bawah.
 > 2️⃣ *Pilih File:* Upload video/foto langsung dari galeri browser.
 > 3️⃣ *Salin Kode:* Tunggu upload selesai & copy 6 digit kode claim.
-> 4️⃣ *Kirim Perintah:* Ketik \`.claim <KODE>\` di WhatsApp.
+> 4️⃣ *Kirim Perintah:* Ketik \`.claim <KODE>\` di grup claim WhatsApp.
 
 🔗 *LINK AKSES CEPAT*
 > 🚀 *Web Uploader:* ${webUrl}
-> ⚙️ *Admin Console:* ${adminUrl}
 > 👥 *Grup Claim:* ${claimGroupLink}
 ━━━━━━━━━━━━━━━━━━━━━
 🔹 *Engine:* ${config.bot?.name || 'SHIROWAHD'} High-Performance Web
 🔹 *Author:* @${config.owner?.name || 'SHIRO HLZ'}`;
 
-  // Kirim dengan media gambar poster header
+  // Kirim dengan media gambar poster header & tombol khusus user
   try {
     return await sock.sendMessage(
       m.chat,
@@ -111,9 +109,9 @@ Platform uploader video & foto beresolusi tinggi tanpa buram. Video diproses den
           {
             name: 'cta_url',
             buttonParamsJson: JSON.stringify({
-              display_text: '⚙️ Admin Console',
-              url: adminUrl,
-              merchant_url: adminUrl,
+              display_text: '👥 Masuk Grup Claim',
+              url: claimGroupLink,
+              merchant_url: claimGroupLink,
             }),
           },
         ],
@@ -121,7 +119,6 @@ Platform uploader video & foto beresolusi tinggi tanpa buram. Video diproses den
       { quoted: m }
     );
   } catch (err) {
-    // Fallback jika fetch poster url gagal di socket
     return await sock.sendMessage(m.chat, { text: caption }, { quoted: m });
   }
 }
