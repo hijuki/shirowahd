@@ -1,6 +1,7 @@
-import { createCanvas } from "@napi-rs/canvas"
+import { createCanvas, GlobalFonts } from "@napi-rs/canvas"
 import { performance } from "perf_hooks"
 import os from "os"
+import fs from "fs"
 import config from "../../config.js"
 import te from "../../src/lib/hillz-error.js"
 import { getStats, getTotalStorage } from "../../src/lib/vid-store.js"
@@ -10,7 +11,7 @@ const pluginConfig = {
   name: "ping",
   alias: ["speed", "p", "latency", "sys", "status"],
   category: "main",
-  description: "Cek performa dan status sistem bot secara real-time (Canvas Epic)",
+  description: "Cek performa dan status sistem bot secara real-time (Canvas Cyberpunk)",
   usage: ".ping",
   example: ".ping",
   isOwner: false,
@@ -22,6 +23,29 @@ const pluginConfig = {
   isEnabled: true,
 }
 
+// Inisialisasi font lokal sistem langsung
+let isFontLoaded = false;
+function initFont() {
+  if (isFontLoaded) return;
+  try {
+    const fonts = [
+      '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+      '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+    ];
+    for (const f of fonts) {
+      if (fs.existsSync(f)) {
+        GlobalFonts.registerFromPath(f, 'Roboto');
+        GlobalFonts.registerFromPath(f, 'sans-serif');
+        isFontLoaded = true;
+        break;
+      }
+    }
+  } catch (e) {
+    console.error('[Ping Font] Warning:', e.message);
+  }
+}
+initFont();
+
 const fmtSize = (b) => {
   if (!b || b === 0) return "0 B"
   const u = ["B", "KB", "MB", "GB", "TB"]
@@ -31,10 +55,7 @@ const fmtSize = (b) => {
 
 const fmtUp = (s) => {
   s = Number(s)
-  const d = Math.floor(s / 86400),
-    h = Math.floor((s % 86400) / 3600),
-    m = Math.floor((s % 3600) / 60),
-    sc = Math.floor(s % 60)
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sc = Math.floor(s % 60)
   if (d > 0) return `${d}d ${h}h ${m}m`
   if (h > 0) return `${h}h ${m}m ${sc}s`
   return `${m}m ${sc}s`
@@ -42,236 +63,132 @@ const fmtUp = (s) => {
 
 function drawCyberBox(ctx, x, y, w, h, title, glowColor) {
     const boxGradient = ctx.createLinearGradient(x, y, x, y + h);
-    boxGradient.addColorStop(0, 'rgba(30, 41, 59, 0.8)');
-    boxGradient.addColorStop(1, 'rgba(15, 23, 42, 0.6)');
+    boxGradient.addColorStop(0, 'rgba(30, 41, 59, 0.85)');
+    boxGradient.addColorStop(1, 'rgba(15, 23, 42, 0.7)');
     
     ctx.fillStyle = boxGradient;
     ctx.fillRect(x, y, w, h);
-    
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.strokeRect(x, y, w, h);
 
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + w, y);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = glowColor;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = glowColor;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y);
+    ctx.lineWidth = 4; ctx.strokeStyle = glowColor; ctx.shadowBlur = 15; ctx.shadowColor = glowColor; ctx.stroke(); ctx.shadowBlur = 0;
 
-    ctx.beginPath();
-    ctx.moveTo(x, y + h - 10);
-    ctx.lineTo(x, y + h);
-    ctx.lineTo(x + 10, y + h);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = glowColor;
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = glowColor;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.moveTo(x, y + h - 10); ctx.lineTo(x, y + h); ctx.lineTo(x + 10, y + h);
+    ctx.lineWidth = 3; ctx.strokeStyle = glowColor; ctx.shadowBlur = 10; ctx.shadowColor = glowColor; ctx.stroke(); ctx.shadowBlur = 0;
 
-    ctx.beginPath();
-    ctx.moveTo(x + w - 10, y + h);
-    ctx.lineTo(x + w, y + h);
-    ctx.lineTo(x + w, y + h - 10);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = glowColor;
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = glowColor;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.moveTo(x + w - 10, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - 10);
+    ctx.lineWidth = 3; ctx.strokeStyle = glowColor; ctx.shadowBlur = 10; ctx.shadowColor = glowColor; ctx.stroke(); ctx.shadowBlur = 0;
 
     ctx.fillStyle = glowColor;
-    ctx.font = 'bold 22px sans-serif';
+    ctx.font = 'bold 22px Roboto, sans-serif';
     ctx.fillText(`⌖ ${title.toUpperCase()}`, x + 20, y + 35);
 }
 
 function drawGauge(ctx, x, y, radius, percentage, color, label) {
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0.75 * Math.PI, 2.25 * Math.PI);
-    ctx.lineWidth = 30;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, radius, 0.75 * Math.PI, 2.25 * Math.PI);
+    ctx.lineWidth = 30; ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)'; ctx.lineCap = 'round'; ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0.75 * Math.PI, 0.75 * Math.PI + (1.5 * Math.PI * (percentage / 100)));
+    ctx.beginPath(); ctx.arc(x, y, radius, 0.75 * Math.PI, 0.75 * Math.PI + (1.5 * Math.PI * (Math.min(100, Math.max(0, percentage)) / 100)));
     ctx.lineWidth = 30;
-    
     const grad = ctx.createLinearGradient(x - radius, y - radius, x + radius, y + radius);
-    grad.addColorStop(0, color);
-    grad.addColorStop(1, '#ffffff');
-
-    ctx.strokeStyle = grad;
-    ctx.shadowBlur = 25;
-    ctx.shadowColor = color;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    grad.addColorStop(0, color); grad.addColorStop(1, '#ffffff');
+    ctx.strokeStyle = grad; ctx.shadowBlur = 20; ctx.shadowColor = color; ctx.lineCap = 'round'; ctx.stroke(); ctx.shadowBlur = 0;
     
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 70px sans-serif';
-    ctx.textAlign = 'center';
-    
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = color;
+    ctx.font = 'bold 70px Roboto, sans-serif';
+    ctx.textAlign = 'center'; ctx.shadowBlur = 15; ctx.shadowColor = color;
     ctx.fillText(`${percentage}%`, x, y + 15);
     ctx.shadowBlur = 0;
     
     ctx.fillStyle = color;
-    ctx.font = 'bold 24px sans-serif';
-    ctx.fillText(label, x, y + 60);
-    ctx.textAlign = 'left';
+    ctx.font = 'bold 24px Roboto, sans-serif';
+    ctx.fillText(label, x, y + 60); ctx.textAlign = 'left';
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-    const words = text.split(' ');
-    let line = '';
-    let currentY = y;
+    const words = String(text || '').split(' ');
+    let line = '', currentY = y;
     for(let n = 0; n < words.length; n++) {
       const testLine = line + words[n] + ' ';
       const metrics = ctx.measureText(testLine);
       const testWidth = metrics.width;
       if (testWidth > maxWidth && n > 0) {
-        ctx.fillText(line, x, currentY);
-        line = words[n] + ' ';
-        currentY += lineHeight;
-      } else {
-        line = testLine;
-      }
+        ctx.fillText(line, x, currentY); line = words[n] + ' '; currentY += lineHeight;
+      } else { line = testLine; }
     }
     ctx.fillText(line, x, currentY);
 }
 
-async function createEpicPingCanvas(data) {
+function createEpicPingCanvas(data) {
     const width = 1200;
     const height = 900;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
     const bgGrad = ctx.createRadialGradient(width/2, height/2, 100, width/2, height/2, width);
-    bgGrad.addColorStop(0, '#0f172a');
-    bgGrad.addColorStop(1, '#020617');
-    
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, width, height);
+    bgGrad.addColorStop(0, '#0f172a'); bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, width, height);
 
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.04)';
-    ctx.lineWidth = 1;
-    for(let i = 0; i < width; i += 40) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke();
-    }
-    for(let i = 0; i < height; i += 40) {
-        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke();
-    }
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.04)'; ctx.lineWidth = 1;
+    for(let i = 0; i < width; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke(); }
+    for(let i = 0; i < height; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke(); }
 
-    ctx.beginPath();
-    ctx.arc(100, 100, 400, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
-    ctx.filter = 'blur(80px)';
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.arc(1100, 700, 300, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgba(192, 132, 252, 0.05)';
-    ctx.fill();
-    ctx.filter = 'none';
+    ctx.beginPath(); ctx.arc(100, 100, 400, 0, 2 * Math.PI); ctx.fillStyle = 'rgba(56, 189, 248, 0.05)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(1100, 700, 300, 0, 2 * Math.PI); ctx.fillStyle = 'rgba(192, 132, 252, 0.05)'; ctx.fill();
 
     ctx.fillStyle = '#38bdf8';
-    ctx.font = 'bold 50px sans-serif';
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#38bdf8';
-    ctx.fillText('SYSTEM DIAGNOSTICS', 50, 70);
-    ctx.shadowBlur = 0;
+    ctx.font = 'bold 50px Roboto, sans-serif';
+    ctx.shadowBlur = 20; ctx.shadowColor = '#38bdf8'; ctx.fillText('SYSTEM DIAGNOSTICS', 50, 70); ctx.shadowBlur = 0;
     
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = 'bold 24px Courier New';
+    ctx.fillStyle = '#cbd5e1'; ctx.font = 'bold 24px monospace';
     ctx.fillText(`STATUS: ONLINE | TERMINAL: SHIROWAHD`, 50, 110);
     
-    ctx.beginPath();
-    ctx.moveTo(50, 130);
-    ctx.lineTo(width - 50, 130);
-    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(50, 130); ctx.lineTo(width - 50, 130); ctx.lineWidth = 3;
     const lineGrad = ctx.createLinearGradient(50, 130, width - 50, 130);
-    lineGrad.addColorStop(0, '#38bdf8');
-    lineGrad.addColorStop(0.5, '#c084fc');
-    lineGrad.addColorStop(1, 'transparent');
-    ctx.strokeStyle = lineGrad;
-    ctx.stroke();
+    lineGrad.addColorStop(0, '#38bdf8'); lineGrad.addColorStop(0.5, '#c084fc'); lineGrad.addColorStop(1, 'transparent');
+    ctx.strokeStyle = lineGrad; ctx.stroke();
 
     const col1X = 50, colWidth = 330;
 
     drawCyberBox(ctx, col1X, 160, colWidth, 180, 'LATENCY PING', '#4ade80');
     const pingColor = data.ping < 100 ? '#4ade80' : (data.ping < 500 ? '#facc15' : '#f87171');
-    ctx.fillStyle = pingColor;
-    ctx.font = 'bold 70px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = pingColor;
-    ctx.fillText(`${data.ping}`, col1X + colWidth/2 - 20, 260);
-    ctx.shadowBlur = 0;
-    ctx.font = 'bold 30px sans-serif';
-    ctx.fillText(`ms`, col1X + colWidth/2 + ctx.measureText(`${data.ping}`).width/2 + 10, 260);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = pingColor; ctx.font = 'bold 70px Roboto, sans-serif'; ctx.textAlign = 'center'; ctx.shadowBlur = 20; ctx.shadowColor = pingColor;
+    ctx.fillText(`${data.ping}`, col1X + colWidth/2 - 20, 260); ctx.shadowBlur = 0;
+    ctx.font = 'bold 30px Roboto, sans-serif'; ctx.fillText(`ms`, col1X + colWidth/2 + ctx.measureText(`${data.ping}`).width/2 + 10, 260);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#cbd5e1'; ctx.font = 'bold 18px Roboto, sans-serif';
     let pStatus = data.ping < 100 ? 'EXCELLENT' : (data.ping < 500 ? 'MODERATE' : 'POOR');
     ctx.fillText(`CONNECTION: ${pStatus}`, col1X + 20, 310);
 
     drawCyberBox(ctx, col1X, 360, colWidth, 230, 'CPU PROCESSOR', '#fbbf24');
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = '22px sans-serif';
+    ctx.fillStyle = '#f8fafc'; ctx.font = '22px Roboto, sans-serif';
     wrapText(ctx, data.cpuModel, col1X + 20, 430, colWidth - 40, 30);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(`Cores:`, col1X + 20, 520);
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillText(`${data.cpuCores} Threads`, col1X + 110, 520);
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText(`Speed:`, col1X + 20, 555);
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillText(`${data.cpuSpeed} MHz`, col1X + 110, 555);
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px Roboto, sans-serif'; ctx.fillText(`Cores:`, col1X + 20, 520);
+    ctx.fillStyle = '#fbbf24'; ctx.fillText(`${data.cpuCores} Threads`, col1X + 110, 520);
+    ctx.fillStyle = '#94a3b8'; ctx.fillText(`Speed:`, col1X + 20, 555);
+    ctx.fillStyle = '#fbbf24'; ctx.fillText(`${data.cpuSpeed} MHz`, col1X + 110, 555);
 
     drawCyberBox(ctx, col1X, 610, colWidth, 180, 'VIDEO STORAGE', '#22d3ee');
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px Roboto, sans-serif';
     ctx.fillText(`Active:`, col1X + 20, 680); ctx.fillStyle = '#22d3ee'; ctx.fillText(`${data.vidActive} video`, col1X + 120, 680);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Today:`, col1X + 20, 715); ctx.fillStyle = '#22d3ee'; ctx.fillText(`${data.vidToday} uploads`, col1X + 120, 715);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Storage:`, col1X + 20, 750); ctx.fillStyle = '#22d3ee'; ctx.fillText(fmtSize(data.vidStorage), col1X + 120, 750);
 
-    const col2X = 410, col2Width = 380;
-    const gaugeX = col2X + col2Width/2;
-    const gaugeY = 380;
-    
-    ctx.fillStyle = '#c084fc';
-    ctx.font = 'bold 30px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = '#c084fc';
-    ctx.fillText('MEMORY USAGE', gaugeX, 200);
-    ctx.shadowBlur = 0;
-    ctx.textAlign = 'left';
-
+    const col2X = 410, col2Width = 380, gaugeX = col2X + col2Width/2, gaugeY = 380;
+    ctx.fillStyle = '#c084fc'; ctx.font = 'bold 30px Roboto, sans-serif'; ctx.textAlign = 'center'; ctx.shadowBlur = 10; ctx.shadowColor = '#c084fc';
+    ctx.fillText('MEMORY USAGE', gaugeX, 200); ctx.shadowBlur = 0; ctx.textAlign = 'left';
     drawGauge(ctx, gaugeX, gaugeY, 140, data.memPct, '#c084fc', 'USED RAM');
-
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 22px sans-serif';
-    ctx.textAlign = 'center';
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 22px Roboto, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(`Used: ${fmtSize(data.usedMem)}`, gaugeX, 580);
     ctx.fillText(`Free: ${fmtSize(data.freeMem)}`, gaugeX, 615);
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 28px sans-serif';
-    ctx.fillText(`TOTAL: ${fmtSize(data.totalMem)}`, gaugeX, 660);
+    ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 28px Roboto, sans-serif'; ctx.fillText(`TOTAL: ${fmtSize(data.totalMem)}`, gaugeX, 660);
     ctx.textAlign = 'left';
 
     const col3X = 820, col3Width = 330;
-
     drawCyberBox(ctx, col3X, 160, col3Width, 230, 'NODE.JS ENGINE', '#38bdf8');
-    const nY = 220;
-    const nColor = '#38bdf8';
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
+    const nY = 220, nColor = '#38bdf8';
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px Roboto, sans-serif';
     ctx.fillText(`RSS:`, col3X + 20, nY);       ctx.fillStyle = nColor; ctx.fillText(fmtSize(data.memNode.rss), col3X + 140, nY);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Heap Used:`, col3X + 20, nY+35); ctx.fillStyle = nColor; ctx.fillText(fmtSize(data.memNode.heapUsed), col3X + 140, nY+35);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Heap Total:`, col3X + 20, nY+70); ctx.fillStyle = nColor; ctx.fillText(fmtSize(data.memNode.heapTotal), col3X + 140, nY+70);
@@ -280,26 +197,25 @@ async function createEpicPingCanvas(data) {
 
     drawCyberBox(ctx, col3X, 410, col3Width, 180, 'SYSTEM SPECS', '#a855f7');
     const osY = 470;
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px Roboto, sans-serif';
     ctx.fillText(`OS:`, col3X + 20, osY);      ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.osType} ${data.osRel}`, col3X + 80, osY);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Arch:`, col3X + 20, osY+35);    ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.osPlatform} (${data.osArch})`, col3X + 80, osY+35);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Host:`, col3X + 20, osY+70);    ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.osHost}`, col3X + 80, osY+70);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Node:`, col3X + 20, osY+105);   ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.nodeVer}`, col3X + 80, osY+105);
 
     drawCyberBox(ctx, col3X, 610, col3Width, 180, 'BOT STATS', '#ec4899');
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(`Server:`, col3X + 20, 670); ctx.fillStyle = '#ec4899'; ctx.font = 'bold 22px sans-serif'; ctx.fillText(data.upOS, col3X + 110, 670);
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(`Bot:`, col3X + 20, 705); ctx.fillStyle = '#ec4899'; ctx.font = 'bold 22px sans-serif'; ctx.fillText(data.upBot, col3X + 110, 705);
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px Roboto, sans-serif';
+    ctx.fillText(`Server:`, col3X + 20, 670); ctx.fillStyle = '#ec4899'; ctx.font = 'bold 22px Roboto, sans-serif'; ctx.fillText(data.upOS, col3X + 110, 670);
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px Roboto, sans-serif';
+    ctx.fillText(`Bot:`, col3X + 20, 705); ctx.fillStyle = '#ec4899'; ctx.font = 'bold 22px Roboto, sans-serif'; ctx.fillText(data.upBot, col3X + 110, 705);
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 20px Roboto, sans-serif';
     ctx.fillText(`Users:`, col3X + 20, 740); ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.dbUsers}`, col3X + 110, 740);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Premium:`, col3X + 170, 740); ctx.fillStyle = '#fbbf24'; ctx.fillText(`${data.dbPremium}`, col3X + 260, 740);
     ctx.fillStyle = '#94a3b8'; ctx.fillText(`Groups:`, col3X + 20, 775); ctx.fillStyle = '#f8fafc'; ctx.fillText(`${data.dbGroups}`, col3X + 110, 775);
 
-    // Domain bar at bottom
     ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
     ctx.fillRect(50, height - 50, width - 100, 35);
-    ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 18px Courier New'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center';
     ctx.fillText(`DOMAIN: ${data.domain} | SHIROWAHD v3.3`, width/2, height - 27);
     ctx.textAlign = 'left';
 
@@ -320,12 +236,10 @@ async function handler(m, { sock }) {
     const tEnd = performance.now();
     const execTime = (tEnd - tStart).toFixed(0);
 
-    // Video storage stats
     let vidStats = { totalActive: 0, totalSize: 0, uploadsToday: 0 };
     let vidStorage = 0;
-    try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch { /* upload optional */ }
+    try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch { }
 
-    // Database stats
     let dbUsers = 0, dbGroups = 0, dbPremium = 0;
     try {
       const db = getDatabase();
@@ -334,7 +248,7 @@ async function handler(m, { sock }) {
         dbGroups = Object.keys(db.data.groups || {}).length;
         dbPremium = Object.values(db.data.users || {}).filter(u => u.isPremium).length;
       }
-    } catch { /* db optional */ }
+    } catch { }
 
     const data = {
         ping: execTime,
@@ -354,18 +268,17 @@ async function handler(m, { sock }) {
         upOS: fmtUp(os.uptime()),
         upBot: fmtUp(process.uptime()),
         vidActive: vidStats.totalActive,
-        vidSize: vidStats.totalSize,
         vidToday: vidStats.uploadsToday,
         vidStorage,
         dbUsers, dbGroups, dbPremium,
-        domain: 'swhdhlz.my.id'
+        domain: config.domain || 'swhdhlz.my.id'
     };
 
-    await m.react('🕕');
+    if (m.react) await m.react('🕕').catch(() => {});
 
-    const imageBuffer = await createEpicPingCanvas(data);
+    const imageBuffer = createEpicPingCanvas(data);
 
-    const caption = 
+    const caption =
       `🏓 *PONG!* (${data.ping}ms)\n\n` +
       `🖥️ *SISTEM*\n` +
       `> ◦ *OS:* ${data.osType} (${data.osRel})\n` +
@@ -393,12 +306,15 @@ async function handler(m, { sock }) {
       `🌐 *DOMAIN:* ${data.domain}\n\n` +
       `Eksekusi: *${data.ping}ms*`;
 
-    await sock.sendMessage(m.chat, { image: imageBuffer, caption: caption }, { quoted: m });
-    await m.react("✅");
+    // Quoted dibuat super aman: hanya pasang jika ada message valid
+    const quoteOpt = (m?.message || m?.raw) ? { quoted: m.raw || m } : {};
+    await sock.sendMessage(m.chat, { image: imageBuffer, caption: caption }, quoteOpt);
+    if (m.react) await m.react("✅").catch(() => {});
 
   } catch (error) {
-    await m.react("❌");
-    m.reply(te(m.prefix, m.command, m.pushName));
+    console.error('[ping-error]', error);
+    if (m.react) await m.react("❌").catch(() => {});
+    if (m.reply) m.reply(te(m.prefix, m.command, m.pushName));
   }
 }
 

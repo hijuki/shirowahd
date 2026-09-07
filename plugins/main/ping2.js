@@ -3,14 +3,13 @@ import { performance } from 'perf_hooks'
 import { execSync } from 'child_process'
 import config from '../../config.js'
 import { getDatabase } from '../../src/lib/hillz-database.js'
-import { getStats, getTotalStorage } from '../../src/lib/vid-store.js'
 import te from '../../src/lib/hillz-error.js'
 
 const pluginConfig = {
     name: 'ping2',
     alias: ['speed2', 'p2', 'latency2', 'sys2', 'status2'],
     category: 'main',
-    description: 'Cek performa dan status sistem bot secara real-time',
+    description: 'Cek performa dan status sistem bot secara real-time (Interactive Table)',
     usage: '.ping2',
     example: '.ping2',
     isOwner: false,
@@ -31,7 +30,7 @@ const fmtSize = (b) => {
 
 const fmtUp = (s) => {
     s = Number(s)
-    const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sc = Math.floor(s % 60)
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sc = Math.floor(s % 60)
     if (d > 0) return `${d}d ${h}h ${m}m`
     if (h > 0) return `${h}h ${m}m ${sc}s`
     return `${m}m ${sc}s`
@@ -40,7 +39,7 @@ const fmtUp = (s) => {
 function getNetwork() {
     try {
         const ifaces = os.networkInterfaces()
-        let active = 'N/A'
+        let active = 'eth0'
         for (const [name, addrs] of Object.entries(ifaces)) {
             if (name.toLowerCase().includes('lo')) continue
             for (const a of addrs) {
@@ -52,13 +51,13 @@ function getNetwork() {
         }
         return { iface: active }
     } catch {
-        return { iface: 'N/A' }
+        return { iface: 'eth0' }
     }
 }
 
 async function handler(m, { sock }) {
     const execStart = performance.now()
-    await m.react('🕕')
+    if (m.react) await m.react('🕕').catch(() => {})
 
     try {
         const t0 = m.messageTimestamp ? (m.messageTimestamp * 1000) : Date.now()
@@ -68,31 +67,22 @@ async function handler(m, { sock }) {
         const totalMem = os.totalmem()
         const freeMem = os.freemem()
 
-        let cpuPct = Math.max(1, Math.min(100, os.loadavg()[0] / cpus.length * 100)).toFixed(1)
+        let cpuPct = Math.max(1, Math.min(100, (os.loadavg()[0] / (cpus.length || 1)) * 100)).toFixed(1)
 
         let diskTotal = 0, diskUsed = 0
         try {
-            if (process.platform === 'win32') {
-                const w = execSync("wmic logicaldisk where \"DeviceID='C:'\" get Size,FreeSpace /format:value", { encoding: 'utf-8' })
-                const fm = w.match(/FreeSpace=(\d+)/), sm = w.match(/Size=(\d+)/)
-                if (sm && fm) {
-                    diskTotal = parseInt(sm[1])
-                    diskUsed = diskTotal - parseInt(fm[1])
-                }
-            } else {
-                const df = execSync('df -k --output=size,used /').toString().trim().split('\n')
-                if (df.length > 1) {
-                    const p = df[1].trim().split(/\s+/).map(Number)
-                    if (p.length >= 2) {
-                        diskTotal = p[0] * 1024
-                        diskUsed = p[1] * 1024
-                    }
+            const df = execSync('df -k --output=size,used /').toString().trim().split('\n')
+            if (df.length > 1) {
+                const p = df[1].trim().split(/\s+/).map(Number)
+                if (p.length >= 2) {
+                    diskTotal = p[0] * 1024
+                    diskUsed = p[1] * 1024
                 }
             }
-        } catch { /* ignored */ }
+        } catch {}
 
         const heap = process.memoryUsage()
-        const net = await getNetwork()
+        const net = getNetwork()
 
         let dbUsers = 0, dbGroups = 0, dbPremium = 0
         try {
@@ -102,54 +92,75 @@ async function handler(m, { sock }) {
                 dbGroups = Object.keys(db.data.groups || {}).length
                 dbPremium = Object.values(db.data.users || {}).filter(u => u.isPremium).length
             }
-        } catch { /* db optional */ }
-
-        let vidStats = { totalActive: 0, totalSize: 0, uploadsToday: 0 };
-        let vidStorage = 0;
-        try { vidStats = getStats(); vidStorage = getTotalStorage(); } catch { /* upload optional */ }
+        } catch {}
 
         const totalExec = Math.round(performance.now() - execStart)
 
         const tableData = [
             ['WA Roundtrip', `${waRoundtrip} ms`],
-            ['Response', `${totalExec} ms`],
+            ['Kecepatan Respon', `${totalExec} ms`],
             ['Status', 'Online'],
+            ['Hostname', os.hostname()],
             ['Platform', `${os.platform()} ${os.arch()}`],
             ['Node', process.version],
-            ['CPU', `${cpus[0]?.model?.slice(0, 25)}`],
+            ['CPU', `${cpus[0]?.model?.slice(0, 25) || 'AMD/Intel'}`],
             ['Cores', `${cpus.length}`],
             ['CPU Load', `${cpuPct}%`],
             ['RAM', `${fmtSize(totalMem - freeMem)} / ${fmtSize(totalMem)}`],
             ['Heap', `${fmtSize(heap.heapUsed)} / ${fmtSize(heap.heapTotal)}`],
             ['Disk', `${fmtSize(diskUsed)} / ${fmtSize(diskTotal)}`],
             ['Network', net.iface],
-            ['Videos', `${vidStats.totalActive} aktif`],
-            ['Uploads Today', `${vidStats.uploadsToday}`],
-            ['Storage', fmtSize(vidStorage)],
             ['Users', `${dbUsers}`],
             ['Premium', `${dbPremium}`],
             ['Groups', `${dbGroups}`],
             ['Uptime Bot', fmtUp(process.uptime())],
             ['Uptime Server', fmtUp(os.uptime())],
-            ['Domain', 'swhdhlz.my.id'],
         ]
 
-        await sock.sendTable(
-            m.chat,
-            '⚡ System Performance',
-            ['Metric', 'Value'],
-            tableData,
-            m,
-            {
-                headerText: `${config.bot?.name || 'SHIROWAHD'} *STATUS*\n\n- 🎄 Dibawah ini adalah statistik bot kita`,
-                footer: '🍃 Realtime Monitoring'
+        let tableSuccess = false;
+        if (typeof sock.sendTable === 'function') {
+            try {
+                await sock.sendTable(
+                    m.chat,
+                    '⚡ System Performance',
+                    ['Metric', 'Value'],
+                    tableData,
+                    m?.raw || m,
+                    {
+                        headerText: `${config.bot?.name || 'SHIROWAHD'} *STATUS*\n\n- 📊 Statistik Realtime Server & Bot`,
+                        footer: '🍃 Realtime Monitoring'
+                    }
+                );
+                tableSuccess = true;
+            } catch (tableErr) {
+                console.warn('[ping2] sendTable fallback to text:', tableErr.message);
             }
-        )
+        }
 
-        await m.react('✅')
+        // Fallback jika WA client tidak render table atau sendTable gagal
+        if (!tableSuccess) {
+            let textMsg = `⚡ *${config.bot?.name || 'SHIROWAHD'} STATUS*\n\n`;
+            textMsg += `> ◦ *WA Roundtrip:* ${waRoundtrip} ms\n`;
+            textMsg += `> ◦ *Respon Bot:* ${totalExec} ms\n`;
+            textMsg += `> ◦ *Status:* Online\n`;
+            textMsg += `> ◦ *Platform:* ${os.platform()} ${os.arch()}\n`;
+            textMsg += `> ◦ *CPU:* ${cpus[0]?.model?.slice(0, 25) || 'CPU'} (${cpus.length} Cores)\n`;
+            textMsg += `> ◦ *CPU Load:* ${cpuPct}%\n`;
+            textMsg += `> ◦ *RAM:* ${fmtSize(totalMem - freeMem)} / ${fmtSize(totalMem)}\n`;
+            textMsg += `> ◦ *Heap:* ${fmtSize(heap.heapUsed)} / ${fmtSize(heap.heapTotal)}\n`;
+            textMsg += `> ◦ *Disk:* ${fmtSize(diskUsed)} / ${fmtSize(diskTotal)}\n`;
+            textMsg += `> ◦ *Users / Groups:* ${dbUsers} / ${dbGroups}\n`;
+            textMsg += `> ◦ *Uptime Server:* ${fmtUp(os.uptime())}\n`;
+            textMsg += `> ◦ *Uptime Bot:* ${fmtUp(process.uptime())}\n\n`;
+            textMsg += `🍃 *Realtime Monitoring*`;
+            await sock.sendMessage(m.chat, { text: textMsg }, { quoted: m?.raw || m });
+        }
+
+        if (m.react) await m.react('✅').catch(() => {})
     } catch (error) {
-        await m.react('☢')
-        m.reply(te(m.prefix, m.command, m.pushName))
+        console.error('[ping2 error]', error);
+        if (m.react) await m.react('☢').catch(() => {})
+        if (m.reply) m.reply(te(m.prefix, m.command, m.pushName));
     }
 }
 
