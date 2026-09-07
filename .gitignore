@@ -70,3 +70,7 @@ admin-settings.sanitized.json
 # Token sesi admin aktif (persisten lokal)
 .admin-tokens.json
 
+
+# Next.js build traces
+.next/trace
+.next/trace-build

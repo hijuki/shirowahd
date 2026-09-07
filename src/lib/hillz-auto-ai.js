@@ -3,6 +3,7 @@ import { promisify } from "util";
 import { chat as geminiChat } from "../scraper/geminiVision.js";
 import { getDatabase } from "./hillz-database.js";
 import { pinterest } from "btch-downloader";
+import { AIRich } from "./hillz-builder.js";
 import config from "../../config.js";
 import axios from "axios";
 import path from "path";
@@ -315,6 +316,87 @@ function cleanRichTags(text) {
       "",
     )
     .trim();
+}
+
+/**
+ * Parse markdown text into AIRich components (tables, code blocks, text)
+ * Mirrors the logic in plugins/ai/ai.js but returns an AIRich instance
+ */
+function markdownToAIRich(text, sock) {
+  const aiRich = new AIRich(sock);
+  const lines = text.split("\n");
+  let currentTable = [];
+  let currentCode = [];
+  let inCode = false;
+  let codeLang = "";
+  let textBuffer = [];
+
+  const flushText = () => {
+    if (textBuffer.length > 0) {
+      const joined = textBuffer.join("\n").trim();
+      if (joined) aiRich.addText(joined);
+      textBuffer = [];
+    }
+  };
+
+  const flushTable = () => {
+    if (currentTable.length > 0) {
+      const tableData = currentTable.map((line) =>
+        line
+          .split("|")
+          .map((c) => c.trim())
+          .filter((_, i, arr) => i !== 0 && i !== arr.length - 1)
+      );
+      const filtered = tableData.filter(
+        (row) => row.length > 0 && !row.every((c) => /^[-:]+$/.test(c))
+      );
+      if (filtered.length > 0 && filtered.every((row) => row.length > 0)) {
+        aiRich.addTable(filtered);
+      } else {
+        aiRich.addText(currentTable.join("\n"));
+      }
+      currentTable = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Code block detection
+    if (line.trim().startsWith("```")) {
+      if (!inCode) {
+        flushText();
+        flushTable();
+        inCode = true;
+        codeLang = line.trim().substring(3).trim() || "text";
+      } else {
+        inCode = false;
+        aiRich.addCode(codeLang, currentCode.join("\n"));
+        currentCode = [];
+      }
+      continue;
+    }
+
+    if (inCode) {
+      currentCode.push(line);
+      continue;
+    }
+
+    // Table detection (markdown pipe tables)
+    if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
+      flushText();
+      currentTable.push(line.trim());
+      continue;
+    }
+
+    flushTable();
+    textBuffer.push(line);
+  }
+
+  flushText();
+  flushTable();
+
+  return aiRich;
 }
 
 async function sendRichMessage(rich, sock, jid, quoted) {
@@ -1124,7 +1206,22 @@ async function handleAutoAI(m, sock) {
         }
       }
       if ((!richSent || stickerSent) && cleanResponse) {
-        await m.reply(cleanResponse);
+        // AIRich: parse markdown → rich message (tables, code blocks, text)
+        try {
+          const hasMarkdown =
+            cleanResponse.includes("```") ||
+            (cleanResponse.includes("|") && cleanResponse.includes("\n|"));
+          if (hasMarkdown) {
+            const aiRich = markdownToAIRich(cleanResponse, sock);
+            await aiRich.send(m.chat, { quoted: m });
+            richSent = true;
+          }
+        } catch (e) {
+          console.error("[AutoAI AIRich fallback error]", e.message);
+        }
+        if (!richSent) {
+          await m.reply(cleanResponse);
+        }
       }
     }
 
