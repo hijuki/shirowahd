@@ -2,62 +2,62 @@ import config from '../../config.js';
 
 function renderZahraBouquetCard() {
   return `
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; box-sizing: border-box; margin: 0; padding: 0; }
 body {
   margin: 0;
-  padding: 0;
-  background: transparent;
+  background: #090307;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #fff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
+  color: #ffffff;
 }
-.love-card {
-  position: relative;
+.wrap {
   width: 100%;
-  max-width: 330px;
-  background: linear-gradient(165deg, #180812 0%, #0c0309 100%);
-  border: 1px solid rgba(255, 77, 121, 0.3);
-  border-radius: 16px;
-  padding: 8px 10px 6px;
-  box-shadow: 0 8px 24px rgba(255, 42, 109, 0.2);
+  max-width: 380px;
+  margin: auto;
+  padding: 8px;
+}
+.card {
+  position: relative;
+  background: linear-gradient(170deg, #1f0817 0%, #0e030b 100%);
+  border: 1px solid rgba(255, 77, 121, 0.35);
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 42, 109, 0.15);
   overflow: hidden;
 }
 
 /* Ambient glow */
 .ambient-glow {
   position: absolute;
-  top: -20px;
-  right: -20px;
-  width: 130px;
-  height: 130px;
-  background: radial-gradient(circle, rgba(255, 42, 109, 0.3) 0%, transparent 70%);
+  top: -30px;
+  right: -30px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(255, 42, 109, 0.28) 0%, transparent 70%);
   pointer-events: none;
+  z-index: 1;
 }
 
-/* Floating petals */
+/* Floating petals in background */
 .petal {
   position: absolute;
   border-radius: 60% 40% 70% 30% / 60% 30% 70% 40%;
-  background: linear-gradient(135deg, #ff2a6d 0%, #bd003c 100%);
-  opacity: 0.6;
+  background: linear-gradient(135deg, #ff2a6d 0%, #a80036 100%);
+  opacity: 0.35;
   pointer-events: none;
   animation: fallPetal linear infinite;
   z-index: 1;
 }
-.petal:nth-child(1) { width: 8px; height: 6px; left: 10%; top: -8px; animation-duration: 4.5s; animation-delay: 0s; }
-.petal:nth-child(2) { width: 7px; height: 5px; left: 45%; top: -8px; animation-duration: 5.5s; animation-delay: 1.2s; }
-.petal:nth-child(3) { width: 9px; height: 7px; left: 85%; top: -8px; animation-duration: 4.8s; animation-delay: 0.5s; }
+.petal:nth-child(1) { width: 10px; height: 7px; left: 15%; top: -10px; animation-duration: 5s; animation-delay: 0s; }
+.petal:nth-child(2) { width: 8px; height: 6px; left: 55%; top: -10px; animation-duration: 6.5s; animation-delay: 1.5s; }
+.petal:nth-child(3) { width: 11px; height: 8px; left: 85%; top: -10px; animation-duration: 5.5s; animation-delay: 0.7s; }
 
 @keyframes fallPetal {
   0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-  20% { opacity: 0.8; }
-  80% { opacity: 0.8; }
-  100% { transform: translateY(280px) rotate(360deg); opacity: 0; }
+  20% { opacity: 0.45; }
+  80% { opacity: 0.45; }
+  100% { transform: translateY(360px) rotate(360deg); opacity: 0; }
 }
 
 /* Header */
@@ -65,27 +65,27 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
   position: relative;
   z-index: 2;
 }
 .header-tag {
-  font-size: 7.5px;
+  font-size: 8.5px;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.5px;
   color: #ff85a2;
   text-transform: uppercase;
 }
 .header-pill {
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 7.5px;
+  gap: 4px;
+  font-size: 8.5px;
   font-weight: 700;
   color: #ffd166;
   background: rgba(255, 209, 102, 0.12);
   border: 1px solid rgba(255, 209, 102, 0.3);
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 100px;
 }
 
@@ -93,38 +93,42 @@ body {
 .hero-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 77, 121, 0.16);
-  border-radius: 10px;
-  padding: 4px 8px;
-  margin-bottom: 5px;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 77, 121, 0.2);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
   position: relative;
   z-index: 2;
   cursor: pointer;
 }
 .bouquet-visual {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: floatBouquet 3s ease-in-out infinite;
-  filter: drop-shadow(0 2px 8px rgba(255, 42, 109, 0.35));
+  animation: floatBouquet 3.5s ease-in-out infinite;
+  filter: drop-shadow(0 3px 10px rgba(255, 42, 109, 0.4));
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.hero-row:active .bouquet-visual {
+  transform: scale(1.15) rotate(-3deg);
 }
 @keyframes floatBouquet {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-2px) rotate(1.5deg); }
+  50% { transform: translateY(-3px) rotate(1.5deg); }
 }
 
 .bouquet-aura {
   position: absolute;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 77, 121, 0.4) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 77, 121, 0.45) 0%, transparent 70%);
 }
 
 .hero-copy {
@@ -132,16 +136,17 @@ body {
   flex: 1;
 }
 .sub-for {
-  font-size: 7.5px;
+  font-size: 8.5px;
   color: #ff85a2;
   letter-spacing: 0.8px;
   text-transform: uppercase;
   font-weight: 700;
   line-height: 1;
+  margin-bottom: 2px;
 }
 .name-zahra {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 16px;
+  font-size: 19px;
   font-weight: 700;
   font-style: italic;
   letter-spacing: -0.2px;
@@ -155,20 +160,20 @@ body {
 .message-box {
   position: relative;
   z-index: 2;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 77, 121, 0.12);
-  border-radius: 8px;
-  padding: 6px 8px;
-  margin-bottom: 5px;
-  min-height: 38px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 77, 121, 0.2);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  min-height: 54px;
   display: flex;
   align-items: center;
 }
 .message-text {
-  font-size: 10px;
-  line-height: 1.42;
+  font-size: 11.5px;
+  line-height: 1.55;
   color: #fce7f0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
 /* Controls */
@@ -178,42 +183,43 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 6px;
 }
 .page-dots {
   display: flex;
-  gap: 3px;
+  gap: 4px;
 }
 .dot {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
   transition: all 0.2s ease;
 }
 .dot.active {
-  width: 12px;
+  width: 14px;
   border-radius: 6px;
   background: #ff2a6d;
-  box-shadow: 0 0 5px #ff2a6d;
+  box-shadow: 0 0 6px #ff2a6d;
 }
 
 .action-btn {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background: linear-gradient(135deg, #ff2a6d 0%, #e11d48 100%);
   color: #ffffff;
   border: none;
-  border-radius: 6px;
-  padding: 4px 9px;
-  font-size: 9.5px;
+  border-radius: 8px;
+  padding: 6px 13px;
+  font-size: 10.5px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(255, 42, 109, 0.35);
+  box-shadow: 0 3px 10px rgba(255, 42, 109, 0.35);
   transition: transform 0.15s ease;
 }
 .action-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.93);
 }
 
 .footer-stamp {
@@ -222,19 +228,18 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 4px;
-  margin-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 .stamp-text {
-  font-size: 7px;
+  font-size: 7.5px;
   font-weight: 700;
-  letter-spacing: 0.6px;
-  color: #8f5c76;
+  letter-spacing: 0.8px;
+  color: #9f6583;
   text-transform: uppercase;
 }
 .stamp-heart {
-  font-size: 8px;
+  font-size: 9px;
   color: #ff85a2;
 }
 
@@ -242,13 +247,13 @@ body {
 .easter-egg-screen {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, #260a1e 0%, #0d0209 100%);
+  background: radial-gradient(circle at center, #260a1e 0%, #0e020a 100%);
   z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 12px;
   text-align: center;
   opacity: 0;
   pointer-events: none;
@@ -259,44 +264,44 @@ body {
   pointer-events: auto;
 }
 .egg-crown {
-  font-size: 20px;
+  font-size: 22px;
   animation: crownBounce 1.8s infinite ease-in-out;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
 }
 @keyframes crownBounce {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-3px) rotate(4deg); }
+  50% { transform: translateY(-4px) rotate(4deg); }
 }
 .egg-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.8px;
   color: #ffd166;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   text-shadow: 0 0 8px rgba(255, 209, 102, 0.5);
 }
 .egg-desc {
-  font-size: 9.5px;
-  line-height: 1.38;
+  font-size: 10px;
+  line-height: 1.45;
   color: #ffffff;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .burst-btn {
   background: linear-gradient(135deg, #ffd166 0%, #ff9f1c 100%);
   color: #2b0010;
   font-weight: 800;
-  font-size: 9.5px;
+  font-size: 10px;
   border: none;
-  border-radius: 6px;
-  padding: 4px 10px;
+  border-radius: 7px;
+  padding: 5px 12px;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(255, 209, 102, 0.4);
 }
 .burst-btn:active { transform: scale(0.92); }
 .close-egg {
-  margin-top: 4px;
-  font-size: 7.5px;
+  margin-top: 5px;
+  font-size: 8px;
   color: #ff85a2;
   text-decoration: underline;
   cursor: pointer;
@@ -307,7 +312,7 @@ body {
   position: absolute;
   pointer-events: none;
   z-index: 20;
-  font-size: 12px;
+  font-size: 13px;
   animation: popFly 1.1s forwards ease-out;
 }
 @keyframes popFly {
@@ -316,110 +321,112 @@ body {
 }
 </style>
 
-<div class="love-card" id="mainCard">
-  <div class="ambient-glow"></div>
-  
-  <!-- Falling Petals -->
-  <div class="petal"></div>
-  <div class="petal"></div>
-  <div class="petal"></div>
+<div class="wrap">
+  <div class="card" id="mainCard">
+    <div class="ambient-glow"></div>
+    
+    <!-- Background Falling Petals -->
+    <div class="petal"></div>
+    <div class="petal"></div>
+    <div class="petal"></div>
 
-  <!-- Header -->
-  <div class="card-header">
-    <span class="header-tag">EXCLUSIVE BOUQUET</span>
-    <div class="header-pill">
-      <span>BLOOMING</span> 🌸
+    <!-- Header -->
+    <div class="card-header">
+      <span class="header-tag">EXCLUSIVE BOUQUET</span>
+      <div class="header-pill">
+        <span>BLOOMING</span> 🌸
+      </div>
     </div>
-  </div>
 
-  <!-- Horizontal Hero Row -->
-  <div class="hero-row" onclick="nextCard()">
-    <div class="bouquet-visual" id="bouquetEl">
-      <div class="bouquet-aura"></div>
-      <!-- SVG Floral Bouquet -->
-      <svg width="40" height="40" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M40 70 L60 112 L80 70 Z" fill="#D4A373" stroke="#BA7C4D" stroke-width="1.5" />
-        <path d="M36 68 L60 114 L52 68 Z" fill="#C59364" />
-        <path d="M84 68 L60 114 L68 68 Z" fill="#E2B488" />
-        <path d="M50 78 C56 74 64 74 70 78 C65 82 55 82 50 78 Z" fill="#FFD166" />
-        <path d="M58 80 L52 94 L57 91 L62 94 Z" fill="#FFD166" />
-        <path d="M62 80 L68 94 L63 91 L58 94 Z" fill="#FFC043" />
-        <path d="M28 50 C26 38 40 38 44 48 C36 54 30 54 28 50 Z" fill="#2D6A4F" />
-        <path d="M92 50 C94 38 80 38 76 48 C84 54 90 54 92 50 Z" fill="#2D6A4F" />
-        <circle cx="42" cy="48" r="16" fill="url(#gradRosePink)" />
-        <path d="M34 46 C34 40 48 38 50 48 C48 56 36 56 34 46 Z" fill="#FF4D79" />
-        <circle cx="78" cy="48" r="16" fill="url(#gradRoseCoral)" />
-        <path d="M70 46 C70 40 84 38 86 48 C84 56 72 56 70 46 Z" fill="#FF5E7E" />
-        <circle cx="60" cy="42" r="20" fill="url(#gradRoseRed)" />
-        <path d="M48 38 C50 28 70 28 72 38 C72 50 48 50 48 38 Z" fill="#E11D48" />
-        <path d="M52 38 C54 32 66 32 68 38 C66 45 54 45 52 38 Z" fill="#BE123C" />
-        <circle cx="60" cy="38" r="2.5" fill="#FFE4E6" />
-        <circle cx="32" cy="36" r="3" fill="#FFFFFF" />
-        <circle cx="88" cy="36" r="3" fill="#FFFFFF" />
-        <circle cx="60" cy="22" r="3.5" fill="#FFFFFF" />
-        <defs>
-          <radialGradient id="gradRoseRed" cx="50%" cy="40%" r="50%">
-            <stop offset="0%" stop-color="#FF4D6D" />
-            <stop offset="60%" stop-color="#E11D48" />
-            <stop offset="100%" stop-color="#880D28" />
-          </radialGradient>
-          <radialGradient id="gradRosePink" cx="50%" cy="40%" r="50%">
-            <stop offset="0%" stop-color="#FF85A2" />
-            <stop offset="70%" stop-color="#FF2A6D" />
-            <stop offset="100%" stop-color="#B0003A" />
-          </radialGradient>
-          <radialGradient id="gradRoseCoral" cx="50%" cy="40%" r="50%">
-            <stop offset="0%" stop-color="#FFA8BA" />
-            <stop offset="70%" stop-color="#FF3366" />
-            <stop offset="100%" stop-color="#9C002B" />
-          </radialGradient>
-        </defs>
-      </svg>
+    <!-- Horizontal Hero Row -->
+    <div class="hero-row" onclick="nextCard()">
+      <div class="bouquet-visual" id="bouquetEl">
+        <div class="bouquet-aura"></div>
+        <!-- SVG Floral Bouquet -->
+        <svg width="44" height="44" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M40 70 L60 112 L80 70 Z" fill="#D4A373" stroke="#BA7C4D" stroke-width="1.5" />
+          <path d="M36 68 L60 114 L52 68 Z" fill="#C59364" />
+          <path d="M84 68 L60 114 L68 68 Z" fill="#E2B488" />
+          <path d="M50 78 C56 74 64 74 70 78 C65 82 55 82 50 78 Z" fill="#FFD166" />
+          <path d="M58 80 L52 94 L57 91 L62 94 Z" fill="#FFD166" />
+          <path d="M62 80 L68 94 L63 91 L58 94 Z" fill="#FFC043" />
+          <path d="M28 50 C26 38 40 38 44 48 C36 54 30 54 28 50 Z" fill="#2D6A4F" />
+          <path d="M92 50 C94 38 80 38 76 48 C84 54 90 54 92 50 Z" fill="#2D6A4F" />
+          <circle cx="42" cy="48" r="16" fill="url(#gradRosePink)" />
+          <path d="M34 46 C34 40 48 38 50 48 C48 56 36 56 34 46 Z" fill="#FF4D79" />
+          <circle cx="78" cy="48" r="16" fill="url(#gradRoseCoral)" />
+          <path d="M70 46 C70 40 84 38 86 48 C84 56 72 56 70 46 Z" fill="#FF5E7E" />
+          <circle cx="60" cy="42" r="20" fill="url(#gradRoseRed)" />
+          <path d="M48 38 C50 28 70 28 72 38 C72 50 48 50 48 38 Z" fill="#E11D48" />
+          <path d="M52 38 C54 32 66 32 68 38 C66 45 54 45 52 38 Z" fill="#BE123C" />
+          <circle cx="60" cy="38" r="2.5" fill="#FFE4E6" />
+          <circle cx="32" cy="36" r="3" fill="#FFFFFF" />
+          <circle cx="88" cy="36" r="3" fill="#FFFFFF" />
+          <circle cx="60" cy="22" r="3.5" fill="#FFFFFF" />
+          <defs>
+            <radialGradient id="gradRoseRed" cx="50%" cy="40%" r="50%">
+              <stop offset="0%" stop-color="#FF4D6D" />
+              <stop offset="60%" stop-color="#E11D48" />
+              <stop offset="100%" stop-color="#880D28" />
+            </radialGradient>
+            <radialGradient id="gradRosePink" cx="50%" cy="40%" r="50%">
+              <stop offset="0%" stop-color="#FF85A2" />
+              <stop offset="70%" stop-color="#FF2A6D" />
+              <stop offset="100%" stop-color="#B0003A" />
+            </radialGradient>
+            <radialGradient id="gradRoseCoral" cx="50%" cy="40%" r="50%">
+              <stop offset="0%" stop-color="#FFA8BA" />
+              <stop offset="70%" stop-color="#FF3366" />
+              <stop offset="100%" stop-color="#9C002B" />
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="hero-copy">
+        <div class="sub-for">Buket Bunga Untuk</div>
+        <div class="name-zahra">Zahra 💐</div>
+      </div>
     </div>
-    <div class="hero-copy">
-      <div class="sub-for">Buket Bunga Untuk</div>
-      <div class="name-zahra">Zahra 💐</div>
+
+    <!-- Message Box -->
+    <div class="message-box">
+      <p class="message-text" id="quoteText">
+        Sebuket bunga yang mekar khusus buat Zahra. Terima kasih udah selalu hadir bawa senyum dan suasana yang selalu bikin tenang setiap hari.
+      </p>
     </div>
-  </div>
 
-  <!-- Message Box -->
-  <div class="message-box">
-    <p class="message-text" id="quoteText">
-      Sebuket bunga yang mekar khusus buat Zahra. Terima kasih udah selalu hadir bawa senyum dan suasana yang selalu bikin tenang setiap hari.
-    </p>
-  </div>
-
-  <!-- Interactive Controls -->
-  <div class="controls-row">
-    <div class="page-dots">
-      <div class="dot active" id="dot0"></div>
-      <div class="dot" id="dot1"></div>
-      <div class="dot" id="dot2"></div>
-      <div class="dot" id="dot3"></div>
-      <div class="dot" id="dot4" style="background:rgba(255,209,102,0.4)"></div>
+    <!-- Interactive Controls -->
+    <div class="controls-row">
+      <div class="page-dots">
+        <div class="dot active" id="dot0"></div>
+        <div class="dot" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+        <div class="dot" id="dot3"></div>
+        <div class="dot" id="dot4" style="background:rgba(255,209,102,0.4)"></div>
+      </div>
+      <button class="action-btn" id="btnAction" onclick="nextCard()">
+        <span id="btnText">Lanjut</span> 💌
+      </button>
     </div>
-    <button class="action-btn" id="btnAction" onclick="nextCard()">
-      <span id="btnText">Lanjut</span> 💌
-    </button>
-  </div>
 
-  <!-- Footer -->
-  <div class="footer-stamp">
-    <span class="stamp-text">Shiro • Dedicated</span>
-    <span class="stamp-heart">Forever with Zahra 🤍</span>
-  </div>
+    <!-- Footer -->
+    <div class="footer-stamp">
+      <span class="stamp-text">Shiro • Dedicated</span>
+      <span class="stamp-heart">Forever with Zahra 🤍</span>
+    </div>
 
-  <!-- Easter Egg Screen -->
-  <div class="easter-egg-screen" id="easterEggScreen">
-    <div class="egg-crown">👑 ✨</div>
-    <div class="egg-title">SECRET EASTER EGG!</div>
-    <p class="egg-desc">
-      Zahra, dari sekian banyak orang di dunia, kamu adalah anugerah paling berharga yang selalu kusyukuri. You are loved endlessly! 💖
-    </p>
-    <button class="burst-btn" onclick="fireBurst(event)">
-      Ledakkan Cinta 💥
-    </button>
-    <span class="close-egg" onclick="resetCard()">← Kembali ke awal</span>
+    <!-- Easter Egg Screen -->
+    <div class="easter-egg-screen" id="easterEggScreen">
+      <div class="egg-crown">👑 ✨</div>
+      <div class="egg-title">SECRET EASTER EGG!</div>
+      <p class="egg-desc">
+        Zahra, dari sekian banyak orang di dunia, kamu adalah anugerah paling berharga yang selalu kusyukuri. You are loved endlessly! 💖
+      </p>
+      <button class="burst-btn" onclick="fireBurst(event)">
+        Ledakkan Cinta 💥
+      </button>
+      <span class="close-egg" onclick="resetCard()">← Kembali ke awal</span>
+    </div>
   </div>
 </div>
 
