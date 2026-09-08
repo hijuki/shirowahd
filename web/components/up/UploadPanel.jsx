@@ -116,6 +116,7 @@ function Reactor({ pct, stageIdx, phase, phaseText, cellFloor, label, sub, right
 }
 
 const FPS_PRESETS = [
+  { fps: 'auto', title: 'Default (Auto)', sub: 'Resolusi & FPS Asli', badge: 'FAST' },
   { fps: 60, title: '1080p · 60 FPS', sub: 'Standar Mulus · Fast' },
   { fps: 90, title: '1080p · 90 FPS', sub: 'Rekomendasi · 90Hz', badge: 'OPTIMAL' },
   { fps: 120, title: '1080p · 120 FPS', sub: 'Ultra Smooth · 120Hz' }
@@ -433,10 +434,12 @@ export default function UploadPanel({ settings, toast }) {
                       <i className="fa-solid fa-sliders text-[10px] text-[var(--hot)]" />
                       PRESET STATUS WHATSAPP
                     </span>
-                    <span className="data !text-[10px] text-[var(--hot)] font-bold">1080P FORCED</span>
+                    <span className="data !text-[10px] text-[var(--hot)] font-bold">
+                      {targetFps === 'auto' ? 'ORIGINAL PASSTHROUGH' : `${targetFps} FPS · 1080P`}
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {FPS_PRESETS.map(p => {
                       const active = targetFps === p.fps
                       return (
@@ -472,10 +475,18 @@ export default function UploadPanel({ settings, toast }) {
                   <div className="mt-3 p-3 bg-[var(--paper-2)] border-2 border-[var(--edge)] text-[11px] leading-relaxed">
                     <div className="font-bold flex items-center gap-1.5 mb-1 text-[11px] text-[var(--foreground)]">
                       <i className="fa-solid fa-circle-info text-[var(--hot)] text-[12px]" />
-                      KENAPA WAJIB 1080P?
+                      {targetFps === 'auto' ? 'MODE DEFAULT (ORIGINAL)' : 'KENAPA WAJIB 1080P?'}
                     </div>
                     <p className="opacity-80">
-                      WhatsApp Status tidak mendukung native playback 1440p (2K) atau 4K — resolusi tinggi justru dikompresi paksa hingga pecah &amp; buram. Video kamu otomatis dioptimasi ke <strong>1080p (Lanczos Sharpener)</strong> dengan frame rate <strong>{targetFps} FPS</strong> agar hasil di Status WA tetap tajam dan pergerakan di layar HP 90Hz/120Hz super mulus.
+                      {targetFps === 'auto' ? (
+                        <>
+                          Mode <strong>Default (Auto)</strong> mempertahankan resolusi dan frame rate asli video kamu tanpa pemaksaan. Jika format sudah H.264 kompatibel, video akan diproses instan (remux) tanpa penurunan kualitas. Jika video kamu di atas 1080p dan ingin diunggah ke WhatsApp Status tanpa pecah, disarankan memilih preset <strong>1080p (60/90/120 FPS)</strong>.
+                        </>
+                      ) : (
+                        <>
+                          WhatsApp Status tidak mendukung native playback 1440p (2K) atau 4K — resolusi tinggi justru dikompresi paksa hingga pecah &amp; buram. Video kamu otomatis dioptimasi ke <strong>1080p (Lanczos Sharpener)</strong> dengan frame rate <strong>{targetFps} FPS</strong> agar hasil di Status WA tetap tajam dan pergerakan di layar HP 90Hz/120Hz super mulus.
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>

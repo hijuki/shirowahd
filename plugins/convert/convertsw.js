@@ -147,14 +147,11 @@ async function getVideoInfo(filePath) {
 }
 
 async function reencodeVideoHD(inputPath, outputPath, targetFps = 90) {
-    // Mode Paksa 1080p + Custom FPS (60 / 90 / 120 FPS):
-    // 1. Skala otomatis ke 1080p (jika potret/status WA 9:16 -> 1080x1920; lanskap 16:9 -> 1920x1080)
-    // 2. Lanczos high-order scaling + unsharp filter (anti-blur kompresi WhatsApp)
-    // 3. Paksa FPS konstan (CFR) sesuai parameter input (misal 90 FPS)
-    // 4. H.264 High Profile Level 5.1 (standar industri untuk 1080p high refresh rate 90Hz/120Hz)
-    // 5. CRF 20 (sweet spot optimal visual jernih & ukuran di bawah batas status WhatsApp)
-    // 6. Faststart moov atom di awal file untuk streaming instant di status WA
-    const vf = [
+    const isAuto = !targetFps || targetFps === 'auto';
+    const vf = isAuto ? [
+        'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+        'unsharp=3:3:0.8:3:3:0.0'
+    ].join(',') : [
         `scale='if(gte(ih,iw),1080,-2)':'if(gte(ih,iw),-2,1080)':flags=lanczos`,
         `scale=trunc(iw/2)*2:trunc(ih/2)*2`,
         `unsharp=3:3:0.8:3:3:0.0`,
@@ -172,7 +169,7 @@ async function reencodeVideoHD(inputPath, outputPath, targetFps = 90) {
         '-preset', 'fast',
         '-sn',
         '-profile:v', 'high',
-        '-level', '5.1',
+        '-level', isAuto ? '4.1' : '5.1',
         '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
         '-b:a', '192k',
@@ -190,8 +187,9 @@ async function handler(m, { sock, conn, args, text }) {
     const media = extractMediaContent(m);
     if (!media) {
         return m.reply(
-            `🎬 *CONVERT STATUS WA 1080P (CUSTOM FPS)*\n\n` +
+            `🎬 *CONVERT STATUS WA (CUSTOM PRESET)*\n\n` +
             `> Balas (reply) video/dokumen MP4 lalu ketik:\n` +
+            `• \`${m.prefix || '.'}convertsw auto\` _(Mode Default / Asli - Cepat)_\n` +
             `• \`${m.prefix || '.'}convertsw 90\` _(Paksa 90 FPS 1080p - Rekomendasi)_\n` +
             `• \`${m.prefix || '.'}convertsw 60\` _(Paksa 60 FPS 1080p)_\n` +
             `• \`${m.prefix || '.'}convertsw 120\` _(Paksa 120 FPS 1080p Ultra)_\n` +
@@ -201,16 +199,20 @@ async function handler(m, { sock, conn, args, text }) {
         );
     }
 
-    // Parse FPS dari argumen user (contoh: .convertsw 90 atau .convertsw 60)
-    let targetFps = 90;
-    const rawArg = (args && args[0]) || (text && text.trim().split(/\s+/)[0]) || '';
+    // Parse FPS dari argumen user (contoh: .convertsw auto, .convertsw 90, dll)
+    const rawArg = ((args && args[0]) || (text && text.trim().split(/\s+/)[0]) || '').toLowerCase();
+    const isAuto = ['auto', 'default', 'asli', 'ori', 'original'].includes(rawArg);
+    let targetFps = isAuto ? 'auto' : 90;
     const parsedFps = parseInt(rawArg, 10);
-    if (parsedFps && !isNaN(parsedFps) && parsedFps >= 24 && parsedFps <= 144) {
+    if (!isAuto && parsedFps && !isNaN(parsedFps) && parsedFps >= 24 && parsedFps <= 144) {
         targetFps = parsedFps;
     }
 
     if (typeof m.react === 'function') await m.react('⏳');
-    await m.reply(`⏳ *Sedang memproses video ke 1080p (${targetFps} FPS)...*\n\n_Mohon tunggu sebentar, video sedang di-render dengan filter Lanczos anti-buram._`);
+    const prosesText = isAuto
+        ? `⏳ *Sedang memproses video ke Mode Default (Resolusi & FPS Asli)...*`
+        : `⏳ *Sedang memproses video ke 1080p (${targetFps} FPS)...*`;
+    await m.reply(`${prosesText}\n\n_Mohon tunggu sebentar, video sedang di-render dengan filter anti-buram._`);
 
     const tempDir = os.tmpdir();
     const ts = Date.now();
@@ -248,7 +250,8 @@ async function handler(m, { sock, conn, args, text }) {
 
         console.log(`[convertsw] Success encoded! Output size: ${outputSize}, duration: ${videoDuration}s`);
 
-        const resText = videoInfo.width && videoInfo.height ? `${videoInfo.width}x${videoInfo.height} (1080p)` : '1080p Ultra HD';
+        const resText = videoInfo.width && videoInfo.height ? `${videoInfo.width}x${videoInfo.height}` : (isAuto ? 'Resolusi Asli' : '1080p Ultra HD');
+        const fpsText = isAuto ? 'FPS Asli (CFR Optimized)' : `${targetFps} FPS Smooth (Level 5.1)`;
 
         await client.sendMessage(
             m.chat,
@@ -258,13 +261,14 @@ async function handler(m, { sock, conn, args, text }) {
                 fileName: `status_${targetFps}fps_${ts}.mp4`,
                 caption:
                     `✅ *CONVERT STATUS WA BERHASIL*\n\n` +
+                    `• Mode        : ${isAuto ? 'Default (Original Auto)' : '1080p Forced'}\n` +
                     `• Resolusi    : ${resText}\n` +
-                    `• Frame Rate  : ${targetFps} FPS Smooth (Level 5.1)\n` +
-                    `• Kualitas    : CRF 20 (Ultra HD Lanczos Sharpened)\n` +
+                    `• Frame Rate  : ${fpsText}\n` +
+                    `• Kualitas    : CRF 20 (Anti-Blur WhatsApp Status)\n` +
                     `• Audio       : AAC 192kbps Stereo\n` +
                     `• Ukuran File : ${outputSize} (Input: ${inputSize})\n` +
                     `• Durasi      : ${videoDuration > 0 ? `${videoDuration} Detik` : '60 Detik'}\n\n` +
-                    `_Video siap diupload ke Status WhatsApp tanpa buram & mulus di layar 90Hz/120Hz._`,
+                    `_Video siap diupload ke Status WhatsApp tanpa buram & mulus._`,
                 gifPlayback: false,
                 ptv: false
             },

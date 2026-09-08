@@ -917,7 +917,9 @@ function parseMultipartFiles(body, boundary) {
 function beginUploadJob(files, clientIP, options = {}) {
   const jobId = newJob(files.map(f => f.name));
   const job = jobs.get(jobId);
-  const targetFps = options.targetFps ? parseInt(options.targetFps, 10) : (files.fields?.targetFps ? parseInt(files.fields.targetFps, 10) : null);
+  const rawTarget = options.targetFps || files.fields?.targetFps;
+  const parsed = parseInt(rawTarget, 10);
+  const targetFps = (rawTarget && rawTarget !== 'auto' && !isNaN(parsed) && parsed >= 24 && parsed <= 144) ? parsed : null;
   (async () => {
     try {
       let convFail = 0;
