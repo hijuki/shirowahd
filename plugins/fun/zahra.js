@@ -7,9 +7,9 @@ function renderZahraBouquetCard() {
 * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; box-sizing: border-box; margin: 0; padding: 0; }
 body {
   margin: 0;
-  padding: 8px;
+  padding: 4px;
   background: #080306;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   color: #fff;
   display: flex;
   justify-content: center;
@@ -19,24 +19,23 @@ body {
 .love-card {
   position: relative;
   width: 100%;
-  max-width: 355px;
-  background: linear-gradient(170deg, #180812 0%, #0d040a 100%);
-  border: 1px solid rgba(255, 77, 121, 0.25);
-  border-radius: 22px;
-  padding: 16px 16px 14px;
-  box-shadow: 0 16px 40px rgba(255, 42, 109, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  max-width: 350px;
+  background: linear-gradient(165deg, #180812 0%, #0d040a 100%);
+  border: 1px solid rgba(255, 77, 121, 0.28);
+  border-radius: 18px;
+  padding: 10px 12px 8px;
+  box-shadow: 0 12px 32px rgba(255, 42, 109, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 
 /* Ambient glow */
 .ambient-glow {
   position: absolute;
-  top: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(255, 42, 109, 0.3) 0%, rgba(255, 110, 160, 0.08) 50%, transparent 75%);
+  top: -20px;
+  right: -20px;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(255, 42, 109, 0.3) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -49,17 +48,17 @@ body {
   pointer-events: none;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
   animation: fallPetal linear infinite;
+  z-index: 1;
 }
-.petal:nth-child(1) { width: 14px; height: 10px; left: 12%; top: -10px; animation-duration: 4.8s; animation-delay: 0s; }
-.petal:nth-child(2) { width: 10px; height: 8px; left: 35%; top: -10px; animation-duration: 6.2s; animation-delay: 1.5s; }
-.petal:nth-child(3) { width: 16px; height: 12px; left: 75%; top: -10px; animation-duration: 5.4s; animation-delay: 0.8s; }
-.petal:nth-child(4) { width: 12px; height: 9px; left: 90%; top: -10px; animation-duration: 7.1s; animation-delay: 2.2s; }
+.petal:nth-child(1) { width: 10px; height: 7px; left: 12%; top: -10px; animation-duration: 4.5s; animation-delay: 0s; }
+.petal:nth-child(2) { width: 8px; height: 6px; left: 45%; top: -10px; animation-duration: 5.8s; animation-delay: 1.2s; }
+.petal:nth-child(3) { width: 12px; height: 9px; left: 80%; top: -10px; animation-duration: 5s; animation-delay: 0.6s; }
 
 @keyframes fallPetal {
   0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
   15% { opacity: 0.8; }
   85% { opacity: 0.8; }
-  100% { transform: translateY(460px) rotate(360deg) scale(1.1); opacity: 0; }
+  100% { transform: translateY(380px) rotate(360deg) scale(1.1); opacity: 0; }
 }
 
 /* Header */
@@ -67,130 +66,121 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   position: relative;
   z-index: 2;
 }
 .header-tag {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
-  letter-spacing: 1.8px;
+  letter-spacing: 1.5px;
   color: #ff85a2;
   text-transform: uppercase;
 }
 .header-pill {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 9px;
+  gap: 4px;
+  font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   color: #ffd166;
   background: rgba(255, 209, 102, 0.12);
   border: 1px solid rgba(255, 209, 102, 0.3);
-  padding: 3px 9px;
+  padding: 2px 7px;
   border-radius: 100px;
 }
 
-/* Bouquet Hero Stage */
-.bouquet-stage {
+/* Horizontal Compact Hero */
+.hero-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 77, 121, 0.18);
+  border-radius: 14px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
   position: relative;
   z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 0 6px;
   cursor: pointer;
 }
-.bouquet-container {
+.bouquet-visual {
   position: relative;
-  width: 140px;
-  height: 130px;
+  width: 64px;
+  height: 64px;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 8px 20px rgba(255, 42, 109, 0.35));
   animation: floatBouquet 3.5s ease-in-out infinite;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 4px 12px rgba(255, 42, 109, 0.4));
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.bouquet-container:active {
-  transform: scale(1.08) rotate(-2deg);
+.hero-row:active .bouquet-visual {
+  transform: scale(1.15) rotate(-3deg);
 }
 @keyframes floatBouquet {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-6px) rotate(1.5deg); }
+  50% { transform: translateY(-3px) rotate(1.5deg); }
 }
 
 .bouquet-aura {
   position: absolute;
-  width: 110px;
-  height: 110px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 77, 121, 0.4) 0%, transparent 70%);
-  animation: auraPulse 2.8s ease-in-out infinite;
-}
-@keyframes auraPulse {
-  0%, 100% { transform: scale(0.9); opacity: 0.5; }
-  50% { transform: scale(1.2); opacity: 0.9; }
+  background: radial-gradient(circle, rgba(255, 77, 121, 0.45) 0%, transparent 70%);
 }
 
-/* Sparkle stars */
-.sparkle-star {
-  position: absolute;
-  color: #ffd166;
-  font-size: 13px;
-  animation: sparkleAnim 2s infinite ease-in-out;
-  pointer-events: none;
-}
-.sparkle-1 { top: 10px; left: 15px; animation-delay: 0.3s; }
-.sparkle-2 { top: 20px; right: 15px; animation-delay: 1.1s; }
-.sparkle-3 { bottom: 20px; left: 25px; animation-delay: 0.7s; }
-
-@keyframes sparkleAnim {
-  0%, 100% { transform: scale(0.6) rotate(0deg); opacity: 0.3; }
-  50% { transform: scale(1.2) rotate(45deg); opacity: 1; }
-}
-
-.stage-title {
-  text-align: center;
-  margin-top: 4px;
+.hero-copy {
+  overflow: hidden;
+  flex: 1;
 }
 .sub-for {
-  font-size: 10px;
+  font-size: 8.5px;
   color: #ff85a2;
-  letter-spacing: 1.2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   font-weight: 700;
+  margin-bottom: 1px;
 }
 .name-zahra {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 26px;
+  font-size: 19px;
   font-weight: 700;
   font-style: italic;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
   background: linear-gradient(135deg, #ffffff 0%, #ffc0d0 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+.hero-badge {
+  display: inline-block;
+  font-size: 8px;
+  color: #a17188;
+  margin-top: 2px;
+}
 
-/* Message Card */
+/* Message Box */
 .message-box {
   position: relative;
   z-index: 2;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 77, 121, 0.2);
-  border-radius: 14px;
-  padding: 13px 14px;
-  margin: 10px 0 12px;
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 77, 121, 0.15);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
 }
 .message-text {
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 11px;
+  line-height: 1.5;
   color: #fce7f0;
-  min-height: 58px;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 /* Controls */
@@ -203,41 +193,40 @@ body {
 }
 .page-dots {
   display: flex;
-  gap: 5px;
+  gap: 4px;
 }
 .dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
 .dot.active {
-  width: 18px;
+  width: 14px;
   border-radius: 10px;
   background: #ff2a6d;
-  box-shadow: 0 0 8px #ff2a6d;
+  box-shadow: 0 0 6px #ff2a6d;
 }
 
-.tap-btn {
+.action-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: linear-gradient(135deg, #ff2a6d 0%, #e11d48 100%);
   color: #ffffff;
   border: none;
-  border-radius: 10px;
-  padding: 8px 16px;
-  font-size: 11.5px;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.3px;
-  box-shadow: 0 4px 14px rgba(255, 42, 109, 0.4);
+  letter-spacing: 0.2px;
+  box-shadow: 0 3px 10px rgba(255, 42, 109, 0.35);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
-.tap-btn:active {
+.action-btn:active {
   transform: scale(0.94);
-  box-shadow: 0 2px 6px rgba(255, 42, 109, 0.3);
 }
 
 .footer-stamp {
@@ -246,28 +235,104 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 10px;
-  margin-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 .stamp-text {
-  font-size: 8.5px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: #a17188;
+  letter-spacing: 0.8px;
+  color: #8f5c76;
   text-transform: uppercase;
 }
 .stamp-heart {
-  font-size: 11px;
+  font-size: 9.5px;
   color: #ff85a2;
+}
+
+/* Easter Egg Secret Screen */
+.easter-egg-screen {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, #260a1e 0%, #0d0209 100%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.easter-egg-screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.egg-crown {
+  font-size: 26px;
+  animation: crownBounce 1.8s infinite ease-in-out;
+  margin-bottom: 2px;
+}
+@keyframes crownBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(4deg); }
+}
+.egg-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffd166;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  text-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
+}
+.egg-desc {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+.burst-btn {
+  background: linear-gradient(135deg, #ffd166 0%, #ff9f1c 100%);
+  color: #2b0010;
+  font-weight: 800;
+  font-size: 10.5px;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(255, 209, 102, 0.4);
+}
+.burst-btn:active { transform: scale(0.94); }
+.close-egg {
+  margin-top: 6px;
+  font-size: 8.5px;
+  color: #ff85a2;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Burst particle element */
+.burst-particle {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  font-size: 14px;
+  animation: popFly 1.2s forwards ease-out;
+}
+@keyframes popFly {
+  0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; }
 }
 </style>
 
-<div class="love-card">
+<div class="love-card" id="mainCard">
   <div class="ambient-glow"></div>
   
   <!-- Falling Petals -->
-  <div class="petal"></div>
   <div class="petal"></div>
   <div class="petal"></div>
   <div class="petal"></div>
@@ -280,57 +345,31 @@ body {
     </div>
   </div>
 
-  <!-- Bouquet Hero -->
-  <div class="bouquet-stage" onclick="nextCard()">
-    <div class="bouquet-container" id="bouquetEl">
+  <!-- Horizontal Hero Row -->
+  <div class="hero-row" onclick="nextCard()">
+    <div class="bouquet-visual" id="bouquetEl">
       <div class="bouquet-aura"></div>
-      <span class="sparkle-star sparkle-1">✨</span>
-      <span class="sparkle-star sparkle-2">🌟</span>
-      <span class="sparkle-star sparkle-3">✨</span>
-
-      <!-- High-Quality Handcrafted SVG Floral Bouquet -->
-      <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Bouquet Wrap / Paper -->
+      <!-- Compact Handcrafted Floral Bouquet SVG -->
+      <svg width="58" height="58" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M40 70 L60 112 L80 70 Z" fill="#D4A373" stroke="#BA7C4D" stroke-width="1.5" />
         <path d="M36 68 L60 114 L52 68 Z" fill="#C59364" />
         <path d="M84 68 L60 114 L68 68 Z" fill="#E2B488" />
-        
-        <!-- Golden Satin Ribbon -->
-        <path d="M50 78 C56 74 64 74 70 78 C65 82 55 82 50 78 Z" fill="#FFD166" stroke="#E0A620" stroke-width="1" />
+        <path d="M50 78 C56 74 64 74 70 78 C65 82 55 82 50 78 Z" fill="#FFD166" />
         <path d="M58 80 L52 94 L57 91 L62 94 Z" fill="#FFD166" />
         <path d="M62 80 L68 94 L63 91 L58 94 Z" fill="#FFC043" />
-
-        <!-- Green Leaves -->
         <path d="M28 50 C26 38 40 38 44 48 C36 54 30 54 28 50 Z" fill="#2D6A4F" />
         <path d="M92 50 C94 38 80 38 76 48 C84 54 90 54 92 50 Z" fill="#2D6A4F" />
-        <path d="M45 32 C48 22 60 25 58 36 C52 38 46 36 45 32 Z" fill="#40916C" />
-        <path d="M75 32 C72 22 60 25 62 36 C68 38 74 36 75 32 Z" fill="#40916C" />
-
-        <!-- Outer Rose Left (Pink Rose) -->
         <circle cx="42" cy="48" r="16" fill="url(#gradRosePink)" />
         <path d="M34 46 C34 40 48 38 50 48 C48 56 36 56 34 46 Z" fill="#FF4D79" />
-        <path d="M38 46 C38 42 46 42 46 48 C44 52 40 52 38 46 Z" fill="#FF1E56" />
-
-        <!-- Outer Rose Right (Bright Coral Rose) -->
         <circle cx="78" cy="48" r="16" fill="url(#gradRoseCoral)" />
         <path d="M70 46 C70 40 84 38 86 48 C84 56 72 56 70 46 Z" fill="#FF5E7E" />
-        <path d="M74 46 C74 42 82 42 82 48 C80 52 76 52 74 46 Z" fill="#E61E50" />
-
-        <!-- Center Main Velvet Red Rose (Blooming) -->
-        <circle cx="60" cy="42" r="20" fill="url(#gradRoseRed)" filter="drop-shadow(0 4px 8px rgba(0,0,0,0.3))" />
+        <circle cx="60" cy="42" r="20" fill="url(#gradRoseRed)" />
         <path d="M48 38 C50 28 70 28 72 38 C72 50 48 50 48 38 Z" fill="#E11D48" />
         <path d="M52 38 C54 32 66 32 68 38 C66 45 54 45 52 38 Z" fill="#BE123C" />
-        <path d="M56 38 C57 34 63 34 64 38 C63 42 57 42 56 38 Z" fill="#9F1239" />
         <circle cx="60" cy="38" r="2.5" fill="#FFE4E6" />
-
-        <!-- Tiny White Baby Breath Flowers -->
         <circle cx="32" cy="36" r="3" fill="#FFFFFF" />
         <circle cx="88" cy="36" r="3" fill="#FFFFFF" />
         <circle cx="60" cy="22" r="3.5" fill="#FFFFFF" />
-        <circle cx="36" cy="62" r="2.5" fill="#FFFFFF" />
-        <circle cx="84" cy="62" r="2.5" fill="#FFFFFF" />
-
-        <!-- Gradients -->
         <defs>
           <radialGradient id="gradRoseRed" cx="50%" cy="40%" r="50%">
             <stop offset="0%" stop-color="#FF4D6D" />
@@ -350,10 +389,10 @@ body {
         </defs>
       </svg>
     </div>
-
-    <div class="stage-title">
+    <div class="hero-copy">
       <div class="sub-for">Buket Bunga Untuk</div>
       <div class="name-zahra">Zahra 💐</div>
+      <div class="hero-badge">Sentuh buket untuk membuka pesan</div>
     </div>
   </div>
 
@@ -371,16 +410,30 @@ body {
       <div class="dot" id="dot1"></div>
       <div class="dot" id="dot2"></div>
       <div class="dot" id="dot3"></div>
+      <div class="dot" id="dot4" style="background:rgba(255,209,102,0.4)"></div>
     </div>
-    <button class="tap-btn" onclick="nextCard()">
-      <span>Buka Pesan</span> 💌
+    <button class="action-btn" id="btnAction" onclick="nextCard()">
+      <span id="btnText">Lanjut</span> 💌
     </button>
   </div>
 
   <!-- Footer -->
   <div class="footer-stamp">
-    <span class="stamp-text">Shiro • Special Dedicated</span>
+    <span class="stamp-text">Shiro • Dedicated</span>
     <span class="stamp-heart">Forever with Zahra 🤍</span>
+  </div>
+
+  <!-- Easter Egg Screen -->
+  <div class="easter-egg-screen" id="easterEggScreen">
+    <div class="egg-crown">👑 ✨</div>
+    <div class="egg-title">SECRET EASTER EGG!</div>
+    <p class="egg-desc">
+      Zahra, dari sekian banyak orang di dunia, kamu adalah anugerah paling berharga yang selalu kusyukuri. You are loved endlessly! 💖
+    </p>
+    <button class="burst-btn" onclick="fireBurst(event)">
+      Ledakkan Cinta 💥
+    </button>
+    <span class="close-egg" onclick="resetCard()">← Kembali ke awal</span>
   </div>
 </div>
 
@@ -394,31 +447,40 @@ const quotes = [
 let currentIdx = 0;
 
 function nextCard() {
-  currentIdx = (currentIdx + 1) % quotes.length;
-  const textEl = document.getElementById('quoteText');
-  const bouquetEl = document.getElementById('bouquetEl');
-
-  // Flower burst animation
-  if (bouquetEl) {
-    bouquetEl.style.transform = 'scale(1.15) rotate(' + (Math.random() * 6 - 3) + 'deg)';
-    setTimeout(() => {
-      bouquetEl.style.transform = '';
-    }, 300);
+  currentIdx++;
+  
+  if (currentIdx >= quotes.length) {
+    // Show Easter Egg
+    const egg = document.getElementById('easterEggScreen');
+    if (egg) egg.classList.add('active');
+    triggerAutoHearts();
+    return;
   }
 
-  // Text transition
+  const textEl = document.getElementById('quoteText');
+  const bouquetEl = document.getElementById('bouquetEl');
+  const btnText = document.getElementById('btnText');
+
+  if (bouquetEl) {
+    bouquetEl.style.transform = 'scale(1.18) rotate(-4deg)';
+    setTimeout(() => { bouquetEl.style.transform = ''; }, 250);
+  }
+
   if (textEl) {
     textEl.style.opacity = '0';
-    textEl.style.transform = 'translateY(4px)';
+    textEl.style.transform = 'translateY(3px)';
     setTimeout(() => {
       textEl.innerHTML = quotes[currentIdx];
       textEl.style.opacity = '1';
       textEl.style.transform = 'translateY(0)';
-    }, 180);
+    }, 150);
   }
 
-  // Update dots
-  for (let i = 0; i < 4; i++) {
+  if (btnText) {
+    btnText.textContent = (currentIdx === quotes.length - 1) ? 'Buka Kejutan' : 'Lanjut';
+  }
+
+  for (let i = 0; i < 5; i++) {
     const dot = document.getElementById('dot' + i);
     if (dot) {
       if (i === currentIdx) {
@@ -429,6 +491,61 @@ function nextCard() {
     }
   }
 }
+
+function resetCard() {
+  currentIdx = 0;
+  const egg = document.getElementById('easterEggScreen');
+  if (egg) egg.classList.remove('active');
+  const textEl = document.getElementById('quoteText');
+  const btnText = document.getElementById('btnText');
+  if (textEl) textEl.innerHTML = quotes[0];
+  if (btnText) btnText.textContent = 'Lanjut';
+  for (let i = 0; i < 5; i++) {
+    const dot = document.getElementById('dot' + i);
+    if (dot) {
+      if (i === 0) dot.classList.add('active');
+      else dot.classList.remove('active');
+    }
+  }
+}
+
+function fireBurst(e) {
+  const card = document.getElementById('mainCard');
+  if (!card) return;
+  const emojis = ['💖', '💐', '✨', '🌸', '👑', '🤍', '🌹'];
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'burst-particle';
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    p.style.left = '50%';
+    p.style.top = '60%';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 50 + Math.random() * 90;
+    p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    card.appendChild(p);
+    setTimeout(() => p.remove(), 1200);
+  }
+}
+
+function triggerAutoHearts() {
+  const card = document.getElementById('mainCard');
+  if (!card) return;
+  const emojis = ['✨', '💖', '🌟', '🤍'];
+  for (let i = 0; i < 10; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'burst-particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left = (20 + Math.random() * 60) + '%';
+      p.style.top = (30 + Math.random() * 40) + '%';
+      p.style.setProperty('--dx', (Math.random() * 60 - 30) + 'px');
+      p.style.setProperty('--dy', (-40 - Math.random() * 50) + 'px');
+      card.appendChild(p);
+      setTimeout(() => p.remove(), 1200);
+    }, i * 100);
+  }
+}
 </script>
 `;
 }
@@ -437,7 +554,7 @@ const pluginConfig = {
   name: 'zahra',
   alias: ['dearzahra', 'lovezahra', 'myzahra', 'zahralove', 'bunga', 'bucketbunga'],
   category: 'fun',
-  description: 'Kartu buket bunga beranimasi dan ungkapan interaktif untuk Zahra',
+  description: 'Kartu buket bunga beranimasi dan ungkapan interaktif untuk Zahra dengan Easter Egg',
   usage: '.zahra',
   example: '.zahra',
   isOwner: false,
