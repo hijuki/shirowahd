@@ -533,7 +533,7 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
     </footer>
   </main>
 </div>
-<audio id="player-audio" preload="metadata"></audio>
+<audio id="player-audio" preload="auto" playsinline webkit-playsinline ${audioUrl ? `src="${audioUrl}"` : ''}></audio>
 <script>window.__SNOWKIT_PLAYER__=${clientConfig};</script>
 <script>
 (() => {
@@ -564,9 +564,12 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
     return m + ":" + String(sec).padStart(2, "0");
   };
 
-  if (streamUrl) {
+  if (streamUrl && !audio.src) {
     audio.src = streamUrl;
   }
+  try {
+    audio.load();
+  } catch {}
 
   const renderLyrics = () => {
     if (!lyrics.length) {
