@@ -29,6 +29,88 @@ function formatSize(bytes) {
     return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
+function extractMediaContent(m) {
+    // Cari pesan video / dokumen dari direct message atau quoted message
+    const msg = m.quoted ? (m.quoted.message || m.quoted) : (m.message || m);
+    if (!msg) return null;
+
+    // Normalisasi jika terbungkus
+    const unwrap = (obj) => {
+        if (!obj) return null;
+        if (obj.ephemeralMessage?.message) return unwrap(obj.ephemeralMessage.message);
+        if (obj.viewOnceMessage?.message) return unwrap(obj.viewOnceMessage.message);
+        if (obj.viewOnceMessageV2?.message) return unwrap(obj.viewOnceMessageV2.message);
+        if (obj.viewOnceMessageV2Extension?.message) return unwrap(obj.viewOnceMessageV2Extension.message);
+        if (obj.documentWithCaptionMessage?.message) return unwrap(obj.documentWithCaptionMessage.message);
+        return obj;
+    };
+
+    const target = unwrap(msg);
+    if (!target) return null;
+
+    if (target.videoMessage) {
+        return { content: target.videoMessage, type: 'video' };
+    }
+
+    if (target.documentMessage) {
+        const mime = (target.documentMessage.mimetype || '').toLowerCase();
+        const name = (target.documentMessage.fileName || '').toLowerCase();
+        if (
+            mime.startsWith('video/') ||
+            mime === 'application/mp4' ||
+            name.endsWith('.mp4') ||
+            name.endsWith('.mkv') ||
+            name.endsWith('.mov') ||
+            name.endsWith('.webm')
+        ) {
+            return { content: target.documentMessage, type: 'document' };
+        }
+    }
+
+    if (m.isVideo || m.quoted?.isVideo) {
+        const directContent = target.videoMessage || target;
+        return { content: directContent, type: 'video' };
+    }
+
+    return null;
+}
+
+async function downloadMediaToDisk(m, destPath) {
+    // 1. Coba downloadContentFromMessage dari pustaka baileys (hillz)
+    const media = extractMediaContent(m);
+    if (media && media.content) {
+        try {
+            const { downloadContentFromMessage } = await import('hillz');
+            const stream = await downloadContentFromMessage(media.content, media.type);
+            const writeStream = fs.createWriteStream(destPath);
+            await new Promise((resolve, reject) => {
+                stream.pipe(writeStream);
+                writeStream.on('finish', resolve);
+                writeStream.on('error', reject);
+                stream.on('error', reject);
+            });
+            if (fs.existsSync(destPath) && fs.statSync(destPath).size > 1000) {
+                return true;
+            }
+        } catch (e) {
+            console.warn('[convertsw] downloadContentFromMessage fallback to m.download:', e.message);
+        }
+    }
+
+    // 2. Coba m.quoted.download() atau m.download()
+    try {
+        const buf = (await m.quoted?.download?.()) || (await m.download?.());
+        if (buf && buf.length > 1000) {
+            fs.writeFileSync(destPath, buf);
+            return true;
+        }
+    } catch (e) {
+        console.error('[convertsw] m.download failed:', e.message);
+    }
+
+    return false;
+}
+
 async function getVideoDuration(filePath) {
     try {
         const { stdout } = await execFileAsync(FFPROBE_BIN, [
@@ -70,10 +152,11 @@ async function reencodeVideoHD(inputPath, outputPath, targetFps = 90) {
     // 2. Lanczos high-order scaling + unsharp filter (anti-blur kompresi WhatsApp)
     // 3. Paksa FPS konstan (CFR) sesuai parameter input (misal 90 FPS)
     // 4. H.264 High Profile Level 5.1 (standar industri untuk 1080p high refresh rate 90Hz/120Hz)
-    // 5. CRF 17 (visually lossless), preset fast, audio AAC 192k stereo
+    // 5. CRF 20 (sweet spot optimal visual jernih & ukuran di bawah batas status WhatsApp)
     // 6. Faststart moov atom di awal file untuk streaming instant di status WA
     const vf = [
         `scale='if(gte(ih,iw),1080,-2)':'if(gte(ih,iw),-2,1080)':flags=lanczos`,
+        `scale=trunc(iw/2)*2:trunc(ih/2)*2`,
         `unsharp=3:3:0.8:3:3:0.0`,
         `fps=${targetFps}`
     ].join(',');
@@ -85,7 +168,7 @@ async function reencodeVideoHD(inputPath, outputPath, targetFps = 90) {
         '-threads', '0',
         '-vf', vf,
         '-c:v', 'libx264',
-        '-crf', '17',
+        '-crf', '20',
         '-preset', 'fast',
         '-sn',
         '-profile:v', 'high',
@@ -104,23 +187,17 @@ async function reencodeVideoHD(inputPath, outputPath, targetFps = 90) {
 async function handler(m, { sock, conn, args, text }) {
     const client = sock || conn;
 
-    const isVideo = m.isVideo || (m.quoted && (m.quoted.isVideo || m.quoted.type === 'videoMessage' || String(m.quoted.mimetype || '').startsWith('video')));
-    const isDocVideo = (m.type === 'documentMessage' && String(m.message?.documentMessage?.mimetype || '').startsWith('video')) ||
-                      (m.quoted && (m.quoted.type === 'documentMessage' || String(m.quoted.mimetype || '').startsWith('video')));
-
-    if (!isVideo && !isDocVideo) {
+    const media = extractMediaContent(m);
+    if (!media) {
         return m.reply(
             `🎬 *CONVERT STATUS WA 1080P (CUSTOM FPS)*\n\n` +
-            `> Balas atau kirim video/dokumen MP4 lalu ketik:\n` +
+            `> Balas (reply) video/dokumen MP4 lalu ketik:\n` +
             `• \`${m.prefix || '.'}convertsw 90\` _(Paksa 90 FPS 1080p - Rekomendasi)_\n` +
             `• \`${m.prefix || '.'}convertsw 60\` _(Paksa 60 FPS 1080p)_\n` +
             `• \`${m.prefix || '.'}convertsw 120\` _(Paksa 120 FPS 1080p Ultra)_\n` +
             `• \`${m.prefix || '.'}convertsw\` _(Default 90 FPS 1080p)_\n\n` +
-            `*Fitur Unggulan:*\n` +
-            `• Paksa Resolusi : 1080p Full HD (Lanczos Scaler)\n` +
-            `• Refresh Rate   : High FPS (Smooth 60/90/120Hz)\n` +
-            `• Encoding       : H.264 High Profile Level 5.1 (CRF 17)\n` +
-            `• Anti Buram     : Unsharp Masking filter untuk WhatsApp Status`
+            `*Catatan:*\n` +
+            `Pastikan kamu me-reply/membalas video yang ingin di-convert!`
         );
     }
 
@@ -133,6 +210,7 @@ async function handler(m, { sock, conn, args, text }) {
     }
 
     if (typeof m.react === 'function') await m.react('⏳');
+    await m.reply(`⏳ *Sedang memproses video ke 1080p (${targetFps} FPS)...*\n\n_Mohon tunggu sebentar, video sedang di-render dengan filter Lanczos anti-buram._`);
 
     const tempDir = os.tmpdir();
     const ts = Date.now();
@@ -140,20 +218,22 @@ async function handler(m, { sock, conn, args, text }) {
     const outPath = path.join(tempDir, `csw_out_${ts}.mp4`);
 
     try {
-        const videoBuffer = (await m.quoted?.download?.()) || (await m.download?.());
+        console.log(`[convertsw] Downloading media for chat ${m.chat}...`);
+        const downloaded = await downloadMediaToDisk(m, inPath);
 
-        if (!videoBuffer || !videoBuffer.length) {
+        if (!downloaded || !fs.existsSync(inPath)) {
             if (typeof m.react === 'function') await m.react('❌');
-            return m.reply('❌ *GAGAL*\n\n> Gagal mengunduh file media. Coba kirim ulang videonya.');
+            return m.reply('❌ *GAGAL*\n\n> Gagal mengunduh file video. Pastikan video belum kedaluwarsa dan coba kirim ulang.');
         }
 
-        if (videoBuffer.length > 150 * 1024 * 1024) {
+        const inStats = fs.statSync(inPath);
+        if (inStats.size > 200 * 1024 * 1024) {
             if (typeof m.react === 'function') await m.react('❌');
-            return m.reply('❌ *FILE TERLALU BESAR*\n\n> Maksimal ukuran video adalah 150 MB.');
+            return m.reply('❌ *FILE TERLALU BESAR*\n\n> Maksimal ukuran video adalah 200 MB.');
         }
 
-        fs.writeFileSync(inPath, videoBuffer);
-        const inputSize = formatSize(videoBuffer.length);
+        const inputSize = formatSize(inStats.size);
+        console.log(`[convertsw] Encoding video (${inputSize}) to 1080p @ ${targetFps}fps...`);
 
         await reencodeVideoHD(inPath, outPath, targetFps);
 
@@ -165,25 +245,26 @@ async function handler(m, { sock, conn, args, text }) {
         const videoInfo = await getVideoInfo(outPath);
         const outStats = fs.statSync(outPath);
         const outputSize = formatSize(outStats.size);
-        const outBuffer = fs.readFileSync(outPath);
+
+        console.log(`[convertsw] Success encoded! Output size: ${outputSize}, duration: ${videoDuration}s`);
 
         const resText = videoInfo.width && videoInfo.height ? `${videoInfo.width}x${videoInfo.height} (1080p)` : '1080p Ultra HD';
 
         await client.sendMessage(
             m.chat,
             {
-                video: outBuffer,
+                video: { url: outPath },
                 mimetype: 'video/mp4',
                 fileName: `status_${targetFps}fps_${ts}.mp4`,
                 caption:
                     `✅ *CONVERT STATUS WA BERHASIL*\n\n` +
                     `• Resolusi    : ${resText}\n` +
                     `• Frame Rate  : ${targetFps} FPS Smooth (Level 5.1)\n` +
-                    `• Kualitas    : CRF 17 (Ultra HD Lanczos Sharpened)\n` +
+                    `• Kualitas    : CRF 20 (Ultra HD Lanczos Sharpened)\n` +
                     `• Audio       : AAC 192kbps Stereo\n` +
                     `• Ukuran File : ${outputSize} (Input: ${inputSize})\n` +
                     `• Durasi      : ${videoDuration > 0 ? `${videoDuration} Detik` : '60 Detik'}\n\n` +
-                    `_Video sudah dipaksa ke resolusi 1080p & ${targetFps} FPS dengan parameter anti-buram kompresi WhatsApp._`,
+                    `_Video siap diupload ke Status WhatsApp tanpa buram & mulus di layar 90Hz/120Hz._`,
                 gifPlayback: false,
                 ptv: false
             },
