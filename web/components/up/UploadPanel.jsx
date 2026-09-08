@@ -116,10 +116,10 @@ function Reactor({ pct, stageIdx, phase, phaseText, cellFloor, label, sub, right
 }
 
 const FPS_PRESETS = [
-  { fps: 'default', title: 'Default (Bawaan)', sub: 'Standar Kualitas Asli', badge: 'BAWAAN' },
-  { fps: 60, title: '1080p · 60 FPS', sub: 'Standar Mulus · Fast' },
-  { fps: 90, title: '1080p · 90 FPS', sub: 'Rekomendasi · 90Hz', badge: 'OPTIMAL' },
-  { fps: 120, title: '1080p · 120 FPS', sub: 'Ultra Smooth · 120Hz' }
+  { id: 'default', label: 'BAWAAN', note: 'Asli' },
+  { id: 60, label: '60 FPS', note: '1080p' },
+  { id: 90, label: '90 FPS', note: '1080p' },
+  { id: 120, label: '120 FPS', note: '1080p' },
 ]
 
 export default function UploadPanel({ settings, toast }) {
@@ -426,68 +426,60 @@ export default function UploadPanel({ settings, toast }) {
                 </div>
               )}
 
-              {/* ── Preset Kualitas Status WA & Disclaimer (Khusus Video) ── */}
+              {/* ── Segmented Process Mode Selector ── */}
               {tab === 'video' && (
                 <div className="mt-4 pt-3 border-t-2 border-[var(--edge)]">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="kicker !text-[10px] flex items-center gap-1.5">
-                      <i className="fa-solid fa-sliders text-[10px] text-[var(--hot)]" />
-                      PRESET STATUS WHATSAPP
+                    <span className="font-[family-name:var(--font-mono)] text-[9px] font-bold tracking-[0.15em] uppercase text-[var(--ink-2)]">
+                      MODE ENCODE VIDEO
                     </span>
-                    <span className="data !text-[10px] text-[var(--hot)] font-bold">
-                      {targetFps === 'default' ? 'STANDAR SHIROWAHD' : `${targetFps} FPS · 1080P`}
+                    <span className="font-[family-name:var(--font-mono)] text-[9px] font-bold text-[var(--accent)] tracking-[0.08em]">
+                      {targetFps === 'default' ? '● BAWAAN SERVER' : `● PAKSA 1080P · ${targetFps} FPS`}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {FPS_PRESETS.map(p => {
-                      const active = targetFps === p.fps
+                  <div className="grid grid-cols-4 border-2 border-[var(--edge)] rounded-[var(--r-xs)] overflow-hidden bg-[var(--paper-2)]">
+                    {FPS_PRESETS.map((p, idx) => {
+                      const active = targetFps === p.id
                       return (
                         <button
-                          key={p.fps}
+                          key={p.id}
                           type="button"
                           disabled={uploading}
-                          onClick={() => setTargetFps(p.fps)}
-                          className={`relative text-left p-2.5 border-2 transition-all cursor-pointer ${
+                          onClick={() => setTargetFps(p.id)}
+                          className={`py-2 px-1 text-center transition-colors cursor-pointer relative ${
+                            idx > 0 ? 'border-l-2 border-[var(--edge)]' : ''
+                          } ${
                             active
-                              ? 'border-[var(--hot)] bg-[var(--fill-strong)] text-[var(--on-fill-strong)] shadow-sm'
-                              : 'border-[var(--edge)] bg-[var(--paper-2)] hover:border-[var(--hot)]'
+                              ? 'bg-[var(--fill-strong)] text-[var(--on-fill-strong)]'
+                              : 'text-[var(--ink-2)] hover:bg-[var(--paper-3)] hover:text-[var(--ink)]'
                           }`}
                         >
-                          {p.badge && (
-                            <span className="absolute -top-2 right-2 px-1.5 py-0.5 text-[8px] font-black bg-[var(--hot)] text-white tracking-wider border border-[var(--edge)]">
-                              {p.badge}
-                            </span>
+                          <span className="block font-[family-name:var(--font-mono)] font-bold text-[11px] leading-none tracking-[0.02em]">
+                            {p.label}
+                          </span>
+                          <span className={`block font-[family-name:var(--font-mono)] text-[8px] mt-1 tracking-wider uppercase ${active ? 'text-[var(--accent)]' : 'opacity-40'}`}>
+                            {p.note}
+                          </span>
+                          {active && (
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--accent)]" />
                           )}
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-[12px] leading-tight">{p.title}</span>
-                            {active && <i className="fa-solid fa-check text-[10px] text-[var(--hot)]" />}
-                          </div>
-                          <p className={`text-[10px] mt-0.5 leading-snug ${active ? 'opacity-80' : 'opacity-60'}`}>
-                            {p.sub}
-                          </p>
                         </button>
                       )
                     })}
                   </div>
 
-                  {/* ── Disclaimer Box ── */}
-                  <div className="mt-3 p-3 bg-[var(--paper-2)] border-2 border-[var(--edge)] text-[11px] leading-relaxed">
-                    <div className="font-bold flex items-center gap-1.5 mb-1 text-[11px] text-[var(--foreground)]">
-                      <i className="fa-solid fa-circle-info text-[var(--hot)] text-[12px]" />
-                      {targetFps === 'default' ? 'MODE DEFAULT (BAWAAN SISTEM)' : 'KENAPA WAJIB 1080P?'}
-                    </div>
-                    <p className="opacity-80">
-                      {targetFps === 'default' ? (
-                        <>
-                          Menggunakan standar bawaan sistem kami. Kualitas dan resolusi asli video kamu dipertahankan sepenuhnya tanpa dipangkas paksa ke 1080p. Jika video kamu di atas 1080p dan ingin diunggah khusus ke Status WhatsApp agar tidak pecah &amp; mulus di layar HP, pilih preset <strong>1080p (60/90/120 FPS)</strong>.
-                        </>
-                      ) : (
-                        <>
-                          WhatsApp Status tidak mendukung native playback 1440p (2K) atau 4K — resolusi tinggi justru dikompresi paksa hingga pecah &amp; buram. Video kamu otomatis dioptimasi ke <strong>1080p (Lanczos Sharpener)</strong> dengan frame rate <strong>{targetFps} FPS</strong> agar hasil di Status WA tetap tajam dan pergerakan di layar HP 90Hz/120Hz super mulus.
-                        </>
-                      )}
-                    </p>
+                  {/* Clean Technical Disclaimer */}
+                  <div className="mt-2.5 text-[10.5px] leading-relaxed text-[var(--ink-2)] font-[family-name:var(--font-mono)] border-l-2 border-[var(--edge)] pl-2.5 py-0.5">
+                    {targetFps === 'default' ? (
+                      <span>
+                        <strong className="text-[var(--ink)]">Mode Bawaan:</strong> Pipeline asli server. File H.264 di-remux instan tanpa re-encode. Resolusi &amp; frame rate asli dipertahankan utuh.
+                      </span>
+                    ) : (
+                      <span>
+                        <strong className="text-[var(--ink)]">Mode Status WA:</strong> Di-render ulang ke 1080p Lanczos pada {targetFps} FPS konstan (CRF 18) agar video tidak pecah oleh kompresi WhatsApp.
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
