@@ -116,7 +116,7 @@ function Reactor({ pct, stageIdx, phase, phaseText, cellFloor, label, sub, right
 }
 
 const FPS_PRESETS = [
-  { fps: 'auto', title: 'Default (Auto)', sub: 'Resolusi & FPS Asli', badge: 'FAST' },
+  { fps: 'default', title: 'Default (Bawaan)', sub: 'Standar Shirowahd · .ttv2', badge: 'BAWAAN' },
   { fps: 60, title: '1080p · 60 FPS', sub: 'Standar Mulus · Fast' },
   { fps: 90, title: '1080p · 90 FPS', sub: 'Rekomendasi · 90Hz', badge: 'OPTIMAL' },
   { fps: 120, title: '1080p · 120 FPS', sub: 'Ultra Smooth · 120Hz' }
@@ -125,7 +125,7 @@ const FPS_PRESETS = [
 export default function UploadPanel({ settings, toast }) {
   const [tab, setTab] = useState('video')
   const [files, setFiles] = useState([])
-  const [targetFps, setTargetFps] = useState(90)
+  const [targetFps, setTargetFps] = useState('default')
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState({ pct: 0, loaded: 0, total: 0, speed: 0 })
   const [encode, setEncode] = useState(null) // { stage, pct }
@@ -435,7 +435,7 @@ export default function UploadPanel({ settings, toast }) {
                       PRESET STATUS WHATSAPP
                     </span>
                     <span className="data !text-[10px] text-[var(--hot)] font-bold">
-                      {targetFps === 'auto' ? 'ORIGINAL PASSTHROUGH' : `${targetFps} FPS · 1080P`}
+                      {targetFps === 'default' ? 'STANDAR SHIROWAHD' : `${targetFps} FPS · 1080P`}
                     </span>
                   </div>
 
@@ -475,12 +475,12 @@ export default function UploadPanel({ settings, toast }) {
                   <div className="mt-3 p-3 bg-[var(--paper-2)] border-2 border-[var(--edge)] text-[11px] leading-relaxed">
                     <div className="font-bold flex items-center gap-1.5 mb-1 text-[11px] text-[var(--foreground)]">
                       <i className="fa-solid fa-circle-info text-[var(--hot)] text-[12px]" />
-                      {targetFps === 'auto' ? 'MODE DEFAULT (ORIGINAL)' : 'KENAPA WAJIB 1080P?'}
+                      {targetFps === 'default' ? 'MODE DEFAULT (BAWAAN SHIROWAHD)' : 'KENAPA WAJIB 1080P?'}
                     </div>
                     <p className="opacity-80">
-                      {targetFps === 'auto' ? (
+                      {targetFps === 'default' ? (
                         <>
-                          Mode <strong>Default (Auto)</strong> mempertahankan resolusi dan frame rate asli video kamu tanpa pemaksaan. Jika format sudah H.264 kompatibel, video akan diproses instan (remux) tanpa penurunan kualitas. Jika video kamu di atas 1080p dan ingin diunggah ke WhatsApp Status tanpa pecah, disarankan memilih preset <strong>1080p (60/90/120 FPS)</strong>.
+                          Menggunakan pipeline bawaan sistem <strong>Shirowahd (.ttv2)</strong>. Video diproses dengan kualitas master asli (CRF 18), mempertahankan resolusi sumber tanpa dipotong paksa ke 1080p, dan stream-copy utuh jika format sudah optimal. Jika ingin dioptimasi khusus untuk Status WA agar tidak pecah &amp; super mulus di layar HP, pilih preset <strong>1080p (60/90/120 FPS)</strong>.
                         </>
                       ) : (
                         <>
