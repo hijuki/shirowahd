@@ -1,6 +1,6 @@
 import config from '../../config.js';
 
-function renderZahraLoveCard() {
+function renderZahraEditorialCard() {
   return `
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
@@ -8,281 +8,259 @@ function renderZahraLoveCard() {
 body {
   margin: 0;
   padding: 6px;
-  background: #090507;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-  color: #ffffff;
-  overflow: hidden;
+  background: #09090b;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  color: #f4f4f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-.love-card {
+.editorial-card {
   position: relative;
   width: 100%;
   max-width: 350px;
   margin: 0 auto;
-  background: #12080e;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(244, 63, 94, 0.22) 0px, transparent 60%),
-    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.18) 0px, transparent 60%);
-  border: 1px solid rgba(244, 63, 94, 0.25);
-  border-radius: 20px;
-  padding: 18px 16px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: #111114;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  padding: 16px 16px 14px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
   overflow: hidden;
 }
-.particles-wrap {
+.card-ambient {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(225, 29, 72, 0.22) 0%, transparent 70%);
   pointer-events: none;
-  overflow: hidden;
-  z-index: 1;
 }
-.p-heart {
-  position: absolute;
-  color: rgba(244, 63, 94, 0.35);
-  font-size: 14px;
-  animation: floatUp 6s linear infinite;
-}
-.p1 { left: 10%; bottom: -20px; animation-duration: 5s; animation-delay: 0s; font-size: 12px; }
-.p2 { left: 30%; bottom: -20px; animation-duration: 7s; animation-delay: 1.5s; font-size: 16px; }
-.p3 { left: 60%; bottom: -20px; animation-duration: 6s; animation-delay: 3s; font-size: 11px; }
-.p4 { left: 85%; bottom: -20px; animation-duration: 8s; animation-delay: 0.5s; font-size: 15px; }
-
-@keyframes floatUp {
-  0% { transform: translateY(0) scale(0.8) rotate(0deg); opacity: 0; }
-  20% { opacity: 0.7; }
-  80% { opacity: 0.7; }
-  100% { transform: translateY(-380px) scale(1.2) rotate(25deg); opacity: 0; }
-}
-
-.content-layer {
-  position: relative;
-  z-index: 2;
-}
-.header-tag {
+.top-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
-.badge-special {
-  display: inline-flex;
+.edition-tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #a1a1aa;
+  text-transform: uppercase;
+}
+.status-node {
+  display: flex;
   align-items: center;
   gap: 5px;
   font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  color: #fb7185;
-  background: rgba(244, 63, 94, 0.12);
-  border: 1px solid rgba(244, 63, 94, 0.28);
-  padding: 4px 10px;
+  font-weight: 600;
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  padding: 3px 8px;
   border-radius: 100px;
-  text-transform: uppercase;
 }
-.badge-dot {
-  width: 6px;
-  height: 6px;
+.node-dot {
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #f43f5e;
-  box-shadow: 0 0 8px #f43f5e;
-  animation: pulseDot 2s infinite ease-in-out;
+  box-shadow: 0 0 6px #f43f5e;
+  animation: pulseNode 2.4s infinite ease-in-out;
 }
-@keyframes pulseDot {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.3); }
-}
-.love-meter {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #f43f5e;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 3px 8px;
-  border-radius: 12px;
+@keyframes pulseNode {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
-.hero-heart-box {
+.bouquet-hero {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: #17171c;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.bouquet-visual {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
   align-items: center;
   justify-content: center;
-  margin: 8px 0 14px;
+  background: rgba(225, 29, 72, 0.1);
+  border: 1px solid rgba(225, 29, 72, 0.25);
+  border-radius: 12px;
+  font-size: 24px;
+  animation: floatBouquet 3s ease-in-out infinite;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.15);
 }
-.main-heart {
-  font-size: 38px;
-  display: inline-block;
-  animation: heartbeat 1.4s infinite ease-in-out;
-  cursor: pointer;
-  filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.7));
-  transition: transform 0.2s;
+@keyframes floatBouquet {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-3deg); }
 }
-.main-heart:active {
-  transform: scale(1.3) !important;
+.hero-copy {
+  overflow: hidden;
 }
-@keyframes heartbeat {
-  0% { transform: scale(1); }
-  14% { transform: scale(1.18); }
-  28% { transform: scale(1); }
-  42% { transform: scale(1.18); }
-  70% { transform: scale(1); }
-}
-
-.name-title {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: #ffffff;
-  margin-top: 4px;
-  text-shadow: 0 2px 10px rgba(244, 63, 94, 0.3);
-}
-.name-sub {
-  font-size: 11px;
+.to-label {
+  font-size: 9.5px;
+  color: #71717a;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   font-weight: 600;
-  color: #fda4af;
-  margin-top: 1px;
-  letter-spacing: 0.4px;
+}
+.recipient-name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+  font-style: italic;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
 }
 
-.letter-box {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  padding: 13px 14px;
+.letter-surface {
+  background: #17171c;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 13px 14px 12px;
   margin-bottom: 12px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
 }
-.letter-quote {
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: #fce7f3;
-  font-weight: 500;
-  text-align: justify;
-  letter-spacing: -0.1px;
+.letter-surface::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: #e11d48;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
 }
-.letter-highlight {
-  color: #fb7185;
-  font-weight: 700;
+.letter-text {
+  font-size: 11.5px;
+  line-height: 1.58;
+  color: #d4d4d8;
+  font-weight: 400;
+  letter-spacing: 0.1px;
+  transition: opacity 0.2s ease;
 }
 
-.interactive-btn-wrap {
+.action-row {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 10px;
 }
-.tap-heart-btn {
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 100px;
-  padding: 8px 18px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.45);
-  transition: transform 0.15s, box-shadow 0.15s;
+.page-indicator {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #71717a;
+  font-family: ui-monospace, SFMono-Regular, monospace;
 }
-.tap-heart-btn:active {
-  transform: scale(0.94);
-  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.3);
+.next-btn {
+  background: #ffffff;
+  color: #09090b;
+  border: none;
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.next-btn:active {
+  transform: scale(0.95);
+  background: #e4e4e7;
 }
 
-.footer-info {
+.card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
-.footer-text {
-  font-size: 9px;
+.footer-brand {
+  font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: 0.8px;
-  color: #6b7280;
+  letter-spacing: 1px;
+  color: #52525b;
   text-transform: uppercase;
 }
-.footer-love {
-  font-size: 10px;
-  color: #f43f5e;
-  font-weight: 700;
+.footer-sig {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 10.5px;
+  color: #a1a1aa;
 }
 </style>
 
-<div class="love-card">
-  <div class="particles-wrap">
-    <div class="p-heart p1">💖</div>
-    <div class="p-heart p2">✨</div>
-    <div class="p-heart p3">🌸</div>
-    <div class="p-heart p4">💕</div>
+<div class="editorial-card">
+  <div class="card-ambient"></div>
+  
+  <div class="top-meta">
+    <span class="edition-tag">SPECIAL ARCHIVE • NO. 01</span>
+    <div class="status-node">
+      <div class="node-dot"></div>
+      <span>FOR YOU</span>
+    </div>
   </div>
 
-  <div class="content-layer">
-    <div class="header-tag">
-      <div class="badge-special">
-        <div class="badge-dot"></div>
-        <span>FOR ZAHRA</span>
-      </div>
-      <div class="love-meter" id="loveCount">❤️ 100% Love</div>
+  <div class="bouquet-hero">
+    <div class="bouquet-visual">💐</div>
+    <div class="hero-copy">
+      <div class="to-label">Buket Bunga & Catatan Untuk</div>
+      <div class="recipient-name">Zahra.</div>
     </div>
+  </div>
 
-    <div class="hero-heart-box">
-      <div class="main-heart" id="bigHeart" onclick="kirimCinta()">💖</div>
-      <div class="name-title">Dear Zahra 🤍</div>
-      <div class="name-sub">You are my sweetest serendipity ✨</div>
-    </div>
+  <div class="letter-surface">
+    <p class="letter-text" id="quoteText">
+      Sebuket bunga dan sejuta hal sederhana yang selalu bikin hariku tenang. Nggak butuh banyak alasan untuk ngebuat hari biasa jadi berharga—cukup ada kamu di dalamnya.
+    </p>
+  </div>
 
-    <div class="letter-box">
-      <p class="letter-quote" id="pesanCinta">
-        Di antara miliaran detik di dunia, bertemumu adalah ketidaksengajaan terindah yang selalu kusyukuri. Terima kasih telah hadir, membawa hangat di setiap hariku, dan menjadi alasan terbaik di balik setiap senyumanku. <br><br>
-        <span class="letter-highlight">Aku cuma mau kamu, hari ini, esok, dan seterusnya. Tetaplah jadi Zahra yang selalu ada di hatiku. 🌹✨</span>
-      </p>
-    </div>
+  <div class="action-row">
+    <span class="page-indicator" id="pageNumber">01 / 04</span>
+    <button class="next-btn" onclick="nextQuote()">Lanjut Baca →</button>
+  </div>
 
-    <div class="interactive-btn-wrap">
-      <button class="tap-heart-btn" id="loveBtn" onclick="kirimCinta()">
-        <span>Tekan Hatiku</span> <span>💌</span>
-      </button>
-    </div>
-
-    <div class="footer-info">
-      <span class="footer-text">FOREVER & ALWAYS</span>
-      <span class="footer-love">I Love You Zahra 🤍</span>
-    </div>
+  <div class="card-footer">
+    <span class="footer-brand">SHIRO ARCHIVE</span>
+    <span class="footer-sig">Selalu untuk Zahra 🤍</span>
   </div>
 </div>
 
 <script>
-let count = 100;
-const kataKata = [
-  "Di antara miliaran manusia, mataku cuma tertuju padamu, Zahra. Terima kasih sudah menjadi orang paling berharga di hidupku. 🤍",
-  "Kamu adalah alasan kenapa setiap hari selalu terasa lebih manis. Jangan pernah ragu, rasa ini selalu utuh untukmu. 🌹",
-  "Dunia mungkin berisik, tapi bersamamu selalu terasa tenang. Tetaplah jadi rumah ternyaman tempat hatiku pulang. ✨",
-  "Aku tidak butuh dunia yang sempurna, aku cuma butuh kamu di setiap langkahku. I love you more than words can say. 💕",
-  "Terima kasih telah hadir membawa warna indah. Selamanya namamu terukir paling indah di hatiku, Zahra. 🌸"
+const quotes = [
+  "Sebuket bunga dan sejuta hal sederhana yang selalu bikin hariku tenang. Nggak butuh banyak alasan untuk ngebuat hari biasa jadi berharga—cukup ada kamu di dalamnya.",
+  "Dunia di luar sana mungkin sering berisik dan nuntut banyak hal. Tapi kalau sama kamu, semuanya selalu terasa cukup dan sederhana.",
+  "Aku nggak pernah butuh cerita yang rumit atau berlebihan. Asal langkah ke depannya bareng kamu, itu udah lebih dari cukup.",
+  "Bunga ini mungkin bisa layu, tapi rasa tenang setiap kali ingat kamu nggak akan pernah pudar. Tetaplah jadi Zahra yang selalu apa adanya."
 ];
-let idxPesan = 0;
+let currentIdx = 0;
 
-function kirimCinta() {
-  count += 10;
-  const lc = document.getElementById('loveCount');
-  if (lc) lc.textContent = '❤️ ' + count + '% Love';
-
-  idxPesan = (idxPesan + 1) % kataKata.length;
-  const p = document.getElementById('pesanCinta');
-  if (p) {
-    p.style.opacity = '0';
+function nextQuote() {
+  currentIdx = (currentIdx + 1) % quotes.length;
+  const textEl = document.getElementById('quoteText');
+  const pageEl = document.getElementById('pageNumber');
+  
+  if (textEl) {
+    textEl.style.opacity = '0';
     setTimeout(() => {
-      p.innerHTML = kataKata[idxPesan];
-      p.style.opacity = '1';
-    }, 180);
+      textEl.innerHTML = quotes[currentIdx];
+      textEl.style.opacity = '1';
+    }, 150);
   }
-
-  const bh = document.getElementById('bigHeart');
-  if (bh) {
-    bh.style.transform = 'scale(1.35)';
-    setTimeout(() => { bh.style.transform = 'scale(1)'; }, 200);
+  
+  if (pageEl) {
+    pageEl.textContent = '0' + (currentIdx + 1) + ' / 0' + quotes.length;
   }
 }
 </script>
@@ -291,9 +269,9 @@ function kirimCinta() {
 
 const pluginConfig = {
   name: 'zahra',
-  alias: ['dearzahra', 'lovezahra', 'myzahra', 'zahralove'],
+  alias: ['dearzahra', 'lovezahra', 'myzahra', 'zahralove', 'bunga', 'bucketbunga'],
   category: 'fun',
-  description: 'Kartu ungkapan cinta romantis interaktif untuk Zahra dengan animasi in-bubble HTML',
+  description: 'Kartu buket bunga editorial dan ungkapan untuk Zahra',
   usage: '.zahra',
   example: '.zahra',
   isOwner: false,
@@ -310,11 +288,11 @@ async function handler(m, { sock, conn }) {
 
   if (typeof m.react === 'function') {
     try {
-      await m.react('💖');
+      await m.react('💐');
     } catch {}
   }
 
-  const htmlPayload = renderZahraLoveCard();
+  const htmlPayload = renderZahraEditorialCard();
 
   const msgContent = {
     messageContextInfo: {
@@ -322,7 +300,7 @@ async function handler(m, { sock, conn }) {
       deviceListMetadataVersion: 2,
       botMetadata: {
         messageDisclaimerText: '',
-        botResponseId: 'shirowahd-zahra-love',
+        botResponseId: 'shirowahd-zahra-editorial',
         verificationMetadata: {
           proofs: [
             {
@@ -342,11 +320,11 @@ async function handler(m, { sock, conn }) {
       message: {
         richResponseMessage: {
           messageType: 1,
-          submessages: [{ messageType: 2, messageText: 'Special Love Letter for Zahra 🤍' }],
+          submessages: [{ messageType: 2, messageText: 'Buket Bunga untuk Zahra 💐' }],
           unifiedResponse: {
             data: Buffer.from(
               JSON.stringify({
-                response_id: 'shirowahd-zahra-love',
+                response_id: 'shirowahd-zahra-editorial',
                 sections: [
                   {
                     view_model: {
