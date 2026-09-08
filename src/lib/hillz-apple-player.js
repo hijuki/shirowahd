@@ -75,37 +75,65 @@ function parseLrc(lrc) {
   return keluar.sort((a, b) => a.start_ms - b.start_ms);
 }
 
+function bersihkanTeks(s) {
+  return String(s ?? '')
+    .replace(/\s*\(.*?(official|video|audio|lirik|lyrics|remaster|hd|4k|ft\.|feat\.).*?\)/gi, '')
+    .replace(/\s*\[.*?\]/gi, '')
+    .trim();
+}
+
+function pecahJudulLagu(rawTitle, channel) {
+  const bersih = bersihkanTeks(rawTitle);
+  const parts = bersih.split(/\s*[-–—|]\s*/).map((s) => s.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    return { artis: parts[0], judul: parts.slice(1).join(' - ') };
+  }
+  return { artis: channel || 'Artist', judul: bersih || 'Song' };
+}
+
 /**
- * Fetch lirik tersinkronisasi dari LRCLIB
+ * Fetch lirik tersinkronisasi dari LRCLIB (multi-strategy)
  */
-async function getLyrics(judul, artis, durasiDetik) {
+async function getLyrics(rawTitle, rawArtist, durasiDetik) {
+  const { artis, judul } = pecahJudulLagu(rawTitle, rawArtist);
+
+  // Strategy 1: track_name + artist_name
   try {
     const u = new URL(`${API_LRCLIB}/search`);
-    if (judul) u.searchParams.set('track_name', judul);
-    if (artis) u.searchParams.set('artist_name', artis);
+    u.searchParams.set('track_name', judul);
+    if (artis && artis !== 'Artist') u.searchParams.set('artist_name', artis);
     const res = await axios.get(u.toString(), {
       headers: { 'User-Agent': 'shirowahd-bot/1.0 (+apple player)' },
-      timeout: 6000,
+      timeout: 5000,
     });
-    const d = res.data;
-    if (Array.isArray(d) && d.length > 0) {
-      const valid = d.filter((x) => x?.syncedLyrics && !x?.instrumental);
-      if (valid.length > 0) {
-        let best = valid[0];
-        if (durasiDetik) {
-          let minDiff = Infinity;
-          for (const item of valid) {
-            const diff = Math.abs((item.duration ?? 0) - durasiDetik);
-            if (diff < minDiff) {
-              minDiff = diff;
-              best = item;
-            }
-          }
-        }
-        return parseLrc(best.syncedLyrics);
-      }
-    }
+    const valid = Array.isArray(res.data) ? res.data.filter((x) => x?.syncedLyrics && !x?.instrumental) : [];
+    if (valid.length > 0) return parseLrc(valid[0].syncedLyrics);
   } catch {}
+
+  // Strategy 2: track_name only
+  try {
+    const u = new URL(`${API_LRCLIB}/search`);
+    u.searchParams.set('track_name', judul);
+    const res = await axios.get(u.toString(), {
+      headers: { 'User-Agent': 'shirowahd-bot/1.0 (+apple player)' },
+      timeout: 5000,
+    });
+    const valid = Array.isArray(res.data) ? res.data.filter((x) => x?.syncedLyrics && !x?.instrumental) : [];
+    if (valid.length > 0) return parseLrc(valid[0].syncedLyrics);
+  } catch {}
+
+  // Strategy 3: query string 'q'
+  try {
+    const u = new URL(`${API_LRCLIB}/search`);
+    u.searchParams.set('q', `${artis} ${judul}`.trim());
+    const res = await axios.get(u.toString(), {
+      headers: { 'User-Agent': 'shirowahd-bot/1.0 (+apple player)' },
+      timeout: 5000,
+    });
+    const valid = Array.isArray(res.data) ? res.data.filter((x) => x?.syncedLyrics && !x?.instrumental) : [];
+    if (valid.length > 0) return parseLrc(valid[0].syncedLyrics);
+  } catch {}
+
   return [];
 }
 
@@ -589,6 +617,7 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
     });
   };
   renderLyrics();
+  syncLyrics();
 
   const syncLyrics = () => {
     if (!lyrics.length) return;
@@ -760,8 +789,9 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
     throw new Error('Lagu tidak ditemukan. Silakan coba judul atau nama artis lain.');
   }
 
-  title = video.title.replace(/\s*\(.*?(official|video|audio|lirik|lyrics).*?\)/gi, '').trim();
-  artist = video.author?.name || 'Artist';
+  const parsedMeta = pecahJudulLagu(video.title, video.author?.name);
+  title = parsedMeta.judul;
+  artist = parsedMeta.artis;
   durationSec = video.seconds || 180;
   rawCoverUrl = video.thumbnail || video.image || '';
 
