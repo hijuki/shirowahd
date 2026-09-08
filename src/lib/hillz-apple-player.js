@@ -589,9 +589,37 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
     return m + ":" + String(sec).padStart(2, "0");
   };
 
-  try {
-    audio.load();
-  } catch {}
+  const updateProgress = () => {
+    if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    const p = Math.max(0, Math.min(100, (audio.currentTime / audio.duration) * 100));
+    progressFill.style.width = p + "%";
+    progressThumb.style.left = p + "%";
+    curTimeLbl.textContent = fmt(audio.currentTime);
+  };
+
+  const syncLyrics = () => {
+    if (!lyrics.length) return;
+    const curMs = audio.currentTime * 1000;
+    let nextIdx = -1;
+    for (let i = 0; i < lyrics.length; i++) {
+      if (curMs >= lyrics[i].start_ms) nextIdx = i;
+      else break;
+    }
+    if (nextIdx === activeIndex) return;
+    activeIndex = nextIdx;
+
+    lyricEls.forEach((el, idx) => {
+      el.className = "lyric-line";
+      if (idx === nextIdx) el.classList.add("is-active");
+      else if (idx < nextIdx) el.classList.add("is-past");
+    });
+
+    if (nextIdx >= 0 && lyricEls[nextIdx]) {
+      const target = lyricEls[nextIdx];
+      const desired = target.offsetTop - (lyricsContainer.clientHeight - target.offsetHeight) * 0.45;
+      lyricsContainer.scrollTo({ top: desired, behavior: "smooth" });
+    }
+  };
 
   const renderLyrics = () => {
     if (!lyrics.length) {
@@ -616,41 +644,13 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
       lyricEls.push(d);
     });
   };
+
+  try {
+    audio.load();
+  } catch {}
+
   renderLyrics();
   syncLyrics();
-
-  const syncLyrics = () => {
-    if (!lyrics.length) return;
-    const curMs = audio.currentTime * 1000;
-    let nextIdx = -1;
-    for (let i = 0; i < lyrics.length; i++) {
-      if (curMs >= lyrics[i].start_ms) nextIdx = i;
-      else break;
-    }
-    if (nextIdx === activeIndex) return;
-    activeIndex = nextIdx;
-
-    lyricEls.forEach((el, idx) => {
-      el.className = "lyric-line";
-      if (idx === nextIdx) el.classList.add("is-active");
-      else if (idx < nextIdx) el.classList.add("is-past");
-    });
-
-    if (nextIdx >= 0 && lyricEls[nextIdx]) {
-      const target = lyricEls[nextIdx];
-      const start = lyricsContainer.scrollTop;
-      const desired = target.offsetTop - (lyricsContainer.clientHeight - target.offsetHeight) * 0.45;
-      lyricsContainer.scrollTo({ top: desired, behavior: "smooth" });
-    }
-  };
-
-  const updateProgress = () => {
-    if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
-    const p = Math.max(0, Math.min(100, (audio.currentTime / audio.duration) * 100));
-    progressFill.style.width = p + "%";
-    progressThumb.style.left = p + "%";
-    curTimeLbl.textContent = fmt(audio.currentTime);
-  };
 
   playBtn.addEventListener("click", async () => {
     try {
