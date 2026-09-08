@@ -53,9 +53,9 @@ function runtime(detik) {
 }
 
 function renderStatusCard({ ping, ramPersen, ramPakai, ramTotal, diskPersen, diskPakai, diskTotal, uptime, cpuCore, load, timestamp }) {
-  const isOnline = ping !== null;
-  const pingColor = ping === null ? '#ef4444' : ping < 50 ? '#10b981' : ping < 120 ? '#38bdf8' : '#f59e0b';
-  const pingStatus = ping === null ? 'OFFLINE' : ping < 50 ? 'OPTIMAL' : ping < 120 ? 'STABLE' : 'FAIR';
+  const pingNum = ping === null ? '—' : ping;
+  const pingColor = ping === null ? '#ef4444' : ping < 60 ? '#10b981' : ping < 150 ? '#38bdf8' : '#f59e0b';
+  const pingDesc = ping === null ? 'Offline' : ping < 60 ? 'Sangat Cepat' : ping < 150 ? 'Stabil' : 'Normal';
 
   return `
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -64,254 +64,212 @@ function renderStatusCard({ ping, ramPersen, ramPakai, ramTotal, diskPersen, dis
 body {
   margin: 0;
   padding: 6px;
-  background: #090a0f;
+  background: #0a0a0c;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-  color: #f8fafc;
+  color: #ffffff;
 }
-.telemetry-card {
+.card {
   width: 100%;
-  max-width: 360px;
+  max-width: 350px;
   margin: 0 auto;
-  background: #0d1117;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.08) 0px, transparent 50%);
+  background: #111216;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 14px 14px 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
-.card-header {
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
-.brand-badge {
+.title-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
-.brand-dot {
+.dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: #10b981;
-  box-shadow: 0 0 8px #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
-.brand-text {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  color: #94a3b8;
-  text-transform: uppercase;
-}
-.status-pill {
-  font-size: 8.5px;
+.title {
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.6px;
-  color: ${pingColor};
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 3px 8px;
-  border-radius: 100px;
-  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #a1a1aa;
 }
-.hero-latency {
-  background: rgba(255, 255, 255, 0.02);
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: ${pingColor};
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+.hero {
+  background: #18191f;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.latency-meta {
+.hero-left {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.latency-label {
-  font-size: 9px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.latency-target {
+.hero-label {
   font-size: 11px;
-  font-weight: 700;
-  color: #e2e8f0;
-  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: #71717a;
+  font-weight: 600;
 }
-.latency-value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 24px;
+.hero-sub {
+  font-size: 12px;
+  color: #e4e4e7;
+  font-weight: 600;
+}
+.hero-speed {
+  font-size: 28px;
   font-weight: 800;
   color: ${pingColor};
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  letter-spacing: -0.5px;
   line-height: 1;
 }
-.latency-unit {
-  font-size: 11px;
+.hero-unit {
+  font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: #71717a;
   margin-left: 2px;
 }
-.stats-grid {
+.grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
-.stat-box {
-  background: rgba(255, 255, 255, 0.02);
+.box {
+  background: #18191f;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 9px 10px;
+  border-radius: 12px;
+  padding: 10px 12px;
 }
-.stat-top {
+.box-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 4px;
 }
-.stat-label {
-  font-size: 9px;
+.box-label {
+  font-size: 10px;
+  color: #71717a;
+  font-weight: 600;
+}
+.box-percent {
+  font-size: 10px;
   font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
+  color: #a1a1aa;
 }
-.stat-percent {
-  font-size: 9.5px;
-  font-weight: 800;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  color: #94a3b8;
-}
-.stat-value {
-  font-size: 11.5px;
+.box-val {
+  font-size: 12px;
   font-weight: 700;
-  color: #f1f5f9;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  margin-bottom: 6px;
+  color: #f4f4f5;
+  margin-bottom: 8px;
 }
-.progress-track {
+.track {
   width: 100%;
   height: 4px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
   overflow: hidden;
 }
-.progress-fill {
+.fill {
   height: 100%;
-  border-radius: 6px;
+  border-radius: 4px;
 }
-.system-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.system-item {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 8px 10px;
-}
-.system-label {
-  font-size: 8.5px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-.system-val {
-  font-size: 11px;
-  font-weight: 700;
-  color: #cbd5e1;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.card-footer {
+.footer-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 8px 4px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
-.footer-text {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  color: #475569;
-  text-transform: uppercase;
+.footer-info {
+  font-size: 10px;
+  color: #71717a;
+  font-weight: 500;
 }
 .footer-time {
-  font-size: 8.5px;
+  font-size: 10px;
+  color: #a1a1aa;
   font-weight: 600;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  color: #64748b;
 }
 </style>
 
-<div class="telemetry-card">
-  <div class="card-header">
-    <div class="brand-badge">
-      <div class="brand-dot"></div>
-      <span class="brand-text">SHIROWAHD NODE</span>
+<div class="card">
+  <div class="header">
+    <div class="title-wrap">
+      <div class="dot"></div>
+      <span class="title">SHIROWAHD</span>
     </div>
-    <div class="status-pill">${pingStatus}</div>
+    <div class="tag">${pingDesc}</div>
   </div>
 
-  <div class="hero-latency">
-    <div class="latency-meta">
-      <span class="latency-label">TCP Handshake</span>
-      <span class="latency-target">g.whatsapp.net:443</span>
+  <div class="hero">
+    <div class="hero-left">
+      <span class="hero-label">Kecepatan Respons</span>
+      <span class="hero-sub">Server WhatsApp</span>
     </div>
-    <div class="latency-value">
-      ${ping === null ? 'FAIL' : ping}<span class="latency-unit">${ping === null ? '' : 'ms'}</span>
-    </div>
-  </div>
-
-  <div class="stats-grid">
-    <div class="stat-box">
-      <div class="stat-top">
-        <span class="stat-label">RAM Memory</span>
-        <span class="stat-percent">${ramPersen}%</span>
-      </div>
-      <div class="stat-value">${formatSize(ramPakai)}</div>
-      <div class="progress-track">
-        <div class="progress-fill" style="width: ${ramPersen}%; background: ${ramPersen > 85 ? '#ef4444' : '#10b981'};"></div>
-      </div>
-    </div>
-
-    <div class="stat-box">
-      <div class="stat-top">
-        <span class="stat-label">NVMe Disk</span>
-        <span class="stat-percent">${diskPersen || 0}%</span>
-      </div>
-      <div class="stat-value">${diskTotal ? formatSize(diskPakai) : 'N/A'}</div>
-      <div class="progress-track">
-        <div class="progress-fill" style="width: ${diskPersen || 0}%; background: ${diskPersen > 85 ? '#ef4444' : '#0ea5e9'};"></div>
-      </div>
+    <div class="hero-speed">
+      ${pingNum}<span class="hero-unit">${ping === null ? '' : 'ms'}</span>
     </div>
   </div>
 
-  <div class="system-row">
-    <div class="system-item">
-      <div class="system-label">CPU Cores & Load</div>
-      <div class="system-val">${cpuCore}C • ${load[0]}</div>
+  <div class="grid">
+    <div class="box">
+      <div class="box-header">
+        <span class="box-label">RAM</span>
+        <span class="box-percent">${ramPersen}%</span>
+      </div>
+      <div class="box-val">${formatSize(ramPakai)}</div>
+      <div class="track">
+        <div class="fill" style="width: ${ramPersen}%; background: ${ramPersen > 85 ? '#ef4444' : '#10b981'};"></div>
+      </div>
     </div>
-    <div class="system-item">
-      <div class="system-label">Node Uptime</div>
-      <div class="system-val">${runtime(uptime)}</div>
+
+    <div class="box">
+      <div class="box-header">
+        <span class="box-label">Penyimpanan</span>
+        <span class="box-percent">${diskPersen || 0}%</span>
+      </div>
+      <div class="box-val">${diskTotal ? formatSize(diskPakai) : 'N/A'}</div>
+      <div class="track">
+        <div class="fill" style="width: ${diskPersen || 0}%; background: ${diskPersen > 85 ? '#ef4444' : '#38bdf8'};"></div>
+      </div>
     </div>
   </div>
 
-  <div class="card-footer">
-    <span class="footer-text">SECURE TELEMETRY</span>
+  <div class="grid" style="margin-bottom: 8px;">
+    <div class="box" style="padding: 8px 12px;">
+      <div class="box-label" style="margin-bottom: 2px;">Prosesor</div>
+      <div class="box-val" style="margin-bottom: 0;">${cpuCore} Core • ${load[0]}</div>
+    </div>
+    <div class="box" style="padding: 8px 12px;">
+      <div class="box-label" style="margin-bottom: 2px;">Aktif Bot</div>
+      <div class="box-val" style="margin-bottom: 0;">${runtime(uptime)}</div>
+    </div>
+  </div>
+
+  <div class="footer-row">
+    <span class="footer-info">Status Sistem</span>
     <span class="footer-time">${timestamp} WIB</span>
   </div>
 </div>
