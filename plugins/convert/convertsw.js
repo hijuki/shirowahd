@@ -146,7 +146,7 @@ async function getVideoInfo(filePath) {
     }
 }
 
-async function reencodeVideoHD(inputPath, outputPath, targetFps = 90) {
+async function reencodeVideoHD(inputPath, outputPath, targetFps = 60) {
     const isAuto = !targetFps || targetFps === 'auto';
     const vf = isAuto ? [
         'scale=trunc(iw/2)*2:trunc(ih/2)*2',
@@ -169,7 +169,7 @@ async function reencodeVideoHD(inputPath, outputPath, targetFps = 90) {
         '-preset', 'fast',
         '-sn',
         '-profile:v', 'high',
-        '-level', isAuto ? '4.1' : '5.1',
+        '-level', isAuto ? '4.1' : (targetFps > 60 ? '5.1' : '4.2'),
         '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
         '-b:a', '192k',
@@ -187,22 +187,21 @@ async function handler(m, { sock, conn, args, text }) {
     const media = extractMediaContent(m);
     if (!media) {
         return m.reply(
-            `🎬 *CONVERT STATUS WA (CUSTOM PRESET)*\n\n` +
+            `🎬 *CONVERT STATUS WA (1080P / 60 FPS)*\n\n` +
             `> Balas (reply) video/dokumen MP4 lalu ketik:\n` +
-            `• \`${m.prefix || '.'}convertsw auto\` _(Mode Default / Asli - Cepat)_\n` +
-            `• \`${m.prefix || '.'}convertsw 90\` _(Paksa 90 FPS 1080p - Rekomendasi)_\n` +
-            `• \`${m.prefix || '.'}convertsw 60\` _(Paksa 60 FPS 1080p)_\n` +
-            `• \`${m.prefix || '.'}convertsw 120\` _(Paksa 120 FPS 1080p Ultra)_\n` +
-            `• \`${m.prefix || '.'}convertsw\` _(Default 90 FPS 1080p)_\n\n` +
+            `• \`${m.prefix || '.'}convertsw\` _(Normal 1080p / 60 FPS - Standar Status WA)_\n` +
+            `• \`${m.prefix || '.'}convertsw 90\` _(Paksa 90 FPS - High Refresh Rate)_\n` +
+            `• \`${m.prefix || '.'}convertsw 120\` _(Paksa 120 FPS - Ultra Smooth)_\n` +
+            `• \`${m.prefix || '.'}convertsw auto\` _(Mode Default / Asli - Cepat)_\n\n` +
             `*Catatan:*\n` +
             `Pastikan kamu me-reply/membalas video yang ingin di-convert!`
         );
     }
 
-    // Parse FPS dari argumen user (contoh: .convertsw auto, .convertsw 90, dll)
+    // Parse FPS dari argumen user (contoh: .convertsw, .convertsw 90, .convertsw auto)
     const rawArg = ((args && args[0]) || (text && text.trim().split(/\s+/)[0]) || '').toLowerCase();
     const isAuto = ['auto', 'default', 'asli', 'ori', 'original'].includes(rawArg);
-    let targetFps = isAuto ? 'auto' : 90;
+    let targetFps = isAuto ? 'auto' : 60;
     const parsedFps = parseInt(rawArg, 10);
     if (!isAuto && parsedFps && !isNaN(parsedFps) && parsedFps >= 24 && parsedFps <= 144) {
         targetFps = parsedFps;
