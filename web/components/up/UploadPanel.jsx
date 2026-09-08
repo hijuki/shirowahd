@@ -115,9 +115,16 @@ function Reactor({ pct, stageIdx, phase, phaseText, cellFloor, label, sub, right
   )
 }
 
+const FPS_PRESETS = [
+  { fps: 60, title: '1080p · 60 FPS', sub: 'Standar Mulus · Fast' },
+  { fps: 90, title: '1080p · 90 FPS', sub: 'Rekomendasi · 90Hz', badge: 'OPTIMAL' },
+  { fps: 120, title: '1080p · 120 FPS', sub: 'Ultra Smooth · 120Hz' }
+]
+
 export default function UploadPanel({ settings, toast }) {
   const [tab, setTab] = useState('video')
   const [files, setFiles] = useState([])
+  const [targetFps, setTargetFps] = useState(90)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState({ pct: 0, loaded: 0, total: 0, speed: 0 })
   const [encode, setEncode] = useState(null) // { stage, pct }
@@ -199,7 +206,12 @@ export default function UploadPanel({ settings, toast }) {
     setEncode(null)
     abortRef.current = new AbortController()
     try {
-      const res = await uploadFiles(files, { field, onProgress: p => setProgress(p), signal: abortRef.current.signal })
+      const res = await uploadFiles(files, {
+        field,
+        params: tab === 'video' ? { targetFps } : undefined,
+        onProgress: p => setProgress(p),
+        signal: abortRef.current.signal
+      })
       let final = res
       if (res.pending && res.jobId) {
         // Begitu XHR selesai, tahap jaringan sudah 100%. Tampilkan tahap 2 SEGERA
@@ -410,6 +422,62 @@ export default function UploadPanel({ settings, toast }) {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* ── Preset Kualitas Status WA & Disclaimer (Khusus Video) ── */}
+              {tab === 'video' && (
+                <div className="mt-4 pt-3 border-t-2 border-[var(--edge)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="kicker !text-[10px] flex items-center gap-1.5">
+                      <i className="fa-solid fa-sliders text-[10px] text-[var(--hot)]" />
+                      PRESET STATUS WHATSAPP
+                    </span>
+                    <span className="data !text-[10px] text-[var(--hot)] font-bold">1080P FORCED</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {FPS_PRESETS.map(p => {
+                      const active = targetFps === p.fps
+                      return (
+                        <button
+                          key={p.fps}
+                          type="button"
+                          disabled={uploading}
+                          onClick={() => setTargetFps(p.fps)}
+                          className={`relative text-left p-2.5 border-2 transition-all cursor-pointer ${
+                            active
+                              ? 'border-[var(--hot)] bg-[var(--fill-strong)] text-[var(--on-fill-strong)] shadow-sm'
+                              : 'border-[var(--edge)] bg-[var(--paper-2)] hover:border-[var(--hot)]'
+                          }`}
+                        >
+                          {p.badge && (
+                            <span className="absolute -top-2 right-2 px-1.5 py-0.5 text-[8px] font-black bg-[var(--hot)] text-white tracking-wider border border-[var(--edge)]">
+                              {p.badge}
+                            </span>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[12px] leading-tight">{p.title}</span>
+                            {active && <i className="fa-solid fa-check text-[10px] text-[var(--hot)]" />}
+                          </div>
+                          <p className={`text-[10px] mt-0.5 leading-snug ${active ? 'opacity-80' : 'opacity-60'}`}>
+                            {p.sub}
+                          </p>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* ── Disclaimer Box ── */}
+                  <div className="mt-3 p-3 bg-[var(--paper-2)] border-2 border-[var(--edge)] text-[11px] leading-relaxed">
+                    <div className="font-bold flex items-center gap-1.5 mb-1 text-[11px] text-[var(--foreground)]">
+                      <i className="fa-solid fa-circle-info text-[var(--hot)] text-[12px]" />
+                      KENAPA WAJIB 1080P?
+                    </div>
+                    <p className="opacity-80">
+                      WhatsApp Status tidak mendukung native playback 1440p (2K) atau 4K — resolusi tinggi justru dikompresi paksa hingga pecah &amp; buram. Video kamu otomatis dioptimasi ke <strong>1080p (Lanczos Sharpener)</strong> dengan frame rate <strong>{targetFps} FPS</strong> agar hasil di Status WA tetap tajam dan pergerakan di layar HP 90Hz/120Hz super mulus.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

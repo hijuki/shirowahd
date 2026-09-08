@@ -58,9 +58,14 @@ export async function uploadFiles(files, opts) {
   return { ...res, base }
 }
 
-async function uploadSingle(files, { onProgress, field, signal, base }) {
+async function uploadSingle(files, { onProgress, field, signal, base, params }) {
   const fd = new FormData()
   for (const f of files) fd.append(field || 'files', f, f.name)
+  if (params && typeof params === 'object') {
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null) fd.append(k, String(v))
+    }
+  }
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', (base || '') + '/upload')

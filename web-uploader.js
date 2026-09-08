@@ -780,23 +780,19 @@ function toMp4Name(originalName) {
   return /\.[^.\/]+$/.test(n) ? n.replace(/\.[^.\/]+$/, '.mp4') : n + '.mp4';
 }
 
-async function convertToMp4Async(item, originalName, onPct, onPhase) {
+async function convertToMp4Async(item, originalName, onPct, onPhase, targetFps = null) {
   const id = crypto.randomBytes(8).toString('hex');
   const ext = extname(originalName || '').toLowerCase() || '.vid';
   const src = itemToPath(item, ext);
   const tmpIn = src.path;
   const tmpOut = join(tmpdir(), 'upload_out_' + id + '.mp4');
   try {
-    // Rencana fps dihitung SEKALI di sini dan dipakai ulang di semua jalur:
-    // gerbang remux, encode utama, dan percobaan cadangan. Selain menghemat
-    // panggilan ffprobe, ini mencegah dua jalur mengambil keputusan fps yang
-    // berbeda atas berkas yang sama.
     const rFps = rencanaFps(tmpIn);
 
     const quickNeeds = detectNeedsReencode(tmpIn, rFps);
-    const forceReencode = quickNeeds || rFps.bohong;
+    const forceReencode = quickNeeds || rFps.bohong || !!targetFps;
     
-    // JALUR 1: STREAM COPY / REMUX (Standar .ttv2 - Kualitas 100% Utuh Asli)
+    // JALUR 1: STREAM COPY / REMUX (Hanya jika tidak ada targetFps dan tidak perlu reencode)
     if (!forceReencode) {
       if (onPhase) onPhase('remux');
       const silentAudio = !hasAudioStream(tmpIn)
@@ -816,52 +812,34 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
       } catch {}
     }
 
-    // JALUR 2: HD ULTRA-CLEAN TRANSCODE
-    // Resolusi dibiarkan ASLI (kecuali .MOV/HEVC, dibatasi 1440p).
-    // Kualitas CRF 18. FPS dibatasi 60 — lihat src/lib/hillz-fps.js.
+    // JALUR 2: HD ULTRA-CLEAN TRANSCODE (1080p + high FPS)
     try { unlinkSync(tmpOut); } catch {}
     if (onPhase) onPhase('encode');
 
     const dur = probeDuration(tmpIn);
     const audioSenyap = hasAudioStream(tmpIn) ? '' : ' -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -shortest';
 
-    // Khusus file .MOV / iPhone HEVC: batasi sisi panjang max 2560px (1440p Quad HD)
-    // agar WhatsApp lancar memutar tanpa lag / drop frame / patah-patah.
     const isMov = ext === '.mov' || (originalName && /\.mov$/i.test(originalName)) || codecVideoOf(tmpIn) === 'hevc';
 
-    // SATU rantai -vf. Dulu scale memakai `-vf` sendiri; menambahkan filter fps
-    // sebagai `-vf` kedua akan membuat ffmpeg MEMBUANG yang pertama secara
-    // senyap (opsi terakhir menang), jadi penurunan fps atau downscale-nya
-    // hilang tanpa error apa pun.
-    //
-    // Urutan penting: fps DULU baru scale. Membuang frame sebelum penskalaan
-    // berarti frame yang dibuang tidak ikut diskalakan — hemat separuh kerja
-    // penskalaan pada sumber 120 fps.
-    const rantaiVf = [
+    const rantaiVf = targetFps ? [
+      `scale='if(gte(ih,iw),1080,-2)':'if(gte(ih,iw),-2,1080)':flags=lanczos`,
+      `scale=trunc(iw/2)*2:trunc(ih/2)*2`,
+      `unsharp=3:3:0.8:3:3:0.0`,
+      `fps=${targetFps}`,
+    ] : [
       filterFps(rFps),
       isMov ? 'scale=2560:2560:force_original_aspect_ratio=decrease:force_divisible_by=2' : '',
     ].filter(Boolean);
     const vfArg = rantaiVf.length ? ' -vf ' + JSON.stringify(rantaiVf.join(',')) : '';
 
-    // Saat fps diturunkan, keluaran dipaksa CFR (frame rate tetap) — pemutar WA
-    // menangani CFR jauh lebih mulus daripada VFR. Saat tidak ada penurunan,
-    // timing sumber dibiarkan apa adanya (passthrough).
-    const argFps = ' ' + argKeluaranFps(rFps, FFMPEG_PUNYA_FPS_MODE).join(' ');
+    const argFps = targetFps ? ' -r ' + targetFps : (' ' + argKeluaranFps(rFps, FFMPEG_PUNYA_FPS_MODE).join(' '));
 
-    // CRF 18 = Master Visual Quality. Preset `fast` (bukan `veryfast`): pada CRF
-    // yang sama, preset lebih lambat memberi kualitas per bit lebih baik dan
-    // gerakan lebih bersih. Biaya waktunya tertutup karena jumlah frame yang
-    // di-encode sudah separuh setelah fps diturunkan.
-    //
-    // `-g` dipatok ~2 detik supaya WA punya keyframe cukup rapat untuk seek dan
-    // pemulihan setelah paket hilang — keyint default 250 pada 60 fps = 4 detik,
-    // dan seek di tengah gerakan terasa tersendat.
-    const fpsUntukGop = rFps.perluTurun ? rFps.target : (rFps.fpsSumber || 30);
+    const fpsUntukGop = targetFps || (rFps.perluTurun ? rFps.target : (rFps.fpsSumber || 30));
     const gop = Math.max(24, Math.round(fpsUntukGop * 2));
 
     const perintahEncode = (extraIn, argFpsPakai) =>
       'ffmpeg -y' + extraIn + ' -i ' + JSON.stringify(tmpIn) + audioSenyap +
-      ' -c:v libx264 -profile:v high -pix_fmt yuv420p -preset fast -crf 18' +
+      ' -c:v libx264 -profile:v high -level 5.1 -pix_fmt yuv420p -preset fast -crf 18' +
       ' -g ' + gop + ' -keyint_min ' + Math.round(gop / 2) + ' -sc_threshold 0' +
       vfArg + argFpsPakai + ' -c:a aac -b:a 192k -ac 2 -movflags +faststart -progress pipe:1 -nostats ' +
       JSON.stringify(tmpOut);
@@ -903,19 +881,32 @@ async function convertToMp4Async(item, originalName, onPct, onPhase) {
 function parseMultipartFiles(body, boundary) {
   const parts = body.toString('binary').split('--' + boundary);
   const files = [];
+  const fields = {};
   for (const part of parts) {
     const fnMatch = part.match(/filename="([^"]+)"/);
-    if (!fnMatch) continue;
-    if (!part.includes('name="video"') && !part.includes('name="image"') && !part.includes('name="file"')) continue;
-    const fileName = fnMatch[1];
-    const headerEnd = part.indexOf('\r\n\r\n');
-    if (headerEnd === -1) continue;
-    const raw = part.slice(headerEnd + 4);
-    const trimmed = raw.endsWith('\r\n') ? raw.slice(0, -2) : raw;
-    const buf = Buffer.from(trimmed, 'binary');
-    if (buf.length < 100) continue;
-    files.push({ name: fileName, buf });
+    const nameMatch = part.match(/name="([^"]+)"/);
+    if (!nameMatch) continue;
+    const fieldName = nameMatch[1];
+
+    if (fnMatch) {
+      if (!part.includes('name="video"') && !part.includes('name="image"') && !part.includes('name="file"') && !part.includes('name="files"')) continue;
+      const fileName = fnMatch[1];
+      const headerEnd = part.indexOf('\r\n\r\n');
+      if (headerEnd === -1) continue;
+      const raw = part.slice(headerEnd + 4);
+      const trimmed = raw.endsWith('\r\n') ? raw.slice(0, -2) : raw;
+      const buf = Buffer.from(trimmed, 'binary');
+      if (buf.length < 100) continue;
+      files.push({ name: fileName, buf });
+    } else {
+      const headerEnd = part.indexOf('\r\n\r\n');
+      if (headerEnd === -1) continue;
+      const raw = part.slice(headerEnd + 4);
+      const val = (raw.endsWith('\r\n') ? raw.slice(0, -2) : raw).trim();
+      fields[fieldName] = val;
+    }
   }
+  files.fields = fields;
   return files;
 }
 
@@ -923,9 +914,10 @@ function parseMultipartFiles(body, boundary) {
 // Dipisah jadi fungsi supaya file besar yang masuk lewat chunk diproses dengan
 // langkah yang persis sama: remux/encode → simpan → log → notif. Tidak ada
 // perbedaan perlakuan video antara dua jalur.
-function beginUploadJob(files, clientIP) {
+function beginUploadJob(files, clientIP, options = {}) {
   const jobId = newJob(files.map(f => f.name));
   const job = jobs.get(jobId);
+  const targetFps = options.targetFps ? parseInt(options.targetFps, 10) : (files.fields?.targetFps ? parseInt(files.fields.targetFps, 10) : null);
   (async () => {
     try {
       let convFail = 0;
@@ -951,9 +943,10 @@ function beginUploadJob(files, clientIP) {
             p => { job.pct = Math.min(99, scale(p)); },
             phase => {
               // Label jujur: beda antara "cuma dirapikan" dan "dikonversi ulang".
-              job.stage = (phase === 'remux' ? 'Merapikan video' : 'Konversi video') + suffix + '…';
+              job.stage = (phase === 'remux' ? 'Merapikan video' : (targetFps ? `Konversi video 1080p (${targetFps} FPS)` : 'Konversi video')) + suffix + '…';
               if (job.needsEncode === null) job.needsEncode = (phase !== 'remux');
-            }
+            },
+            targetFps
           );
           // Sumber lama (berkas chunk / berkas sementara) tidak dipakai lagi:
           // hapus segera supaya /tmp tidak menyimpan dua salinan file besar.
