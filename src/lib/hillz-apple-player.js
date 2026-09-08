@@ -10,7 +10,7 @@ import { ytdl } from '../scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
-const BATAS_BASE64 = 550 * 1024;
+const BATAS_BASE64 = 480 * 1024;
 const BITRATE_MIN = { mp3: 20, opus: 16 };
 const BITRATE_AWAL = { mp3: 32, opus: 24 };
 
@@ -230,8 +230,6 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
   const backdrop = artworkDataUrl ? `<img class="player-backdrop-image" src="${artworkDataUrl}" alt="">` : '';
 
   const clientConfig = JSON.stringify({
-    socketUrl: audioUrl || '',
-    mimeType: 'audio/ogg',
     lyrics: lyrics || [],
   })
     .replace(/</g, '\\u003c')
@@ -553,7 +551,6 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
 
   const conf = window.__SNOWKIT_PLAYER__ || {};
   const lyrics = Array.isArray(conf.lyrics) ? conf.lyrics : [];
-  const streamUrl = conf.socketUrl || "";
   let activeIndex = -1;
   const lyricEls = [];
 
@@ -564,9 +561,6 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
     return m + ":" + String(sec).padStart(2, "0");
   };
 
-  if (streamUrl && !audio.src) {
-    audio.src = streamUrl;
-  }
   try {
     audio.load();
   } catch {}
