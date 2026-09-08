@@ -736,39 +736,76 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
   let durationSec = 0;
   let rawCoverUrl = '';
 
-  // 1. Cek apakah query adalah URL Spotify dan SnowKit terkonfigurasi
+  // 1. Cek apakah SnowKit terkonfigurasi (support URL Spotify, judul lagu, match, atau nama artis)
   const isSpotify = /open\.spotify\.com\/track\/|spotify:track:/i.test(query);
   const snowkitToken = process.env.SNOWKIT_TOKEN;
   const snowkitEndpoint = process.env.SNOWKIT_ENDPOINT || 'https://snow.kairogg.com.br';
 
-  if (isSpotify && snowkitToken) {
+  if (snowkitToken) {
     try {
       const { SnowKit } = await import('@luanxdd/snowkit');
       const { SnowKitPlayer } = await import('@luanxdd/snowkit/player');
       const snow = new SnowKit({ baseUrl: snowkitEndpoint, token: snowkitToken });
       const player = new SnowKitPlayer({ baseUrl: snowkitEndpoint, token: snowkitToken });
 
-      const track = await snow.catalog.resolve(query, { market: 'ID' });
-      title = track.title;
-      artist = track.artists?.map((a) => a.name).join(', ') || 'Spotify Artist';
-      durationSec = Math.floor((track.durationMs || 0) / 1000);
-      rawCoverUrl = track.artwork?.url || track.album?.images?.[0]?.url || '';
+      let track = null;
 
-      const ready = await player.ready(track.id, { market: 'ID' });
-      const lyrics = ready.lyrics?.lines || (await getLyrics(title, artist, durationSec));
-      const artworkDataUrl = await coverDataUri(rawCoverUrl);
+      if (isSpotify) {
+        // Resolve URL Spotify langsung
+        track = await snow.catalog.resolve(query, { market: 'ID' });
+      } else {
+        // Coba pencarian lagu di katalog SnowKit
+        const results = await snow.catalog.songs.search(query, { market: 'ID', limit: 5 });
+        if (results?.data?.length > 0) {
+          track = results.data[0];
+        } else {
+          // Coba cari artisnya jika pencarian lagu kosong
+          const artistRes = await snow.catalog.artists.search(query, { market: 'ID', limit: 3 });
+          if (artistRes?.data?.length > 0) {
+            const artistId = artistRes.data[0].id;
+            const topTracks = await snow.catalog.artists.albums(artistId, { market: 'ID', limit: 1 });
+            if (topTracks?.data?.length > 0) {
+              const albumTracks = await snow.catalog.albums.tracks(topTracks.data[0].id, { market: 'ID', limit: 5 });
+              track = albumTracks?.data?.[0];
+            }
+          }
+        }
+      }
 
-      const streamSrc = ready.audio?.socketUrl || ready.audio?.streamUrl;
-      const htmlPayload = buildApplePlayerHtml({
-        title,
-        artist,
-        durationSec,
-        audioUrl: streamSrc,
-        artworkDataUrl,
-        lyrics,
-      });
+      if (track && track.id) {
+        title = track.title || track.name;
+        artist = track.artists?.map((a) => a.name).join(', ') || 'Spotify Artist';
+        durationSec = Math.floor((track.durationMs || 0) / 1000);
+        rawCoverUrl = track.artwork?.url || track.album?.images?.[0]?.url || '';
 
-      return await sendRichEnvelope(sock, chat, htmlPayload, `${title} - ${artist}`);
+        const ready = await player.ready(track.id, { market: 'ID' });
+        let lyrics = [];
+        if (ready?.lyrics?.lines?.length) {
+          lyrics = ready.lyrics.lines.map((l) => ({
+            start_ms: l.startMs ?? l.start_ms ?? 0,
+            end_ms: l.endMs ?? l.end_ms ?? null,
+            text: l.text || '♪',
+          }));
+        } else {
+          lyrics = await getLyrics(title, artist, durationSec);
+        }
+
+        const artworkDataUrl = await coverDataUri(rawCoverUrl);
+        const streamSrc = ready.audio?.socketUrl || ready.audio?.streamUrl;
+
+        if (streamSrc) {
+          const htmlPayload = buildApplePlayerHtml({
+            title,
+            artist,
+            durationSec,
+            audioUrl: streamSrc,
+            artworkDataUrl,
+            lyrics,
+          });
+
+          return await sendRichEnvelope(sock, chat, htmlPayload, `${title} - ${artist}`);
+        }
+      }
     } catch (e) {
       console.warn('[SnowKit resolve fallback]:', e.message);
     }
