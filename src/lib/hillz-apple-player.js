@@ -747,8 +747,14 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
 
   // 2. Universal Search Engine (YouTube + LRCLIB + Opus 48kHz Transcoder)
   const cleanQuery = query.replace(/^https?:\/\/[^\s]+/i, '').trim() || query;
-  const searchResult = await yts(cleanQuery);
-  const video = searchResult?.videos?.[0];
+  
+  // Utamakan hasil 'audio' / 'official audio' agar tidak mengambil Official Music Video yang ada adegan klip/hening pembuka
+  let searchResult = await yts(cleanQuery + ' audio');
+  let video = searchResult?.videos?.find((v) => /official audio|topic|audio/i.test(v.title)) || searchResult?.videos?.[0];
+  if (!video) {
+    searchResult = await yts(cleanQuery);
+    video = searchResult?.videos?.[0];
+  }
 
   if (!video) {
     throw new Error('Lagu tidak ditemukan. Silakan coba judul atau nama artis lain.');

@@ -632,8 +632,12 @@ async function handler(m, { sock, conn, args }) {
     }
 
     try {
-        const cari = await yts(query);
-        const video = cari?.videos?.[0];
+        let cari = await yts(query + ' audio');
+        let video = cari?.videos?.find((v) => /official audio|topic|audio/i.test(v.title)) || cari?.videos?.[0];
+        if (!video || !video.url) {
+            cari = await yts(query);
+            video = cari?.videos?.[0];
+        }
 
         if (!video || !video.url) {
             if (typeof m.react === 'function') try { await m.react('❌'); } catch {}
