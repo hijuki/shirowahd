@@ -54,67 +54,270 @@ function runtime(detik) {
 
 function renderStatusCard({ ping, ramPersen, ramPakai, ramTotal, diskPersen, diskPakai, diskTotal, uptime, cpuCore, load, timestamp }) {
   const isOnline = ping !== null;
+  const pingColor = ping === null ? '#ef4444' : ping < 50 ? '#10b981' : ping < 120 ? '#38bdf8' : '#f59e0b';
+  const pingStatus = ping === null ? 'OFFLINE' : ping < 50 ? 'EXCELLENT' : ping < 120 ? 'STABLE' : 'FAIR';
+
   return `
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-* { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; box-sizing: border-box; }
-body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f2e9e4; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
-.card-wrap { width: 100%; max-width: 390px; margin: auto; }
-.ping-card { background: linear-gradient(145deg, #090d16 0%, #111827 100%); border: 1px solid rgba(0,255,178,0.25); border-radius: 20px; box-shadow: 0 16px 40px rgba(0,0,0,0.8); overflow: hidden; padding: 20px; position: relative; }
-.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; }
-.header-title { font-size: 13px; font-weight: 700; color: #00ffb2; text-transform: uppercase; letter-spacing: 1px; }
-.badge-status { background: ${isOnline ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}; color: ${isOnline ? '#4ade80' : '#f87171'}; font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid ${isOnline ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}; text-transform: uppercase; }
-.info-group { margin-bottom: 14px; }
-.info-label { font-size: 10.5px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-.info-value { font-size: 14.5px; color: #fff; font-weight: 600; word-break: break-all; font-family: monospace; }
-.ping-box { background: rgba(0,255,178,0.08); border: 1px solid rgba(0,255,178,0.3); border-radius: 14px; padding: 14px; text-align: center; margin: 16px 0; }
-.ping-title { font-size: 11px; color: #6ee7b7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-.ping-score { font-size: 26px; font-weight: 800; color: #38bdf8; }
-.grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.bar-track { background: rgba(255,255,255,0.08); border-radius: 8px; height: 8px; overflow: hidden; margin-top: 6px; }
-.bar-fill { height: 100%; border-radius: 8px; }
-.card-footer { text-align: center; font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 14px; letter-spacing: 0.5px; text-transform: uppercase; }
+* { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  margin: 0;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  color: #f8fafc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+}
+.telemetry-card {
+  position: relative;
+  width: 100%;
+  max-width: 370px;
+  background: #090a0f;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.10) 0px, transparent 50%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  padding: 20px;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+}
+.brand-text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+.status-pill {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: ${pingColor};
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+.hero-latency {
+  position: relative;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.latency-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.latency-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.latency-target {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.latency-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 32px;
+  font-weight: 800;
+  color: ${pingColor};
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.latency-unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-left: 2px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.stat-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.stat-percent {
+  font-size: 10.5px;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: #94a3b8;
+}
+.stat-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  margin-bottom: 8px;
+}
+.progress-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+.system-row {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.system-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+.system-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 3px;
+}
+.system-val {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.footer-text {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #475569;
+  text-transform: uppercase;
+}
+.footer-time {
+  font-size: 9.5px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: #64748b;
+}
 </style>
 
-<div class="card-wrap">
-  <div class="ping-card">
-    <div class="card-header">
-      <span class="header-title">VPS Telemetry & Status</span>
-      <span class="badge-status">${isOnline ? 'ONLINE' : 'OFFLINE'}</span>
+<div class="telemetry-card">
+  <div class="card-header">
+    <div class="brand-badge">
+      <div class="brand-dot"></div>
+      <span class="brand-text">SHIROWAHD NODE</span>
     </div>
+    <div class="status-pill">${pingStatus}</div>
+  </div>
 
-    <div class="ping-box">
-      <div class="ping-title">TCP Latency to WhatsApp Server</div>
-      <div class="ping-score">${ping === null ? 'Timeout' : ping + ' ms'}</div>
+  <div class="hero-latency">
+    <div class="latency-meta">
+      <span class="latency-label">TCP Handshake</span>
+      <span class="latency-target">g.whatsapp.net:443</span>
     </div>
-
-    <div class="grid-row">
-      <div class="info-group">
-        <div class="info-label">RAM Usage</div>
-        <div class="info-value">${formatSize(ramPakai)} / ${formatSize(ramTotal)}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${ramPersen}%; background:${ramPersen > 85 ? '#f87171' : '#00ffb2'};"></div></div>
-      </div>
-      <div class="info-group">
-        <div class="info-label">Disk Storage</div>
-        <div class="info-value">${diskTotal ? formatSize(diskPakai) + ' / ' + formatSize(diskTotal) : 'N/A'}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${diskPersen || 0}%; background:${diskPersen > 85 ? '#f87171' : '#38bdf8'};"></div></div>
-      </div>
+    <div class="latency-value">
+      ${ping === null ? 'FAIL' : ping}<span class="latency-unit">${ping === null ? '' : 'ms'}</span>
     </div>
+  </div>
 
-    <div class="grid-row">
-      <div class="info-group">
-        <div class="info-label">Uptime VPS</div>
-        <div class="info-value">${runtime(uptime)}</div>
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-top">
+        <span class="stat-label">RAM Memory</span>
+        <span class="stat-percent">${ramPersen}%</span>
       </div>
-      <div class="info-group">
-        <div class="info-label">CPU Cores & Load</div>
-        <div class="info-value">${cpuCore} Cores (${load[0]})</div>
+      <div class="stat-value">${formatSize(ramPakai)}</div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width: ${ramPersen}%; background: ${ramPersen > 85 ? '#ef4444' : '#10b981'};"></div>
       </div>
     </div>
 
-    <div class="card-footer">
-      SHIROWAHD ENGINE • ${timestamp}
+    <div class="stat-box">
+      <div class="stat-top">
+        <span class="stat-label">NVMe Disk</span>
+        <span class="stat-percent">${diskPersen || 0}%</span>
+      </div>
+      <div class="stat-value">${diskTotal ? formatSize(diskPakai) : 'N/A'}</div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width: ${diskPersen || 0}%; background: ${diskPersen > 85 ? '#ef4444' : '#0ea5e9'};"></div>
+      </div>
     </div>
+  </div>
+
+  <div class="system-row">
+    <div class="system-item">
+      <div class="system-label">CPU Load Average</div>
+      <div class="system-val">${cpuCore}C • [${load.join(', ')}]</div>
+    </div>
+    <div class="system-item">
+      <div class="system-label">Node Uptime</div>
+      <div class="system-val">${runtime(uptime)}</div>
+    </div>
+  </div>
+
+  <div class="card-footer">
+    <span class="footer-text">SECURE TELEMETRY</span>
+    <span class="footer-time">${timestamp} WIB</span>
   </div>
 </div>
 `;
