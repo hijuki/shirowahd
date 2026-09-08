@@ -208,11 +208,10 @@ async function handler(m, { sock, conn, args, text }) {
         targetFps = parsedFps;
     }
 
-    if (typeof m.react === 'function') await m.react('⏳');
     const prosesText = isAuto
-        ? `⏳ *Sedang memproses video ke Mode Default (Resolusi & FPS Asli)...*`
-        : `⏳ *Sedang memproses video ke 1080p (${targetFps} FPS)...*`;
-    await m.reply(`${prosesText}\n\n_Mohon tunggu sebentar, video sedang di-render dengan filter anti-buram._`);
+        ? `🎬 *PROSES STATUS WA DIMULAI* 🎬\n\n> Video sedang diproses (Mode Default Asli).\n> ⏱️ Estimasi waktu: *20-60 detik*.\n\n_Mohon tunggu ya kak, video akan langsung dikirim setelah selesai di-render._`
+        : `🎬 *PROSES STATUS WA DIMULAI* 🎬\n\n> Video sedang diproses ke 1080p (${targetFps} FPS).\n> ⏱️ Estimasi waktu: *30-90 detik*.\n\n_Mohon tunggu ya kak, video akan langsung dikirim setelah selesai di-render._`;
+    await m.reply(prosesText);
 
     const tempDir = os.tmpdir();
     const ts = Date.now();

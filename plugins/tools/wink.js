@@ -30,7 +30,12 @@ async function handler(m, { sock }) {
     );
   }
 
-  await m.react("🕕");
+  await m.reply(
+    `✨ *PROSES WINK ENHANCE DIMULAI* ✨\n\n` +
+      `> Video sedang dikirim dan diproses AI Wink ke *Ultra HD* 🎬\n` +
+      `> ⏱️ Estimasi waktu: *1-5 menit* tergantung durasi video.\n\n` +
+      `_Mohon tunggu ya, bot akan langsung mengirimkan hasilnya._`
+  );
 
   try {
     let videoBuffer = null;
@@ -63,12 +68,6 @@ async function handler(m, { sock }) {
       await m.react("❌");
       return m.reply(`❌ *FILE TERLALU BESAR*\n\nMaksimal ukuran video cuma *50MB* ya!`);
     }
-
-    await m.reply(
-      `🎬 *ᴘʀᴏsᴇs ᴡɪɴᴋ ᴇɴʜᴀɴᴄᴇ ᴅɪᴍᴜʟᴀɪ*\n\n` +
-        `> Video lagi diproses AI Wink biar jadi *Ultra HD* ✨\n` +
-        `> Estimasi *1-5 menit*, mohon sabar ya!`,
-    );
 
     const result = await winkEnhance(videoBuffer, {
       filename: `wink-${Date.now()}.mp4`,

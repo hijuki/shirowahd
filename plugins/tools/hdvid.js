@@ -38,7 +38,12 @@ async function handler(m, { sock }) {
     return m.reply(txt);
   }
 
-  await m.react("🕕");
+  await m.reply(
+    `🎞️ *PROSES ENHANCE DIMULAI* 🎞️\n\n` +
+      `> Video sedang diunduh dan diproses ke resolusi HD! ✨\n` +
+      `> ⏱️ Estimasi waktu: *1-3 menit* tergantung ukuran video.\n\n` +
+      `_Mohon bersabar ya kak, video akan otomatis dikirim setelah selesai._`
+  );
 
   try {
     let videoBuffer = null;
@@ -71,8 +76,6 @@ async function handler(m, { sock }) {
       await m.react("❌");
       return m.reply(`❌ *FILE TERLALU BESAR*\n\nMaaf kak, maksimal ukuran video cuma 50MB ya!`);
     }
-
-    await m.reply(`🎞️ *PROSES ENHANCE DIMULAI* 🎞️\n\nVideo kakak sedang diproses agar menjadi HD! ✨\nEstimasi waktu tergantung ukuran video, mohon bersabar ya kak!`);
 
     const tempDir = os.tmpdir();
     const inputPath = path.join(tempDir, `input-hd-${Date.now()}.mp4`);
