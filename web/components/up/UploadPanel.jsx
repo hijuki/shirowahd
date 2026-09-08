@@ -116,7 +116,7 @@ function Reactor({ pct, stageIdx, phase, phaseText, cellFloor, label, sub, right
 }
 
 const FPS_PRESETS = [
-  { fps: 'default', title: 'Default (Bawaan)', sub: 'Standar Shirowahd · .ttv2', badge: 'BAWAAN' },
+  { fps: 'default', title: 'Default (Bawaan)', sub: 'Standar Kualitas Asli', badge: 'BAWAAN' },
   { fps: 60, title: '1080p · 60 FPS', sub: 'Standar Mulus · Fast' },
   { fps: 90, title: '1080p · 90 FPS', sub: 'Rekomendasi · 90Hz', badge: 'OPTIMAL' },
   { fps: 120, title: '1080p · 120 FPS', sub: 'Ultra Smooth · 120Hz' }
@@ -475,12 +475,12 @@ export default function UploadPanel({ settings, toast }) {
                   <div className="mt-3 p-3 bg-[var(--paper-2)] border-2 border-[var(--edge)] text-[11px] leading-relaxed">
                     <div className="font-bold flex items-center gap-1.5 mb-1 text-[11px] text-[var(--foreground)]">
                       <i className="fa-solid fa-circle-info text-[var(--hot)] text-[12px]" />
-                      {targetFps === 'default' ? 'MODE DEFAULT (BAWAAN SHIROWAHD)' : 'KENAPA WAJIB 1080P?'}
+                      {targetFps === 'default' ? 'MODE DEFAULT (BAWAAN SISTEM)' : 'KENAPA WAJIB 1080P?'}
                     </div>
                     <p className="opacity-80">
                       {targetFps === 'default' ? (
                         <>
-                          Menggunakan pipeline bawaan sistem <strong>Shirowahd (.ttv2)</strong>. Video diproses dengan kualitas master asli (CRF 18), mempertahankan resolusi sumber tanpa dipotong paksa ke 1080p, dan stream-copy utuh jika format sudah optimal. Jika ingin dioptimasi khusus untuk Status WA agar tidak pecah &amp; super mulus di layar HP, pilih preset <strong>1080p (60/90/120 FPS)</strong>.
+                          Menggunakan standar bawaan sistem kami. Kualitas dan resolusi asli video kamu dipertahankan sepenuhnya tanpa dipangkas paksa ke 1080p. Jika video kamu di atas 1080p dan ingin diunggah khusus ke Status WhatsApp agar tidak pecah &amp; mulus di layar HP, pilih preset <strong>1080p (60/90/120 FPS)</strong>.
                         </>
                       ) : (
                         <>
