@@ -33,7 +33,26 @@ async function handler(m, { sock }) {
   await m.react("🕕");
 
   try {
-    const videoBuffer = (await m?.quoted?.download?.()) || (await m.download?.());
+    let videoBuffer = null;
+    try {
+      videoBuffer = (await m?.quoted?.download?.()) || (await m.download?.());
+    } catch {}
+
+    if (!videoBuffer || videoBuffer.length < 1000) {
+      const q = m.quoted;
+      const msg = q?.message || m.message;
+      const target = msg?.ephemeralMessage?.message || msg?.viewOnceMessage?.message || msg?.viewOnceMessageV2?.message || msg;
+      const content = target?.videoMessage || target?.documentMessage;
+      if (content) {
+        try {
+          const { downloadContentFromMessage } = await import('hillz');
+          const stream = await downloadContentFromMessage(content, target.documentMessage ? 'document' : 'video');
+          const chunks = [];
+          for await (const chunk of stream) chunks.push(chunk);
+          videoBuffer = Buffer.concat(chunks);
+        } catch {}
+      }
+    }
 
     if (!videoBuffer || videoBuffer.length === 0) {
       await m.react("❌");
