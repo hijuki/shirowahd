@@ -121,7 +121,8 @@ let FormData,
   stickerlyAnswerHandler,
   caiAnswerHandler,
   caiChatHandler,
-  comparationAnswerHandler;
+  comparationAnswerHandler,
+  pinzPlugin;
 
 try {
   FormData = (await import("form-data")).default || (await import("form-data"));
@@ -228,6 +229,9 @@ try {
 } catch { }
 try {
   sulapPlugin = await import("../plugins/fun/sulap.js");
+} catch { }
+try {
+  pinzPlugin = await import("../plugins/search/pinz.js");
 } catch { }
 try {
   handleAutoAI = (await import("./lib/hillz-auto-ai.js")).handleAutoAI;
@@ -371,6 +375,16 @@ async function handleSmartTriggers(m, sock, db) {
     /^[\.\/\!\#\-]?(autoreply|ar|smarttrigger|smarttriggers)$/.test(firstWord)
   ) {
     return false;
+  }
+
+  // Auto-download gambar Pinterest jika ada link di chat
+  if (pinzPlugin?.checkPinterestLink) {
+    try {
+      const handled = await pinzPlugin.checkPinterestLink(m, sock);
+      if (handled) return true;
+    } catch (e) {
+      console.error("[Pinz] Auto-download error:", e.message);
+    }
   }
 
   if (text === "done") {
