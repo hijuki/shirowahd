@@ -43,16 +43,27 @@ async function handler(m, { sock }) {
 
   let code = quoted.text || quoted.body || "";
 
+  // Dukung unduh berkas .js / text dari dokumen WhatsApp
   if (
-    quoted.mimetype === "application/javascript" ||
-    quoted.filename?.endsWith(".js")
+    quoted.mimetype?.includes("javascript") ||
+    quoted.mimetype?.includes("text") ||
+    quoted.mimetype?.includes("octet-stream") ||
+    quoted.fileName?.endsWith(".js") ||
+    quoted.filename?.endsWith(".js") ||
+    quoted.mtype === "documentMessage"
   ) {
     try {
-      code = (await quoted.download()).toString();
+      const downloaded = await quoted.download();
+      if (downloaded && downloaded.length > 0) {
+        code = downloaded.toString("utf-8");
+      }
     } catch (e) {
-      return m.reply(`Maaf *${m.pushName}*, proses gagal karena file tidak dapat diunduh.`);
+      // jika gagal download buffer, fallback ke text
     }
   }
+
+  // Bersihkan markdown code blocks (```javascript ... ```) jika di-copy langsung dari chat
+  code = code.trim().replace(/^```(?:javascript|js)?\r?\n([\s\S]*?)\r?\n```$/i, "$1").trim();
 
   if (!code || code.length < 50) {
     return m.reply(`Maaf *${m.pushName}*, proses gagal karena kode terlalu pendek atau tidak valid.`);

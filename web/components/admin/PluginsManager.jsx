@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   getBotPluginsDetailed,
   auditBotPlugins,
@@ -10,43 +11,91 @@ import {
   clearBotPluginErrors,
 } from '@/lib/admin-api'
 
-export default function PluginsManager({ toast }) {
-  const [data, setData] = useState(null)
+const PAGE_SIZE = 25
+
+const CATEGORY_ICONS = {
+  owner: 'fa-user-shield',
+  group: 'fa-users',
+  rpg: 'fa-shield-halved',
+  tools: 'fa-toolbox',
+  cek: 'fa-list-check',
+  ai: 'fa-robot',
+  search: 'fa-magnifying-glass',
+  fun: 'fa-face-laugh-beam',
+  game: 'fa-gamepad',
+  canvas: 'fa-paintbrush',
+  download: 'fa-cloud-arrow-down',
+  main: 'fa-house',
+  sticker: 'fa-note-sticky',
+  panel: 'fa-server',
+  user: 'fa-user',
+  stalker: 'fa-crosshairs',
+  info: 'fa-circle-info',
+  store: 'fa-shop',
+  random: 'fa-shuffle',
+  clan: 'fa-flag',
+  primbon: 'fa-hat-wizard',
+  vps: 'fa-network-wired',
+  claim: 'fa-gift',
+  religi: 'fa-mosque',
+  islamic: 'fa-star-and-crescent',
+  anime: 'fa-tv',
+  asupan: 'fa-film',
+  utility: 'fa-gear',
+  convert: 'fa-arrow-right-arrow-left',
+  media: 'fa-photo-film',
+  music: 'fa-music',
+  tts: 'fa-microphone',
+  ephoto: 'fa-image',
+  jpm: 'fa-bullhorn',
+  pushkontak: 'fa-address-book',
+  other: 'fa-puzzle-piece'
+}
+
+export default function PluginsManager({ toast: propToast }) {
+  const toast = propToast || ((msg) => console.log(msg))
+
   const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
   const [actionBusy, setActionBusy] = useState(false)
+
+  // Filtering & Pagination
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'online' | 'error' | 'disabled' | 'shadowed'
+  const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [page, setPage] = useState(1)
-  const PAGE_SIZE = 25
 
-  // Modals & Panels
+  // View Mode: 'category' (grouped per section) or 'flat' (list biasa)
+  const [viewMode, setViewMode] = useState('category')
+  const [collapsedCategories, setCollapsedCategories] = useState({})
+
+  // Modals & Inspection States
   const [auditResult, setAuditResult] = useState(null)
+  const [testResult, setTestResult] = useState(null)
   const [errorLogs, setErrorLogs] = useState(null)
   const [selectedPluginError, setSelectedPluginError] = useState(null)
-  const [testResult, setTestResult] = useState(null)
 
-  const loadData = async (silent = false) => {
+  const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     try {
       const res = await getBotPluginsDetailed()
       if (res?.ok) {
         setData(res)
       } else {
-        if (!silent) toast(res?.error || 'Gagal mengambil data plugin', 'error')
+        toast(res?.error || 'Gagal mengambil data plugin', 'error')
       }
     } catch (err) {
-      if (!silent) toast(err.message, 'error')
+      toast(err.message, 'error')
     } finally {
-      if (!silent) setLoading(false)
+      setLoading(false)
     }
-  }
+  }, [toast])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
-  // Action handlers
+  // Handlers
   const handleToggle = async (plugin) => {
     const targetStatus = !plugin.isEnabled
     setActionBusy(true)
@@ -174,10 +223,12 @@ export default function PluginsManager({ toast }) {
     if (!data?.plugins) return []
     const map = new Map()
     for (const p of data.plugins) {
-      const cat = p.category || 'uncategorized'
+      const cat = (p.category || 'other').trim().toLowerCase()
       map.set(cat, (map.get(cat) || 0) + 1)
     }
-    return Array.from(map.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
   }, [data])
 
   // Filtering plugins
@@ -192,7 +243,7 @@ export default function PluginsManager({ toast }) {
 
     // Category filter
     if (categoryFilter !== 'all') {
-      list = list.filter((p) => (p.category || 'uncategorized').toLowerCase() === categoryFilter.toLowerCase())
+      list = list.filter((p) => (p.category || 'other').toLowerCase() === categoryFilter.toLowerCase())
     }
 
     // Search query
@@ -201,7 +252,7 @@ export default function PluginsManager({ toast }) {
       list = list.filter((p) => {
         return (
           p.name.toLowerCase().includes(q) ||
-          p.filePath.toLowerCase().includes(q) ||
+          (p.filePath && p.filePath.toLowerCase().includes(q)) ||
           (p.description && p.description.toLowerCase().includes(q)) ||
           (p.aliases && p.aliases.some((a) => a.toLowerCase().includes(q)))
         )
@@ -211,7 +262,43 @@ export default function PluginsManager({ toast }) {
     return list
   }, [data, statusFilter, categoryFilter, search])
 
-  // Pagination
+  // Grouped by category for Category View
+  const groupedPlugins = useMemo(() => {
+    const groups = {}
+    for (const p of filteredPlugins) {
+      const cat = (p.category || 'other').toLowerCase().trim()
+      if (!groups[cat]) groups[cat] = []
+      groups[cat].push(p)
+    }
+    // Urutkan plugin dalam kategori berdasarkan nama A-Z
+    for (const cat in groups) {
+      groups[cat].sort((a, b) => a.name.localeCompare(b.name))
+    }
+    // Urutkan kelompok kategori berdasarkan jumlah plugin terbanyak
+    return Object.entries(groups).sort((a, b) => b[1].length - a[1].length)
+  }, [filteredPlugins])
+
+  // Toggle Collapse
+  const toggleCategoryCollapse = (catName) => {
+    setCollapsedCategories((prev) => ({
+      ...prev,
+      [catName]: !prev[catName],
+    }))
+  }
+
+  const collapseAll = () => {
+    const all = {}
+    groupedPlugins.forEach(([cat]) => {
+      all[cat] = true
+    })
+    setCollapsedCategories(all)
+  }
+
+  const expandAll = () => {
+    setCollapsedCategories({})
+  }
+
+  // Pagination for Flat View
   const totalPages = Math.ceil(filteredPlugins.length / PAGE_SIZE) || 1
   const paginatedPlugins = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE
@@ -221,6 +308,164 @@ export default function PluginsManager({ toast }) {
   useEffect(() => {
     setPage(1)
   }, [search, statusFilter, categoryFilter])
+
+  // Render individual plugin row
+  const renderPluginRow = (plugin) => {
+    const isOnline = plugin.status === 'online'
+    const isErr = plugin.status === 'error'
+    const isOff = plugin.status === 'disabled'
+    const isShadow = plugin.status === 'shadowed'
+
+    return (
+      <div
+        key={plugin.filePath || plugin.name}
+        className={`p-3.5 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3.5 transition-colors border-b border-[var(--edge)] last:border-b-0 ${
+          isErr
+            ? 'bg-rose-500/5 hover:bg-rose-500/10'
+            : isOff
+            ? 'bg-amber-500/5 hover:bg-amber-500/10'
+            : 'hover:bg-[var(--paper-2)]'
+        }`}
+      >
+        {/* Left: Plugin Details */}
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status Badge */}
+            <span
+              className={`chip text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 ${
+                isOnline
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                  : isErr
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
+                  : isOff
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  : 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+              }`}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{
+                  backgroundColor: isOnline
+                    ? '#34d399'
+                    : isErr
+                    ? '#f87171'
+                    : isOff
+                    ? '#fbbf24'
+                    : '#c084fc',
+                }}
+              />
+              {isOnline ? 'ONLINE' : isErr ? 'ERROR' : isOff ? 'OFF' : 'SHADOWED'}
+            </span>
+
+            {/* Command Name */}
+            <span className="font-mono font-bold text-sm md:text-base text-[var(--ink)]">
+              .{plugin.name}
+            </span>
+
+            {/* Category Tag */}
+            <span className="chip text-[9.5px] px-2 py-0.2 bg-[var(--paper-2)] border-[var(--edge)] text-[var(--ink-2)] font-mono uppercase tracking-wider">
+              {plugin.category}
+            </span>
+
+            {/* Role Flags */}
+            {plugin.isOwner && (
+              <span className="chip text-[9px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 font-bold">
+                OWNER
+              </span>
+            )}
+            {plugin.isPremium && (
+              <span className="chip text-[9px] px-1.5 py-0.2 bg-blue-500/20 text-blue-300 font-bold">
+                PREM
+              </span>
+            )}
+            {plugin.isGroup && (
+              <span className="chip text-[9px] px-1.5 py-0.2 bg-teal-500/20 text-teal-300 font-bold">
+                GROUP
+              </span>
+            )}
+          </div>
+
+          {/* Description */}
+          <p className="text-xs text-[var(--ink-2)] line-clamp-1">
+            {plugin.description || 'Tidak ada deskripsi modul.'}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--ink-2)] font-mono">
+            <span className="flex items-center gap-1 opacity-80" title={plugin.filePath}>
+              <i className="fa-regular fa-file-code text-[10px]" />
+              {plugin.filePath}
+            </span>
+
+            {plugin.aliases && plugin.aliases.length > 0 && (
+              <span className="flex items-center gap-1 opacity-70">
+                <i className="fa-solid fa-tags text-[10px]" />
+                alias: {plugin.aliases.map((a) => `.${a}`).join(', ')}
+              </span>
+            )}
+
+            <span className="flex items-center gap-2 opacity-80">
+              <span>Runs: <b>{plugin.runs}x</b></span>
+              {plugin.errors > 0 && (
+                <span className="text-rose-400">Galat: <b>{plugin.errors}x</b></span>
+              )}
+            </span>
+          </div>
+
+          {/* Last Error inline message if available */}
+          {plugin.lastError && (
+            <div className="mt-1 p-2 rounded bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2">
+              <i className="fa-solid fa-triangle-exclamation text-rose-400 mt-0.5 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-[11px] truncate">{plugin.lastError.message}</p>
+              </div>
+              <button
+                onClick={() => setSelectedPluginError(plugin)}
+                className="btn btn-quiet text-[10px] py-0.5 px-1.5 text-rose-300 shrink-0"
+              >
+                Detail
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+          {/* Toggle Switch */}
+          <button
+            onClick={() => handleToggle(plugin)}
+            disabled={actionBusy}
+            title={plugin.isEnabled ? 'Nonaktifkan Plugin' : 'Aktifkan Plugin'}
+            className={`btn text-xs py-1.5 px-3 flex items-center gap-1.5 ${
+              plugin.isEnabled ? 'btn-quiet text-emerald-400' : 'btn-warn text-amber-300'
+            }`}
+          >
+            <i className={`fa-solid ${plugin.isEnabled ? 'fa-toggle-on text-emerald-400 text-sm' : 'fa-toggle-off text-amber-400 text-sm'}`} />
+            <span>{plugin.isEnabled ? 'ON' : 'OFF'}</span>
+          </button>
+
+          {/* Test Syntax Button */}
+          <button
+            onClick={() => handleTest(plugin)}
+            disabled={actionBusy}
+            className="btn btn-quiet text-xs py-1.5 px-2.5"
+            title="Uji Syntax & Import Module"
+          >
+            <i className="fa-solid fa-vial" />
+          </button>
+
+          {/* Hot Reload Button */}
+          <button
+            onClick={() => handleReload(plugin)}
+            disabled={actionBusy}
+            className="btn btn-quiet text-xs py-1.5 px-2.5"
+            title="Hot-Reload Plugin dari Disk"
+          >
+            <i className="fa-solid fa-rotate" />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -232,7 +477,7 @@ export default function PluginsManager({ toast }) {
             Montir Plugin
           </h1>
           <p className="text-[var(--ink-2)] text-sm mt-1">
-            Pantau status kesehatan, periksa error runtime, uji modul, dan kelola seluruh {data?.total || '800+'} plugin bot secara live.
+            Pantau status kesehatan, periksa error runtime, uji modul, dan kelola seluruh {data?.total || '830+'} plugin bot secara live per kategori.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -334,8 +579,63 @@ export default function PluginsManager({ toast }) {
         })}
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="card p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      {/* Category Pills Bar (Quick Filter) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-[var(--ink-2)]">
+          <span className="font-bold tracking-wider uppercase text-[10.5px]">Kategori Modul ({categories.length})</span>
+          {viewMode === 'category' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={expandAll}
+                className="hover:text-[var(--ink)] transition-colors text-[11px] underline"
+              >
+                Buka Semua
+              </button>
+              <span>·</span>
+              <button
+                onClick={collapseAll}
+                className="hover:text-[var(--ink)] transition-colors text-[11px] underline"
+              >
+                Tutup Semua
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
+          <button
+            onClick={() => setCategoryFilter('all')}
+            className={`chip text-xs py-1 px-3 cursor-pointer shrink-0 transition-all font-mono ${
+              categoryFilter === 'all'
+                ? 'bg-[var(--volt)] text-black font-bold border-transparent shadow-sm'
+                : 'bg-[var(--paper)] hover:bg-[var(--paper-2)] text-[var(--ink-2)] border-[var(--edge)]'
+            }`}
+          >
+            SEMUA ({data?.total || 0})
+          </button>
+          {categories.map((c) => {
+            const active = categoryFilter.toLowerCase() === c.name.toLowerCase()
+            const icon = CATEGORY_ICONS[c.name] || 'fa-folder'
+            return (
+              <button
+                key={c.name}
+                onClick={() => setCategoryFilter(active ? 'all' : c.name)}
+                className={`chip text-xs py-1 px-3 cursor-pointer shrink-0 transition-all flex items-center gap-1.5 font-mono ${
+                  active
+                    ? 'bg-[var(--volt)] text-black font-bold border-transparent shadow-sm'
+                    : 'bg-[var(--paper)] hover:bg-[var(--paper-2)] text-[var(--ink-2)] border-[var(--edge)]'
+                }`}
+              >
+                <i className={`fa-solid ${icon} text-[10.5px]`} />
+                <span>{c.name.toUpperCase()}</span>
+                <span className="opacity-70 text-[10px]">({c.count})</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Filter & View Mode Bar */}
+      <div className="card p-3.5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1">
           <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-2)] text-xs" />
@@ -343,7 +643,7 @@ export default function PluginsManager({ toast }) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama command (.play), alias, path berkas, atau deskripsi..."
+            placeholder="Cari command (.play), alias, path file, atau deskripsi..."
             className="input w-full pl-9 pr-8 text-xs py-2"
           />
           {search && (
@@ -356,20 +656,35 @@ export default function PluginsManager({ toast }) {
           )}
         </div>
 
-        {/* Category Dropdown */}
-        <div className="flex items-center gap-2">
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="input text-xs py-2 px-3"
-          >
-            <option value="all">Semua Kategori ({data?.total || 0})</option>
-            {categories.map((c) => (
-              <option key={c.name} value={c.name}>
-                {c.name.toUpperCase()} ({c.count})
-              </option>
-            ))}
-          </select>
+        {/* View Mode Switcher + Category Dropdown */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Segmented View Mode */}
+          <div className="bg-[var(--paper-2)] p-1 rounded-xl border border-[var(--edge)] flex items-center gap-1">
+            <button
+              onClick={() => setViewMode('category')}
+              className={`text-xs py-1 px-3 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                viewMode === 'category'
+                  ? 'bg-[var(--paper)] text-[var(--volt)] shadow-sm border border-[var(--edge)]'
+                  : 'text-[var(--ink-2)] hover:text-[var(--ink)]'
+              }`}
+              title="Kelompokkan plugin per kategori"
+            >
+              <i className="fa-solid fa-layer-group" />
+              <span>Per Kategori</span>
+            </button>
+            <button
+              onClick={() => setViewMode('flat')}
+              className={`text-xs py-1 px-3 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                viewMode === 'flat'
+                  ? 'bg-[var(--paper)] text-[var(--volt)] shadow-sm border border-[var(--edge)]'
+                  : 'text-[var(--ink-2)] hover:text-[var(--ink)]'
+              }`}
+              title="Tampilkan daftar flat dengan paginasi"
+            >
+              <i className="fa-solid fa-list-ul" />
+              <span>List Datar</span>
+            </button>
+          </div>
 
           {/* Quick Clear Filter */}
           {(statusFilter !== 'all' || categoryFilter !== 'all' || search) && (
@@ -389,208 +704,119 @@ export default function PluginsManager({ toast }) {
         </div>
       </div>
 
-      {/* Main Plugin List */}
-      <div className="card p-0 overflow-hidden border-[var(--edge)]">
-        {loading ? (
-          <div className="p-12 text-center text-[var(--ink-2)] text-sm">
-            <i className="fa-solid fa-circle-notch fa-spin text-2xl text-[var(--volt)] mb-3 block" />
-            Memuat daftar seluruh plugin &amp; status montir...
-          </div>
-        ) : filteredPlugins.length === 0 ? (
-          <div className="p-12 text-center text-[var(--ink-2)] text-sm">
-            <i className="fa-solid fa-box-open text-3xl mb-3 block opacity-40" />
-            Tidak ada plugin yang cocok dengan filter atau pencarian saat ini.
-          </div>
-        ) : (
-          <div className="divide-y divide-[var(--edge)]">
-            {paginatedPlugins.map((plugin) => {
-              const isOnline = plugin.status === 'online'
-              const isErr = plugin.status === 'error'
-              const isOff = plugin.status === 'disabled'
-              const isShadow = plugin.status === 'shadowed'
+      {/* Main Content Area */}
+      {loading ? (
+        <div className="card p-12 text-center text-[var(--ink-2)] text-sm">
+          <i className="fa-solid fa-circle-notch fa-spin text-2xl text-[var(--volt)] mb-3 block" />
+          Memuat daftar seluruh plugin &amp; status montir...
+        </div>
+      ) : filteredPlugins.length === 0 ? (
+        <div className="card p-12 text-center text-[var(--ink-2)] text-sm">
+          <i className="fa-solid fa-box-open text-3xl mb-3 block opacity-40" />
+          Tidak ada plugin yang cocok dengan filter atau pencarian saat ini.
+        </div>
+      ) : viewMode === 'category' ? (
+        /* ═══ VIEW MODE: GROUPED PER KATEGORI ═══ */
+        <div className="space-y-4">
+          {groupedPlugins.map(([catName, pluginsInCat]) => {
+            const isCollapsed = !!collapsedCategories[catName]
+            const icon = CATEGORY_ICONS[catName] || 'fa-folder'
+            const errCount = pluginsInCat.filter((p) => p.status === 'error').length
+            const offCount = pluginsInCat.filter((p) => p.status === 'disabled').length
 
-              return (
+            return (
+              <div
+                key={catName}
+                className="card p-0 overflow-hidden border-[var(--edge)] bg-[var(--paper)]"
+              >
+                {/* Category Header Banner */}
                 <div
-                  key={plugin.filePath || plugin.name}
-                  className={`p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors ${
-                    isErr
-                      ? 'bg-rose-500/5 hover:bg-rose-500/10'
-                      : isOff
-                      ? 'bg-amber-500/5 hover:bg-amber-500/10'
-                      : 'hover:bg-[var(--paper-2)]'
-                  }`}
+                  onClick={() => toggleCategoryCollapse(catName)}
+                  className="p-3.5 md:p-4 bg-[var(--paper-2)] border-b border-[var(--edge)] flex items-center justify-between cursor-pointer hover:bg-[var(--paper-3)] transition-colors select-none"
                 >
-                  {/* Left: Plugin Details */}
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Status Badge */}
-                      <span
-                        className={`chip text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 ${
-                          isOnline
-                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                            : isErr
-                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
-                            : isOff
-                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                            : 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                        }`}
-                      >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{
-                            backgroundColor: isOnline
-                              ? '#34d399'
-                              : isErr
-                              ? '#f87171'
-                              : isOff
-                              ? '#fbbf24'
-                              : '#c084fc',
-                          }}
-                        />
-                        {isOnline ? 'ONLINE' : isErr ? 'ERROR' : isOff ? 'OFF' : 'SHADOWED'}
-                      </span>
-
-                      {/* Command Name */}
-                      <span className="font-mono font-bold text-base text-[var(--ink)]">
-                        .{plugin.name}
-                      </span>
-
-                      {/* Category Badge */}
-                      <span className="chip text-[10px] px-2 py-0.5 bg-[var(--paper-2)] border-[var(--edge)] text-[var(--ink-2)] font-mono">
-                        {plugin.category}
-                      </span>
-
-                      {/* Role Flags */}
-                      {plugin.isOwner && (
-                        <span className="chip text-[9px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 font-bold">
-                          OWNER
-                        </span>
-                      )}
-                      {plugin.isPremium && (
-                        <span className="chip text-[9px] px-1.5 py-0.2 bg-blue-500/20 text-blue-300 font-bold">
-                          PREM
-                        </span>
-                      )}
-                      {plugin.isGroup && (
-                        <span className="chip text-[9px] px-1.5 py-0.2 bg-teal-500/20 text-teal-300 font-bold">
-                          GROUP
-                        </span>
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--paper)] border border-[var(--edge)] flex items-center justify-center text-[var(--volt)] shadow-xs">
+                      <i className={`fa-solid ${icon} text-sm`} />
                     </div>
-
-                    {/* Description & File Path */}
-                    <p className="text-xs text-[var(--ink-2)] line-clamp-1">
-                      {plugin.description || 'Tidak ada deskripsi.'}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--ink-2)] font-mono">
-                      <span className="flex items-center gap-1 opacity-80" title={plugin.filePath}>
-                        <i className="fa-regular fa-file-code text-[10px]" />
-                        {plugin.filePath}
-                      </span>
-
-                      {plugin.aliases && plugin.aliases.length > 0 && (
-                        <span className="flex items-center gap-1 opacity-70">
-                          <i className="fa-solid fa-tags text-[10px]" />
-                          alias: {plugin.aliases.map((a) => `.${a}`).join(', ')}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-[family-name:var(--font-display)] font-bold text-sm md:text-base tracking-wide text-[var(--ink)] uppercase">
+                          {catName}
+                        </h2>
+                        <span className="chip text-[10px] font-mono px-2 py-0.2 bg-[var(--paper)] border-[var(--edge)] text-[var(--ink-2)]">
+                          {pluginsInCat.length} Plugin
                         </span>
-                      )}
-
-                      <span className="flex items-center gap-2 opacity-80">
-                        <span>Eksekusi: <b>{plugin.runs}x</b></span>
-                        {plugin.errors > 0 && (
-                          <span className="text-rose-400">Galat: <b>{plugin.errors}x</b></span>
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Last Error inline message if available */}
-                    {plugin.lastError && (
-                      <div className="mt-1 p-2 rounded bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2">
-                        <i className="fa-solid fa-triangle-exclamation text-rose-400 mt-0.5 shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-mono text-[11px] truncate">{plugin.lastError.message}</p>
-                        </div>
-                        <button
-                          onClick={() => setSelectedPluginError(plugin)}
-                          className="btn btn-quiet text-[10px] py-0.5 px-1.5 text-rose-300 shrink-0"
-                        >
-                          Detail
-                        </button>
                       </div>
-                    )}
+                      <p className="text-[11px] text-[var(--ink-2)] mt-0.5">
+                        Folder: <code className="font-mono opacity-80">plugins/{catName}/</code>
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Right: Actions */}
-                  <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                    {/* Toggle Switch */}
-                    <button
-                      onClick={() => handleToggle(plugin)}
-                      disabled={actionBusy}
-                      title={plugin.isEnabled ? 'Nonaktifkan Plugin' : 'Aktifkan Plugin'}
-                      className={`btn text-xs py-1.5 px-3 flex items-center gap-1.5 ${
-                        plugin.isEnabled ? 'btn-quiet text-emerald-400' : 'btn-warn text-amber-300'
-                      }`}
-                    >
-                      <i className={`fa-solid ${plugin.isEnabled ? 'fa-toggle-on text-emerald-400 text-sm' : 'fa-toggle-off text-amber-400 text-sm'}`} />
-                      <span>{plugin.isEnabled ? 'ON' : 'OFF'}</span>
-                    </button>
-
-                    {/* Test Syntax Button */}
-                    <button
-                      onClick={() => handleTest(plugin)}
-                      disabled={actionBusy}
-                      className="btn btn-quiet text-xs py-1.5 px-2.5"
-                      title="Uji Syntax &amp; Import Module"
-                    >
-                      <i className="fa-solid fa-vial" />
-                    </button>
-
-                    {/* Hot Reload Button */}
-                    <button
-                      onClick={() => handleReload(plugin)}
-                      disabled={actionBusy}
-                      className="btn btn-quiet text-xs py-1.5 px-2.5"
-                      title="Hot-Reload Plugin dari Disk"
-                    >
-                      <i className="fa-solid fa-rotate" />
-                    </button>
+                  <div className="flex items-center gap-2.5">
+                    {errCount > 0 && (
+                      <span className="chip text-[9.5px] px-2 py-0.5 bg-rose-500/20 text-rose-300 font-bold font-mono">
+                        {errCount} Error
+                      </span>
+                    )}
+                    {offCount > 0 && (
+                      <span className="chip text-[9.5px] px-2 py-0.5 bg-amber-500/20 text-amber-300 font-bold font-mono">
+                        {offCount} Off
+                      </span>
+                    )}
+                    <div className="w-7 h-7 rounded-full bg-[var(--paper)] border border-[var(--edge)] flex items-center justify-center text-[var(--ink-2)] text-xs">
+                      <i className={`fa-solid fa-chevron-down transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`} />
+                    </div>
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
 
-        {/* Pagination Footer */}
-        {filteredPlugins.length > PAGE_SIZE && (
-          <div className="p-4 border-t border-[var(--edge)] flex items-center justify-between text-xs text-[var(--ink-2)] bg-[var(--paper-2)]">
-            <div>
-              Menampilkan {(page - 1) * PAGE_SIZE + 1} -{' '}
-              {Math.min(page * PAGE_SIZE, filteredPlugins.length)} dari {filteredPlugins.length} plugin
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="btn btn-quiet py-1 px-2.5 text-xs disabled:opacity-30"
-              >
-                <i className="fa-solid fa-chevron-left" />
-              </button>
-              <span className="px-2 font-mono font-bold">
-                {page} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="btn btn-quiet py-1 px-2.5 text-xs disabled:opacity-30"
-              >
-                <i className="fa-solid fa-chevron-right" />
-              </button>
-            </div>
+                {/* Plugins in this Category */}
+                {!isCollapsed && (
+                  <div className="divide-y divide-[var(--edge)]">
+                    {pluginsInCat.map((plugin) => renderPluginRow(plugin))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        /* ═══ VIEW MODE: FLAT LIST DENGAN PAGINASI ═══ */
+        <div className="card p-0 overflow-hidden border-[var(--edge)]">
+          <div className="divide-y divide-[var(--edge)]">
+            {paginatedPlugins.map((plugin) => renderPluginRow(plugin))}
           </div>
-        )}
-      </div>
+
+          {/* Pagination Footer */}
+          {filteredPlugins.length > PAGE_SIZE && (
+            <div className="p-4 border-t border-[var(--edge)] flex items-center justify-between text-xs text-[var(--ink-2)] bg-[var(--paper-2)]">
+              <div>
+                Menampilkan {(page - 1) * PAGE_SIZE + 1} -{' '}
+                {Math.min(page * PAGE_SIZE, filteredPlugins.length)} dari {filteredPlugins.length} plugin
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="btn btn-quiet py-1 px-2.5 text-xs disabled:opacity-30"
+                >
+                  <i className="fa-solid fa-chevron-left" />
+                </button>
+                <span className="px-2 font-mono font-bold">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="btn btn-quiet py-1 px-2.5 text-xs disabled:opacity-30"
+                >
+                  <i className="fa-solid fa-chevron-right" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal: Audit Diagnosa Result */}
       {auditResult && (
@@ -698,21 +924,19 @@ export default function PluginsManager({ toast }) {
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
               {errorLogs.length === 0 ? (
                 <div className="p-8 text-center text-[var(--ink-2)]">
-                  <i className="fa-solid fa-shield-heart text-3xl mb-2 text-emerald-400 block" />
-                  Belum ada catatan error runtime plugin. Semua plugin berjalan lancar!
+                  <i className="fa-solid fa-champagne-glasses text-2xl text-emerald-400 mb-2 block" />
+                  Belum ada catatan error runtime dari plugin bot.
                 </div>
               ) : (
-                errorLogs.map((log) => (
-                  <div key={log.id} className="p-3.5 rounded bg-rose-950/30 border border-rose-500/30 space-y-2">
-                    <div className="flex items-center justify-between gap-2 font-mono text-[11px]">
-                      <span className="font-bold text-rose-300">
-                        .{log.command} <span className="text-[var(--ink-2)] font-normal">({log.filePath})</span>
-                      </span>
-                      <span className="text-[var(--ink-2)]">{new Date(log.time).toLocaleString('id-ID')}</span>
+                errorLogs.map((log, i) => (
+                  <div key={i} className="p-3 rounded bg-[var(--paper-2)] border border-[var(--edge)] space-y-1.5 font-mono">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-rose-400 font-bold">.{log.command}</span>
+                      <span className="text-[var(--ink-2)]">{new Date(log.timestamp).toLocaleString('id-ID')}</span>
                     </div>
-                    <p className="font-mono text-rose-400 font-bold break-all">{log.message}</p>
+                    <p className="text-rose-300 text-xs break-all">{log.message}</p>
                     {log.stack && (
-                      <pre className="p-2 rounded bg-black/60 text-[10px] font-mono text-rose-300/80 overflow-x-auto max-h-36">
+                      <pre className="p-2 rounded bg-black/40 text-[10px] text-[var(--ink-2)] overflow-x-auto">
                         {log.stack}
                       </pre>
                     )}
@@ -730,40 +954,39 @@ export default function PluginsManager({ toast }) {
         </div>
       )}
 
-      {/* Modal: Single Plugin Error Detail */}
-      {selectedPluginError && (
+      {/* Modal: Test Syntax Result */}
+      {testResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="card w-full max-w-xl p-6 space-y-4 border-[var(--edge-2)]">
-            <div className="flex items-center justify-between border-b border-[var(--edge)] pb-3">
-              <h3 className="font-bold text-base flex items-center gap-2 text-rose-400">
-                <i className="fa-solid fa-triangle-exclamation" />
-                Detail Error .{selectedPluginError.name}
+          <div className="card w-full max-w-lg p-5 space-y-3 border-[var(--edge-2)]">
+            <div className="flex items-center justify-between border-b border-[var(--edge)] pb-2.5">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <i className="fa-solid fa-vial text-[var(--volt)]" />
+                Hasil Uji Syntax Modul
               </h3>
-              <button
-                onClick={() => setSelectedPluginError(null)}
-                className="text-[var(--ink-2)] hover:text-[var(--ink)]"
-              >
-                <i className="fa-solid fa-xmark" />
+              <button onClick={() => setTestResult(null)} className="text-[var(--ink-2)] hover:text-[var(--ink)]">
+                <i className="fa-solid fa-xmark text-sm" />
               </button>
             </div>
-            <div className="space-y-2 text-xs">
-              <p className="text-[var(--ink-2)] font-mono">Berkas: {selectedPluginError.filePath}</p>
-              <div className="p-3 rounded bg-rose-950/40 border border-rose-500/30 font-mono text-rose-300">
-                {selectedPluginError.lastError?.message || 'Error tidak diketahui'}
+
+            <div className={`p-4 rounded border text-xs font-mono ${
+              testResult.valid
+                ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+                : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+            }`}>
+              <div className="flex items-center gap-2 font-bold mb-2">
+                <i className={`fa-solid ${testResult.valid ? 'fa-circle-check text-emerald-400' : 'fa-circle-xmark text-rose-400'} text-base`} />
+                <span>{testResult.valid ? 'STATUS SEHAT (SYNTAX VALID)' : 'TERDETEKSI KESALAHAN'}</span>
               </div>
+              <p className="text-[11px] text-[var(--ink-2)]">File: {testResult.file}</p>
+              {testResult.error && (
+                <pre className="mt-2 p-2 rounded bg-black/50 text-rose-400 overflow-x-auto text-[10px]">
+                  {testResult.error}
+                </pre>
+              )}
             </div>
-            <div className="flex justify-between items-center pt-2">
-              <button
-                onClick={() => {
-                  handleReload(selectedPluginError)
-                  setSelectedPluginError(null)
-                }}
-                className="btn btn-primary text-xs flex items-center gap-1.5"
-              >
-                <i className="fa-solid fa-rotate" />
-                <span>Coba Reload Sekarang</span>
-              </button>
-              <button onClick={() => setSelectedPluginError(null)} className="btn btn-quiet text-xs">
+
+            <div className="flex justify-end pt-2">
+              <button onClick={() => setTestResult(null)} className="btn btn-quiet text-xs">
                 Tutup
               </button>
             </div>
@@ -771,32 +994,36 @@ export default function PluginsManager({ toast }) {
         </div>
       )}
 
-      {/* Modal: Test Result */}
-      {testResult && (
+      {/* Modal: Single Plugin Error Detail */}
+      {selectedPluginError && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="card w-full max-w-lg p-6 space-y-4 border-[var(--edge-2)]">
-            <div className="flex items-center justify-between border-b border-[var(--edge)] pb-3">
-              <h3 className="font-bold text-base flex items-center gap-2">
-                <i className={`fa-solid ${testResult.valid ? 'fa-circle-check text-emerald-400' : 'fa-circle-xmark text-rose-400'}`} />
-                Hasil Uji Plugin: {testResult.name ? `.${testResult.name}` : 'Berkas'}
+          <div className="card w-full max-w-lg p-5 space-y-3 border-[var(--edge-2)]">
+            <div className="flex items-center justify-between border-b border-[var(--edge)] pb-2.5">
+              <h3 className="font-bold text-sm flex items-center gap-2 text-rose-400">
+                <i className="fa-solid fa-triangle-exclamation" />
+                Detail Error Terakhir: .{selectedPluginError.name}
               </h3>
-              <button onClick={() => setTestResult(null)} className="text-[var(--ink-2)] hover:text-[var(--ink)]">
-                <i className="fa-solid fa-xmark" />
+              <button onClick={() => setSelectedPluginError(null)} className="text-[var(--ink-2)] hover:text-[var(--ink)]">
+                <i className="fa-solid fa-xmark text-sm" />
               </button>
             </div>
-            <div className="space-y-2 text-xs font-mono">
-              <p>Path: {testResult.filePath}</p>
-              <p>Status: <b className={testResult.valid ? 'text-emerald-400' : 'text-rose-400'}>{testResult.valid ? 'VALID & SIAP' : 'GAGAL'}</b></p>
-              {testResult.category && <p>Kategori: {testResult.category}</p>}
-              {testResult.aliases && testResult.aliases.length > 0 && <p>Aliases: {testResult.aliases.join(', ')}</p>}
-              {testResult.error && (
-                <div className="p-3 rounded bg-rose-950/40 border border-rose-500/30 text-rose-300">
-                  {testResult.error}
-                </div>
+
+            <div className="p-3 rounded bg-rose-950/40 border border-rose-500/30 font-mono text-xs space-y-2">
+              <p className="font-bold text-rose-300">{selectedPluginError.lastError?.message || 'Error tidak diketahui'}</p>
+              {selectedPluginError.lastError?.time && (
+                <p className="text-[10px] text-[var(--ink-2)]">
+                  Waktu: {new Date(selectedPluginError.lastError.time).toLocaleString('id-ID')}
+                </p>
+              )}
+              {selectedPluginError.lastError?.stack && (
+                <pre className="p-2 rounded bg-black/50 text-[10px] text-rose-400 overflow-x-auto max-h-48">
+                  {selectedPluginError.lastError.stack}
+                </pre>
               )}
             </div>
+
             <div className="flex justify-end pt-2">
-              <button onClick={() => setTestResult(null)} className="btn btn-quiet text-xs">
+              <button onClick={() => setSelectedPluginError(null)} className="btn btn-quiet text-xs">
                 Tutup
               </button>
             </div>

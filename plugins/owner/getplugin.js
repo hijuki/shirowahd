@@ -150,19 +150,28 @@ async function handler(m, { sock }) {
 
   const code = fs.readFileSync(pluginInfo.path);
 
-  return await sock.sendMessage(m.chat, {
-    text: "Langsung aja, pencet tombol dibawah",
-    footer: config.bot.name,
-    interactiveButtons: [
-      {
-        name: "cta_copy",
-        buttonParamsJson: JSON.stringify({
-          display_text: "Salin Kode",
-          copy_code: code.toString("utf-8")
-        })
-      }
-    ]
-  }, { quoted: m });
+  await sock.sendMessage(
+    m.chat,
+    {
+      document: code,
+      mimetype: "application/javascript",
+      fileName: pluginInfo.file,
+      caption:
+        `╭┈┈⬡「 📦 *ɢᴇᴛ ᴘʟᴜɢɪɴ* 」\n` +
+        `┃ 📄 *Berkas:* \`${pluginInfo.category}/${pluginInfo.file}\`\n` +
+        `┃ 📁 *Kategori:* \`${pluginInfo.category}\`\n` +
+        `┃ ⚖️ *Ukuran:* ${(code.length / 1024).toFixed(2)} KB\n` +
+        `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n` +
+        `> 💡 _Reply berkas dokumen di atas dengan \`${m.prefix}addplugin\` untuk menduplikasi / install._`,
+    },
+    { quoted: m }
+  );
+
+  if (code.length <= 4000) {
+    await m.reply(`\`\`\`javascript\n${code.toString("utf-8")}\n\`\`\``);
+  }
+
+  return true;
 }
 
 export { pluginConfig as config, handler };

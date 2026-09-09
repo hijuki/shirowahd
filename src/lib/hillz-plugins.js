@@ -780,6 +780,14 @@ function getDetailedPluginsList() {
     const loadErr = loadErrorsMap.get(filePath) || null;
     const pStat = stats[name.toLowerCase()] || { runs: 0, success: 0, errors: 0, lastRun: 0, lastError: null };
 
+    const pathParts = relPath.split("/");
+    const folderCat = (pathParts.length >= 3 && pathParts[0] === "plugins") ? pathParts[1].toLowerCase().trim() : null;
+    let category = folderCat || (plugin.config?.category ? String(plugin.config.category).trim().toLowerCase() : "other");
+    if (category === "downloader") category = "download";
+    if (category === "cecan") category = "random";
+    if (category === "maker") category = "canvas";
+    if (category === "linode") category = "panel";
+
     let status = "online";
     if (loadErr) {
       status = "error";
@@ -794,7 +802,7 @@ function getDetailedPluginsList() {
     list.push({
       name,
       aliases: normalizePluginAliases(plugin.config?.alias),
-      category: plugin.config?.category || "uncategorized",
+      category,
       description: plugin.config?.description || "",
       usage: plugin.config?.usage || "",
       example: plugin.config?.example || "",
