@@ -258,27 +258,26 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
 
   // Encode ulang. RESOLUSI tidak disentuh sama sekali.
   //
-  // fps: kalau header jujur, dibiarkan apa adanya (ffmpeg memakai fps sumber).
-  // Kalau header berbohong, fps NYATA dipaksa lewat `-r` sebagai PECAHAN —
-  // membulatkan 60,1 jadi 60 membuat audio dan video pelan-pelan bergeser.
-  // Diukur: tanpa `-r`, ffmpeg percaya header 25/1 dan membuang 630 dari 1083
-  // paket; dengan `-r` fps nyata, semua 1083 paket bertahan.
-  //
-  // Batas 90 fps menahan berkas VFR ngawur yang melaporkan angka raksasa
-  // (mis. 1000000/1) dan membuat encoder mengamuk.
-  const fpsArgs = [];
-  if (fpsNgaco) {
-    const avg = fraksiKeAngka(info.fpsAvg);
-    if (avg > 0 && avg <= 90) fpsArgs.push("-r", info.fpsAvg);
-    else if (avg > 90) fpsArgs.push("-r", "90");
-  }
+  // Kunci 60 FPS mulus di WA:
+  // 1. Pastikan CFR (Constant Frame Rate) dengan `-r` sesuai FPS nyata sumber,
+  //    agar timing frame stabil tanpa jitter/judder di pemutar WhatsApp.
+  // 2. Pasang GOP rapat ~2 detik (`-g ${gop}`) agar WhatsApp tidak drop frame.
+  // 3. Pasang H.264 High Profile Level 4.2/5.1 yang mendukung 1080p 60fps.
+  const avg = fraksiKeAngka(info.fpsAvg);
+  const nominal = fraksiKeAngka(info.fps);
+  const fpsSumber = avg > 0 ? avg : (nominal > 0 ? nominal : 30);
+  const fpsStr = (avg > 0 && avg <= 90) ? info.fpsAvg : ((nominal > 0 && nominal <= 90) ? info.fps : "60");
+  const gop = Math.max(24, Math.round(fpsSumber * 2));
+  const levelH264 = fpsSumber > 50 ? "5.1" : "4.1";
+
   const argsEnc = [
     "-y", "-err_detect", "ignore_err", "-fflags", "+genpts+discardcorrupt",
     "-i", fileMasuk,
     ...(adaAudio(fileMasuk) ? [] : ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-shortest"]),
-    ...fpsArgs,
-    "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p",
-    "-preset", "veryfast", "-crf", "20",
+    "-r", fpsStr,
+    "-c:v", "libx264", "-profile:v", "high", "-level", levelH264, "-pix_fmt", "yuv420p",
+    "-preset", "fast", "-crf", "18",
+    "-g", String(gop), "-keyint_min", String(Math.round(gop / 2)), "-sc_threshold", "0",
     "-c:a", "aac", "-b:a", "192k", "-ac", "2",
     "-movflags", "+faststart", out,
   ];
@@ -322,16 +321,16 @@ export async function ambilVideoHD(kandidat, opts = {}) {
   throw errTerakhir || new Error("Semua URL video gagal diunduh");
 }
 
-/** Ringkasan singkat untuk caption, mis. "1080x1920 · H.264 · dikonversi". */
+/** Ringkasan singkat untuk caption, mis. "1080x1920 · 60 FPS · H.264 · kualitas asli". */
 export function ringkasKualitas(siap) {
   if (!siap || !siap.info) return "";
-  const { width, height, codec } = siap.info;
+  const { width, height, codec, fpsAvg, fps } = siap.info;
   const dim = width && height ? `${width}x${height}` : "";
+  const fpsNum = Math.round(fraksiKeAngka(fpsAvg) || fraksiKeAngka(fps));
+  const fpsText = fpsNum > 0 ? `${fpsNum} FPS` : "";
   const kode = codec === "h264" ? "H.264" : (codec || "").toUpperCase();
-  // "1080x1920 · H.264 · dikonversi ke H.264" itu mengulang diri sendiri.
-  // Codec hasil selalu H.264, jadi yang berguna disebut adalah apa yang terjadi.
   const aksi =
     siap.tindakan === "encode" ? "dikonversi" :
     siap.tindakan === "remux" ? "kualitas asli" : "apa adanya";
-  return [dim, kode, aksi].filter(Boolean).join(" · ");
+  return [dim, fpsText, kode, aksi].filter(Boolean).join(" · ");
 }
