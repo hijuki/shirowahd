@@ -64,9 +64,9 @@ async function pinterest(query, poolSize = 60) {
                 seenIds.add(v.id)
                 pool.push({
                     id: v.id,
-                    fullname: v?.pinner?.full_name || v?.pinner?.username || 'Pinterest',
+                    fullname: v?.pinner?.full_name || v?.pinner?.username || 'Pinterest Creator',
                     username: v?.pinner?.username || '',
-                    caption: v?.grid_title || v?.title || 'Pinterest image',
+                    caption: v?.grid_title || v?.title || `${query} pin`,
                     image: v.images.orig.url,
                     preview: v?.images?.['236x']?.url || v?.images?.['474x']?.url || v?.images?.['564x']?.url || v?.images?.['736x']?.url || v.images.orig.url,
                     source: `https://www.pinterest.com/pin/${v.id}/`
@@ -114,102 +114,139 @@ async function fetchImage(url) {
 }
 
 function esc(value) {
-    return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
 }
 
 function makeHtml(query, results, media) {
-    const rawData = results.map((v, i) => ({
-        id: i,
-        caption: v.caption,
-        user: v.fullname + (v.username ? ` · @${v.username}` : ''),
-        image: media[i]?.dataUri || v.preview || v.image,
-        origUrl: v.image || v.preview
-    }))
+    const rawData = results.map((v, i) => {
+        const fullname = v.fullname || v.username || 'Pinterest';
+        const initial = (fullname || 'P').charAt(0).toUpperCase();
+        return {
+            id: i,
+            caption: v.caption || 'Pinterest Pin',
+            user: fullname,
+            initial: initial,
+            image: media[i]?.dataUri || v.preview || v.image,
+            origUrl: v.image || v.preview
+        };
+    });
 
     const safeData = JSON.stringify(rawData).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e')
-    const tags = [`${query} aesthetic`, `${query} wallpaper`, `${query} art`, `${query} icon`]
 
     return `<style>
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:#0d0e12;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;overflow:hidden}
-#app{width:100%;max-width:440px;margin:auto;padding:12px 14px 10px;background:#0d0e12;display:flex;flex-direction:column;border-radius:20px;user-select:none}
-.header-brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#8e9297;font-size:11px;font-weight:700;letter-spacing:0.5px}
-.brand-left{display:flex;align-items:center;gap:6px}
-.brand-left span.logo{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:#e60023;color:#fff;font-size:11px;font-weight:900;border-radius:50%}
-.brand-wm{color:#25d366;font-family:monospace;font-size:9.5px;letter-spacing:1px;font-weight:700}
-.search-box{display:flex;gap:6px;margin-bottom:8px}
-.search-input{flex:1;background:#1a1c23;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:6px 12px;color:#fff;font-size:11.5px;outline:none}
-.chips-container{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none;touch-action:pan-x;-webkit-overflow-scrolling:touch}
-.chips-container::-webkit-scrollbar{display:none}
-.chip{background:#1a1c23;color:#c4c7cc;padding:3.5px 9px;border-radius:10px;font-size:10.5px;white-space:nowrap;font-weight:500;border:1px solid rgba(255,255,255,0.05)}
-.grid-view{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;touch-action:pan-x}
-.card{border-radius:12px;overflow:hidden;background:#16181f;cursor:pointer;position:relative;border:1px solid rgba(255,255,255,0.06)}
-.card img{width:100%;display:block;border-radius:12px;object-fit:cover;aspect-ratio:3/4}
-.card-cap{position:absolute;bottom:0;left:0;right:0;padding:16px 6px 6px;background:linear-gradient(transparent,rgba(0,0,0,0.85));font-size:9.5px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#e6e8ec}
-.pagination{display:flex;align-items:center;justify-content:space-between;background:#16181f;padding:6px 12px;border-radius:14px;border:1px solid rgba(255,255,255,0.06)}
-.page-btn{background:#e60023;color:#fff;border:none;padding:5px 12px;border-radius:10px;font-weight:700;font-size:11px;cursor:pointer}
-.page-btn:disabled{background:#232630;color:#555964;cursor:not-allowed}
-.page-info{font-size:11.5px;font-weight:700;color:#8e9297;font-family:monospace}
-.footer-tag{text-align:center;margin-top:6px;font-size:9px;color:rgba(255,255,255,0.3);font-family:monospace;letter-spacing:1.2px}
-.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:12px}
-.modal.active{display:flex}
-.modal-card{width:100%;max-width:300px;background:#16181f;border-radius:18px;overflow:hidden;position:relative;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,0.1)}
-.modal-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#1f222b;font-size:11.5px;font-weight:700;color:#ccc}
-.modal-actions{display:flex;gap:10px;align-items:center}
-.icon-btn{background:none;border:none;color:#fff;font-size:15px;cursor:pointer;padding:2px}
-.modal-img-wrapper{position:relative;width:100%;height:350px;background:#000;display:flex;align-items:center;justify-content:center}
-.modal-img-wrapper img{width:100%;height:100%;object-fit:contain}
-.modal-nav{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px}
-.nav-arrow{background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.15);color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer}
-.modal-footer{padding:8px 12px;font-size:10.5px;color:#8e9297}
-.modal-cap{color:#fff;font-size:11.5px;font-weight:700;margin-bottom:2px}
-.copy-toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#25d366;color:#000;padding:6px 14px;border-radius:16px;font-size:11px;font-weight:800;display:none;z-index:10000}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:#111111;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;user-select:none;overflow:hidden}
+#app{width:100%;max-width:440px;margin:0 auto;padding:12px 14px 14px;background:#111111;display:flex;flex-direction:column;position:relative}
+
+/* Authentic Pinterest Header */
+.pin-topbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.pin-logo-box{display:flex;align-items:center;gap:6px;flex:none}
+.pin-logo{width:26px;height:26px;fill:#e60023}
+.pin-search-capsule{flex:1;display:flex;align-items:center;gap:8px;background:#262626;border-radius:999px;padding:7px 14px;height:36px;border:1px solid rgba(255,255,255,0.06)}
+.pin-search-icon{width:13px;height:13px;fill:#8e8e8e;flex:none}
+.pin-search-text{flex:1;font-size:12.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pin-badge-count{font-size:10px;font-weight:700;color:#a0a0a0;background:#1a1a1a;padding:2px 8px;border-radius:12px;font-family:monospace}
+
+/* Authentic Pinterest Pin Grid (Cards with metadata UNDERNEATH, no AI gradients) */
+.pin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.pin-card{display:flex;flex-direction:column;cursor:pointer;background:transparent;border-radius:16px}
+.pin-photo-box{position:relative;width:100%;border-radius:16px;overflow:hidden;background:#1c1c1e;aspect-ratio:3/4}
+.pin-photo-box img{width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;transition:transform 0.2s ease}
+.pin-card:active .pin-photo-box img{transform:scale(0.97)}
+.pin-save-overlay{position:absolute;top:7px;right:7px;background:#e60023;color:#fff;font-size:9.5px;font-weight:700;padding:3.5px 9px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.4);opacity:0.95}
+.pin-info{padding:6px 2px 2px;display:flex;flex-direction:column;gap:3px}
+.pin-title{font-size:11.5px;font-weight:600;color:#f2f2f2;line-height:1.25;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.pin-author{display:flex;align-items:center;gap:5px}
+.pin-avatar{width:15px;height:15px;border-radius:50%;background:#2e2e2e;color:#ddd;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;text-transform:uppercase}
+.pin-name{font-size:10px;color:#8e8e8e;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Authentic Pinterest Dock Pagination */
+.pin-dock{display:flex;align-items:center;justify-content:space-between;background:#1c1c1e;border-radius:999px;padding:4px 6px;border:1px solid rgba(255,255,255,0.06)}
+.dock-btn{background:#2a2a2c;color:#fff;border:none;width:30px;height:30px;border-radius:50%;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s}
+.dock-btn:disabled{background:transparent;color:#444;cursor:not-allowed}
+.dock-info{font-size:11.5px;font-weight:600;color:#8e8e8e;font-family:monospace}
+.dock-info span{color:#fff;font-weight:700}
+.dock-brand{display:flex;align-items:center;gap:4px;font-size:9px;color:rgba(255,255,255,0.4);font-family:monospace;letter-spacing:1px;padding-right:6px}
+.dock-brand .dot{width:4px;height:4px;border-radius:50%;background:#e60023}
+
+/* Authentic Pinterest Pin Detail Modal Sheet */
+.modal-sheet{position:fixed;inset:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(8px);z-index:9999;display:none;align-items:center;justify-content:center;padding:14px}
+.modal-sheet.active{display:flex}
+.modal-box{width:100%;max-width:315px;background:#1c1c1e;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.08)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.modal-author{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.modal-avatar{width:24px;height:24px;border-radius:50%;background:#333;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.modal-author-name{font-size:12px;font-weight:600;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal-save-btn{background:#e60023;color:#fff;border:none;padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;flex:none;box-shadow:0 2px 8px rgba(230,0,35,0.4)}
+.modal-img-area{position:relative;width:100%;height:350px;background:#0c0c0d;display:flex;align-items:center;justify-content:center}
+.modal-img-area img{width:100%;height:100%;object-fit:contain}
+.modal-arrow{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:rgba(28,28,30,0.8);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:16px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px)}
+.modal-arrow.left{left:8px}
+.modal-arrow.right{right:8px}
+.modal-foot{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.modal-caption{font-size:12.5px;font-weight:700;color:#fff;line-height:1.3}
+.modal-action-row{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)}
+.modal-domain{font-size:11px;color:#8e8e8e;text-decoration:none;font-weight:500}
+.modal-close-btn{background:#2a2a2c;border:none;color:#ddd;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px}
+.copy-toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#e60023;color:#fff;padding:7px 16px;border-radius:999px;font-size:11px;font-weight:700;display:none;z-index:10000;box-shadow:0 4px 16px rgba(0,0,0,0.6)}
 </style>
 
 <div id="app">
-<div class="header-brand">
-  <div class="brand-left"><span class="logo">P</span> PINTEREST · ${esc(query)}</div>
-  <div class="brand-wm">● SHIROWAHD</div>
-</div>
-<div class="search-box">
-<input type="text" class="search-input" value="${esc(query)}" readonly />
-</div>
-<div class="chips-container">
-${tags.map(t => `<div class="chip">${esc(t)}</div>`).join('')}
-</div>
-<div class="grid-view" id="grid"></div>
-<div class="pagination">
-<button class="page-btn" id="btn-prev">◀ Prev</button>
-<span class="page-info" id="page-info">1 / 1</span>
-<button class="page-btn" id="btn-next">Next ▶</button>
-</div>
-<div class="footer-tag">SHIROWAHD • INTERACTIVE VISUAL EXPLORER</div>
+  <div class="pin-topbar">
+    <div class="pin-logo-box">
+      <svg class="pin-logo" viewBox="0 0 24 24">
+        <path d="M12 0a12 12 0 0 0-4.37 23.17c-.07-.94-.13-2.38.03-3.41l1.1-4.7s-.28-.56-.28-1.39c0-1.3.75-2.27 1.7-2.27.8 0 1.18.6 1.18 1.33 0 .81-.51 2.01-.78 3.13-.22.94.47 1.7 1.4 1.7 1.68 0 2.97-1.77 2.97-4.33 0-2.26-1.63-3.85-3.95-3.85-2.69 0-4.27 2.02-4.27 4.1 0 .81.31 1.68.7 2.16.08.09.09.18.06.32l-.27 1.1c-.04.18-.15.22-.34.13-1.28-.6-2.07-2.46-2.07-3.96 0-3.23 2.35-6.2 6.77-6.2 3.56 0 6.32 2.53 6.32 5.92 0 3.53-2.23 6.38-5.32 6.38-1.04 0-2.02-.54-2.35-1.18l-.64 2.44c-.23.89-.86 2-1.28 2.69A12 12 0 1 0 12 0z"/>
+      </svg>
+    </div>
+    <div class="pin-search-capsule">
+      <svg class="pin-search-icon" viewBox="0 0 24 24">
+        <path d="M10 2a8 8 0 0 1 6.32 12.9l5.39 5.39-1.42 1.42-5.39-5.39A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/>
+      </svg>
+      <span class="pin-search-text">${esc(query)}</span>
+      <span class="pin-badge-count">${rawData.length} Pins</span>
+    </div>
+  </div>
+
+  <div class="pin-grid" id="grid"></div>
+
+  <div class="pin-dock">
+    <button class="dock-btn" id="btn-prev">‹</button>
+    <div class="dock-info"><span id="page-cur">1</span> / <span id="page-total">1</span></div>
+    <div class="dock-brand"><span class="dot"></span> SHIROWAHD</div>
+    <button class="dock-btn" id="btn-next">›</button>
+  </div>
 </div>
 
-<div class="modal" id="modal">
-<div class="modal-card">
-<div class="modal-header">
-<span id="modal-index">1 / ${rawData.length}</span>
-<div class="modal-actions">
-<button class="icon-btn" id="btn-copy" title="Salin Link">🔗</button>
-<button class="icon-btn" id="btn-close" title="Tutup">✕</button>
-</div>
-</div>
-<div class="modal-img-wrapper">
-<img id="modal-img" src="" alt="" />
-<div class="modal-nav">
-<button class="nav-arrow" id="nav-up">▲</button>
-<button class="nav-arrow" id="nav-down">▼</button>
-</div>
-</div>
-<div class="modal-footer">
-<div class="modal-cap" id="modal-cap"></div>
-<div id="modal-user"></div>
-</div>
-</div>
+<div class="modal-sheet" id="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-author">
+        <div class="modal-avatar" id="modal-avatar">P</div>
+        <div class="modal-author-name" id="modal-user">Pinterest Creator</div>
+      </div>
+      <button class="modal-save-btn" id="btn-save">Simpan</button>
+    </div>
+    <div class="modal-img-area">
+      <img id="modal-img" src="" alt="" />
+      <button class="modal-arrow left" id="nav-prev">‹</button>
+      <button class="modal-arrow right" id="nav-next">›</button>
+    </div>
+    <div class="modal-foot">
+      <div class="modal-caption" id="modal-cap"></div>
+      <div class="modal-action-row">
+        <span class="modal-domain">pinterest.com</span>
+        <button class="modal-close-btn" id="btn-close">✕</button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="copy-toast" id="toast">Link disalin! Kirim ke chat untuk unduh</div>
+<div class="copy-toast" id="toast">Tautan Pin disalin!</div>
 
 <script>
 (function(){
@@ -221,13 +258,14 @@ var totalPages = Math.ceil(items.length / pageSize) || 1;
 var grid = document.getElementById('grid');
 var btnPrev = document.getElementById('btn-prev');
 var btnNext = document.getElementById('btn-next');
-var pageInfo = document.getElementById('page-info');
+var pageCur = document.getElementById('page-cur');
+var pageTotal = document.getElementById('page-total');
 
 var modal = document.getElementById('modal');
 var modalImg = document.getElementById('modal-img');
-var modalIndex = document.getElementById('modal-index');
-var modalCap = document.getElementById('modal-cap');
+var modalAvatar = document.getElementById('modal-avatar');
 var modalUser = document.getElementById('modal-user');
+var modalCap = document.getElementById('modal-cap');
 var toast = document.getElementById('toast');
 var currentIndex = 0;
 
@@ -238,13 +276,23 @@ function renderPage(){
 
     grid.innerHTML = pageItems.map(function(item, idx){
         var realIndex = start + idx;
-        return '<div class="card" onclick="openModal(' + realIndex + ')">' +
-            '<img src="' + item.image + '" loading="lazy" />' +
-            '<div class="card-cap">' + (item.caption || '') + '</div>' +
-            '</div>';
+        return '<div class="pin-card" onclick="openModal(' + realIndex + ')">' +
+            '<div class="pin-photo-box">' +
+                '<img src="' + item.image + '" loading="lazy" />' +
+                '<div class="pin-save-overlay">Simpan</div>' +
+            '</div>' +
+            '<div class="pin-info">' +
+                '<div class="pin-title">' + (item.caption || 'Pinterest Pin') + '</div>' +
+                '<div class="pin-author">' +
+                    '<div class="pin-avatar">' + item.initial + '</div>' +
+                    '<div class="pin-name">' + item.user + '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
     }).join('');
 
-    pageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    pageCur.textContent = currentPage + 1;
+    pageTotal.textContent = totalPages;
     btnPrev.disabled = currentPage === 0;
     btnNext.disabled = currentPage >= totalPages - 1;
 }
@@ -300,24 +348,24 @@ window.openModal = function(idx){
 function updateModal(){
     var item = items[currentIndex];
     modalImg.src = item.image;
-    modalIndex.textContent = (currentIndex + 1) + ' / ' + items.length;
+    modalAvatar.textContent = item.initial;
+    modalUser.textContent = item.user;
     modalCap.textContent = item.caption || '';
-    modalUser.textContent = item.user || '';
 }
 
 document.getElementById('btn-close').onclick = function(){
     modal.classList.remove('active');
 };
 
-document.getElementById('nav-up').onclick = function(){
+document.getElementById('nav-prev').onclick = function(){
     if(currentIndex > 0){ currentIndex--; updateModal(); }
 };
 
-document.getElementById('nav-down').onclick = function(){
+document.getElementById('nav-next').onclick = function(){
     if(currentIndex < items.length - 1){ currentIndex++; updateModal(); }
 };
 
-document.getElementById('btn-copy').onclick = function(){
+function copyLink(){
     var url = items[currentIndex].origUrl;
     var success = false;
     try {
@@ -335,12 +383,14 @@ document.getElementById('btn-copy').onclick = function(){
         success = false;
     }
     if(!success) {
-        prompt('Salin link gambar di bawah ini:', url);
+        prompt('Salin link gambar Pinterest:', url);
     } else {
         toast.style.display = 'block';
         setTimeout(function(){ toast.style.display = 'none'; }, 2000);
     }
-};
+}
+
+document.getElementById('btn-save').onclick = copyLink;
 
 renderPage();
 })();
@@ -411,7 +461,6 @@ async function prepareMedia(results) {
         let buf = media.buffer
         let mime = media.mimetype
         try {
-            // Optimasi resolusi thumbnail via sharp agar Base64 payload bubble WhatsApp ringan & tajam
             buf = await sharp(buf)
                 .resize(320, null, { withoutEnlargement: true })
                 .jpeg({ quality: 72 })
@@ -452,7 +501,6 @@ async function checkPinterestLink(m, sock) {
     const rawUrl = match[0]
     let directImgUrl = rawUrl
 
-    // Jika berupa link halaman pinterest atau shortlink pin.it, resolve dulu ke direct URL
     if (!/i\.pinimg\.com\/.*\.(jpg|jpeg|png|webp)/i.test(rawUrl)) {
         try {
             const pageRes = await axios.get(rawUrl, {
