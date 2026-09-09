@@ -2264,6 +2264,18 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (url === '/admin/api/bot/plugins/set-role' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/plugins/set-role');
+    return;
+  }
+
+  if (url === '/admin/api/bot/plugins/set-category-role' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/plugins/set-category-role');
+    return;
+  }
+
   if (url === '/admin/api/bot/plugins/reload' && req.method === 'POST') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     proxyBotApi(req, res, 'POST', '/plugins/reload');

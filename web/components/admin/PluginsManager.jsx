@@ -9,6 +9,8 @@ import {
   testBotPlugin,
   getBotPluginErrors,
   clearBotPluginErrors,
+  setBotPluginRole,
+  setBotCategoryRole,
 } from '@/lib/admin-api'
 
 const PAGE_SIZE = 25
@@ -96,6 +98,42 @@ export default function PluginsManager({ toast: propToast }) {
   }, [loadData])
 
   // Handlers
+  const handleSetRole = async (plugin, newRole) => {
+    if (plugin.role === newRole) return
+    setActionBusy(true)
+    try {
+      const res = await setBotPluginRole(plugin.name || plugin.filePath, newRole)
+      if (res?.ok) {
+        toast(`Akses .${plugin.name} diubah jadi ${newRole.toUpperCase()}`, 'success')
+        loadData(true)
+      } else {
+        toast(res?.error || 'Gagal mengubah hak akses plugin', 'error')
+      }
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  const handleSetCategoryRole = async (category, newRole) => {
+    if (!confirm(`Ubah hak akses SELURUH plugin kategori ${category.toUpperCase()} menjadi ${newRole.toUpperCase()}?`)) return
+    setActionBusy(true)
+    try {
+      const res = await setBotCategoryRole(category, newRole)
+      if (res?.ok) {
+        toast(`Seluruh plugin kategori ${category.toUpperCase()} diubah jadi ${newRole.toUpperCase()}`, 'success')
+        loadData(true)
+      } else {
+        toast(res?.error || 'Gagal mengubah hak akses kategori', 'error')
+      }
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
   const handleToggle = async (plugin) => {
     const targetStatus = !plugin.isEnabled
     setActionBusy(true)
@@ -400,17 +438,33 @@ export default function PluginsManager({ toast: propToast }) {
               {plugin.category}
             </span>
 
-            {/* Role Flags */}
-            {plugin.isOwner && (
-              <span className="chip text-[9px] px-1.5 py-0.2 bg-amber-500/20 text-amber-300 font-bold">
-                OWNER
-              </span>
-            )}
-            {plugin.isPremium && (
-              <span className="chip text-[9px] px-1.5 py-0.2 bg-blue-500/20 text-blue-300 font-bold">
-                PREM
-              </span>
-            )}
+            {/* Interactive Role Switcher */}
+            <div className="flex items-center gap-1 bg-[var(--paper)] p-0.5 rounded-lg border border-[var(--edge)]">
+              {[
+                { id: 'free', label: 'FREE', color: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30' },
+                { id: 'premium', label: 'PREM 💎', color: 'text-blue-300 bg-blue-500/20 border-blue-500/40' },
+                { id: 'admin', label: 'ADMIN 👮', color: 'text-amber-300 bg-amber-500/20 border-amber-500/40' },
+                { id: 'owner', label: 'OWNER 👑', color: 'text-rose-300 bg-rose-500/20 border-rose-500/40' }
+              ].map((r) => {
+                const isCurrent = (plugin.role || 'free') === r.id
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => handleSetRole(plugin, r.id)}
+                    disabled={actionBusy}
+                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded transition-all cursor-pointer ${
+                      isCurrent
+                        ? `${r.color} shadow-xs border`
+                        : 'text-[var(--ink-2)] hover:text-[var(--ink)] opacity-50 hover:opacity-90 border border-transparent'
+                    }`}
+                    title={`Ubah hak akses .${plugin.name} ke ${r.label}`}
+                  >
+                    {r.label}
+                  </button>
+                )
+              })}
+            </div>
+
             {plugin.isGroup && (
               <span className="chip text-[9px] px-1.5 py-0.2 bg-teal-500/20 text-teal-300 font-bold">
                 GROUP
@@ -796,6 +850,30 @@ export default function PluginsManager({ toast: propToast }) {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* Batch Category Access Selector */}
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="hidden sm:flex items-center gap-1 bg-[var(--paper)] p-0.5 rounded-lg border border-[var(--edge)]"
+                    >
+                      <span className="text-[9px] font-mono text-[var(--ink-2)] px-1.5 uppercase tracking-wider">Akses:</span>
+                      {[
+                        { id: 'free', label: 'Free' },
+                        { id: 'premium', label: 'Prem 💎' },
+                        { id: 'admin', label: 'Admin 👮' },
+                        { id: 'owner', label: 'Owner 👑' }
+                      ].map((cr) => (
+                        <button
+                          key={cr.id}
+                          onClick={() => handleSetCategoryRole(catName, cr.id)}
+                          disabled={actionBusy}
+                          className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded hover:bg-[var(--paper-2)] text-[var(--ink-2)] hover:text-[var(--ink)] cursor-pointer"
+                          title={`Set SELURUH plugin kategori ${catName.toUpperCase()} ke ${cr.label}`}
+                        >
+                          {cr.label}
+                        </button>
+                      ))}
+                    </div>
+
                     {/* Tombol Unduh ZIP Kategori */}
                     <button
                       onClick={(e) => {

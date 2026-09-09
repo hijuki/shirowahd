@@ -88,19 +88,34 @@ function checkPermission(m, pluginConfig) {
     };
   }
 
-  if (pluginConfig.isOwner && !hasAccess) {
+  const pluginRoles = db.setting("pluginRoles") || {};
+  const categoryRoles = db.setting("categoryRoles") || {};
+  const overrides = db.setting("capprem") || {};
+
+  const name = pluginConfig.name || "";
+  const cat = (pluginConfig.category || "").toLowerCase();
+
+  let effectiveRole = "default";
+  if (categoryRoles[cat]) effectiveRole = categoryRoles[cat];
+  if (pluginRoles[name]) effectiveRole = pluginRoles[name];
+
+  const isOwnerFeature = effectiveRole === "owner" ? true : (effectiveRole === "free" ? false : !!pluginConfig.isOwner);
+  const isAdminFeature = effectiveRole === "admin" ? true : (effectiveRole === "free" ? false : !!pluginConfig.isAdmin);
+  const isPremiumFeature = effectiveRole === "premium" ? true : (effectiveRole === "free" ? false : (overrides[name] !== undefined ? overrides[name] : !!pluginConfig.isPremium));
+
+  if (isOwnerFeature && !hasAccess) {
     return {
       allowed: false,
       reason: config.messages?.ownerOnly || "🚫 Owner only!",
     };
   }
 
-  if (pluginConfig.isPartner && !m.isPartner && !hasAccess) {
-    return { allowed: false, reason: "🤝 Partner only!" };
+  if (isAdminFeature && m.isGroup && !m.isAdmin && !hasAccess) {
+    return {
+      allowed: false,
+      reason: config.messages?.adminOnly || "👮 Admin grup only!",
+    };
   }
-
-  const overrides = db.setting("capprem") || {};
-  const isPremiumFeature = overrides[pluginConfig.name] !== undefined ? overrides[pluginConfig.name] : pluginConfig.isPremium;
 
   if (
     isPremiumFeature &&
@@ -114,6 +129,10 @@ function checkPermission(m, pluginConfig) {
     };
   }
 
+  if (pluginConfig.isPartner && !m.isPartner && !hasAccess) {
+    return { allowed: false, reason: "🤝 Partner only!" };
+  }
+
   if (pluginConfig.isGroup && !m.isGroup) {
     return {
       allowed: false,
@@ -125,18 +144,6 @@ function checkPermission(m, pluginConfig) {
     return {
       allowed: false,
       reason: config.messages?.privateOnly || "📱 Private chat only!",
-    };
-  }
-
-  if (
-    pluginConfig.isAdmin &&
-    m.isGroup &&
-    !m.isAdmin &&
-    !hasAccess
-  ) {
-    return {
-      allowed: false,
-      reason: config.messages?.adminOnly || "👮 Admin grup only!",
     };
   }
 

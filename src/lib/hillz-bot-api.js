@@ -15,6 +15,8 @@ import {
   reloadSinglePlugin,
   reloadAllPlugins,
   testPlugin,
+  setPluginRole,
+  setCategoryRole,
 } from './hillz-plugins.js';
 import { setelPluginMati, ambilRiwayatErrorPlugin, bersihkanRiwayatErrorPlugin } from './hillz-plugin-state.js';
 import { daftarGrupMati, toggleGrup } from './hillz-group-state.js';
@@ -153,6 +155,36 @@ export function startBotApi() {
         const disabled = typeof body.disabled === 'boolean' ? body.disabled : true;
         const ok = setelPluginMati(body.target, disabled);
         json(res, 200, { ok, target: body.target, disabled });
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/plugins/set-role') {
+      try {
+        const body = await parseBody(req);
+        if (!body.target || !body.role) {
+          json(res, 400, { ok: false, error: 'Target dan role plugin wajib diisi' });
+          return;
+        }
+        const ok = setPluginRole(body.target, body.role);
+        json(res, 200, { ok, target: body.target, role: body.role });
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/plugins/set-category-role') {
+      try {
+        const body = await parseBody(req);
+        if (!body.category || !body.role) {
+          json(res, 400, { ok: false, error: 'Category dan role wajib diisi' });
+          return;
+        }
+        const ok = setCategoryRole(body.category, body.role);
+        json(res, 200, { ok, category: body.category, role: body.role });
       } catch (e) {
         json(res, 500, { ok: false, error: e.message });
       }

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { getDatabase } from "./hillz-database.js";
 import { theme, chalk, logger, setPluginTotal } from "./hillz-logger.js";
 import { apakahPluginMati, daftarPluginMati, ambilStatistikPlugin } from "./hillz-plugin-state.js";
 /**
@@ -761,6 +762,11 @@ function getHijackedAliases() {
  * Mengambil daftar seluruh plugin secara detail untuk dashboard montir admin
  */
 function getDetailedPluginsList() {
+  const db = typeof getDatabase === "function" ? getDatabase() : null;
+  const pluginRoles = db?.setting("pluginRoles") || {};
+  const categoryRoles = db?.setting("categoryRoles") || {};
+  const capprem = db?.setting("capprem") || {};
+
   const stats = ambilStatistikPlugin();
   const disabledSet = daftarPluginMati();
   const unreachables = new Set(getUnreachablePlugins().map((p) => path.resolve(p.filePath)));
@@ -788,6 +794,19 @@ function getDetailedPluginsList() {
     if (category === "maker") category = "canvas";
     if (category === "linode") category = "panel";
 
+    // Hitung hak akses efektif (Free, Premium, Admin, Owner)
+    let role = "free";
+    if (plugin.config?.isOwner) role = "owner";
+    else if (plugin.config?.isAdmin) role = "admin";
+    else if (plugin.config?.isPremium || capprem[name]) role = "premium";
+
+    if (categoryRoles[category]) {
+      role = categoryRoles[category];
+    }
+    if (pluginRoles[name]) {
+      role = pluginRoles[name];
+    }
+
     let status = "online";
     if (loadErr) {
       status = "error";
@@ -803,14 +822,15 @@ function getDetailedPluginsList() {
       name,
       aliases: normalizePluginAliases(plugin.config?.alias),
       category,
+      role, // 'free' | 'premium' | 'admin' | 'owner'
       description: plugin.config?.description || "",
       usage: plugin.config?.usage || "",
       example: plugin.config?.example || "",
       filePath: relPath,
-      isOwner: !!plugin.config?.isOwner,
-      isPremium: !!plugin.config?.isPremium,
+      isOwner: role === "owner",
+      isPremium: role === "premium",
       isGroup: !!plugin.config?.isGroup,
-      isAdmin: !!plugin.config?.isAdmin,
+      isAdmin: role === "admin",
       cooldown: plugin.config?.cooldown || 0,
       limit: plugin.config?.limit || 0,
       isEnabled: !isOff,
@@ -869,8 +889,39 @@ function getDetailedPluginsList() {
     disabledCount: list.filter((p) => p.status === "disabled").length,
     shadowedCount: list.filter((p) => p.status === "shadowed").length,
     categoriesCount: new Set(list.map((p) => p.category)).size,
+    categoryRoles: db?.setting("categoryRoles") || {},
+    pluginRoles: db?.setting("pluginRoles") || {},
     plugins: list,
   };
+}
+
+function setPluginRole(target, role) {
+  const db = typeof getDatabase === "function" ? getDatabase() : null;
+  if (!db) return false;
+  const pluginRoles = db.setting("pluginRoles") || {};
+  const cleanRole = String(role).toLowerCase().trim();
+  if (cleanRole === "default") {
+    delete pluginRoles[target];
+  } else {
+    pluginRoles[target] = cleanRole;
+  }
+  db.setting("pluginRoles", pluginRoles);
+  return true;
+}
+
+function setCategoryRole(category, role) {
+  const db = typeof getDatabase === "function" ? getDatabase() : null;
+  if (!db) return false;
+  const categoryRoles = db.setting("categoryRoles") || {};
+  const cleanCat = String(category).toLowerCase().trim();
+  const cleanRole = String(role).toLowerCase().trim();
+  if (cleanRole === "default") {
+    delete categoryRoles[cleanCat];
+  } else {
+    categoryRoles[cleanCat] = cleanRole;
+  }
+  db.setting("categoryRoles", categoryRoles);
+  return true;
 }
 
 /**
@@ -1116,4 +1167,6 @@ export {
   reloadSinglePlugin,
   reloadAllPlugins,
   testPlugin,
+  setPluginRole,
+  setCategoryRole,
 };
