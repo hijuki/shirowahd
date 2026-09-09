@@ -12,11 +12,11 @@ import { ytdl } from '../../src/scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
 const BATAS_BASE64 = 550 * 1024;
-const BITRATE_MIN = { mp3: 20, opus: 16 };
-const BITRATE_AWAL = { mp3: 32, opus: 24 };
+const BITRATE_MIN = { mp3: 32, opus: 28 };
+const BITRATE_AWAL = { mp3: 48, opus: 36 };
 const CODEC = {
-    mp3: { args: (br) => ['-af', 'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11', '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '1', '-ar', '44100'], ext: 'mp3', mime: 'audio/mpeg' },
-    opus: { args: (br) => ['-af', 'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11', '-c:a', 'libopus', '-b:a', `${br}k`, '-vbr', 'on', '-application', 'audio', '-ac', '1', '-ar', '48000'], ext: 'ogg', mime: 'audio/ogg' }
+    mp3: { args: (br) => ['-af', 'alimiter=limit=0.98:attack=5:release=50', '-c:a', 'libmp3lame', '-b:a', `${br}k`, '-ac', '2', '-ar', '44100'], ext: 'mp3', mime: 'audio/mpeg' },
+    opus: { args: (br) => ['-af', 'alimiter=limit=0.98:attack=5:release=50', '-c:a', 'libopus', '-b:a', `${br}k`, '-vbr', 'on', '-application', 'audio', '-ac', '2', '-ar', '48000'], ext: 'ogg', mime: 'audio/ogg' }
 };
 
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
@@ -147,7 +147,7 @@ async function kecilkan(masuk, keluar, codec, bitrate, maxDetik) {
 }
 
 async function audioDataUri(buffer, opsi = {}) {
-    const { codec = 'opus', maxDetik = 160, batas = BATAS_BASE64 } = opsi;
+    const { codec = 'opus', maxDetik = 95, batas = BATAS_BASE64 } = opsi;
     if (!Buffer.isBuffer(buffer) || !buffer.length || !CODEC[codec]) return null;
     const bitrate = opsi.bitrate ?? BITRATE_AWAL[codec];
     const minimum = BITRATE_MIN[codec];
@@ -161,8 +161,13 @@ async function audioDataUri(buffer, opsi = {}) {
         let kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
         for (let putaran = 0; putaran < 3 && kecil.length > batasBerkas; putaran++) {
             const usul = Math.floor(((br * batasBerkas) / kecil.length) * 0.94);
-            br = usul < minimum ? (br <= minimum ? minimum : minimum) : usul;
+            br = usul < minimum ? minimum : usul;
             kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
+            if (br <= minimum && kecil.length > batasBerkas) {
+                const durasiBaru = Math.max(60, Math.floor((batasBerkas / kecil.length) * maxDetik * 0.95));
+                kecil = await kecilkan(masuk, keluar, codec, minimum, durasiBaru);
+                break;
+            }
         }
         if (kecil.length > batasBerkas) return null;
         const b64 = kecil.toString('base64');

@@ -10,21 +10,21 @@ import { ytdl } from '../scraper/ytdl.js';
 
 const jalankan = promisify(execFile);
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
-const BATAS_BASE64 = 480 * 1024;
-const BITRATE_MIN = { mp3: 20, opus: 16 };
-const BITRATE_AWAL = { mp3: 32, opus: 24 };
+const BATAS_BASE64 = 520 * 1024;
+const BITRATE_MIN = { mp3: 32, opus: 28 };
+const BITRATE_AWAL = { mp3: 48, opus: 36 };
 
 const CODEC = {
   mp3: {
     args: (br) => [
       '-af',
-      'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11',
+      'alimiter=limit=0.98:attack=5:release=50',
       '-c:a',
       'libmp3lame',
       '-b:a',
       `${br}k`,
       '-ac',
-      '1',
+      '2',
       '-ar',
       '44100',
     ],
@@ -34,7 +34,7 @@ const CODEC = {
   opus: {
     args: (br) => [
       '-af',
-      'highpass=f=30,loudnorm=I=-16:TP=-1.5:LRA=11',
+      'alimiter=limit=0.98:attack=5:release=50',
       '-c:a',
       'libopus',
       '-b:a',
@@ -44,7 +44,7 @@ const CODEC = {
       '-application',
       'audio',
       '-ac',
-      '1',
+      '2',
       '-ar',
       '48000',
     ],
@@ -194,10 +194,10 @@ async function kecilkan(masuk, keluar, codec, bitrate, maxDetik) {
 }
 
 /**
- * Transcode audio stream ke Opus 48kHz Mono EBU R128 (sama seperti .play2s)
+ * Transcode audio stream ke Opus 48kHz Stereo Studio Limiter
  */
 async function audioDataUri(buffer, opsi = {}) {
-  const { codec = 'opus', maxDetik = 160, batas = BATAS_BASE64 } = opsi;
+  const { codec = 'opus', maxDetik = 95, batas = BATAS_BASE64 } = opsi;
   if (!Buffer.isBuffer(buffer) || !buffer.length || !CODEC[codec]) return null;
   const bitrate = opsi.bitrate ?? BITRATE_AWAL[codec];
   const minimum = BITRATE_MIN[codec];
@@ -211,8 +211,15 @@ async function audioDataUri(buffer, opsi = {}) {
     let kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
     for (let putaran = 0; putaran < 3 && kecil.length > batasBerkas; putaran++) {
       const usul = Math.floor(((br * batasBerkas) / kecil.length) * 0.94);
-      br = usul < minimum ? (br <= minimum ? minimum : minimum) : usul;
+      br = usul < minimum ? minimum : usul;
       kecil = await kecilkan(masuk, keluar, codec, br, maxDetik);
+      if (br <= minimum && kecil.length > batasBerkas) {
+        // Jika pada minimum bitrate stereo masih melebihi batas berkas, kurangi sedikit durasi (misal jadi 80s)
+        // daripada memotong bitrate ke mono/buram
+        const durasiBaru = Math.max(60, Math.floor((batasBerkas / kecil.length) * maxDetik * 0.95));
+        kecil = await kecilkan(masuk, keluar, codec, minimum, durasiBaru);
+        break;
+      }
     }
     if (kecil.length > batasBerkas) return null;
     const b64 = kecil.toString('base64');
@@ -813,10 +820,13 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
 
   // 2. Universal Search Engine (YouTube + LRCLIB + Opus 48kHz Transcoder)
   const cleanQuery = query.replace(/^https?:\/\/[^\s]+/i, '').trim() || query;
+  const isModifierQuery = /slow|reverb|remix|edit|speed|sped|nightcore/i.test(cleanQuery);
   
-  // Utamakan hasil 'audio' / 'official audio' agar tidak mengambil Official Music Video yang ada adegan klip/hening pembuka
-  let searchResult = await yts(cleanQuery + ' audio');
-  let video = searchResult?.videos?.find((v) => /official audio|topic|audio/i.test(v.title)) || searchResult?.videos?.[0];
+  // Hindari menambahkan 'audio' jika user mencari versi khusus (slowed, reverb, remix)
+  let searchResult = await yts(isModifierQuery ? cleanQuery : cleanQuery + ' audio');
+  let video = isModifierQuery
+    ? searchResult?.videos?.[0]
+    : (searchResult?.videos?.find((v) => /official audio|topic|audio/i.test(v.title)) || searchResult?.videos?.[0]);
   if (!video) {
     searchResult = await yts(cleanQuery);
     video = searchResult?.videos?.[0];
@@ -850,10 +860,10 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
     throw new Error('Gagal mengambil audio stream dari server YouTube.');
   }
 
-  // Paralel: ambil lirik, transcode audio ke Opus Base64 (persis .play2s), dan optimasi cover
+  // Paralel: ambil lirik, transcode audio ke Opus Stereo 48kHz, dan optimasi cover
   const [lyrics, audioBase64, artworkDataUrl] = await Promise.all([
     getLyrics(title, artist, durationSec),
-    audioDataUri(audioBuffer, { codec: 'opus', maxDetik: 160 }),
+    audioDataUri(audioBuffer, { codec: 'opus', maxDetik: 95 }),
     coverDataUri(rawCoverUrl),
   ]);
 
