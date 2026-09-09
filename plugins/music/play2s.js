@@ -722,8 +722,13 @@ async function handler(m, { sock, conn, args }) {
                     deviceListMetadata: {},
                     deviceListMetadataVersion: 2,
                     botMetadata: {
-                        messageDisclaimerText: "",
-                        botResponseId: "kurumi-music-player",
+                        messageDisclaimerText: "SHIROWAHD • Spotify Player",
+                        sessionTransparencyMetadata: {
+                            disclaimerText: "SHIRO HLZ • Verified Audio",
+                            hcaId: `hca_${Date.now()}`,
+                            sessionTransparencyType: 1,
+                        },
+                        botResponseId: "shirowahd-music-player",
                         verificationMetadata: {
                             proofs: [
                                 {

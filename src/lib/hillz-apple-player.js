@@ -513,6 +513,26 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
   width: 26px;
   height: 26px;
 }
+.player-watermark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 8px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-family: monospace;
+}
+.player-watermark .wm-dot {
+  width: 4.5px;
+  height: 4.5px;
+  border-radius: 50%;
+  background: #1ed760;
+  box-shadow: 0 0 6px rgba(30, 215, 96, 0.7);
+}
 `;
 
   const html = `
@@ -566,6 +586,9 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
             <path d="M260.57 145.52v221c0 13.28 13 21.72 23.63 15.35l188.87-113c9.24-5.53 9.24-20.07 0-25.6L284.2 130.2c-10.64-6.4-23.63 2.04-23.63 15.32Z"/>
           </svg>
         </button>
+      </div>
+      <div class="player-watermark">
+        <span class="wm-dot"></span> SHIROWAHD · APPLE MUSIC
       </div>
     </footer>
   </main>
@@ -902,8 +925,13 @@ async function sendRichEnvelope(sock, chat, htmlPayload, messageTitle) {
       deviceListMetadata: {},
       deviceListMetadataVersion: 2,
       botMetadata: {
-        messageDisclaimerText: '',
-        botResponseId: 'kurumi-music-player',
+        messageDisclaimerText: 'SHIROWAHD • Apple Music',
+        sessionTransparencyMetadata: {
+          disclaimerText: 'SHIRO HLZ • Spatial Audio',
+          hcaId: `hca_${Date.now()}`,
+          sessionTransparencyType: 1,
+        },
+        botResponseId: 'shirowahd-music-player',
         verificationMetadata: {
           proofs: [
             {
@@ -927,7 +955,7 @@ async function sendRichEnvelope(sock, chat, htmlPayload, messageTitle) {
           unifiedResponse: {
             data: Buffer.from(
               JSON.stringify({
-                response_id: 'kurumi-music-player',
+                response_id: 'shirowahd-music-player',
                 sections: [
                   {
                     view_model: {
