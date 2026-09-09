@@ -130,15 +130,13 @@ async function handler(m, { sock }) {
     const rawText = m.text?.trim() || ''
     const urlMatch = rawText.match(/https?:\/\/[^\s]+/i)
     const url = urlMatch ? urlMatch[0] : ''
-    const isDolby = /dolby|hdr|doc|mentah|raw/i.test(rawText)
 
     if (!url) {
         return m.reply(
             `╭┈┈⬡「 🎵 *ᴛɪᴋᴛᴏᴋ ᴅᴏᴡɴʟᴏᴀᴅ* 」\n` +
-            `┃ ㊗ ᴜsᴀɢᴇ: \`${m.prefix}tiktok2 <url> [dolby]\`\n` +
+            `┃ ㊗ ᴜsᴀɢᴇ: \`${m.prefix}tiktok2 <url>\`\n` +
             `╰┈┈⬡\n\n` +
-            `> Normal  : \`${m.prefix}tiktok2 https://vt.tiktok.com/xxx\`\n` +
-            `> Dolby   : \`${m.prefix}tiktok2 https://vt.tiktok.com/xxx dolby\` _(Kirim bitstream asli via dokumen)_`
+            `> Contoh: ${m.prefix}tiktok2 https://vt.tiktok.com/xxx`
         )
     }
 
@@ -172,21 +170,15 @@ async function handler(m, { sock }) {
             } catch { /* cadangan gagal, lanjut dengan kandidat savett saja */ }
 
             const siap = await ambilVideoHD(kandidat, {
-                referer: 'https://www.tiktok.com/',
-                modeDolby: isDolby
+                referer: 'https://www.tiktok.com/'
             })
             try {
-                const isDolbyStream = isDolby && (/hevc|10/i.test(siap.info?.codec || '') || /10/i.test(siap.info?.pixFmt || ''));
-                const dolbyNote = isDolbyStream
-                    ? `\n✨ Mode: *Dolby Vision / HDR 10-bit (hvc1 Inline)*\n_Video dikirim langsung dengan tag Apple hvc1 agar memicu kecerahan HDR di layar HP._`
-                    : (isDolby ? `\n⚠️ _Video dari TikTok aslinya SDR 8-bit (bukan master Dolby Vision), dikirim kualitas asli._` : '');
-
                 await sock.sendMessage(
                     m.chat,
                     {
                         video: { url: siap.path },
                         mimetype: 'video/mp4',
-                        caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*` + dolbyNote,
+                        caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*`,
                     },
                     { quoted: m }
                 )
