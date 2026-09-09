@@ -127,14 +127,18 @@ const pluginConfig = {
 }
 
 async function handler(m, { sock }) {
-    const url = m.text?.trim()
+    const rawText = m.text?.trim() || ''
+    const urlMatch = rawText.match(/https?:\/\/[^\s]+/i)
+    const url = urlMatch ? urlMatch[0] : ''
+    const isDolby = /dolby|hdr|doc|mentah|raw/i.test(rawText)
 
     if (!url) {
         return m.reply(
             `╭┈┈⬡「 🎵 *ᴛɪᴋᴛᴏᴋ ᴅᴏᴡɴʟᴏᴀᴅ* 」\n` +
-            `┃ ㊗ ᴜsᴀɢᴇ: \`${m.prefix}tiktok2 <url>\`\n` +
+            `┃ ㊗ ᴜsᴀɢᴇ: \`${m.prefix}tiktok2 <url> [dolby]\`\n` +
             `╰┈┈⬡\n\n` +
-            `> Contoh: ${m.prefix}tiktok2 https://vt.tiktok.com/xxx`
+            `> Normal  : \`${m.prefix}tiktok2 https://vt.tiktok.com/xxx\`\n` +
+            `> Dolby   : \`${m.prefix}tiktok2 https://vt.tiktok.com/xxx dolby\` _(Kirim bitstream asli via dokumen)_`
         )
     }
 
@@ -151,23 +155,10 @@ async function handler(m, { sock }) {
             `✅ *Done kak*\n\n` +
             `👤 *${result.username || '-'}*\n` +
             `👁️ Views: ${result.views || '-'} | ❤️ Likes: ${result.likes || '-'}\n` +
-            `� Comments: ${result.comments || '-'} | 🔗 Shares: ${result.shares || '-'}\n` +
+            `💬 Comments: ${result.comments || '-'} | 🔗 Shares: ${result.shares || '-'}\n` +
             `⏱️ Duration: ${result.duration || '-'}`
 
         if (result.type === 'video' && result.downloads.nowm.length > 0) {
-            // Dulu: `nowm[0]` + `arraybuffer` + `Buffer.from`. Dua masalah —
-            // (a) opsi pertama belum tentu resolusi tertinggi, (b) memuat video
-            // penuh ke RAM. Sekarang kandidat diurutkan pakai label kualitas,
-            // diunduh ke berkas, dipastikan H.264 (WA tidak bisa HEVC) tanpa
-            // menurunkan resolusi/fps, lalu dikirim sebagai path (stream).
-            // savett memberi URL CDN TikTok yang bertanda tangan, dan tanda tangan
-            // itu tidak selalu berlaku untuk IP kita: diuji langsung, host
-            // `v16-webapp-prime.us.tiktok.com` menjawab 403 sementara
-            // `api16-normal-useastred.tiktokv.eu` menjawab 200 — untuk video yang
-            // SAMA, hanya beda token. Karena itu kandidat tikwm ditambahkan
-            // sebagai cadangan; ambilVideoHD mencoba berurutan dan berhenti di
-            // yang pertama berhasil, jadi perintah tidak lagi mati total saat
-            // CDN savett menolak.
             const kandidat = [...result.downloads.nowm]
             try {
                 const cad = await axios.post('https://www.tikwm.com/api/', {}, {
@@ -181,18 +172,32 @@ async function handler(m, { sock }) {
             } catch { /* cadangan gagal, lanjut dengan kandidat savett saja */ }
 
             const siap = await ambilVideoHD(kandidat, {
-                referer: 'https://www.tiktok.com/'
+                referer: 'https://www.tiktok.com/',
+                modeDolby: isDolby
             })
             try {
-                await sock.sendMessage(
-                    m.chat,
-                    {
-                        video: { url: siap.path },
-                        mimetype: 'video/mp4',
-                        caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*`,
-                    },
-                    { quoted: m }
-                )
+                if (isDolby) {
+                    await sock.sendMessage(
+                        m.chat,
+                        {
+                            document: { url: siap.path },
+                            mimetype: 'video/mp4',
+                            fileName: `tiktok_dolby_${Date.now()}.mp4`,
+                            caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*\n✨ Mode: *Dolby Vision / HDR (Original Bitstream)*\n\n_File dikirim sebagai dokumen utuh agar server WhatsApp tidak menghapus metadata warna Dolby Vision._`,
+                        },
+                        { quoted: m }
+                    )
+                } else {
+                    await sock.sendMessage(
+                        m.chat,
+                        {
+                            video: { url: siap.path },
+                            mimetype: 'video/mp4',
+                            caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*`,
+                        },
+                        { quoted: m }
+                    )
+                }
             } finally {
                 if (siap.temp) { try { fs.unlinkSync(siap.path) } catch {} }
             }

@@ -227,6 +227,7 @@ export async function unduhKeTemp(url, referer, basis) {
  */
 export async function siapkanVideoWA(fileMasuk, opts = {}) {
   const hapusSumber = opts.hapusSumber !== false;
+  const modeDolby = opts.modeDolby === true;
   const info = infoVideo(fileMasuk);
   // Codec benar TIDAK berarti berkasnya siap kirim. Selain codec/pix_fmt, fps
   // header yang menipu atau format HDR/Dolby Vision juga memaksa encode ulang:
@@ -238,13 +239,6 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
     /bt2020/.test(info.colorSpace) ||
     /bt2020/.test(info.colorPrimaries);
 
-  const perluEncode =
-    info.codec !== "h264" ||
-    (info.pixFmt && info.pixFmt !== "yuv420p") ||
-    /10|4:4:4|4:2:2/.test(info.profile) ||
-    fpsNgaco ||
-    isHdr;
-
   const out = path.join(TMP, "wa_" + crypto.randomBytes(8).toString("hex") + ".mp4");
   const audioArgs = !adaAudio(fileMasuk)
     ? ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-shortest", "-c:a", "aac", "-b:a", "128k"]
@@ -253,6 +247,26 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
       : ["-c:a", "aac", "-b:a", "192k"];
 
   const bersihkan = () => { if (hapusSumber) { try { fs.unlinkSync(fileMasuk); } catch {} } };
+
+  // Mode Dolby Vision Asli: pertahankan bitstream HEVC 10-bit / Dolby Vision apa adanya (via dokumen)
+  if (modeDolby) {
+    try {
+      const args = ["-y", "-i", fileMasuk, ...audioArgs, "-c:v", "copy", "-movflags", "+faststart", out];
+      await execFileP("ffmpeg", args, 300000);
+      if (fs.existsSync(out) && fs.statSync(out).size > 1000) {
+        bersihkan();
+        return { path: out, temp: true, info, tindakan: "dolby-asli", isDolby: true };
+      }
+    } catch {}
+    return { path: fileMasuk, temp: hapusSumber, info, tindakan: "dolby-asli", isDolby: true };
+  }
+
+  const perluEncode =
+    info.codec !== "h264" ||
+    (info.pixFmt && info.pixFmt !== "yuv420p") ||
+    /10|4:4:4|4:2:2/.test(info.profile) ||
+    fpsNgaco ||
+    isHdr;
 
   if (!perluEncode) {
     try {
@@ -336,7 +350,7 @@ export async function ambilVideoHD(kandidat, opts = {}) {
     const basis = (typeof c === "object" && c.basis) || opts.basis;
     try {
       const mentah = await unduhKeTemp(url, opts.referer, basis);
-      const siap = await siapkanVideoWA(mentah);
+      const siap = await siapkanVideoWA(mentah, opts);
       return { ...siap, url };
     } catch (e) {
       errTerakhir = e;
