@@ -152,68 +152,171 @@ async function downloadMp3Buffer(videoUrl) {
   return mp3Buffer;
 }
 
-// Helper Pencarian Universal YouTube
+// Helper Pencarian Universal YouTube Terstruktur
 async function searchUniversalMusic(title, artist = "") {
   const seenIds = new Set();
   const originalList = [];
-  const djTiktokList = [];
-  const djRemixList = [];
+  const djList = [];
   const slowedList = [];
+  const spedUpList = [];
 
   const cleanTitle = (title || "").replace(/[^\w\s]/gi, " ").trim();
   const cleanArtist = (artist || "").replace(/[^\w\s]/gi, " ").trim();
   const baseQuery = cleanArtist ? `${cleanArtist} ${cleanTitle}` : cleanTitle;
+  const isDjQuery = /dj|remix|jedag|breakbeat|kane|tik\s*tok/i.test(baseQuery);
 
-  // Query 1: DJ TikTok Viral & Sound Kane
+  // 1. Cari Original & Official Track
   try {
-    const r1 = await yts(`DJ ${baseQuery} tiktok viral sound mengkane`);
-    (r1?.videos || []).slice(0, 5).forEach((v) => {
-      if (!seenIds.has(v.videoId)) {
-        seenIds.add(v.videoId);
-        djTiktokList.push(v);
+    const r1 = await yts(baseQuery);
+    (r1?.videos || []).slice(0, 8).forEach((v) => {
+      if (v.seconds > 600 || seenIds.has(v.videoId)) return;
+      const t = v.title.toLowerCase();
+      // Bila query bukan cari DJ, singkirkan hasil yang bertitle DJ/remix/slowed dari kategori Original
+      if (!isDjQuery && (t.includes("dj ") || t.includes("remix") || t.includes("slowed") || t.includes("sped up") || t.includes("speed up"))) {
+        return;
       }
-    });
-  } catch {}
-
-  // Query 2: DJ Remix Jedag Jedug / Breakbeat / Full Bass
-  try {
-    const r2 = await yts(`DJ ${baseQuery} jedag jedug remix breakbeat`);
-    (r2?.videos || []).slice(0, 5).forEach((v) => {
-      if (!seenIds.has(v.videoId)) {
-        seenIds.add(v.videoId);
-        djRemixList.push(v);
-      }
-    });
-  } catch {}
-
-  // Query 3: Original & Official Track
-  try {
-    const r3 = await yts(`${baseQuery}`);
-    (r3?.videos || []).slice(0, 4).forEach((v) => {
-      if (!seenIds.has(v.videoId)) {
+      if (originalList.length < 2) {
         seenIds.add(v.videoId);
         originalList.push(v);
       }
     });
   } catch {}
 
-  // Query 4: Slowed Reverb / Speed Up
+  // 2. Cari DJ / Remix / Jedag Jedug
   try {
-    const r4 = await yts(`${baseQuery} slowed reverb`);
-    (r4?.videos || []).slice(0, 3).forEach((v) => {
-      if (!seenIds.has(v.videoId)) {
+    const r2 = await yts(`${baseQuery} dj remix full bass`);
+    (r2?.videos || []).slice(0, 6).forEach((v) => {
+      if (v.seconds > 600 || seenIds.has(v.videoId)) return;
+      if (djList.length < 2) {
+        seenIds.add(v.videoId);
+        djList.push(v);
+      }
+    });
+  } catch {}
+
+  // 3. Cari Slowed & Reverb
+  try {
+    const r3 = await yts(`${baseQuery} slowed reverb`);
+    (r3?.videos || []).slice(0, 5).forEach((v) => {
+      if (v.seconds > 600 || seenIds.has(v.videoId)) return;
+      if (slowedList.length < 2) {
         seenIds.add(v.videoId);
         slowedList.push(v);
       }
     });
   } catch {}
 
+  // 4. Cari Sped Up / Nightcore
+  try {
+    const r4 = await yts(`${baseQuery} sped up`);
+    (r4?.videos || []).slice(0, 5).forEach((v) => {
+      if (v.seconds > 600 || seenIds.has(v.videoId)) return;
+      if (spedUpList.length < 1) {
+        seenIds.add(v.videoId);
+        spedUpList.push(v);
+      }
+    });
+  } catch {}
+
+  const all = isDjQuery
+    ? [...djList, ...originalList, ...slowedList, ...spedUpList]
+    : [...originalList, ...djList, ...slowedList, ...spedUpList];
+
   return {
-    original: originalList.slice(0, 4),
-    djTiktok: djTiktokList.slice(0, 5),
-    djRemix: djRemixList.slice(0, 5),
-    slowed: slowedList.slice(0, 3),
-    all: [...djTiktokList, ...djRemixList, ...originalList, ...slowedList],
+    isDjQuery,
+    original: originalList,
+    dj: djList,
+    slowed: slowedList,
+    spedUp: spedUpList,
+    all,
+  };
+}
+
+// Formatter hasil pencarian yang eksplisit, rapi, dan terstruktur
+function formatCarilaguResponse({ title, artist = "", source = "", uni, prefix = "." }) {
+  const sections = [];
+  const orderedList = [];
+  let itemNumber = 1;
+
+  const addCategory = (categoryTitle, list, tag, icon) => {
+    if (!list || !list.length) return "";
+    let txt = `\n${icon} *[${categoryTitle.toUpperCase()}]*\n`;
+    const rows = [];
+    for (const v of list) {
+      const num = itemNumber++;
+      orderedList.push(v);
+      const shortTitle = v.title.replace(/[\n\r]+/g, " ").trim();
+      const author = v.author?.name || "YouTube";
+      const dur = v.timestamp || "?";
+      txt += `*${num}.* ${shortTitle}\n   └ ⏱️ \`${dur}\` · 👤 _${author}_\n`;
+      rows.push({
+        title: `[${tag} ${num}] ${shortTitle.substring(0, 36)}`,
+        description: `⏱️ ${dur} · 👤 ${author}`,
+        id: `${prefix}getmusic ${v.videoId}`,
+      });
+    }
+    sections.push({ title: `${icon} ${categoryTitle}`, rows });
+    return txt;
+  };
+
+  let listText = "";
+  if (uni.isDjQuery) {
+    listText += addCategory("Versi DJ & Remix Full Bass", uni.dj, "DJ", "🎧");
+    listText += addCategory("Versi Original & Official", uni.original, "ORI", "🎶");
+  } else {
+    listText += addCategory("Versi Original & Official", uni.original, "ORI", "🎶");
+    listText += addCategory("Versi DJ & Remix", uni.dj, "DJ", "🎧");
+  }
+  listText += addCategory("Versi Slowed & Reverb", uni.slowed, "SLOW", "✨");
+  listText += addCategory("Versi Sped Up / Nightcore", uni.spedUp, "SPEED", "⚡");
+
+  let bodyText = `🌐 *HASIL PENCARIAN MUSIK*\n\n`;
+  bodyText += `╭┈┈⬡「 📋 *INFO TRACK* 」\n`;
+  bodyText += `┃ 🔍 *Pencarian:* ${title}${artist ? " - " + artist : ""}\n`;
+  if (source) bodyText += `┃ 📡 *Engine:* ${source}\n`;
+  bodyText += `┃ 📊 *Ditemukan:* ${orderedList.length} versi pilihan\n`;
+  bodyText += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n`;
+  bodyText += listText;
+  bodyText += `\n💡 *Cara Unduh:* Balas dengan angka *1-${orderedList.length}* atau pilih lewat tombol di bawah.`;
+
+  const buttons = [
+    {
+      name: "single_select",
+      buttonParamsJson: JSON.stringify({
+        title: "🌐 PILIH VERSI MP3",
+        sections,
+      }),
+    },
+  ];
+
+  const primary = uni.isDjQuery ? (uni.dj[0] || uni.original[0]) : (uni.original[0] || uni.dj[0]);
+  if (primary) {
+    const isOri = primary === uni.original[0];
+    buttons.push({
+      name: "quick_reply",
+      buttonParamsJson: JSON.stringify({
+        display_text: `${isOri ? "🎶" : "🎧"} Unduh ${isOri ? "Original" : "DJ"} (${primary.timestamp})`,
+        id: `${prefix}getmusic ${primary.videoId}`,
+      }),
+    });
+  }
+
+  const secondary = uni.isDjQuery ? uni.original[0] : (uni.slowed[0] || uni.dj[0]);
+  if (secondary && secondary.videoId !== primary?.videoId) {
+    const label = secondary === uni.slowed[0] ? "✨ Unduh Slowed" : (secondary === uni.original[0] ? "🎶 Unduh Original" : "🎧 Unduh DJ");
+    buttons.push({
+      name: "quick_reply",
+      buttonParamsJson: JSON.stringify({
+        display_text: `${label} (${secondary.timestamp})`,
+        id: `${prefix}getmusic ${secondary.videoId}`,
+      }),
+    });
+  }
+
+  return {
+    bodyText,
+    buttons,
+    allList: orderedList,
   };
 }
 
@@ -257,102 +360,24 @@ async function handler(m, { sock, args, text, command }) {
   // 2. Pencarian berbasis teks langsung
   if (text && text.trim().length > 0) {
     m.react("🔍");
-    await m.reply(`🔍 *ᴍᴇɴᴄᴀʀɪ ᴍᴜsɪᴋ ᴜɴɪᴠᴇʀsᴀʟ...*\n\n> Kata Kunci: *${text.trim()}*\n> Memindai DJ TikTok, Jedag-Jedug, & Official Track...`);
+    await m.reply(`🔍 *ᴍᴇɴᴄᴀʀɪ ᴍᴜsɪᴋ ᴜɴɪᴠᴇʀsᴀʟ...*\n\n> Kata Kunci: *${text.trim()}*\n> Mengumpulkan versi Original, DJ Remix, Slowed & Reverb...`);
 
     const uni = await searchUniversalMusic(text.trim());
     if (!uni.all.length) {
       m.react("❌");
-      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n> Tidak ada lagu atau remix DJ yang cocok untuk kata kunci: _${text}_`);
+      return m.reply(`❌ *ʟᴀɢᴜ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ*\n\n> Tidak ada lagu atau versi yang cocok untuk kata kunci: _${text}_`);
     }
 
-    const sections = [];
-    if (uni.djTiktok.length > 0) {
-      sections.push({
-        title: "🔥 Versi DJ TikTok & Viral Mengkane",
-        rows: uni.djTiktok.map((v, i) => ({
-          title: `[TIKTOK ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "TikTok DJ"}`,
-          id: `${m.prefix}getmusic ${v.videoId}`,
-        })),
-      });
-    }
-
-    if (uni.djRemix.length > 0) {
-      sections.push({
-        title: "🎧 Versi DJ Remix & Jedag-Jedug Full Bass",
-        rows: uni.djRemix.map((v, i) => ({
-          title: `[REMIX ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "DJ Remix"}`,
-          id: `${m.prefix}getmusic ${v.videoId}`,
-        })),
-      });
-    }
-
-    if (uni.original.length > 0) {
-      sections.push({
-        title: "🎶 Versi Original & Official Track",
-        rows: uni.original.map((v, i) => ({
-          title: `[ORI ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "Official"}`,
-          id: `${m.prefix}getmusic ${v.videoId}`,
-        })),
-      });
-    }
-
-    if (uni.slowed.length > 0) {
-      sections.push({
-        title: "✨ Versi Slowed / Reverb / Speed Up",
-        rows: uni.slowed.map((v, i) => ({
-          title: `[VIBE ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "Vibe"}`,
-          id: `${m.prefix}getmusic ${v.videoId}`,
-        })),
-      });
-    }
-
-    let bodyText = `🌐 *ᴘᴇɴᴄᴀʀɪᴀɴ ᴜɴɪᴠᴇʀsᴀʟ ᴍᴜsɪᴋ & ᴅᴊ*\n\n`;
-    bodyText += `╭┈┈⬡「 📋 *ɪɴꜰᴏ ᴘᴇɴᴄᴀʀɪᴀɴ* 」\n`;
-    bodyText += `┃ 🔍 *Kata Kunci:* ${text.trim()}\n`;
-    bodyText += `┃ 📊 *Total Ditemukan:* ${uni.all.length} audio\n`;
-    bodyText += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
-    bodyText += `🔥 *Hasil Kategori:*\n`;
-    if (uni.djTiktok.length) bodyText += `> 📱 *DJ TikTok Viral:* ${uni.djTiktok.length} versi\n`;
-    if (uni.djRemix.length) bodyText += `> 🎧 *DJ Remix / JJ:* ${uni.djRemix.length} versi\n`;
-    if (uni.original.length) bodyText += `> 🎶 *Original Track:* ${uni.original.length} versi\n`;
-    if (uni.slowed.length) bodyText += `> ✨ *Slowed / Vibe:* ${uni.slowed.length} versi\n\n`;
-    bodyText += `👇 *Pilih versi audio MP3 di tombol menu berikut:*`;
-
-    const buttons = [
-      {
-        name: "single_select",
-        buttonParamsJson: JSON.stringify({
-          title: "🌐 PILIH VERSI MP3 / DJ TIKTOK",
-          sections,
-        }),
-      },
-    ];
-
-    if (uni.djTiktok[0]) {
-      buttons.push({
-        name: "quick_reply",
-        buttonParamsJson: JSON.stringify({
-          display_text: `📱 Unduh DJ TikTok (${uni.djTiktok[0].timestamp})`,
-          id: `${m.prefix}getmusic ${uni.djTiktok[0].videoId}`,
-        }),
-      });
-    } else if (uni.original[0]) {
-      buttons.push({
-        name: "quick_reply",
-        buttonParamsJson: JSON.stringify({
-          display_text: `🎶 Unduh Original (${uni.original[0].timestamp})`,
-          id: `${m.prefix}getmusic ${uni.original[0].videoId}`,
-        }),
-      });
-    }
+    const { bodyText, buttons, allList } = formatCarilaguResponse({
+      title: text.trim(),
+      source: "Universal YouTube",
+      uni,
+      prefix: m.prefix,
+    });
 
     const senderJid = m.sender || m.key?.participant || m.chat;
     const sessionData = {
-      results: uni.all,
+      results: allList,
       chat: m.chat,
       sender: senderJid,
       songInfo: { title: text.trim(), artist: "" },
@@ -363,7 +388,7 @@ async function handler(m, { sock, args, text, command }) {
     global.carilaguSessions.set(m.chat, sessionData);
     if (senderJid) global.carilaguSessions.set(senderJid, sessionData);
 
-    const headerSource = uni.all[0]?.thumbnail || getAssetBuffer("hillz");
+    const headerSource = allList[0]?.thumbnail || getAssetBuffer("hillz");
 
     try {
       await sock.sendButton(
@@ -491,96 +516,14 @@ async function handler(m, { sock, args, text, command }) {
 
     // Pencarian Universal YouTube
     const uni = await searchUniversalMusic(songTitle, songArtist);
-    const sections = [];
-    const allList = uni.all;
 
-    if (uni.djTiktok.length > 0) {
-      sections.push({
-        title: "🔥 Versi DJ TikTok & Viral Mengkane",
-        rows: uni.djTiktok.map((v, i) => ({
-          title: `[TIKTOK ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "TikTok DJ"}`,
-          id: `${m.prefix}getmusic ${v.videoId}`,
-        })),
-      });
-    }
-
-    if (uni.djRemix.length > 0) {
-      sections.push({
-        title: "🎧 Versi DJ Remix & Jedag-Jedug Full Bass",
-        rows: uni.djRemix.map((v, i) => ({
-          title: `[REMIX ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "DJ Remix"}`,
-          id: `${m.prefix}getmusic ${v.videoId}`,
-        })),
-      });
-    }
-
-    if (uni.original.length > 0) {
-      sections.push({
-        title: "🎶 Versi Original & Official Track",
-        rows: uni.original.map((v, i) => ({
-          title: `[ORI ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "Official"}`,
-          id: `${m.prefix}getmusic ${v.videoId}`,
-        })),
-      });
-    }
-
-    if (uni.slowed.length > 0) {
-      sections.push({
-        title: "✨ Versi Slowed / Reverb / Speed Up",
-        rows: uni.slowed.map((v, i) => ({
-          title: `[VIBE ${i + 1}] ${v.title.substring(0, 42)}`,
-          description: `⏱️ ${v.timestamp || "?"} · 👤 ${v.author?.name || "Vibe"}`,
-          id: `${m.prefix}getmusic ${v.videoId}`,
-        })),
-      });
-    }
-
-    let bodyText = `🌐 *ᴘᴇɴᴄᴀʀɪᴀɴ ᴜɴɪᴠᴇʀsᴀʟ ᴍᴜsɪᴋ & ᴅᴊ*\n\n`;
-    bodyText += `╭┈┈⬡「 📋 *ɪɴꜰᴏ ʟᴀɢᴜ* 」\n`;
-    bodyText += `┃ 🎶 *Judul:* ${songTitle}\n`;
-    bodyText += `┃ 👤 *Artis:* ${songArtist}\n`;
-    bodyText += `┃ 💿 *Album:* ${songAlbum}\n`;
-    bodyText += `┃ 📅 *Rilis:* ${songRelease}\n`;
-    bodyText += `┃ 📡 *Engine:* ${engineSource}\n`;
-    bodyText += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
-
-    bodyText += `🔥 *Hasil Penelusuran Universal:*\n`;
-    if (uni.djTiktok.length) bodyText += `> 📱 *DJ TikTok Viral:* ${uni.djTiktok.length} versi\n`;
-    if (uni.djRemix.length) bodyText += `> 🎧 *DJ Remix / JJ:* ${uni.djRemix.length} versi\n`;
-    if (uni.original.length) bodyText += `> 🎶 *Original Track:* ${uni.original.length} versi\n`;
-    if (uni.slowed.length) bodyText += `> ✨ *Slowed / Vibe:* ${uni.slowed.length} versi\n\n`;
-    bodyText += `👇 *Klik tombol menu di bawah untuk memilih & mengunduh MP3:*`;
-
-    const buttons = [
-      {
-        name: "single_select",
-        buttonParamsJson: JSON.stringify({
-          title: "🌐 PILIH VERSI MP3 / DJ TIKTOK",
-          sections,
-        }),
-      },
-    ];
-
-    if (uni.djTiktok[0]) {
-      buttons.push({
-        name: "quick_reply",
-        buttonParamsJson: JSON.stringify({
-          display_text: `📱 Unduh DJ TikTok (${uni.djTiktok[0].timestamp})`,
-          id: `${m.prefix}getmusic ${uni.djTiktok[0].videoId}`,
-        }),
-      });
-    } else if (uni.original[0]) {
-      buttons.push({
-        name: "quick_reply",
-        buttonParamsJson: JSON.stringify({
-          display_text: `🎶 Unduh Original (${uni.original[0].timestamp})`,
-          id: `${m.prefix}getmusic ${uni.original[0].videoId}`,
-        }),
-      });
-    }
+    const { bodyText, buttons, allList } = formatCarilaguResponse({
+      title: songTitle,
+      artist: songArtist,
+      source: engineSource,
+      uni,
+      prefix: m.prefix,
+    });
 
     const senderJid = m.sender || m.key?.participant || m.chat;
     const sessionData = {
@@ -628,7 +571,7 @@ export async function carilaguAnswerHandler(m, sock) {
   const rawBody = (m.body || m.text || "").trim();
   if (!rawBody) return false;
 
-  const match = rawBody.match(/^#?\[?([1-9]|1[0-7])\]?\.?$/i);
+  const match = rawBody.match(/^#?\[?([1-9]|1[0-9]|2[0-5])\]?\.?$/i);
   if (!match) return false;
 
   const choiceNum = parseInt(match[1], 10);
