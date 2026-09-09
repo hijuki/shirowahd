@@ -18,7 +18,7 @@ const CODEC = {
   mp3: {
     args: (br) => [
       '-af',
-      'alimiter=limit=0.98:attack=5:release=50',
+      'equalizer=f=120:width_type=o:w=1.2:g=2.2,equalizer=f=4200:width_type=o:w=1.2:g=-2.2,lowpass=f=16000,alimiter=limit=0.96:attack=5:release=50',
       '-c:a',
       'libmp3lame',
       '-b:a',
@@ -34,7 +34,7 @@ const CODEC = {
   opus: {
     args: (br) => [
       '-af',
-      'alimiter=limit=0.98:attack=5:release=50',
+      'equalizer=f=120:width_type=o:w=1.2:g=2.2,equalizer=f=4200:width_type=o:w=1.2:g=-2.2,lowpass=f=16000,alimiter=limit=0.96:attack=5:release=50',
       '-c:a',
       'libopus',
       '-b:a',
@@ -92,47 +92,50 @@ function pecahJudulLagu(rawTitle, channel) {
 }
 
 /**
- * Fetch lirik tersinkronisasi dari LRCLIB (multi-strategy)
+ * Fetch lirik tersinkronisasi dari LRCLIB (multi-strategy tahan banting)
  */
-async function getLyrics(rawTitle, rawArtist, durasiDetik) {
+async function getLyrics(rawTitle, rawArtist, durasiDetik, rawQuery = '') {
   const { artis, judul } = pecahJudulLagu(rawTitle, rawArtist);
 
-  // Strategy 1: track_name + artist_name
-  try {
-    const u = new URL(`${API_LRCLIB}/search`);
-    u.searchParams.set('track_name', judul);
-    if (artis && artis !== 'Artist') u.searchParams.set('artist_name', artis);
-    const res = await axios.get(u.toString(), {
-      headers: { 'User-Agent': 'shirowahd-bot/1.0 (+apple player)' },
-      timeout: 5000,
-    });
-    const valid = Array.isArray(res.data) ? res.data.filter((x) => x?.syncedLyrics && !x?.instrumental) : [];
-    if (valid.length > 0) return parseLrc(valid[0].syncedLyrics);
-  } catch {}
+  const cobaAmbil = async (params) => {
+    try {
+      const u = new URL(`${API_LRCLIB}/search`);
+      for (const [k, v] of Object.entries(params)) {
+        if (v && v.trim()) u.searchParams.set(k, v.trim());
+      }
+      const res = await axios.get(u.toString(), {
+        headers: { 'User-Agent': 'shirowahd-bot/1.0 (+apple player)' },
+        timeout: 5000,
+      });
+      const valid = Array.isArray(res.data) ? res.data.filter((x) => x?.syncedLyrics && !x?.instrumental) : [];
+      if (valid.length > 0) return parseLrc(valid[0].syncedLyrics);
+    } catch {}
+    return null;
+  };
 
-  // Strategy 2: track_name only
-  try {
-    const u = new URL(`${API_LRCLIB}/search`);
-    u.searchParams.set('track_name', judul);
-    const res = await axios.get(u.toString(), {
-      headers: { 'User-Agent': 'shirowahd-bot/1.0 (+apple player)' },
-      timeout: 5000,
-    });
-    const valid = Array.isArray(res.data) ? res.data.filter((x) => x?.syncedLyrics && !x?.instrumental) : [];
-    if (valid.length > 0) return parseLrc(valid[0].syncedLyrics);
-  } catch {}
+  // Strategy 1: track_name + artist_name normal
+  let lrc = await cobaAmbil({ track_name: judul, artist_name: artis !== 'Artist' ? artis : '' });
+  if (lrc?.length) return lrc;
 
-  // Strategy 3: query string 'q'
-  try {
-    const u = new URL(`${API_LRCLIB}/search`);
-    u.searchParams.set('q', `${artis} ${judul}`.trim());
-    const res = await axios.get(u.toString(), {
-      headers: { 'User-Agent': 'shirowahd-bot/1.0 (+apple player)' },
-      timeout: 5000,
-    });
-    const valid = Array.isArray(res.data) ? res.data.filter((x) => x?.syncedLyrics && !x?.instrumental) : [];
-    if (valid.length > 0) return parseLrc(valid[0].syncedLyrics);
-  } catch {}
+  // Strategy 2: Inverted (jika judul & artis di YouTube terbalik formatnya)
+  if (artis && artis !== 'Artist') {
+    lrc = await cobaAmbil({ track_name: artis, artist_name: judul });
+    if (lrc?.length) return lrc;
+  }
+
+  // Strategy 3: user raw query langsung
+  if (rawQuery) {
+    lrc = await cobaAmbil({ q: rawQuery });
+    if (lrc?.length) return lrc;
+  }
+
+  // Strategy 4: query string q gabungan
+  lrc = await cobaAmbil({ q: `${artis} ${judul}`.trim() });
+  if (lrc?.length) return lrc;
+
+  // Strategy 5: track_name only
+  lrc = await cobaAmbil({ track_name: judul });
+  if (lrc?.length) return lrc;
 
   return [];
 }
@@ -398,10 +401,11 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
   stroke: #1ed760;
 }
 .player-lyrics {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 6px 36% 0;
+  padding: 12px 6px 40% 0;
   overscroll-behavior: contain;
   scrollbar-width: none;
 }
@@ -623,8 +627,8 @@ export function buildApplePlayerHtml({ title, artist, durationSec, audioUrl, art
 
     if (nextIdx >= 0 && lyricEls[nextIdx]) {
       const target = lyricEls[nextIdx];
-      const desired = target.offsetTop - (lyricsContainer.clientHeight - target.offsetHeight) * 0.45;
-      lyricsContainer.scrollTo({ top: desired, behavior: "smooth" });
+      const desired = target.offsetTop - (lyricsContainer.clientHeight * 0.35);
+      lyricsContainer.scrollTo({ top: Math.max(0, desired), behavior: "smooth" });
     }
   };
 
@@ -822,14 +826,20 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
   const cleanQuery = query.replace(/^https?:\/\/[^\s]+/i, '').trim() || query;
   const isModifierQuery = /slow|reverb|remix|edit|speed|sped|nightcore/i.test(cleanQuery);
   
-  // Hindari menambahkan 'audio' jika user mencari versi khusus (slowed, reverb, remix)
-  let searchResult = await yts(isModifierQuery ? cleanQuery : cleanQuery + ' audio');
-  let video = isModifierQuery
-    ? searchResult?.videos?.[0]
-    : (searchResult?.videos?.find((v) => /official audio|topic|audio/i.test(v.title)) || searchResult?.videos?.[0]);
+  let searchResult = await yts(cleanQuery);
+  const videos = searchResult?.videos || [];
+  const isGimmick = (t) => /\b(8d|3d|16d|bass\s*boosted|chipmunk|karaoke|instrumental|mashup|x\b|medley|earrape)\b/i.test(t);
+
+  let video = null;
+  if (!isModifierQuery) {
+    // Cari video teratas yang bukan gimmick 8D dan bukan mashup
+    video = videos.find((v) => !isGimmick(v.title) && v.seconds < 600);
+  } else {
+    video = videos.find((v) => !isGimmick(v.title)) || videos[0];
+  }
+
   if (!video) {
-    searchResult = await yts(cleanQuery);
-    video = searchResult?.videos?.[0];
+    video = videos[0];
   }
 
   if (!video) {
@@ -860,9 +870,9 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
     throw new Error('Gagal mengambil audio stream dari server YouTube.');
   }
 
-  // Paralel: ambil lirik, transcode audio ke Opus Stereo 48kHz, dan optimasi cover
+  // Paralel: ambil lirik (multi-strategy), transcode audio ke Opus Stereo 48kHz (Warm Studio EQ), dan optimasi cover
   const [lyrics, audioBase64, artworkDataUrl] = await Promise.all([
-    getLyrics(title, artist, durationSec),
+    getLyrics(title, artist, durationSec, cleanQuery),
     audioDataUri(audioBuffer, { codec: 'opus', maxDetik: 95 }),
     coverDataUri(rawCoverUrl),
   ]);
