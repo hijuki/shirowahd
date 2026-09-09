@@ -176,28 +176,20 @@ async function handler(m, { sock }) {
                 modeDolby: isDolby
             })
             try {
-                if (isDolby) {
-                    await sock.sendMessage(
-                        m.chat,
-                        {
-                            document: { url: siap.path },
-                            mimetype: 'video/mp4',
-                            fileName: `tiktok_dolby_${Date.now()}.mp4`,
-                            caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*\n✨ Mode: *Dolby Vision / HDR (Original Bitstream)*\n\n_File dikirim sebagai dokumen utuh agar server WhatsApp tidak menghapus metadata warna Dolby Vision._`,
-                        },
-                        { quoted: m }
-                    )
-                } else {
-                    await sock.sendMessage(
-                        m.chat,
-                        {
-                            video: { url: siap.path },
-                            mimetype: 'video/mp4',
-                            caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*`,
-                        },
-                        { quoted: m }
-                    )
-                }
+                const isDolbyStream = isDolby && (/hevc|10/i.test(siap.info?.codec || '') || /10/i.test(siap.info?.pixFmt || ''));
+                const dolbyNote = isDolbyStream
+                    ? `\n✨ Mode: *Dolby Vision / HDR 10-bit (hvc1 Inline)*\n_Video dikirim langsung dengan tag Apple hvc1 agar memicu kecerahan HDR di layar HP._`
+                    : (isDolby ? `\n⚠️ _Video dari TikTok aslinya SDR 8-bit (bukan master Dolby Vision), dikirim kualitas asli._` : '');
+
+                await sock.sendMessage(
+                    m.chat,
+                    {
+                        video: { url: siap.path },
+                        mimetype: 'video/mp4',
+                        caption: caption + `\n📺 Kualitas: *${ringkasKualitas(siap)}*` + dolbyNote,
+                    },
+                    { quoted: m }
+                )
             } finally {
                 if (siap.temp) { try { fs.unlinkSync(siap.path) } catch {} }
             }

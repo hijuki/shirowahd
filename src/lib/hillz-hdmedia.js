@@ -248,17 +248,22 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
 
   const bersihkan = () => { if (hapusSumber) { try { fs.unlinkSync(fileMasuk); } catch {} } };
 
-  // Mode Dolby Vision Asli: pertahankan bitstream HEVC 10-bit / Dolby Vision apa adanya (via dokumen)
+  // Mode Dolby Vision Asli: pertahankan bitstream HEVC 10-bit / Dolby Vision apa adanya
+  // Diakali dengan container MP4 bersertifikasi tag Apple QuickTime `-tag:v hvc1` + `+faststart`
+  // agar WhatsApp bisa memutarnya langsung sebagai VIDEO biasa di dalam chat (bukan dokumen)
+  // dan memicu layar HDR di iPhone/Android AMOLED.
   if (modeDolby) {
     try {
-      const args = ["-y", "-i", fileMasuk, ...audioArgs, "-c:v", "copy", "-movflags", "+faststart", out];
+      const isHevc = info.codec === "hevc" || /hevc|h265/i.test(info.codec);
+      const tagArgs = isHevc ? ["-tag:v", "hvc1"] : [];
+      const args = ["-y", "-i", fileMasuk, ...audioArgs, "-c:v", "copy", ...tagArgs, "-movflags", "+faststart", out];
       await execFileP("ffmpeg", args, 300000);
       if (fs.existsSync(out) && fs.statSync(out).size > 1000) {
         bersihkan();
-        return { path: out, temp: true, info, tindakan: "dolby-asli", isDolby: true };
+        return { path: out, temp: true, info: infoVideo(out), tindakan: "dolby-inline", isDolby: true };
       }
     } catch {}
-    return { path: fileMasuk, temp: hapusSumber, info, tindakan: "dolby-asli", isDolby: true };
+    return { path: fileMasuk, temp: hapusSumber, info, tindakan: "dolby-inline", isDolby: true };
   }
 
   const perluEncode =
