@@ -108,7 +108,7 @@ export function pilihUrlTerbaik(kandidat) {
 
 function infoVideo(file) {
   const raw = jalankan(
-    `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,pix_fmt,profile,r_frame_rate,avg_frame_rate -of default=nw=1 ${JSON.stringify(file)}`
+    `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,pix_fmt,profile,r_frame_rate,avg_frame_rate,color_space,color_transfer,color_primaries -of default=nw=1 ${JSON.stringify(file)}`
   );
   const get = (k) => (raw.match(new RegExp(`^${k}=(.*)$`, "m")) || [, ""])[1].trim();
   return {
@@ -119,6 +119,9 @@ function infoVideo(file) {
     profile: get("profile"),
     fps: get("r_frame_rate"),
     fpsAvg: get("avg_frame_rate"),
+    colorSpace: get("color_space").toLowerCase(),
+    colorTransfer: get("color_transfer").toLowerCase(),
+    colorPrimaries: get("color_primaries").toLowerCase(),
   };
 }
 
@@ -226,14 +229,21 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
   const hapusSumber = opts.hapusSumber !== false;
   const info = infoVideo(fileMasuk);
   // Codec benar TIDAK berarti berkasnya siap kirim. Selain codec/pix_fmt, fps
-  // header yang menipu juga memaksa encode ulang: jalur remux menyalin header
-  // itu apa adanya sehingga videonya "jernih tapi timing-nya ngaco".
+  // header yang menipu atau format HDR/Dolby Vision juga memaksa encode ulang:
+  // WhatsApp tidak mendukung HDR10/Dolby Vision mentah (warnanya jadi pucat/washed out).
   const fpsNgaco = fpsBohong(info);
+  const isHdr =
+    info.colorTransfer === "smpte2084" ||
+    info.colorTransfer === "arib-std-b67" ||
+    /bt2020/.test(info.colorSpace) ||
+    /bt2020/.test(info.colorPrimaries);
+
   const perluEncode =
     info.codec !== "h264" ||
     (info.pixFmt && info.pixFmt !== "yuv420p") ||
     /10|4:4:4|4:2:2/.test(info.profile) ||
-    fpsNgaco;
+    fpsNgaco ||
+    isHdr;
 
   const out = path.join(TMP, "wa_" + crypto.randomBytes(8).toString("hex") + ".mp4");
   const audioArgs = !adaAudio(fileMasuk)
@@ -258,11 +268,13 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
 
   // Encode ulang. RESOLUSI tidak disentuh sama sekali.
   //
-  // Kunci 60 FPS mulus di WA:
-  // 1. Pastikan CFR (Constant Frame Rate) dengan `-r` sesuai FPS nyata sumber,
+  // Kunci 60 FPS mulus di WA + Auto Tone-Mapping Dolby Vision/HDR:
+  // 1. Jika sumbernya Dolby Vision / HDR (BT.2020), lakukan tone mapping ke BT.709
+  //    agar warna tidak pucat (washed-out) saat diputar di WhatsApp.
+  // 2. Pastikan CFR (Constant Frame Rate) dengan `-r` sesuai FPS nyata sumber,
   //    agar timing frame stabil tanpa jitter/judder di pemutar WhatsApp.
-  // 2. Pasang GOP rapat ~2 detik (`-g ${gop}`) agar WhatsApp tidak drop frame.
-  // 3. Pasang H.264 High Profile Level 4.2/5.1 yang mendukung 1080p 60fps.
+  // 3. Pasang GOP rapat ~2 detik (`-g ${gop}`) agar WhatsApp tidak drop frame.
+  // 4. Pasang H.264 High Profile Level 4.2/5.1 yang mendukung 1080p 60fps.
   const avg = fraksiKeAngka(info.fpsAvg);
   const nominal = fraksiKeAngka(info.fps);
   const fpsSumber = avg > 0 ? avg : (nominal > 0 ? nominal : 30);
@@ -270,10 +282,22 @@ export async function siapkanVideoWA(fileMasuk, opts = {}) {
   const gop = Math.max(24, Math.round(fpsSumber * 2));
   const levelH264 = fpsSumber > 50 ? "5.1" : "4.1";
 
+  const vfList = [];
+  if (isHdr) {
+    if (info.colorTransfer === "arib-std-b67") {
+      vfList.push("zscale=tin=arib-std-b67:min=bt2020nc:pin=bt2020:rin=limited:t=bt709:m=bt709:p=bt709:r=limited,format=yuv420p");
+    } else {
+      vfList.push("zscale=tin=smpte2084:min=bt2020nc:pin=bt2020:rin=limited:t=bt709:m=bt709:p=bt709:r=limited,format=yuv420p");
+    }
+  }
+
+  const vfArgs = vfList.length ? ["-vf", vfList.join(",")] : [];
+
   const argsEnc = [
     "-y", "-err_detect", "ignore_err", "-fflags", "+genpts+discardcorrupt",
     "-i", fileMasuk,
     ...(adaAudio(fileMasuk) ? [] : ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-shortest"]),
+    ...vfArgs,
     "-r", fpsStr,
     "-c:v", "libx264", "-profile:v", "high", "-level", levelH264, "-pix_fmt", "yuv420p",
     "-preset", "fast", "-crf", "18",
