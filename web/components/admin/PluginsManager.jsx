@@ -218,6 +218,39 @@ export default function PluginsManager({ toast: propToast }) {
     }
   }
 
+  const handleDownloadZip = (category = 'all') => {
+    const token = localStorage.getItem('admin_token') || ''
+    const url = `/admin/api/bot/plugins/export-zip?category=${encodeURIComponent(category)}`
+    setActionBusy(true)
+    toast(`Menyiapkan arsip ZIP ${category === 'all' ? 'seluruh plugin' : 'kategori ' + category.toUpperCase()}...`, 'info')
+    fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Gagal mengunduh ZIP (HTTP ' + res.status + ')')
+        return res.blob()
+      })
+      .then((blob) => {
+        const blobUrl = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = `shirowahd_plugins_${category}_${Date.now()}.zip`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(blobUrl)
+        toast('Arsip ZIP berhasil diunduh!', 'success')
+      })
+      .catch((err) => {
+        toast(`Gagal unduh ZIP: ${err.message}`, 'error')
+      })
+      .finally(() => {
+        setActionBusy(false)
+      })
+  }
+
   // Categories list extraction
   const categories = useMemo(() => {
     if (!data?.plugins) return []
@@ -506,6 +539,15 @@ export default function PluginsManager({ toast: propToast }) {
             <span>Riwayat Error</span>
           </button>
           <button
+            onClick={() => handleDownloadZip('all')}
+            disabled={actionBusy || loading}
+            className="btn btn-quiet text-xs py-2 px-3.5 flex items-center gap-2"
+            title="Download seluruh 830+ plugin dalam satu file ZIP"
+          >
+            <i className="fa-solid fa-file-zipper text-[var(--volt)]" />
+            <span>Unduh ZIP Semua</span>
+          </button>
+          <button
             onClick={() => loadData()}
             disabled={actionBusy || loading}
             className="btn btn-quiet text-xs py-2 px-3"
@@ -753,7 +795,21 @@ export default function PluginsManager({ toast: propToast }) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2">
+                    {/* Tombol Unduh ZIP Kategori */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDownloadZip(catName)
+                      }}
+                      disabled={actionBusy}
+                      title={`Unduh seluruh plugin kategori ${catName.toUpperCase()} dalam file ZIP`}
+                      className="btn btn-quiet text-[11px] py-1 px-2.5 flex items-center gap-1.5"
+                    >
+                      <i className="fa-solid fa-file-zipper text-[var(--volt)]" />
+                      <span>ZIP</span>
+                    </button>
+
                     {errCount > 0 && (
                       <span className="chip text-[9.5px] px-2 py-0.5 bg-rose-500/20 text-rose-300 font-bold font-mono">
                         {errCount} Error

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import AdmZip from "adm-zip";
 import config from "../../config.js";
 const pluginConfig = {
   name: "getplugin",
@@ -98,22 +99,101 @@ async function handler(m, { sock }) {
     return m.reply("❌ *Owner Only!*");
   }
 
-  const pluginName = m.args?.[0]?.trim();
+  const rawArg = (m.args?.[0] || "").trim();
+  const isZipRequested = m.args?.some((a) => /^(zip|--zip|-z)$/i.test(a));
 
-  if (!pluginName) {
+  if (!rawArg) {
     return m.reply(
-      `Halo *${m.pushName}*, sepertinya kamu lupa memasukkan nama plugin yang ingin dicari.\n\n` +
-      `Silakan gunakan format berikut:\n` +
-      `- .getplugin <nama plugin>\n\n` +
-      `Contoh penggunaan:\n` +
-      `- .getplugin menu\n` +
-      `- .getplugin sticker\n` +
-      `- .getplugin game/tebakgambar`
+      `╭┈┈⬡「 📦 *ɢᴇᴛ ᴘʟᴜɢɪɴ* 」\n` +
+      `┃ ㊗ *Format Single:* \`${m.prefix}getplugin <nama plugin>\`\n` +
+      `┃ ㊗ *Format Kategori:* \`${m.prefix}getplugin <kategori> zip\`\n` +
+      `┃ ㊗ *Format Semua:* \`${m.prefix}getplugin all zip\`\n` +
+      `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n` +
+      `*Contoh:*\n` +
+      `> \`${m.prefix}getplugin menu\`\n` +
+      `> \`${m.prefix}getplugin ai zip\`\n` +
+      `> \`${m.prefix}getplugin all zip\``
     );
   }
 
   const pluginsDir = path.join(process.cwd(), "plugins");
 
+  // Mode ZIP: Seluruh Plugin (all / semua)
+  if (rawArg.toLowerCase() === "all" || rawArg.toLowerCase() === "semua") {
+    await m.react("⏳");
+    try {
+      const zip = new AdmZip();
+      zip.addLocalFolder(pluginsDir, "plugins");
+      const zipBuffer = zip.toBuffer();
+      const zipName = `shirowahd_all_plugins_${Date.now()}.zip`;
+
+      await sock.sendMessage(
+        m.chat,
+        {
+          document: zipBuffer,
+          mimetype: "application/zip",
+          fileName: zipName,
+          caption:
+            `╭┈┈⬡「 📦 *ɢᴇᴛ ᴀʟʟ ᴘʟᴜɢɪɴs ᴢɪᴘ* 」\n` +
+            `┃ 📦 *Koleksi:* Seluruh Plugin Bot\n` +
+            `┃ ⚖️ *Ukuran:* ${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB\n` +
+            `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n` +
+            `> 💡 _Bisa langsung di-reply dengan \`${m.prefix}addplugin\` untuk batch install ke bot lain._`,
+        },
+        { quoted: m }
+      );
+      await m.react("✅");
+      return;
+    } catch (err) {
+      await m.react("❌");
+      return m.reply(`❌ Gagal mengompresi plugin: ${err.message}`);
+    }
+  }
+
+  // Mode ZIP: Per Kategori (misal: .getplugin ai zip ATAU .getplugin ai)
+  const catFolder = path.join(pluginsDir, rawArg.toLowerCase());
+  if (
+    fs.existsSync(catFolder) &&
+    fs.statSync(catFolder).isDirectory() &&
+    (isZipRequested || !rawArg.endsWith(".js"))
+  ) {
+    // Cek apakah ada file spesifik bernama sama di kategori lain, jika tidak ada atau minta zip -> ekspor folder
+    const hasSpecificFile = fs.existsSync(path.join(catFolder, `${rawArg}.js`));
+    if (isZipRequested || !hasSpecificFile) {
+      await m.react("⏳");
+      try {
+        const zip = new AdmZip();
+        zip.addLocalFolder(catFolder, rawArg.toLowerCase());
+        const zipBuffer = zip.toBuffer();
+        const filesCount = fs.readdirSync(catFolder).filter((f) => f.endsWith(".js")).length;
+        const zipName = `plugins_${rawArg.toLowerCase()}_${Date.now()}.zip`;
+
+        await sock.sendMessage(
+          m.chat,
+          {
+            document: zipBuffer,
+            mimetype: "application/zip",
+            fileName: zipName,
+            caption:
+              `╭┈┈⬡「 📦 *ɢᴇᴛ ᴘʟᴜɢɪɴ ᴢɪᴘ* 」\n` +
+              `┃ 📁 *Kategori:* \`${rawArg.toLowerCase()}\`\n` +
+              `┃ 📊 *Jumlah Modul:* ${filesCount} berkas .js\n` +
+              `┃ ⚖️ *Ukuran:* ${(zipBuffer.length / 1024).toFixed(1)} KB\n` +
+              `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n` +
+              `> 💡 _Reply berkas zip ini dengan \`${m.prefix}addplugin\` untuk batch install._`,
+          },
+          { quoted: m }
+        );
+        await m.react("✅");
+        return;
+      } catch (err) {
+        await m.react("❌");
+        return m.reply(`❌ Gagal membuat zip kategori: ${err.message}`);
+      }
+    }
+  }
+
+  const pluginName = rawArg;
   let pluginInfo = null;
 
   if (pluginName.includes("/")) {

@@ -33,12 +33,102 @@ async function handler(m, { sock }) {
 
   if (!quoted) {
     return m.reply(
-      `Halo *${m.pushName}*, sepertinya kamu belum mereply kode pluginnya.\n\n` +
-      `Silakan reply kode plugin yang ingin ditambahkan dengan perintah:\n` +
-      `- .addplugin (untuk deteksi otomatis)\n` +
+      `Halo *${m.pushName}*, sepertinya kamu belum mereply kode atau berkas pluginnya.\n\n` +
+      `Silakan reply pesan dengan perintah:\n` +
+      `- .addplugin (reply kode / file .js / file .zip)\n` +
       `- .addplugin <nama file> (untuk nama kustom)\n` +
       `- .addplugin <nama file> <folder> (untuk nama dan folder kustom)`
     );
+  }
+
+  // Dukung instalasi massal dari arsip berkas .ZIP
+  const isZip =
+    quoted.fileName?.endsWith(".zip") ||
+    quoted.filename?.endsWith(".zip") ||
+    quoted.mimetype?.includes("zip");
+
+  if (isZip) {
+    await m.react("⏳");
+    let zipBuffer = null;
+    try {
+      zipBuffer = await quoted.download();
+    } catch (e) {
+      await m.react("❌");
+      return m.reply("❌ Gagal mengunduh berkas ZIP dari WhatsApp.");
+    }
+
+    if (!zipBuffer || !zipBuffer.length) {
+      await m.react("❌");
+      return m.reply("❌ Berkas ZIP kosong atau rusak.");
+    }
+
+    try {
+      const AdmZip = (await import("adm-zip")).default;
+      const zip = new AdmZip(zipBuffer);
+      const entries = zip.getEntries();
+      const installed = [];
+      const failed = [];
+      const pluginsDir = path.join(process.cwd(), "plugins");
+
+      for (const entry of entries) {
+        if (entry.isDirectory || !entry.entryName.endsWith(".js")) continue;
+        const entryCode = zip.readAsText(entry);
+        if (!entryCode || entryCode.length < 30) continue;
+
+        // Validasi export
+        if (!entryCode.includes("export ") && !entryCode.includes("module.exports")) continue;
+
+        // Sanitasi path (anti traversal)
+        const cleanPath = entry.entryName.replace(/^\/+/, "").replace(/\.\./g, "");
+        const parts = cleanPath.split("/").filter(Boolean);
+        let folderName = parts.length > 1 ? parts[parts.length - 2] : null;
+        let fileName = path.basename(cleanPath, ".js");
+
+        const info = extractPluginInfo(entryCode);
+        if (!folderName) folderName = info.category || "other";
+        if (!fileName) fileName = info.name || `plugin_${Date.now()}`;
+
+        folderName = folderName.toLowerCase().replace(/[^a-z0-9\-_]/g, "");
+        fileName = fileName.toLowerCase().replace(/[^a-z0-9\-_]/g, "");
+
+        const targetFolder = path.join(pluginsDir, folderName);
+        if (!fs.existsSync(targetFolder)) fs.mkdirSync(targetFolder, { recursive: true });
+
+        const targetFile = path.join(targetFolder, `${fileName}.js`);
+        fs.writeFileSync(targetFile, entryCode);
+
+        try {
+          await hotReloadPlugin(targetFile);
+          installed.push(`${folderName}/${fileName}.js`);
+        } catch {
+          failed.push(`${folderName}/${fileName}.js`);
+        }
+      }
+
+      await m.react("✅");
+      let msg =
+        `╭┈┈⬡「 📦 *ɪɴsᴛᴀʟʟ ᴘʟᴜɢɪɴ ᴢɪᴘ* 」\n` +
+        `┃ ✅ *Berhasil Dipasang:* ${installed.length} modul\n`;
+      if (failed.length > 0) msg += `┃ ⚠️ *Gagal Reload:* ${failed.length} modul\n`;
+      msg += `╰┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈⬡\n\n`;
+
+      if (installed.length > 0) {
+        msg += `*Daftar Modul Terpasang:*\n`;
+        installed.slice(0, 15).forEach((p) => {
+          msg += `> • \`${p}\`\n`;
+        });
+        if (installed.length > 15) {
+          msg += `> _...dan ${installed.length - 15} modul lainnya._\n`;
+        }
+        msg += `\n✨ Seluruh plugin baru sudah aktif dan siap digunakan!`;
+      } else {
+        msg += `Tidak ada berkas plugin .js yang valid ditemukan di dalam arsip ZIP.`;
+      }
+      return m.reply(msg);
+    } catch (err) {
+      await m.react("❌");
+      return m.reply(`❌ Gagal mengekstrak arsip ZIP: ${err.message}`);
+    }
   }
 
   let code = quoted.text || quoted.body || "";

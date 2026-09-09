@@ -2288,6 +2288,40 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // Export ZIP Plugin (Per Kategori atau Seluruh Plugins)
+  if (url.startsWith('/admin/api/bot/plugins/export-zip') && req.method === 'GET') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    try {
+      const q = new URL(req.url, 'http://localhost').searchParams;
+      const cat = (q.get('category') || 'all').toLowerCase().trim().replace(/[^a-z0-9\-_]/g, '');
+      const AdmZip = (await import('adm-zip')).default;
+      const zip = new AdmZip();
+      const pluginsDir = path.join(process.cwd(), 'plugins');
+
+      if (cat === 'all' || cat === 'semua') {
+        zip.addLocalFolder(pluginsDir, 'plugins');
+      } else {
+        const catDir = path.join(pluginsDir, cat);
+        if (!fs.existsSync(catDir) || !fs.statSync(catDir).isDirectory()) {
+          jsonRes(res, 404, { ok: false, error: `Kategori '${cat}' tidak ditemukan.` });
+          return;
+        }
+        zip.addLocalFolder(catDir, cat);
+      }
+
+      const zipBuf = zip.toBuffer();
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="shirowahd_plugins_${cat}_${Date.now()}.zip"`,
+        'Content-Length': zipBuf.length
+      });
+      res.end(zipBuf);
+    } catch (e) {
+      jsonRes(res, 500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   if (url === '/admin/api/bot/features' && req.method === 'GET') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     proxyBotApi(req, res, 'GET', '/features');
