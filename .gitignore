@@ -74,3 +74,11 @@ admin-settings.sanitized.json
 # Next.js build traces
 .next/trace
 .next/trace-build
+
+# Lyrics runtime cache
+src/data/lyrics/
+
+# Local env variants
+.env.*
+.env.clean
+.env.synced
