@@ -1,13 +1,16 @@
 /**
- * Plugin Alight Motion Premium Generator & Verifier (Owner Only)
+ * Plugin Alight Motion Premium Generator & Verifier (Premium Feature)
  * Menggunakan direct proxy endpoint Dapji Motion Pro (bebas API key, tanpa redirect)
+ * Biaya: 10 limit per create akun (verify gratis)
  */
+
+import { getDatabase } from "../../src/lib/hillz-database.js";
 
 const config = {
   name: "amprem",
   alias: ["amverify", "ampremverify", "alightmotion", "ampro"],
   category: "tools",
-  description: "Kirim magic link & verifikasi Alight Motion Premium",
+  description: "Kirim magic link & verifikasi Alight Motion Premium (Biaya 10 Limit)",
   usage: ".amprem <email> atau .amverify [email] <link>",
   example: ".amprem user@gmail.com",
   isOwner: false,
@@ -15,8 +18,8 @@ const config = {
   isGroup: false,
   isPrivate: false,
   cooldown: 10,
-  energi: 1,
-  limit: 1,
+  energi: 0,
+  limit: 10,
   isEnabled: true,
 };
 
@@ -24,7 +27,7 @@ const DAPJI_API = "https://dapjimotionpro.my.id/api/proxy-amprem";
 const HEADERS = {
   "Content-Type": "application/json",
   "User-Agent": "Mozilla/5.0 (Android 10; Mobile; rv:154.0) Gecko/154.0 Firefox/154.0",
-  "Referer": "https://dapjimotionpro.my.id/generator-v2",
+  Referer: "https://dapjimotionpro.my.id/generator-v2",
 };
 
 // Cache email terakhir per pengirim (auto expire 20 menit)
@@ -70,7 +73,9 @@ async function requestDapji(payload) {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error(`Server Alight Motion lagi down atau gak respon (HTTP ${res.status}). Coba bentar lagi ya.`);
+    throw new Error(
+      `Server Alight Motion lagi down atau gak respon (HTTP ${res.status}). Coba bentar lagi ya.`
+    );
   }
 }
 
@@ -80,13 +85,14 @@ async function sendOrEdit(sock, m, text, targetKey) {
       await sock.sendMessage(m.chat, { text, edit: targetKey });
       return;
     } catch {
-      // Jika edit gagal, fallback ke reply biasa
+      // Fallback ke reply biasa jika edit gagal
     }
   }
   await m.reply(text);
 }
 
 async function handler(m, { args, sock }) {
+  const db = getDatabase();
   const cmd = (m.command || "").toLowerCase();
   const isVerify =
     cmd === "amverify" ||
@@ -94,7 +100,7 @@ async function handler(m, { args, sock }) {
     (args[0] && args[0].toLowerCase() === "verify");
 
   if (isVerify) {
-    // ── LOGIKA VERIFIKASI LINK ──
+    // ── 1. LOGIKA VERIFIKASI LINK (GRATIS / 0 LIMIT) ──
     let cleanArgs = [...args];
     if (cleanArgs[0] && cleanArgs[0].toLowerCase() === "verify") {
       cleanArgs.shift();
@@ -138,7 +144,9 @@ async function handler(m, { args, sock }) {
     }
 
     m.react("⏳");
-    const waitMsg = await m.reply(`✨ _Lagi verifikasi magic link ke server Alight Motion, bentar ya tuan..._`);
+    const waitMsg = await m.reply(
+      `✨ _Lagi verifikasi magic link ke server Alight Motion, bentar ya..._`
+    );
 
     try {
       const data = await requestDapji({
@@ -179,13 +187,14 @@ async function handler(m, { args, sock }) {
       return await sendOrEdit(sock, m, `❌ *Terjadi Kesalahan:* ${err.message}`, waitMsg?.key);
     }
   } else {
-    // ── LOGIKA KIRIM MAGIC LINK ──
+    // ── 2. LOGIKA CREATE AKUN (.amprem) — POTONG 10 LIMIT ──
     const email = (args[0] || "").trim();
 
     if (!email || !isValidEmail(email)) {
       return m.reply(
         `⚡ *ALIGHT MOTION PREMIUM*\n\n` +
-        `Bikin akun Alight Motion lu jadi Pro / Premium gratis setahun!\n\n` +
+        `Bikin akun Alight Motion lu jadi Pro / Premium gratis setahun!\n` +
+        `Biaya: *10 Limit* per pembuatan akun.\n\n` +
         `○ Format:\n` +
         `\`${m.prefix}amprem <email>\`\n\n` +
         `_Contoh:_\n` +
@@ -196,8 +205,27 @@ async function handler(m, { args, sock }) {
       );
     }
 
+    // Pengecekan limit user (Owner & Partner bebas batas)
+    const user = db.getUser(m.sender);
+    const isExempt = m.isOwner || m.isPartner;
+    const userLimit = user?.energi ?? 0;
+
+    if (!isExempt && user?.energi !== -1) {
+      if (userLimit < 10) {
+        return m.reply(
+          `⚡ *Limit Kamu Kurang!*\n\n` +
+          `> Bikin akun Alight Motion Pro butuh minimal *10 limit*.\n` +
+          `> Sisa limit kamu saat ini: *${userLimit}*\n\n` +
+          `_Tunggu reset limit harian atau hubungi owner buat top up ya._\n\n` +
+          `*By: SHIRO HLZ*`
+        );
+      }
+    }
+
     m.react("🚀");
-    const waitMsg = await m.reply(`⚡ _Otw tembak magic link ke server Alight Motion, tunggu bentar ya tuan..._`);
+    const waitMsg = await m.reply(
+      `⚡ _Otw tembak magic link ke server Alight Motion, tunggu bentar ya..._`
+    );
 
     try {
       const data = await requestDapji({
@@ -211,12 +239,23 @@ async function handler(m, { args, sock }) {
           sock,
           m,
           `❌ *Waduh, Gagal Kirim Link!*\n\n` +
-          `> ${data.message || "Server Alight Motion lagi rewel atau nolak email ini. Coba pake email lain ya tuan."}`,
+          `> ${data.message || "Server Alight Motion lagi nolak email ini. Coba pake email lain ya tuan."}\n\n` +
+          `_Catatan: Limit kamu belum terpotong._`,
           waitMsg?.key
         );
       }
 
+      // Potong 10 limit hanya jika server sukses mengirim magic link
+      if (!isExempt && user?.energi !== -1) {
+        db.updateEnergi(m.sender, -10);
+      }
+
       savePending(m.sender, email);
+
+      const sisaLimit =
+        isExempt || user?.energi === -1
+          ? "∞ Unlimited"
+          : `${db.getUser(m.sender)?.energi ?? 0}`;
 
       m.react("✅");
       return await sendOrEdit(
@@ -224,19 +263,25 @@ async function handler(m, { args, sock }) {
         m,
         `⚡ *ALIGHT MOTION PREMIUM*\n\n` +
         `✓ *Magic link berhasil dikirim!*\n` +
-        `○ Target: \`${email}\`\n\n` +
+        `○ Target: \`${email}\`\n` +
+        `🔋 Biaya: *-10 Limit* (Sisa: *${sisaLimit}*)\n\n` +
         `*Tinggal 1 Step Lagi:*\n` +
-        `1. Cek inbox atau folder spam email lu.\n` +
-        `2. Buka email dari *Alight Motion*, terus salin link verifikasinya (\`https://alight-creative...\`).\n` +
-        `3. Kirim ke bot dengan perintah:\n` +
+        `1. Buka inbox email lu (atau web shiromail).\n` +
+        `2. Buka pesan dari *Alight Motion*, salin link tombol loginnya (\`https://alight-creative...\`).\n` +
+        `3. Kirim ke bot:\n` +
         `   \`${m.prefix}amverify <link>\`\n\n` +
-        `_Note: Buruan verifikasi sebelum link-nya basi ya._\n\n` +
+        `_Note: Verifikasi link ini 100% GRATIS (tidak memotong limit lagi)._\n\n` +
         `*By: SHIRO HLZ*`,
         waitMsg?.key
       );
     } catch (err) {
       m.react("❌");
-      return await sendOrEdit(sock, m, `❌ *Terjadi Kesalahan:* ${err.message}`, waitMsg?.key);
+      return await sendOrEdit(
+        sock,
+        m,
+        `❌ *Terjadi Kesalahan:* ${err.message}\n\n_Catatan: Limit kamu tidak terpotong._`,
+        waitMsg?.key
+      );
     }
   }
 }
