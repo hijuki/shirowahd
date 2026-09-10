@@ -1,5 +1,5 @@
 /**
- * Plugin Alight Motion Premium Generator & Verifier
+ * Plugin Alight Motion Premium Generator & Verifier (Owner Only)
  * Menggunakan direct proxy endpoint Dapji Motion Pro (bebas API key, tanpa redirect)
  */
 
@@ -62,18 +62,30 @@ async function requestDapji(payload) {
     method: "POST",
     headers: HEADERS,
     body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(18000),
   });
 
   const raw = await res.text();
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error(`Server Alight Motion merespons tidak valid (HTTP ${res.status}). Coba beberapa saat lagi.`);
+    throw new Error(`Server Alight Motion lagi down atau gak respon (HTTP ${res.status}). Coba bentar lagi ya.`);
   }
 }
 
-async function handler(m, { args }) {
+async function sendOrEdit(sock, m, text, targetKey) {
+  if (targetKey) {
+    try {
+      await sock.sendMessage(m.chat, { text, edit: targetKey });
+      return;
+    } catch {
+      // Jika edit gagal, fallback ke reply biasa
+    }
+  }
+  await m.reply(text);
+}
+
+async function handler(m, { args, sock }) {
   const cmd = (m.command || "").toLowerCase();
   const isVerify =
     cmd === "amverify" ||
@@ -91,7 +103,6 @@ async function handler(m, { args }) {
     let targetLink = "";
 
     if (cleanArgs.length >= 2) {
-      // User kirim: .amverify email link ATAU .amverify link email
       if (isValidEmail(cleanArgs[0])) {
         targetEmail = cleanArgs[0].trim();
         targetLink = cleanArgs.slice(1).join(" ").trim();
@@ -103,7 +114,6 @@ async function handler(m, { args }) {
         targetLink = cleanArgs[1].trim();
       }
     } else if (cleanArgs.length === 1) {
-      // User kirim: .amverify link (ambil email dari cache perintah .amprem sebelumnya)
       const cached = getPending(m.sender);
       if (cached) {
         targetEmail = cached;
@@ -116,16 +126,18 @@ async function handler(m, { args }) {
     if (!targetEmail || !isValidEmail(targetEmail) || !targetLink || !isValidLink(targetLink)) {
       return m.reply(
         `⚡ *VERIFIKASI ALIGHT MOTION*\n\n` +
-        `○ Cara Verifikasi:\n` +
-        `\`${m.prefix}amverify <email> <magic_link>\`\n\n` +
+        `Tinggal tempel magic link dari email biar akun lu langsung jadi Pro!\n\n` +
+        `○ Format:\n` +
+        `\`${m.prefix}amverify <magic_link>\`\n` +
+        `_atau:_ \`${m.prefix}amverify <email> <magic_link>\`\n\n` +
         `_Contoh:_\n` +
-        `\`${m.prefix}amverify user@gmail.com https://alight-creative.firebaseapp.com/...\`\n\n` +
-        `💡 *Tips:* Kalau kamu baru saja menjalankan \`${m.prefix}amprem <email>\`, kamu cukup ketik:\n` +
-        `\`${m.prefix}amverify <magic_link>\``
+        `\`${m.prefix}amverify https://alight-creative.firebaseapp.com/...\`\n\n` +
+        `*By: SHIRO HLZ*`
       );
     }
 
-    m.react("🕕");
+    m.react("⏳");
+    const waitMsg = await m.reply(`✨ _Lagi verifikasi magic link ke server Alight Motion, bentar ya tuan..._`);
 
     try {
       const data = await requestDapji({
@@ -136,28 +148,34 @@ async function handler(m, { args }) {
 
       if (!data.success) {
         m.react("❌");
-        return m.reply(
-          `❌ *VERIFIKASI GAGAL*\n\n` +
-          `> ${data.message || "Gagal memverifikasi magic link. Pastikan link belum kadaluwarsa atau sudah terpakai."}`
+        return await sendOrEdit(
+          sock,
+          m,
+          `❌ *Waduh, Verifikasi Gagal!*\n\n` +
+          `> ${data.message || "Link-nya salah atau udah kadaluwarsa cuy. Pastikan link yang lu copy utuh dari email Alight Motion."}`,
+          waitMsg?.key
         );
       }
 
       m.react("✅");
-      return m.reply(
+      return await sendOrEdit(
+        sock,
+        m,
         `✨ *ALIGHT MOTION PREMIUM SUKSES!*\n\n` +
         `✓ Akun: \`${targetEmail}\`\n` +
         `✓ Status: *PREMIUM / PRO AKTIF*\n` +
         `✓ Masa Aktif: *1 Tahun*\n\n` +
         `⚡ *Benefit Terbuka:*\n` +
         `• Bebas Watermark Alight Motion\n` +
-        `• Ekspor video resolusi tinggi hingga 4K 60FPS\n` +
-        `• Terbuka semua preset, transisi, & efek eksklusif\n\n` +
-        `_Silakan buka aplikasi Alight Motion dan login langsung menggunakan email tersebut._\n\n` +
-        `*By: SHIRO HLZ*`
+        `• Support ekspor video 4K 60FPS\n` +
+        `• Semua preset, efek, & transisi pro kebuka\n\n` +
+        `_Tinggal login di app Alight Motion pake email ini, fiturnya otomatis langsung aktif!_\n\n` +
+        `*By: SHIRO HLZ*`,
+        waitMsg?.key
       );
     } catch (err) {
       m.react("❌");
-      return m.reply(`❌ *Terjadi Kesalahan:* ${err.message}`);
+      return await sendOrEdit(sock, m, `❌ *Terjadi Kesalahan:* ${err.message}`, waitMsg?.key);
     }
   } else {
     // ── LOGIKA KIRIM MAGIC LINK ──
@@ -166,17 +184,19 @@ async function handler(m, { args }) {
     if (!email || !isValidEmail(email)) {
       return m.reply(
         `⚡ *ALIGHT MOTION PREMIUM*\n\n` +
-        `Generate link aktivasi akun Alight Motion resmi.\n\n` +
+        `Bikin akun Alight Motion lu jadi Pro / Premium gratis setahun!\n\n` +
         `○ Format:\n` +
         `\`${m.prefix}amprem <email>\`\n\n` +
         `_Contoh:_\n` +
         `\`${m.prefix}amprem user@gmail.com\`\n\n` +
-        `💡 *Tips:* Mau pakai disposable email instan? Kamu bisa gunakan tempmail kita di:\n` +
-        `👉 *https://shiromail.my.id*`
+        `💡 *Tips:* Males pake email pribadi? Gas pake tempmail kita aja di:\n` +
+        `👉 *https://shiromail.my.id*\n\n` +
+        `*By: SHIRO HLZ*`
       );
     }
 
-    m.react("🕕");
+    m.react("🚀");
+    const waitMsg = await m.reply(`⚡ _Otw tembak magic link ke server Alight Motion, tunggu bentar ya tuan..._`);
 
     try {
       const data = await requestDapji({
@@ -186,30 +206,36 @@ async function handler(m, { args }) {
 
       if (!data.success) {
         m.react("❌");
-        return m.reply(
-          `❌ *GAGAL MENGIRIM LINK*\n\n` +
-          `> ${data.message || "Server menolak pengiriman link. Coba dengan email lain."}`
+        return await sendOrEdit(
+          sock,
+          m,
+          `❌ *Waduh, Gagal Kirim Link!*\n\n` +
+          `> ${data.message || "Server Alight Motion lagi rewel atau nolak email ini. Coba pake email lain ya tuan."}`,
+          waitMsg?.key
         );
       }
 
-      // Simpan email pengirim untuk kemudahan langkah verifikasi
       savePending(m.sender, email);
 
       m.react("✅");
-      return m.reply(
+      return await sendOrEdit(
+        sock,
+        m,
         `⚡ *ALIGHT MOTION PREMIUM*\n\n` +
         `✓ *Magic link berhasil dikirim!*\n` +
-        `○ Alamat: \`${email}\`\n\n` +
-        `*Langkah Selanjutnya:*\n` +
-        `1. Buka kotak masuk email / folder Spam.\n` +
-        `2. Cari pesan dari *Alight Motion*, lalu salin link verifikasinya (\`https://alight-creative...\`).\n` +
-        `3. Masukkan link ke bot dengan perintah:\n` +
+        `○ Target: \`${email}\`\n\n` +
+        `*Tinggal 1 Step Lagi:*\n` +
+        `1. Cek inbox atau folder spam email lu.\n` +
+        `2. Buka email dari *Alight Motion*, terus salin link verifikasinya (\`https://alight-creative...\`).\n` +
+        `3. Kirim ke bot dengan perintah:\n` +
         `   \`${m.prefix}amverify <link>\`\n\n` +
-        `_Link verifikasi berlaku selama beberapa menit._`
+        `_Note: Buruan verifikasi sebelum link-nya basi ya._\n\n` +
+        `*By: SHIRO HLZ*`,
+        waitMsg?.key
       );
     } catch (err) {
       m.react("❌");
-      return m.reply(`❌ *Terjadi Kesalahan:* ${err.message}`);
+      return await sendOrEdit(sock, m, `❌ *Terjadi Kesalahan:* ${err.message}`, waitMsg?.key);
     }
   }
 }
