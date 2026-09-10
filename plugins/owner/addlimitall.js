@@ -3,7 +3,7 @@ import { getDatabase } from '../../src/lib/hillz-database.js'
 import te from '../../src/lib/hillz-error.js'
 const pluginConfig = {
     name: 'addenergiall',
-    alias: ['addenergianall', 'bonusenergiall'],
+    alias: ['addlimitall', 'tambahlimitall', 'addenergianall', 'bonusenergiall', 'giveenergiall'],
     category: 'owner',
     description: 'Menambahkan limit/energi ke semua member grup',
     usage: '.addenergiall <jumlah>',

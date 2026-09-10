@@ -3,7 +3,7 @@ import { getDatabase } from "../../src/lib/hillz-database.js";
 
 const config = {
   name: "fiturpremium",
-  alias: ["listprem", "listpremium", "fiturprem"],
+  alias: ["fiturprem", "listfiturprem", "premfeatures"],
   category: "info",
   description: "Melihat daftar seluruh fitur premium bot",
   usage: ".fiturpremium",

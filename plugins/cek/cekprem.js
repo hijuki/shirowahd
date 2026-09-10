@@ -5,13 +5,13 @@ const pluginConfig = {
     alias: ['cekpremium', 'preminfo'],
     category: 'cek',
     description: 'Cek detail status premium user',
-    usage: '.cekprem @user',
+    usage: '.cekprem [@user]',
     example: '.cekprem',
     isOwner: false,
-    isPremium: true,
+    isPremium: false,
     isGroup: false,
     isPrivate: false,
-    cooldown: 5,
+    cooldown: 3,
     energi: 0,
     isEnabled: true
 }

@@ -1,7 +1,7 @@
 import { getDatabase } from '../../src/lib/hillz-database.js'
 const pluginConfig = {
     name: 'delenergi',
-    alias: ['kurangenergi', 'removeenergi', 'hapusenergi', 'delenergy'],
+    alias: ['dellimit', 'kuranglimit', 'removelimit', 'hapuslimit', 'kurangenergi', 'removeenergi', 'hapusenergi', 'delenergy'],
     category: 'owner',
     description: 'Kurangi energi user',
     usage: '.delenergi <jumlah> @user',

@@ -2,7 +2,7 @@ import config from '../../config.js'
 import { getDatabase } from '../../src/lib/hillz-database.js'
 const pluginConfig = {
     name: 'addenergi',
-    alias: ['tambahenergi', 'giveenergi', 'addenergy'],
+    alias: ['addlimit', 'tambahlimit', 'givelimit', 'tambahenergi', 'giveenergi', 'addenergy'],
     category: 'owner',
     description: 'Tambah energi user',
     usage: '.addenergi <jumlah> @user',
