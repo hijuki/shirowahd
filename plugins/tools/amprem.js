@@ -142,12 +142,14 @@ async function handler(m, { args }) {
       return m.reply(
         `✨ *ALIGHT MOTION PREMIUM SUKSES!*\n\n` +
         `✓ Akun: \`${targetEmail}\`\n` +
-        `✓ Status: *PREMIUM / PRO AKTIF*\n\n` +
+        `✓ Status: *PREMIUM / PRO AKTIF*\n` +
+        `✓ Masa Aktif: *1 Tahun*\n\n` +
         `⚡ *Benefit Terbuka:*\n` +
         `• Bebas Watermark Alight Motion\n` +
         `• Ekspor video resolusi tinggi hingga 4K 60FPS\n` +
         `• Terbuka semua preset, transisi, & efek eksklusif\n\n` +
-        `_Silakan buka aplikasi Alight Motion dan login langsung menggunakan email tersebut._`
+        `_Silakan buka aplikasi Alight Motion dan login langsung menggunakan email tersebut._\n\n` +
+        `*By: SHIRO HLZ*`
       );
     } catch (err) {
       m.react("❌");
