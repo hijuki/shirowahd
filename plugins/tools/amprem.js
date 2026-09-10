@@ -6,16 +6,17 @@
 const config = {
   name: "amprem",
   alias: ["amverify", "ampremverify", "alightmotion", "ampro"],
-  category: "owner",
+  category: "tools",
   description: "Kirim magic link & verifikasi Alight Motion Premium",
   usage: ".amprem <email> atau .amverify [email] <link>",
   example: ".amprem user@gmail.com",
-  isOwner: true,
-  isPremium: false,
+  isOwner: false,
+  isPremium: true,
   isGroup: false,
   isPrivate: false,
-  cooldown: 5,
-  energi: 0,
+  cooldown: 10,
+  energi: 1,
+  limit: 1,
   isEnabled: true,
 };
 
