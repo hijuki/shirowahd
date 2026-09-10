@@ -10,7 +10,7 @@ const config = {
   name: "amprem",
   alias: ["amverify", "ampremverify", "alightmotion", "ampro"],
   category: "tools",
-  description: "Kirim magic link & verifikasi Alight Motion Premium (Biaya 10 Limit)",
+  description: "Kirim magic link & verifikasi Alight Motion Pro (Biaya 10 Limit)",
   usage: ".amprem <email> atau .amverify [email] <link>",
   example: ".amprem user@gmail.com",
   isOwner: false,
@@ -74,7 +74,7 @@ async function requestDapji(payload) {
     return JSON.parse(raw);
   } catch {
     throw new Error(
-      `Server Alight Motion lagi down atau gak respon (HTTP ${res.status}). Coba bentar lagi ya.`
+      `Gateway Alight Motion tidak merespons (HTTP ${res.status}). Silakan coba beberapa saat lagi.`
     );
   }
 }
@@ -85,7 +85,7 @@ async function sendOrEdit(sock, m, text, targetKey) {
       await sock.sendMessage(m.chat, { text, edit: targetKey });
       return;
     } catch {
-      // Fallback ke reply biasa jika edit gagal
+      // Fallback ke reply jika edit gagal
     }
   }
   await m.reply(text);
@@ -100,7 +100,7 @@ async function handler(m, { args, sock }) {
     (args[0] && args[0].toLowerCase() === "verify");
 
   if (isVerify) {
-    // ── 1. LOGIKA VERIFIKASI LINK (GRATIS / 0 LIMIT) ──
+    // ── 1. LOGIKA VERIFIKASI LINK (0 LIMIT) ──
     let cleanArgs = [...args];
     if (cleanArgs[0] && cleanArgs[0].toLowerCase() === "verify") {
       cleanArgs.shift();
@@ -132,20 +132,22 @@ async function handler(m, { args, sock }) {
 
     if (!targetEmail || !isValidEmail(targetEmail) || !targetLink || !isValidLink(targetLink)) {
       return m.reply(
-        `⚡ *VERIFIKASI ALIGHT MOTION*\n\n` +
-        `Tinggal tempel magic link dari email biar akun lu langsung jadi Pro!\n\n` +
-        `○ Format:\n` +
-        `\`${m.prefix}amverify <magic_link>\`\n` +
-        `_atau:_ \`${m.prefix}amverify <email> <magic_link>\`\n\n` +
-        `_Contoh:_\n` +
-        `\`${m.prefix}amverify https://alight-creative.firebaseapp.com/...\`\n\n` +
-        `*By: SHIRO HLZ*`
+        `⚡ *ALIGHT MOTION PRO*\n` +
+        `_Panduan Verifikasi Lisensi_\n\n` +
+        `> Salin tautan masuk dari email Alight Motion untuk menyelesaikan aktivasi lisensi Pro.\n\n` +
+        `○ *Format Perintah*\n` +
+        `  \`${m.prefix}amverify <link>\`\n` +
+        `  _atau:_ \`${m.prefix}amverify <email> <link>\`\n\n` +
+        `○ *Contoh*\n` +
+        `  \`${m.prefix}amverify https://alight-creative.firebaseapp.com/...\`\n\n` +
+        `—\n` +
+        `⚡ *SHIRO HLZ* • *Core Systems*`
       );
     }
 
     m.react("⏳");
     const waitMsg = await m.reply(
-      `✨ _Lagi verifikasi magic link ke server Alight Motion, bentar ya..._`
+      `✨ _Memvalidasi token lisensi ke server Alight Motion..._`
     );
 
     try {
@@ -160,8 +162,11 @@ async function handler(m, { args, sock }) {
         return await sendOrEdit(
           sock,
           m,
-          `❌ *Waduh, Verifikasi Gagal!*\n\n` +
-          `> ${data.message || "Link-nya salah atau udah kadaluwarsa cuy. Pastikan link yang lu copy utuh dari email Alight Motion."}`,
+          `⚠️ *ALIGHT MOTION PRO*\n` +
+          `_Verifikasi Lisensi Gagal_\n\n` +
+          `> ${data.message || "Tautan tidak valid atau sudah kedaluwarsa. Pastikan menyalin tautan secara utuh dari email masuk Alight Motion."}\n\n` +
+          `—\n` +
+          `⚡ *SHIRO HLZ* • *Core Systems*`,
           waitMsg?.key
         );
       }
@@ -170,21 +175,35 @@ async function handler(m, { args, sock }) {
       return await sendOrEdit(
         sock,
         m,
-        `✨ *ALIGHT MOTION PREMIUM SUKSES!*\n\n` +
-        `✓ Akun: \`${targetEmail}\`\n` +
-        `✓ Status: *PREMIUM / PRO AKTIF*\n` +
-        `✓ Masa Aktif: *1 Tahun*\n\n` +
-        `⚡ *Benefit Terbuka:*\n` +
-        `• Bebas Watermark Alight Motion\n` +
-        `• Support ekspor video 4K 60FPS\n` +
-        `• Semua preset, efek, & transisi pro kebuka\n\n` +
-        `_Tinggal login di app Alight Motion pake email ini, fiturnya otomatis langsung aktif!_\n\n` +
-        `*By: SHIRO HLZ*`,
+        `✨ *ALIGHT MOTION PRO*\n` +
+        `_License Successfully Activated_\n\n` +
+        `> Akun kamu resmi ditingkatkan ke versi *Pro*. Lisensi aktif selama 1 tahun penuh dan siap digunakan langsung di aplikasi.\n\n` +
+        `○ *Detail Lisensi*\n` +
+        `  • Akun : \`${targetEmail}\`\n` +
+        `  • Status : *PRO / PREMIUM AKTIF*\n` +
+        `  • Masa Aktif : *1 Tahun (365 Hari)*\n\n` +
+        `○ *Fitur Terbuka*\n` +
+        `  ✓ Ekspor video resolusi tinggi hingga 4K 60FPS\n` +
+        `  ✓ Bebas tanda air (No Watermark)\n` +
+        `  ✓ Terbuka semua efek, transisi, & XML preset\n` +
+        `  ✓ Sinkronisasi cloud project & prioritas render\n\n` +
+        `_Buka aplikasi Alight Motion di HP kamu, lalu login langsung menggunakan email di atas._\n\n` +
+        `—\n` +
+        `⚡ *SHIRO HLZ* • *Core Systems*`,
         waitMsg?.key
       );
     } catch (err) {
       m.react("❌");
-      return await sendOrEdit(sock, m, `❌ *Terjadi Kesalahan:* ${err.message}`, waitMsg?.key);
+      return await sendOrEdit(
+        sock,
+        m,
+        `⚠️ *ALIGHT MOTION PRO*\n` +
+        `_Sistem Error_\n\n` +
+        `> ${err.message}\n\n` +
+        `—\n` +
+        `⚡ *SHIRO HLZ* • *Core Systems*`,
+        waitMsg?.key
+      );
     }
   } else {
     // ── 2. LOGIKA CREATE AKUN (.amprem) — POTONG 10 LIMIT ──
@@ -192,16 +211,20 @@ async function handler(m, { args, sock }) {
 
     if (!email || !isValidEmail(email)) {
       return m.reply(
-        `⚡ *ALIGHT MOTION PREMIUM*\n\n` +
-        `Bikin akun Alight Motion lu jadi Pro / Premium gratis setahun!\n` +
-        `Biaya: *10 Limit* per pembuatan akun.\n\n` +
-        `○ Format:\n` +
-        `\`${m.prefix}amprem <email>\`\n\n` +
-        `_Contoh:_\n` +
-        `\`${m.prefix}amprem user@gmail.com\`\n\n` +
-        `💡 *Tips:* Males pake email pribadi? Gas pake tempmail kita aja di:\n` +
-        `👉 *https://shiromail.my.id*\n\n` +
-        `*By: SHIRO HLZ*`
+        `⚡ *ALIGHT MOTION PRO*\n` +
+        `_Auto License Activation • 1 Year Access_\n\n` +
+        `> Aktifkan lisensi Alight Motion Pro 1 tahun penuh ke akun kamu. Bebas watermark, unlock semua preset, dan render 4K 60FPS.\n\n` +
+        `○ *Perintah*\n` +
+        `  \`${m.prefix}amprem <email>\`\n\n` +
+        `○ *Contoh*\n` +
+        `  \`${m.prefix}amprem user@gmail.com\`\n\n` +
+        `○ *Biaya Layanan*\n` +
+        `  *10 Limit* per pembuatan akun\n\n` +
+        `💡 *Mau pakai email instan?*\n` +
+        `Bikin tempmail gratis & cepat tanpa daftar di:\n` +
+        `→ *https://shiromail.my.id*\n\n` +
+        `—\n` +
+        `⚡ *SHIRO HLZ* • *Core Systems*`
       );
     }
 
@@ -213,18 +236,20 @@ async function handler(m, { args, sock }) {
     if (!isExempt && user?.energi !== -1) {
       if (userLimit < 10) {
         return m.reply(
-          `⚡ *Limit Kamu Kurang!*\n\n` +
-          `> Bikin akun Alight Motion Pro butuh minimal *10 limit*.\n` +
+          `⚡ *ALIGHT MOTION PRO*\n` +
+          `_Limit Tidak Mencukupi_\n\n` +
+          `> Aktivasi akun Pro membutuhkan minimal *10 Limit*.\n` +
           `> Sisa limit kamu saat ini: *${userLimit}*\n\n` +
-          `_Tunggu reset limit harian atau hubungi owner buat top up ya._\n\n` +
-          `*By: SHIRO HLZ*`
+          `_Silakan tunggu reset limit harian atau hubungi owner untuk top up limit._\n\n` +
+          `—\n` +
+          `⚡ *SHIRO HLZ* • *Core Systems*`
         );
       }
     }
 
     m.react("🚀");
     const waitMsg = await m.reply(
-      `⚡ _Otw tembak magic link ke server Alight Motion, tunggu bentar ya..._`
+      `⚡ _Menghubungkan ke gateway Alight Motion..._`
     );
 
     try {
@@ -238,14 +263,17 @@ async function handler(m, { args, sock }) {
         return await sendOrEdit(
           sock,
           m,
-          `❌ *Waduh, Gagal Kirim Link!*\n\n` +
-          `> ${data.message || "Server Alight Motion lagi nolak email ini. Coba pake email lain ya tuan."}\n\n` +
-          `_Catatan: Limit kamu belum terpotong._`,
+          `⚠️ *ALIGHT MOTION PRO*\n` +
+          `_Pengiriman Magic Link Gagal_\n\n` +
+          `> ${data.message || "Permintaan aktivasi ditolak oleh server. Pastikan email belum terdaftar di sesi aktif atau coba email lain."}\n\n` +
+          `_Catatan: Limit kamu tidak terpotong._\n\n` +
+          `—\n` +
+          `⚡ *SHIRO HLZ* • *Core Systems*`,
           waitMsg?.key
         );
       }
 
-      // Potong 10 limit hanya jika server sukses mengirim magic link
+      // Potong 10 limit jika pengiriman sukses
       if (!isExempt && user?.energi !== -1) {
         db.updateEnergi(m.sender, -10);
       }
@@ -261,17 +289,21 @@ async function handler(m, { args, sock }) {
       return await sendOrEdit(
         sock,
         m,
-        `⚡ *ALIGHT MOTION PREMIUM*\n\n` +
-        `✓ *Magic link berhasil dikirim!*\n` +
-        `○ Target: \`${email}\`\n` +
-        `🔋 Biaya: *-10 Limit* (Sisa: *${sisaLimit}*)\n\n` +
-        `*Tinggal 1 Step Lagi:*\n` +
-        `1. Buka inbox email lu (atau web shiromail).\n` +
-        `2. Buka pesan dari *Alight Motion*, salin link tombol loginnya (\`https://alight-creative...\`).\n` +
-        `3. Kirim ke bot:\n` +
+        `⚡ *ALIGHT MOTION PRO*\n` +
+        `_Magic Link Dispatched_\n\n` +
+        `> Magic link aktivasi berhasil dikirim ke email target. Segera lakukan verifikasi untuk mengaktifkan status Pro.\n\n` +
+        `○ *Target Akun*\n` +
+        `  \`${email}\`\n\n` +
+        `○ *Biaya Layanan*\n` +
+        `  *-10 Limit* (Sisa: *${sisaLimit}*)\n\n` +
+        `*LANGKAH VERIFIKASI*\n` +
+        `1. Buka kotak masuk email kamu (inbox atau folder spam).\n` +
+        `2. Buka pesan dari *Alight Motion*, salin tautan tombol loginnya (\`https://alight-creative...\`).\n` +
+        `3. Kirim ke bot dengan perintah:\n` +
         `   \`${m.prefix}amverify <link>\`\n\n` +
-        `_Note: Verifikasi link ini 100% GRATIS (tidak memotong limit lagi)._\n\n` +
-        `*By: SHIRO HLZ*`,
+        `_Catatan: Verifikasi link 100% bebas biaya (0 limit)._\n\n` +
+        `—\n` +
+        `⚡ *SHIRO HLZ* • *Core Systems*`,
         waitMsg?.key
       );
     } catch (err) {
@@ -279,7 +311,12 @@ async function handler(m, { args, sock }) {
       return await sendOrEdit(
         sock,
         m,
-        `❌ *Terjadi Kesalahan:* ${err.message}\n\n_Catatan: Limit kamu tidak terpotong._`,
+        `⚠️ *ALIGHT MOTION PRO*\n` +
+        `_Sistem Error_\n\n` +
+        `> ${err.message}\n\n` +
+        `_Catatan: Limit kamu tidak terpotong._\n\n` +
+        `—\n` +
+        `⚡ *SHIRO HLZ* • *Core Systems*`,
         waitMsg?.key
       );
     }
