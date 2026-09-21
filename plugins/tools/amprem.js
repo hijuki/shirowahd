@@ -23,11 +23,13 @@ const config = {
   isEnabled: true,
 };
 
-const DAPJI_API = "https://dapjimotionpro.my.id/api/proxy-amprem";
+const DAPJI_BASE = "https://am.dapjisync.my.id";
 const HEADERS = {
   "Content-Type": "application/json",
+  "X-API-Key": "FREE",
   "User-Agent": "Mozilla/5.0 (Android 10; Mobile; rv:154.0) Gecko/154.0 Firefox/154.0",
-  Referer: "https://dapjimotionpro.my.id/generator-v2",
+  Referer: "https://am.dapjisync.my.id/",
+  Origin: "https://am.dapjisync.my.id",
 };
 
 // Cache email terakhir per pengirim (auto expire 20 menit)
@@ -62,10 +64,16 @@ function isValidLink(link) {
 }
 
 async function requestDapji(payload) {
-  const res = await fetch(DAPJI_API, {
+  const isSend = payload.action === "send";
+  const url = isSend ? `${DAPJI_BASE}/api/send` : `${DAPJI_BASE}/api/verif`;
+  const body = isSend
+    ? { gmail: payload.email }
+    : { gmail: payload.email, link: payload.link };
+
+  const res = await fetch(url, {
     method: "POST",
     headers: HEADERS,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(18000),
   });
 
@@ -164,7 +172,7 @@ async function handler(m, { args, sock }) {
           m,
           `⚠️ *ALIGHT MOTION PRO*\n` +
           `_Verifikasi Lisensi Gagal_\n\n` +
-          `> ${data.message || "Tautan tidak valid atau sudah kedaluwarsa. Pastikan menyalin tautan secara utuh dari email masuk Alight Motion."}\n\n` +
+          `> ${data.message || data.error || "Tautan tidak valid atau sudah kedaluwarsa. Pastikan menyalin tautan secara utuh dari email masuk Alight Motion."}\n\n` +
           `—\n` +
           `⚡ *SHIRO HLZ* • *Core Systems*`,
           waitMsg?.key
@@ -172,6 +180,7 @@ async function handler(m, { args, sock }) {
       }
 
       m.react("✅");
+      const duration = data.duration ? `${data.duration} (365 Hari)` : `1 Tahun (365 Hari)`;
       return await sendOrEdit(
         sock,
         m,
@@ -181,7 +190,7 @@ async function handler(m, { args, sock }) {
         `○ *Detail Lisensi*\n` +
         `  • Akun : \`${targetEmail}\`\n` +
         `  • Status : *PRO / PREMIUM AKTIF*\n` +
-        `  • Masa Aktif : *1 Tahun (365 Hari)*\n\n` +
+        `  • Masa Aktif : *${duration}*\n\n` +
         `○ *Fitur Terbuka*\n` +
         `  ✓ Ekspor video resolusi tinggi hingga 4K 60FPS\n` +
         `  ✓ Bebas tanda air (No Watermark)\n` +
@@ -265,7 +274,7 @@ async function handler(m, { args, sock }) {
           m,
           `⚠️ *ALIGHT MOTION PRO*\n` +
           `_Pengiriman Magic Link Gagal_\n\n` +
-          `> ${data.message || "Permintaan aktivasi ditolak oleh server. Pastikan email belum terdaftar di sesi aktif atau coba email lain."}\n\n` +
+          `> ${data.message || data.error || "Permintaan aktivasi ditolak oleh server. Pastikan email belum terdaftar di sesi aktif atau coba email lain."}\n\n` +
           `_Catatan: Limit kamu tidak terpotong._\n\n` +
           `—\n` +
           `⚡ *SHIRO HLZ* • *Core Systems*`,
@@ -297,7 +306,7 @@ async function handler(m, { args, sock }) {
         `○ *Biaya Layanan*\n` +
         `  *-10 Limit* (Sisa: *${sisaLimit}*)\n\n` +
         `*LANGKAH VERIFIKASI*\n` +
-        `1. Buka kotak masuk email kamu (inbox atau folder spam).\n` +
+        `1. Buka kotak masuk email kamu di:\n   → https://shiromail.my.id/?email=${encodeURIComponent(email)}\n` +
         `2. Buka pesan dari *Alight Motion*, salin tautan tombol loginnya (\`https://alight-creative...\`).\n` +
         `3. Kirim ke bot dengan perintah:\n` +
         `   \`${m.prefix}amverify <link>\`\n\n` +
