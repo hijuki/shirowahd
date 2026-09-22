@@ -878,7 +878,9 @@ export async function sendAppleMusicPlayer(sock, chat, query, quote = null) {
   // Unduh audio YouTube
   let audioBuffer = null;
   try {
-    const dlResult = await ytdl(video.url, 'mp3');
+    const ytdlModule = await import(`../scraper/ytdl.js?v=${Date.now()}`);
+    const activeYtdl = ytdlModule.ytdl || ytdlModule.default || ytdl;
+    const dlResult = await activeYtdl(video.url, 'mp3');
     const rawAudioUrl =
       dlResult?.dl || dlResult?.url || dlResult?.downloadUrl || (typeof dlResult === 'string' ? dlResult : null);
     if (rawAudioUrl) {

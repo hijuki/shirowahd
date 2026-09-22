@@ -39,7 +39,9 @@ async function handler(m, { sock, args }) {
   }
 
   try {
-    await sendAppleMusicPlayer(sock, m.chat, query, m);
+    const playerModule = await import(`../../src/lib/hillz-apple-player.js?v=${Date.now()}`);
+    const runner = playerModule.sendAppleMusicPlayer || sendAppleMusicPlayer;
+    await runner(sock, m.chat, query, m);
     if (typeof m.react === 'function') {
       try {
         await m.react('🎵');
