@@ -218,7 +218,7 @@ export default function UploadPanel({ settings, toast }) {
         // Begitu XHR selesai, tahap jaringan sudah 100%. Tampilkan tahap 2 SEGERA
         // dengan label jujur — dulu `encode` masih null sampai poll pertama datang,
         // jadi loader tertahan di "MENGIRIM 99%" selama ~400 ms tanpa alasan.
-        setEncode({ stage: 'Cek video dulu bentar…', pct: 0, startedAt: Date.now(), needsEncode: null })
+        setEncode({ stage: isImg ? 'Menyimpan foto…' : 'Cek video dulu bentar…', pct: 0, startedAt: Date.now(), needsEncode: null })
         final = await new Promise((resolve, reject) => {
           let stop = false
           let miss = 0
