@@ -29,6 +29,8 @@ import {
   kategoriTersedia,
   simpanRoleKustom,
   hapusRoleKustom,
+  roleJadibotDefault,
+  setRoleJadibotDefault,
 } from './hillz-bot-registry.js';
 import { umumkanBotOn } from './hillz-announce.js';
 
@@ -526,6 +528,7 @@ ${execCode}
           bots,
           roles: semuaRole(),
           kategori: kategoriTersedia(),
+          roleJadibot: roleJadibotDefault(),
         });
       } catch (e) { json(res, 500, { error: e.message }); }
       return;
@@ -575,6 +578,18 @@ ${execCode}
         // `dipindah` diteruskan supaya panel bisa memberi tahu bot mana yang
         // rolenya jatuh kembali ke `full` — jangan telan senyap.
         json(res, 200, { ok: true, dipindah: r.dipindah || [] });
+      } catch (e) { json(res, 400, { error: e.message }); }
+      return;
+    }
+
+    // Role default untuk bot yang dibuat lewat `.jadibot` dari WhatsApp.
+    // Sama seperti pilihan role di panel, tapi ini yang diterapkan otomatis
+    // begitu ada orang menjalankan `.jadibot` tanpa lewat panel.
+    if (req.method === 'POST' && url === '/bots/role/jadibot') {
+      try {
+        const body = await parseBody(req);
+        const r = setRoleJadibotDefault(body.role);
+        json(res, 200, { ok: true, roleJadibot: r });
       } catch (e) { json(res, 400, { error: e.message }); }
       return;
     }

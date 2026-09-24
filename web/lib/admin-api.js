@@ -71,6 +71,7 @@ export const pairExtraBot = (nomor, label, role) => api('/api/bots/pair', { meth
 export const stopExtraBot = (nomor) => api('/api/bots/stop', { method: 'POST', body: { nomor } })
 export const saveBotRole = (role) => api('/api/bots/role/save', { method: 'POST', body: role })
 export const deleteBotRole = (id) => api('/api/bots/role/delete', { method: 'POST', body: { id } })
+export const setJadibotRole = (role) => api('/api/bots/role/jadibot', { method: 'POST', body: { role } })
 export const getBotGroups = () => api('/api/bot/groups')
 export const leaveGroup = (jid) => api('/api/bot/groups/leave', { method: 'POST', body: { jid } })
 export const toggleGroup = (jid) => api('/api/bot/groups/toggle', { method: 'POST', body: { jid } })

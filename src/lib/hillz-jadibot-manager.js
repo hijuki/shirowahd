@@ -12,6 +12,7 @@ import { addJadibotOwner } from "./hillz-jadibot-database.js";
 import { extendSocket } from "./hillz-socket.js";
 import { getAssetBuffer } from "./hillz-asset-manager.js";
 import { simpanKodeSub, tandaiSub } from "./hillz-pairing.js";
+import { simpanBot, daftarBot, roleJadibotDefault } from "./hillz-bot-registry.js";
 const JADIBOT_AUTH_FOLDER = path.join(process.cwd(), "session", "jadibot");
 const jadibotSessions = new Map();
 const reconnectAttempts = new Map();
@@ -315,6 +316,24 @@ async function startJadibot(sock, m, userJid, usePairing = true) {
 
   if (jadibotSessions.has(id)) {
     throw new Error("Jadibot sudah aktif untuk nomor ini!");
+  }
+
+  // Daftarkan bot ini ke registry supaya gerbang role di handler berlaku.
+  // Role default diambil dari pilihan admin di panel (roleJadibotDefault),
+  // BUKAN `full` — jadi jadibot otomatis dibatasi sesuai role yang dipilih
+  // admin, sama seperti bot tambahan yang dibuat lewat panel web.
+  try {
+    const sudahAda = daftarBot()[id];
+    if (!sudahAda) {
+      simpanBot(id, {
+        nomor: id,
+        label: id,
+        role: roleJadibotDefault(),
+        aktif: true,
+      });
+    }
+  } catch (e) {
+    logger.error("Jadibot", `Gagal daftar registry ${id}: ${e.message}`);
   }
 
   if (!fs.existsSync(authPath)) {

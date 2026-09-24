@@ -8,7 +8,8 @@ import {
   stopExtraBot,
   getPairState,
   saveBotRole,
-  deleteBotRole
+  deleteBotRole,
+  setJadibotRole
 } from '@/lib/admin-api'
 
 /**
@@ -77,6 +78,7 @@ export default function Bots({ toast }) {
   const bots = data?.bots ? Object.values(data.bots) : []
   const roles = data?.roles || {}
   const kategoriTersedia = data?.kategori || []
+  const roleJadibot = data?.roleJadibot || 'unduh'
 
   // Filter kategori di modal form
   const kategoriTerfilter = useMemo(() => {
@@ -151,6 +153,18 @@ export default function Bots({ toast }) {
       setTimeout(muat, 2000)
     } catch (e) {
       toast(`Gagal memulai pairing: ${e.message}`, 'error')
+    }
+    setBusy(false)
+  }
+
+  const ubahRoleJadibot = async (role) => {
+    setBusy(true)
+    try {
+      await setJadibotRole(role)
+      toast(`Role default .jadibot diatur ke "${roles[role]?.label || role}"`, 'success')
+      muat()
+    } catch (e) {
+      toast(`Gagal mengatur role jadibot: ${e.message}`, 'error')
     }
     setBusy(false)
   }
@@ -438,6 +452,38 @@ export default function Bots({ toast }) {
             <p className="text-[var(--ink-2)] text-[11px]">
               *Sub-bot berbagi memory, database, dan plugin yang sama tanpa overhead deploy ulang.
             </p>
+          </div>
+        </div>
+
+        {/* Role Default untuk .jadibot dari WhatsApp */}
+        <div className="rounded-[var(--r)] p-4 sm:p-5 bg-[var(--paper-2)]/60 border border-[var(--edge)] space-y-3 mt-3">
+          <div className="flex items-start gap-2.5">
+            <span className="w-6 h-6 rounded-full bg-[var(--volt)]/20 text-[var(--volt)] flex items-center justify-center text-xs shrink-0 mt-0.5">
+              <i className="fa-solid fa-wand-magic-sparkles" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[var(--ink)]">Role Otomatis untuk <code className="font-mono text-[var(--volt)]">.jadibot</code></p>
+              <p className="text-[var(--ink-2)] text-[11px] mt-0.5">
+                Role yang otomatis diterapkan saat user menautkan nomornya lewat perintah <code className="font-mono">.jadibot</code> di WhatsApp (bukan lewat panel ini). Akses langsung dibatasi sesuai role terpilih — tidak lagi otomatis akses penuh.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <label className="text-[10px] font-bold uppercase text-[var(--ink-2)] shrink-0" htmlFor="role-jadibot-default">Role default:</label>
+            <select
+              id="role-jadibot-default"
+              value={roleJadibot}
+              disabled={busy}
+              onChange={e => ubahRoleJadibot(e.target.value)}
+              aria-label="Role default jadibot"
+              className="min-h-10 flex-1 min-w-[200px] rounded-[var(--r-soft)] px-3 py-1.5 bg-[var(--paper)] border border-[var(--edge)] text-xs sm:text-sm font-semibold outline-none focus:border-[var(--volt)] transition-colors cursor-pointer"
+            >
+              {Object.entries(roles).map(([id, r]) => (
+                <option key={id} value={id}>
+                  {r.label} {r.bawaan ? '(Bawaan)' : '(Kustom)'}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

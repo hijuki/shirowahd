@@ -81,7 +81,7 @@ function kategoriTersedia() {
   }
 }
 
-const KOSONG = { bots: {}, rolesKustom: {} };
+const KOSONG = { bots: {}, rolesKustom: {}, roleJadibot: "unduh" };
 
 function baca() {
   try {
@@ -89,6 +89,10 @@ function baca() {
     return {
       bots: d.bots && typeof d.bots === "object" ? d.bots : {},
       rolesKustom: d.rolesKustom && typeof d.rolesKustom === "object" ? d.rolesKustom : {},
+      // Role default untuk bot yang dibuat lewat `.jadibot` dari WhatsApp.
+      // Dipilih admin di panel; kalau belum diset, jatuh ke `unduh` (bukan
+      // `full`) supaya jadibot liar tidak otomatis dapat akses penuh.
+      roleJadibot: typeof d.roleJadibot === "string" ? d.roleJadibot : "unduh",
     };
   } catch {
     return { ...KOSONG, bots: {}, rolesKustom: {} };
@@ -233,8 +237,28 @@ function hapusRoleKustom(id) {
   for (const [bid, b] of Object.entries(data.bots)) {
     if (b.role === kunci) { b.role = "full"; dipindah.push(bid); }
   }
+  // Role default jadibot juga jangan dibiarkan menunjuk role hantu.
+  if (data.roleJadibot === kunci) data.roleJadibot = "unduh";
   tulis(data);
   return { ok: true, dipindah };
+}
+
+/** Role default yang dipakai untuk bot hasil `.jadibot` (dipilih admin panel). */
+function roleJadibotDefault() {
+  const r = baca().roleJadibot || "unduh";
+  // Kalau role tersimpan sudah dihapus, jatuh ke `unduh` supaya tidak menunjuk
+  // role hantu (yang akan memblokir semua perintah jadibot secara diam-diam).
+  return r in semuaRole() ? r : "unduh";
+}
+
+/** Admin memilih role default jadibot dari panel. */
+function setRoleJadibotDefault(role) {
+  const r = String(role || "").trim();
+  if (!(r in semuaRole())) throw new Error(`role "${r}" tidak dikenal`);
+  const data = baca();
+  data.roleJadibot = r;
+  tulis(data);
+  return r;
 }
 
 /**
@@ -280,6 +304,8 @@ export {
   hapusBot,
   simpanRoleKustom,
   hapusRoleKustom,
+  roleJadibotDefault,
+  setRoleJadibotDefault,
   bolehJalan,
   botAktif,
 };

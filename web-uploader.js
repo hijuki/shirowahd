@@ -893,11 +893,13 @@ function parseMultipartFiles(body, boundary) {
       const fileName = fnMatch[1];
       const headerEnd = part.indexOf('\r\n\r\n');
       if (headerEnd === -1) continue;
+      const ctMatch = part.slice(0, headerEnd).match(/Content-Type:\s*([^\r\n;]+)/i);
+      const contentType = ctMatch ? ctMatch[1].trim().toLowerCase() : '';
       const raw = part.slice(headerEnd + 4);
       const trimmed = raw.endsWith('\r\n') ? raw.slice(0, -2) : raw;
       const buf = Buffer.from(trimmed, 'binary');
       if (buf.length < 100) continue;
-      files.push({ name: fileName, buf });
+      files.push({ name: fileName, buf, contentType });
     } else {
       const headerEnd = part.indexOf('\r\n\r\n');
       if (headerEnd === -1) continue;
@@ -1379,6 +1381,22 @@ async function handleRequest(req, res) {
             sendTelegram('error', `⚠️ <b>Kuota storage penuh</b>\nTerpakai: ${usedMB} MB / ${quotaMB} MB\nUpload ditolak dari IP ${clientIP}`);
             jsonRes(res, 507, { ok: false, error: 'Kuota storage server penuh (' + usedMB + '/' + quotaMB + ' MB). Coba lagi nanti.' }); return;
           }
+        }
+
+        // Jalur instan untuk foto: simpan langsung, tanpa antre background job atau polling status
+        const allImages = files.every(f => {
+          const ext = extname(f.name || '').toLowerCase();
+          return IMAGE_EXTS.includes(ext) || (f.contentType && f.contentType.startsWith('image/'));
+        });
+        if (allImages && files.length >= 1) {
+          const code = storeBundle(files, clientIP);
+          if (!code) { jsonRes(res, 507, { ok: false, error: 'Server penuh' }); return; }
+          const totalSize = files.reduce((s, f) => s + f.buf.length, 0);
+          addUploadLog({ ip: clientIP, timestamp: Date.now(), filename: files.map(f => f.name).join(', '), filesize: totalSize, code, bundle: true, count: files.length });
+          recordUpload(clientIP);
+          sendTelegram('upload', `📤 <b>Upload Bundle</b>\n${files.length} file | ${(totalSize/1048576).toFixed(1)} MB\nKode: <code>${code}</code>\nIP: ${clientIP}`);
+          jsonRes(res, 200, { ok: true, code, bundle: true, count: files.length });
+          return;
         }
 
         // ponytail: async job flow — respond langsung, encode di background biar client bisa tunjukin progres tahap 2.
@@ -2389,6 +2407,13 @@ async function handleRequest(req, res) {
   if (url === '/admin/api/bots/role/delete' && req.method === 'POST') {
     if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
     proxyBotApi(req, res, 'POST', '/bots/role/delete');
+    return;
+  }
+
+  // Role default untuk bot yang dibuat via .jadibot dari WhatsApp.
+  if (url === '/admin/api/bots/role/jadibot' && req.method === 'POST') {
+    if (!validToken(req)) { jsonRes(res, 401, { ok: false, error: 'Unauthorized' }); return; }
+    proxyBotApi(req, res, 'POST', '/bots/role/jadibot');
     return;
   }
 
